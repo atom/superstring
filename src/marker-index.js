@@ -5,7 +5,8 @@ const MAX_PRIORITY = 2147483647 // max 32 bit signed int (unboxed in v8)
 export default class MarkerIndex {
   constructor (seed) {
     this.random = new Random(seed)
-    this.root = null
+    this.root = new Node(null, 0)
+    this.root.priority = -MAX_PRIORITY
     this.startNodesById = {}
     this.endNodesById = {}
     this.cursor = new Cursor(this)
@@ -27,13 +28,52 @@ export default class MarkerIndex {
     let startNode = this.cursor.insertStart(markerId, startOffset, endOffset)
     let endNode = this.cursor.insertEnd(markerId, startOffset, endOffset)
 
-    startNode.priority = this.random(MAX_PRIORITY)
-    this.bubbleNodeUp(startNode)
-    endNode.priority = this.random(MAX_PRIORITY)
-    this.bubbleNodeUp(endNode)
+    startNode.startMarkerIds.add(markerId)
+    endNode.endMarkerIds.add(markerId)
+
+    if (startNode !== this.root) {
+      startNode.priority = this.random(MAX_PRIORITY)
+      this.bubbleNodeUp(startNode)
+    }
+
+    if (endNode !== this.root) {
+      endNode.priority = this.random(MAX_PRIORITY)
+      this.bubbleNodeUp(endNode)
+    }
 
     this.startNodesById[markerId] = startNode
     this.endNodesById[markerId] = endNode
+  }
+
+  delete (markerId) {
+    let startNode = this.startNodesById[markerId]
+    let endNode = this.endNodesById[markerId]
+
+    let node = startNode
+    while (node) {
+      node.rightMarkerIds.delete(markerId)
+      node = node.parent
+    }
+
+    node = endNode
+    while (node) {
+      node.leftMarkerIds.delete(markerId)
+      node = node.parent
+    }
+
+    startNode.startMarkerIds.delete(markerId)
+    endNode.endMarkerIds.delete(markerId)
+
+    if (startNode !== this.root && (startNode.startMarkerIds.size + startNode.endMarkerIds.size) === 0) {
+      this.deleteNode(startNode)
+    }
+
+    if (endNode !== this.root && endNode !== startNode && (endNode.startMarkerIds.size + endNode.endMarkerIds.size) === 0) {
+      this.deleteNode(endNode)
+    }
+
+    delete this.startNodesById[markerId]
+    delete this.endNodesById[markerId]
   }
 
   splice (start, oldExtent, newExtent) {
@@ -55,6 +95,20 @@ export default class MarkerIndex {
     return offset
   }
 
+  deleteNode (node) {
+    node.priority = Infinity
+    this.bubbleNodeDown(node)
+    if (node.parent) {
+      if (node.parent.left === node) {
+        node.parent.left = null
+      } else {
+        node.parent.right = null
+      }
+    } else {
+      this.root = null
+    }
+  }
+
   bubbleNodeUp (node) {
     while (node.parent && node.priority < node.parent.priority) {
       if (node === node.parent.left) {
@@ -65,8 +119,27 @@ export default class MarkerIndex {
     }
   }
 
+  bubbleNodeDown (node) {
+    while (true) {
+      let leftChildPriority = node.left ? node.left.priority : Infinity
+      let rightChildPriority = node.right ? node.right.priority : Infinity
+
+      if (leftChildPriority < rightChildPriority && leftChildPriority < node.priority) {
+        this.rotateNodeRight(node.left)
+      } else if (rightChildPriority < node.priority) {
+        this.rotateNodeLeft(node.right)
+      } else {
+        break
+      }
+    }
+  }
+
   rotateNodeLeft (pivot) {
     let root = pivot.parent
+
+    if (root === this.root) {
+      throw new Error('Rotating root node downward is not allowed')
+    }
 
     if (root.parent) {
       if (root.parent.left === root) {
@@ -106,6 +179,10 @@ export default class MarkerIndex {
   rotateNodeRight(pivot) {
     let root = pivot.parent
 
+    if (root === this.root) {
+      throw new Error('Rotating root node downward is not allowed')
+    }
+
     if (root.parent) {
       if (root.parent.left === root) {
         root.parent.left = pivot
@@ -142,11 +219,13 @@ export default class MarkerIndex {
   }
 
   toHTML () {
+    if (!this.root) return ''
+
     let s = '<style>'
     s += 'table { width: 100%; }'
     s += 'td { width: 50%; text-align: center; border: 1px solid gray; white-space: nowrap; }'
     s += '</style>'
-    s += this.root.toHTML()
+    s += this.root.toHTML(0)
     return s
   }
 }
@@ -268,22 +347,14 @@ class Cursor {
   }
 
   markLeft (markerId, startOffset, endOffset) {
-    if (startOffset <= this.leftAncestorOffset && this.nodeOffset <= endOffset) {
+    if (this.nodeOffset > 0 && startOffset <= this.leftAncestorOffset && this.nodeOffset <= endOffset) {
       this.node.leftMarkerIds.add(markerId)
     }
-    this.markPoint(markerId, startOffset, endOffset)
   }
 
   markRight (markerId, startOffset, endOffset) {
-    this.markPoint(markerId, startOffset, endOffset)
     if (startOffset <= this.nodeOffset && this.rightAncestorOffset <= endOffset) {
       this.node.rightMarkerIds.add(markerId)
-    }
-  }
-
-  markPoint (markerId, startOffset, endOffset) {
-    if (startOffset <= this.nodeOffset && this.nodeOffset <= endOffset) {
-      this.node.pointMarkerIds.add(markerId)
     }
   }
 
@@ -354,7 +425,11 @@ class Cursor {
     }
 
     if (start <= this.nodeOffset && this.nodeOffset <= end) {
-      this.addToSet(resultSet, this.node.pointMarkerIds)
+      this.addToSet(resultSet, this.node.startMarkerIds)
+    }
+
+    if (start <= this.nodeOffset && this.nodeOffset <= end) {
+      this.addToSet(resultSet, this.node.endMarkerIds)
     }
 
     if (this.nodeOffset <= end && start <= this.rightAncestorOffset) {
@@ -367,17 +442,25 @@ class Cursor {
   }
 }
 
+let idCounter = 1
+
 class Node {
   constructor (parent, leftExtent) {
     this.parent = parent
+    this.left = null
+    this.right = null
     this.leftExtent = leftExtent
     this.leftMarkerIds = new Set
     this.rightMarkerIds = new Set
-    this.pointMarkerIds = new Set
+    this.startMarkerIds = new Set
+    this.endMarkerIds = new Set
     this.priority = null
+    this.id = idCounter++
   }
 
-  toHTML() {
+  toHTML (leftAncestorOffset) {
+    let offset = leftAncestorOffset + this.leftExtent
+
     let s = ''
     s += '<table>'
 
@@ -387,7 +470,15 @@ class Node {
       s += id + ' '
     }
     s += '<< '
-    s += this.leftExtent
+    for (let id of this.endMarkerIds) {
+      s += id + ' '
+    }
+    s += '(( '
+    s += offset
+    s += ' ))'
+    for (let id of this.startMarkerIds) {
+      s += ' ' + id
+    }
     s += ' >>'
     for (let id of this.rightMarkerIds) {
       s += ' ' + id
@@ -399,14 +490,14 @@ class Node {
       s += '<tr>'
       s += '<td>'
       if (this.left) {
-        s += this.left.toHTML()
+        s += this.left.toHTML(leftAncestorOffset)
       } else {
         s += '&nbsp;'
       }
       s += '</td>'
       s += '<td>'
       if (this.right) {
-        s += this.right.toHTML()
+        s += this.right.toHTML(offset)
       } else {
         s += '&nbsp;'
       }
