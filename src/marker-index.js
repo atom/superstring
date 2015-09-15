@@ -27,10 +27,10 @@ export default class MarkerIndex {
     let startNode = this.cursor.insertStart(markerId, startOffset, endOffset)
     let endNode = this.cursor.insertEnd(markerId, startOffset, endOffset)
 
-    // startNode.priority = this.random(MAX_PRIORITY)
-    // this.bubbleNodeUp(startNode)
-    // endNode.priority = this.random(MAX_PRIORITY)
-    // this.bubbleNodeUp(endNode)
+    startNode.priority = this.random(MAX_PRIORITY)
+    this.bubbleNodeUp(startNode)
+    endNode.priority = this.random(MAX_PRIORITY)
+    this.bubbleNodeUp(endNode)
 
     this.startNodesById[markerId] = startNode
     this.endNodesById[markerId] = endNode
@@ -53,6 +53,92 @@ export default class MarkerIndex {
       node = node.parent
     }
     return offset
+  }
+
+  bubbleNodeUp (node) {
+    while (node.parent && node.priority < node.parent.priority) {
+      if (node === node.parent.left) {
+        this.rotateNodeRight(node)
+      } else {
+        this.rotateNodeLeft(node)
+      }
+    }
+  }
+
+  rotateNodeLeft (pivot) {
+    let root = pivot.parent
+
+    if (root.parent) {
+      if (root.parent.left === root) {
+        root.parent.left = pivot
+      } else {
+        root.parent.right = pivot
+      }
+    } else {
+      this.root = pivot
+    }
+    pivot.parent = root.parent
+
+    root.right = pivot.left
+    if (root.right) {
+      root.right.parent = root
+    }
+
+    pivot.left = root
+    pivot.left.parent = pivot
+
+    pivot.leftExtent = root.leftExtent + pivot.leftExtent
+
+    for (let markerId of root.rightMarkerIds) {
+      pivot.rightMarkerIds.add(markerId)
+    }
+
+    for (let markerId of pivot.leftMarkerIds) {
+      if (root.leftMarkerIds.has(markerId)) {
+        root.leftMarkerIds.delete(markerId)
+      } else {
+        pivot.leftMarkerIds.delete(markerId)
+        root.rightMarkerIds.add(markerId)
+      }
+    }
+  }
+
+  rotateNodeRight(pivot) {
+    let root = pivot.parent
+
+    if (root.parent) {
+      if (root.parent.left === root) {
+        root.parent.left = pivot
+      } else {
+        root.parent.right = pivot
+      }
+    } else {
+      this.root = pivot
+    }
+    pivot.parent = root.parent
+
+    root.left = pivot.right
+    if (root.left) {
+      root.left.parent = root
+    }
+
+    pivot.right = root
+    pivot.right.parent = pivot
+
+    root.leftExtent = root.leftExtent - pivot.leftExtent
+
+    for (let markerId of root.leftMarkerIds) {
+      pivot.leftMarkerIds.add(markerId)
+    }
+
+    for (let markerId of pivot.rightMarkerIds) {
+      if (root.rightMarkerIds.has(markerId)) {
+        root.rightMarkerIds.delete(markerId)
+      } else {
+        pivot.rightMarkerIds.delete(markerId)
+        root.leftMarkerIds.add(markerId)
+      }
+    }
   }
 
   toHTML () {
@@ -288,6 +374,7 @@ class Node {
     this.leftMarkerIds = new Set
     this.rightMarkerIds = new Set
     this.pointMarkerIds = new Set
+    this.priority = null
   }
 
   toHTML() {

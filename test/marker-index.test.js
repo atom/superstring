@@ -10,7 +10,7 @@ describe('MarkerIndex', () => {
     let markers = []
     let idCounter = 1
 
-    for (let j = 0; j < 20; j++) {
+    for (let j = 0; j < 50; j++) {
       performInsert()
       // let n = random(10)
       // if (n >= 4) { // 60% insert
@@ -77,7 +77,7 @@ describe('MarkerIndex', () => {
     function getRange () {
       let start = random(100)
       let end = start
-      while (random(2)) {
+      while (random(3) > 0) {
         end += random.intBetween(-10, 10)
       }
 
