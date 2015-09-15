@@ -9,7 +9,7 @@ describe('MarkerIndex', () => {
       // document.write(f())
     }
 
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 10000; i++) {
       let seed = Date.now()
       let assertionMessage = `Random Seed: ${seed}`
       let random = new Random(seed)
@@ -18,9 +18,12 @@ describe('MarkerIndex', () => {
       let idCounter = 65
 
       for (let j = 0; j < 50; j++) {
+        if (j === 8) global.debug = true
         let n = random(10)
-        if (n >= 2) { // 80% insert
+        if (n >= 4) { // 60% insert
           performInsert()
+        } else if (n >= 2) { // 20% splice
+          performSplice()
         } else if (markers.length > 0) {
           performDelete()
         }
@@ -35,8 +38,8 @@ describe('MarkerIndex', () => {
       function verifyRanges () {
         for (let marker of markers) {
           let range = markerIndex.getRange(marker.id)
-          assert.equal(range[0], marker.start, assertionMessage)
-          assert.equal(range[1], marker.end, assertionMessage)
+          assert.equal(range[0], marker.start, `Marker ${marker.id} start. ` + assertionMessage)
+          assert.equal(range[1], marker.end, `Marker ${marker.id} end. ` + assertionMessage)
         }
       }
 
@@ -47,10 +50,10 @@ describe('MarkerIndex', () => {
         }
 
         for (let markerId of node.leftMarkerIds) {
-          assert(!alreadySeen.has(markerId), 'Redundant paths ' + assertionMessage)
+          assert(!alreadySeen.has(markerId), 'Redundant paths. ' + assertionMessage)
         }
         for (let markerId of node.rightMarkerIds) {
-          assert(!alreadySeen.has(markerId), 'Redundant paths ' + assertionMessage)
+          assert(!alreadySeen.has(markerId), 'Redundant paths. ' + assertionMessage)
         }
 
         if (node.left) {
@@ -88,7 +91,10 @@ describe('MarkerIndex', () => {
           }
 
           let actualIds = new Set()
+          if (start === 7) global.debug = true
           markerIndex.findIntersecting(start, end, actualIds)
+
+          // console.log('find intersecting', start, end, expectedIds, actualIds);
 
           assert.equal(actualIds.size, expectedIds.size, assertionMessage)
           for (let id of expectedIds) {
@@ -101,14 +107,15 @@ describe('MarkerIndex', () => {
         let id = String.fromCharCode(idCounter++)
         let [start, end] = getRange()
         let exclusive = !!random(2)
-        write(() => `insert ${id}, ${start}, ${end}`)
+        write(() => `insert ${id}, ${start}, ${end}, exclusive: ${exclusive}`)
         markerIndex.insert(id, start, end)
-        // if (exclusive) markerIndex.setExclusive(id, true)
+        if (exclusive) markerIndex.setExclusive(id, true)
         markers.push({id, start, end, exclusive})
       }
 
       function performSplice () {
         let [start, oldExtent, newExtent] = getSplice()
+        write(() => `splice ${start}, ${oldExtent}, ${newExtent}`)
         markerIndex.splice(start, oldExtent, newExtent)
         applySplice(markers, start, oldExtent, newExtent)
       }
@@ -150,6 +157,8 @@ describe('MarkerIndex', () => {
         let spliceDelta = newExtent - oldExtent
 
         for (let marker of markers) {
+          let isEmpty = marker.start == marker.end
+
           if (spliceStart < marker.start || marker.exclusive && spliceOldEnd === marker.start) {
             if (spliceOldEnd <= marker.start) { // splice precedes marker start
               marker.start += spliceDelta
@@ -158,7 +167,7 @@ describe('MarkerIndex', () => {
             }
           }
 
-          if (spliceStart < marker.end || !marker.exclusive && spliceOldEnd === marker.end) {
+          if (spliceStart < marker.end || (!marker.exclusive || isEmpty) && spliceOldEnd === marker.end) {
             if (spliceOldEnd <= marker.end) { // splice precedes marker end
               marker.end += spliceDelta
             } else { // splice surrounds marker end

@@ -5,11 +5,11 @@ const MAX_PRIORITY = 2147483647 // max 32 bit signed int (unboxed in v8)
 export default class MarkerIndex {
   constructor (seed) {
     this.random = new Random(seed)
-    this.root = new Node(null, 0)
-    this.root.priority = -MAX_PRIORITY
+    this.root = null
     this.startNodesById = {}
     this.endNodesById = {}
     this.cursor = new Cursor(this)
+    this.exclusiveMarkers = new Set()
   }
 
   getRange (markerId) {
@@ -31,18 +31,22 @@ export default class MarkerIndex {
     startNode.startMarkerIds.add(markerId)
     endNode.endMarkerIds.add(markerId)
 
-    if (startNode !== this.root) {
-      startNode.priority = this.random(MAX_PRIORITY)
-      this.bubbleNodeUp(startNode)
-    }
+    startNode.priority = this.random(MAX_PRIORITY)
+    this.bubbleNodeUp(startNode)
 
-    if (endNode !== this.root) {
-      endNode.priority = this.random(MAX_PRIORITY)
-      this.bubbleNodeUp(endNode)
-    }
+    endNode.priority = this.random(MAX_PRIORITY)
+    this.bubbleNodeUp(endNode)
 
     this.startNodesById[markerId] = startNode
     this.endNodesById[markerId] = endNode
+  }
+
+  setExclusive (markerId, exclusive) {
+    if (exclusive) {
+      this.exclusiveMarkers.add(markerId)
+    } else {
+      this.exclusiveMarkers.remove(markerId)
+    }
   }
 
   delete (markerId) {
@@ -64,11 +68,11 @@ export default class MarkerIndex {
     startNode.startMarkerIds.delete(markerId)
     endNode.endMarkerIds.delete(markerId)
 
-    if (startNode !== this.root && (startNode.startMarkerIds.size + startNode.endMarkerIds.size) === 0) {
+    if (!startNode.isMarkerEndpoint()) {
       this.deleteNode(startNode)
     }
 
-    if (endNode !== this.root && endNode !== startNode && (endNode.startMarkerIds.size + endNode.endMarkerIds.size) === 0) {
+    if (endNode !== startNode && !endNode.isMarkerEndpoint()) {
       this.deleteNode(endNode)
     }
 
@@ -77,7 +81,84 @@ export default class MarkerIndex {
   }
 
   splice (start, oldExtent, newExtent) {
+    if (!this.root || oldExtent === 0 && newExtent === 0) return
 
+    let isInsertion = oldExtent === 0
+    let startNode = this.cursor.insertSpliceBoundary(start, false)
+    let endNode = this.cursor.insertSpliceBoundary(start + oldExtent, isInsertion)
+
+    startNode.priority = -2
+    this.bubbleNodeUp(startNode)
+    endNode.priority = -1
+    this.bubbleNodeUp(endNode)
+
+    if (isInsertion) {
+      for (let markerId of startNode.startMarkerIds) {
+        if (this.exclusiveMarkers.has(markerId)) {
+          startNode.startMarkerIds.delete(markerId)
+          endNode.startMarkerIds.add(markerId)
+          endNode.leftMarkerIds.delete(markerId)
+          this.startNodesById[markerId] = endNode
+        }
+      }
+      for (let markerId of startNode.endMarkerIds) {
+        if (!this.exclusiveMarkers.has(markerId) || endNode.startMarkerIds.has(markerId)) {
+          startNode.endMarkerIds.delete(markerId)
+          endNode.endMarkerIds.add(markerId)
+          if (!endNode.startMarkerIds.has(markerId)) {
+            endNode.leftMarkerIds.add(markerId)
+          }
+          this.endNodesById[markerId] = endNode
+        }
+      }
+    } else if (endNode.left) {
+      let startMarkerIds = new Set()
+      let endMarkerIds = new Set()
+      this.getStartingAndEndingsMarkerWithinSubtree(endNode.left, startMarkerIds, endMarkerIds)
+
+      for (let markerId of startMarkerIds) {
+        endNode.startMarkerIds.add(markerId)
+        this.startNodesById[markerId] = endNode
+      }
+
+      for (let markerId of endMarkerIds) {
+        endNode.endMarkerIds.add(markerId)
+        if (!startMarkerIds.has(markerId)) {
+          endNode.leftMarkerIds.add(markerId)
+        }
+        this.endNodesById[markerId] = endNode
+      }
+
+      endNode.left = null
+    }
+
+    endNode.leftExtent += (newExtent - oldExtent)
+
+    if (endNode.leftExtent === 0) {
+      for (let markerId of endNode.startMarkerIds) {
+        startNode.startMarkerIds.add(markerId)
+        endNode.leftMarkerIds.add(markerId)
+        this.startNodesById[markerId] = startNode
+      }
+      for (let markerId of endNode.endMarkerIds) {
+        startNode.endMarkerIds.add(markerId)
+        endNode.leftMarkerIds.delete(markerId)
+        this.endNodesById[markerId] = startNode
+      }
+      this.deleteNode(endNode)
+    } else if (endNode.isMarkerEndpoint()) {
+      endNode.priority = this.random(MAX_PRIORITY)
+      this.bubbleNodeDown(endNode)
+    } else {
+      this.deleteNode(endNode)
+    }
+
+    if (startNode.isMarkerEndpoint()) {
+      startNode.priority = this.random(MAX_PRIORITY)
+      this.bubbleNodeDown(startNode)
+    } else {
+      this.deleteNode(startNode)
+    }
   }
 
   findIntersecting (start, end, resultSet) {
@@ -137,10 +218,6 @@ export default class MarkerIndex {
   rotateNodeLeft (pivot) {
     let root = pivot.parent
 
-    if (root === this.root) {
-      throw new Error('Rotating root node downward is not allowed')
-    }
-
     if (root.parent) {
       if (root.parent.left === root) {
         root.parent.left = pivot
@@ -162,9 +239,7 @@ export default class MarkerIndex {
 
     pivot.leftExtent = root.leftExtent + pivot.leftExtent
 
-    for (let markerId of root.rightMarkerIds) {
-      pivot.rightMarkerIds.add(markerId)
-    }
+    addToSet(pivot.rightMarkerIds, root.rightMarkerIds)
 
     for (let markerId of pivot.leftMarkerIds) {
       if (root.leftMarkerIds.has(markerId)) {
@@ -178,10 +253,6 @@ export default class MarkerIndex {
 
   rotateNodeRight(pivot) {
     let root = pivot.parent
-
-    if (root === this.root) {
-      throw new Error('Rotating root node downward is not allowed')
-    }
 
     if (root.parent) {
       if (root.parent.left === root) {
@@ -204,9 +275,7 @@ export default class MarkerIndex {
 
     root.leftExtent = root.leftExtent - pivot.leftExtent
 
-    for (let markerId of root.leftMarkerIds) {
-      pivot.leftMarkerIds.add(markerId)
-    }
+    addToSet(pivot.leftMarkerIds, root.leftMarkerIds)
 
     for (let markerId of pivot.rightMarkerIds) {
       if (root.rightMarkerIds.has(markerId)) {
@@ -215,6 +284,17 @@ export default class MarkerIndex {
         pivot.rightMarkerIds.delete(markerId)
         root.leftMarkerIds.add(markerId)
       }
+    }
+  }
+
+  getStartingAndEndingsMarkerWithinSubtree (node, startMarkerIds, endMarkerIds) {
+    addToSet(startMarkerIds, node.startMarkerIds)
+    addToSet(endMarkerIds, node.endMarkerIds)
+    if (node.left) {
+      this.getStartingAndEndingsMarkerWithinSubtree(node.left, startMarkerIds, endMarkerIds)
+    }
+    if (node.right) {
+      this.getStartingAndEndingsMarkerWithinSubtree(node.right, startMarkerIds, endMarkerIds)
     }
   }
 
@@ -346,6 +426,30 @@ class Cursor {
     return resultSet
   }
 
+  insertSpliceBoundary (offset, isInsertionEnd) {
+    this.reset()
+
+    while (true) {
+      if (offset === this.nodeOffset && !isInsertionEnd) {
+        return this.node
+      } else if (offset < this.nodeOffset) {
+        if (this.node.left) {
+          this.descendLeft()
+        } else {
+          this.insertLeftChild(offset)
+          return this.node.left
+        }
+      } else { // endOffset > this.nodeOffset
+        if (this.node.right) {
+          this.descendRight()
+        } else {
+          this.insertRightChild(offset)
+          return this.node.right
+        }
+      }
+    }
+  }
+
   markLeft (markerId, startOffset, endOffset) {
     if (this.nodeOffset > 0 && startOffset <= this.leftAncestorOffset && this.nodeOffset <= endOffset) {
       this.node.leftMarkerIds.add(markerId)
@@ -353,7 +457,9 @@ class Cursor {
   }
 
   markRight (markerId, startOffset, endOffset) {
-    if (startOffset <= this.nodeOffset && this.rightAncestorOffset <= endOffset) {
+    if (this.leftAncestorOffset < startOffset
+      && startOffset <= this.nodeOffset
+      && this.rightAncestorOffset <= endOffset) {
       this.node.rightMarkerIds.add(markerId)
     }
   }
@@ -421,24 +527,20 @@ class Cursor {
 
   checkIntersection (start, end, resultSet) {
     if (this.leftAncestorOffset <= end && start <= this.nodeOffset) {
-      this.addToSet(resultSet, this.node.leftMarkerIds)
+      addToSet(resultSet, this.node.leftMarkerIds)
     }
 
     if (start <= this.nodeOffset && this.nodeOffset <= end) {
-      this.addToSet(resultSet, this.node.startMarkerIds)
+      addToSet(resultSet, this.node.startMarkerIds)
     }
 
     if (start <= this.nodeOffset && this.nodeOffset <= end) {
-      this.addToSet(resultSet, this.node.endMarkerIds)
+      addToSet(resultSet, this.node.endMarkerIds)
     }
 
     if (this.nodeOffset <= end && start <= this.rightAncestorOffset) {
-      this.addToSet(resultSet, this.node.rightMarkerIds)
+      addToSet(resultSet, this.node.rightMarkerIds)
     }
-  }
-
-  addToSet (target, source) {
-    for (let id of source) target.add(id)
   }
 }
 
@@ -456,6 +558,10 @@ class Node {
     this.endMarkerIds = new Set
     this.priority = null
     this.id = idCounter++
+  }
+
+  isMarkerEndpoint () {
+    return (this.startMarkerIds.size + this.endMarkerIds.size) > 0
   }
 
   toHTML (leftAncestorOffset) {
@@ -509,4 +615,8 @@ class Node {
 
     return s
   }
+}
+
+function addToSet (target, source) {
+  for (let id of source) target.add(id)
 }
