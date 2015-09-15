@@ -1,0 +1,47 @@
+{
+  "name": "atom-marker-index",
+  "version": "0.0.1",
+  "description": "A data structure to track logical text annotations.",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "npm run standard && node_modules/.bin/electron-mocha --renderer --recursive ./test/helpers/setup  test",
+    "tdd": "npm run standard && node_modules/.bin/electron-mocha --renderer --interactive --recursive ./test/helpers/setup  test",
+    "prepublish": "npm run standard && npm run clean && npm run build",
+    "standard": "node_modules/.bin/standard --recursive src test",
+    "build": "node_modules/.bin/babel src --out-dir dist",
+    "clean": "rm -rf dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nathansobo/atom-marker-index.git"
+  },
+  "keywords": [
+    "patch data-structure"
+  ],
+  "author": "Nathan Sobo <nathan@github.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nathansobo/atom-marker-index/issues"
+  },
+  "homepage": "https://github.com/nathansobo/atom-marker-index",
+  "devDependencies": {
+    "babel": "^5.0.0",
+    "babel-eslint": "^4.0.5",
+    "chai": "^2.0.0",
+    "electron-mocha": "git://github.com/nathansobo/electron-mocha.git#interactive-option",
+    "electron-prebuilt": "^0.30.1",
+    "mocha": "^2.1.0",
+    "random-seed": "^0.2.0",
+    "standard": "^4.5.4"
+  },
+  "dependencies": {
+  },
+  "standard": {
+    "parser": "babel-eslint",
+    "global": [
+      "describe",
+      "it",
+      "expect"
+    ]
+  }
+}
