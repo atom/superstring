@@ -5,11 +5,12 @@ describe('MarkerIndex', () => {
   it('maintains correct marker positions during randomized insertions and mutations', function () {
     this.timeout(Infinity)
 
+    //  uncomment for debug output in electron (`npm run tdd`)
     function write (f) {
       // document.write(f())
     }
 
-    for (let i = 0; i < 10000; i++) {
+    for (let i = 0; i < 1000; i++) {
       let seed = Date.now()
       let assertionMessage = `Random Seed: ${seed}`
       let random = new Random(seed)
@@ -18,7 +19,6 @@ describe('MarkerIndex', () => {
       let idCounter = 65
 
       for (let j = 0; j < 50; j++) {
-        if (j === 8) global.debug = true
         let n = random(10)
         if (n >= 4) { // 60% insert
           performInsert()
@@ -90,11 +90,7 @@ describe('MarkerIndex', () => {
             }
           }
 
-          let actualIds = new Set()
-          if (start === 7) global.debug = true
-          markerIndex.findIntersecting(start, end, actualIds)
-
-          // console.log('find intersecting', start, end, expectedIds, actualIds);
+          let actualIds = markerIndex.findIntersecting(start, end)
 
           assert.equal(actualIds.size, expectedIds.size, assertionMessage)
           for (let id of expectedIds) {
