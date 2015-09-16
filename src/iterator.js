@@ -113,8 +113,6 @@ export default class Iterator {
       this.checkIntersection(start, end, resultSet)
       this.moveToSuccessor()
     } while (this.node && this.nodeOffset <= end)
-
-    return resultSet
   }
 
   findContaining (offset, resultSet) {
