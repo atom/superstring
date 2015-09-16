@@ -183,6 +183,12 @@ export default class MarkerIndex {
     return containing
   }
 
+  findContainedIn (start, end) {
+    let containedIn = new Set()
+    this.iterator.findContainedIn(start, end, containedIn)
+    return containedIn
+  }
+
   getNodeOffset (node) {
     let offset = node.leftExtent
     while (node.parent) {

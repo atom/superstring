@@ -138,6 +138,40 @@ export default class Iterator {
     }
   }
 
+  findContainedIn (start, end, resultSet) {
+    this.reset()
+    if (!this.node) return
+
+    while (true) {
+      if (start <= this.nodeOffset) {
+        if (this.node.left) {
+          this.descendLeft()
+        } else {
+          break
+        }
+      } else {
+        if (this.node.right) {
+          this.descendRight()
+        } else {
+          break
+        }
+      }
+    }
+
+    if (this.nodeOffset < start) this.moveToSuccessor()
+
+    let started = new Set
+    while (this.node && this.nodeOffset <= end) {
+      addToSet(started, this.node.startMarkerIds)
+      for (let markerId of this.node.endMarkerIds) {
+        if (started.has(markerId)) {
+          resultSet.add(markerId)
+        }
+      }
+      this.moveToSuccessor()
+    }
+  }
+
   insertSpliceBoundary (offset, isInsertionEnd) {
     this.reset()
 
