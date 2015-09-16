@@ -12,7 +12,7 @@ describe('MarkerIndex', () => {
 
     for (let i = 0; i < 1000; i++) {
       let seed = Date.now()
-      let assertionMessage = `Random Seed: ${seed}`
+      let seedMessage = `Random Seed: ${seed}`
       let random = new Random(seed)
       let markerIndex = new MarkerIndex(seed)
       let markers = []
@@ -29,31 +29,33 @@ describe('MarkerIndex', () => {
         }
         write(() => markerIndex.toHTML())
         write(() => '<hr>')
-        verifyUniquePathInvariant()
+        verifyHighestPossiblePaths()
+        verifyContinuousPaths()
       }
 
       verifyRanges()
-      testIntersectionQueries()
+      testFindIntersecting()
+      testFindContaining()
 
       function verifyRanges () {
         for (let marker of markers) {
           let range = markerIndex.getRange(marker.id)
-          assert.equal(range[0], marker.start, `Marker ${marker.id} start. ` + assertionMessage)
-          assert.equal(range[1], marker.end, `Marker ${marker.id} end. ` + assertionMessage)
+          assert.equal(range[0], marker.start, `Marker ${marker.id} start. ` + seedMessage)
+          assert.equal(range[1], marker.end, `Marker ${marker.id} end. ` + seedMessage)
         }
       }
 
-      function verifyUniquePathInvariant (node, alreadySeen) {
+      function verifyHighestPossiblePaths (node, alreadySeen) {
         if (!node) {
-          if (markerIndex.root) verifyUniquePathInvariant(markerIndex.root, new Set())
+          if (markerIndex.root) verifyHighestPossiblePaths(markerIndex.root, new Set())
           return
         }
 
         for (let markerId of node.leftMarkerIds) {
-          assert(!alreadySeen.has(markerId), 'Redundant paths. ' + assertionMessage)
+          assert(!alreadySeen.has(markerId), 'Redundant paths. ' + seedMessage)
         }
         for (let markerId of node.rightMarkerIds) {
-          assert(!alreadySeen.has(markerId), 'Redundant paths. ' + assertionMessage)
+          assert(!alreadySeen.has(markerId), 'Redundant paths. ' + seedMessage)
         }
 
         if (node.left) {
@@ -64,7 +66,7 @@ describe('MarkerIndex', () => {
           for (let markerId of node.leftMarkerIds) {
             alreadySeenOnLeft.add(markerId)
           }
-          verifyUniquePathInvariant(node.left, alreadySeenOnLeft)
+          verifyHighestPossiblePaths(node.left, alreadySeenOnLeft)
         }
 
         if (node.right) {
@@ -75,11 +77,48 @@ describe('MarkerIndex', () => {
           for (let markerId of node.rightMarkerIds) {
             alreadySeenOnRight.add(markerId)
           }
-          verifyUniquePathInvariant(node.right, alreadySeenOnRight)
+          verifyHighestPossiblePaths(node.right, alreadySeenOnRight)
         }
       }
 
-      function testIntersectionQueries () {
+      function verifyContinuousPaths () {
+        let startedMarkers = new Set
+        let endedMarkers = new Set
+
+        let iterator = markerIndex.iterator
+        iterator.reset()
+        while (iterator.node && iterator.node.left) iterator.descendLeft()
+
+        let node = iterator.node
+        while(node) {
+          for (let markerId of node.leftMarkerIds) {
+            assert(!endedMarkers.has(markerId), `Marker ${markerId} in left markers, but already ended. ` + seedMessage)
+            assert(startedMarkers.has(markerId), `Marker ${markerId} in left markers, but not yet started. ` + seedMessage)
+          }
+
+          for (let markerId of node.startMarkerIds) {
+            assert(!endedMarkers.has(markerId), `Marker ${markerId} in start markers, but already ended. ` + seedMessage)
+            assert(!startedMarkers.has(markerId), `Marker ${markerId} in start markers, but already started. ` + seedMessage)
+            startedMarkers.add(markerId)
+          }
+
+          for (let markerId of node.endMarkerIds) {
+            assert(startedMarkers.has(markerId), `Marker ${markerId} in end markers, but not yet started. ` + seedMessage)
+            startedMarkers.delete(markerId)
+            endedMarkers.add(markerId)
+          }
+
+          for (let markerId of node.rightMarkerIds) {
+            assert(!endedMarkers.has(markerId), `Marker ${markerId} in right markers, but already ended. ` + seedMessage)
+            assert(startedMarkers.has(markerId), `Marker ${markerId} in right markers, but not yet started. ` + seedMessage)
+          }
+
+          iterator.moveToSuccessor()
+          node = iterator.node
+        }
+      }
+
+      function testFindIntersecting () {
         for (let i = 0; i < 10; i++) {
           let [start, end] = getRange()
 
@@ -92,9 +131,28 @@ describe('MarkerIndex', () => {
 
           let actualIds = markerIndex.findIntersecting(start, end)
 
-          assert.equal(actualIds.size, expectedIds.size, assertionMessage)
+          assert.equal(actualIds.size, expectedIds.size, seedMessage)
           for (let id of expectedIds) {
-            assert(actualIds.has(id), `Expected ${id} to be in set. ` + assertionMessage)
+            assert(actualIds.has(id), `Expected ${id} to be in set. ` + seedMessage)
+          }
+        }
+      }
+
+      function testFindContaining () {
+        for (let i = 0; i < 10; i++) {
+          let [start, end] = getRange()
+
+          let expectedIds = new Set()
+          for (let marker of markers) {
+            if (marker.start <= start && end <= marker.end) {
+              expectedIds.add(marker.id)
+            }
+          }
+
+          let actualIds = markerIndex.findContaining(start, end)
+          assert.equal(actualIds.size, expectedIds.size, seedMessage)
+          for (let id of expectedIds) {
+            assert(actualIds.has(id), `Expected ${id} to be in set. ` + seedMessage)
           }
         }
       }

@@ -164,10 +164,23 @@ export default class MarkerIndex {
     }
   }
 
-  findIntersecting (start, end) {
-    let resultSet = new Set()
-    this.iterator.findIntersecting(start, end, resultSet)
-    return resultSet
+  findIntersecting (start, end = start) {
+    let intersecting = new Set()
+    this.iterator.findIntersecting(start, end, intersecting)
+    return intersecting
+  }
+
+  findContaining (start, end = start) {
+    let containing = new Set()
+    this.iterator.findContaining(start, containing)
+    if (end !== start) {
+      let containingEnd = new Set()
+      this.iterator.findContaining(end, containingEnd)
+      for (let markerId of containing) {
+        if (!containingEnd.has(markerId)) containing.delete(markerId)
+      }
+    }
+    return containing
   }
 
   getNodeOffset (node) {
@@ -280,7 +293,11 @@ export default class MarkerIndex {
 
     root.leftExtent = root.leftExtent - pivot.leftExtent
 
-    addToSet(pivot.leftMarkerIds, root.leftMarkerIds)
+    for (let markerId of root.leftMarkerIds) {
+      if (!pivot.startMarkerIds.has(markerId)) { // don't do this when pivot is at offset 0
+        pivot.leftMarkerIds.add(markerId)
+      }
+    }
 
     for (let markerId of pivot.rightMarkerIds) {
       if (root.rightMarkerIds.has(markerId)) {

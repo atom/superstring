@@ -117,6 +117,29 @@ export default class Iterator {
     return resultSet
   }
 
+  findContaining (offset, resultSet) {
+    this.reset()
+    if (!this.node) return
+
+    while (true) {
+      this.checkIntersection(offset, offset, resultSet)
+
+      if (offset < this.nodeOffset) {
+        if (this.node.left) {
+          this.descendLeft()
+        } else {
+          break
+        }
+      } else {
+        if (this.node.right) {
+          this.descendRight()
+        } else {
+          break
+        }
+      }
+    }
+  }
+
   insertSpliceBoundary (offset, isInsertionEnd) {
     this.reset()
 
