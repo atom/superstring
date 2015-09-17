@@ -180,6 +180,32 @@ export default class Iterator {
     }
   }
 
+  dump (filterSet) {
+    this.reset()
+
+    while (this.node && this.node.left) this.descendLeft()
+
+    let snapshot = {}
+
+    while (this.node) {
+      for (let markerId of this.node.startMarkerIds) {
+        if (!filterSet || filterSet.has(markerId)) {
+          snapshot[markerId] = {start: this.nodeOffset, end: null}
+        }
+      }
+
+      for (let markerId of this.node.endMarkerIds) {
+        if (!filterSet || filterSet.has(markerId)) {
+          snapshot[markerId].end = this.nodeOffset
+        }
+      }
+
+      this.moveToSuccessor()
+    }
+
+    return snapshot
+  }
+
   seekToLeastUpperBound (offset) {
     while (true) {
       if (offset === this.nodeOffset) {

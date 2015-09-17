@@ -34,6 +34,7 @@ describe('MarkerIndex', () => {
       }
 
       verifyRanges()
+      testDump()
       testFindIntersecting()
       testFindContaining()
       testFindContainedIn()
@@ -48,6 +49,21 @@ describe('MarkerIndex', () => {
           assert.equal(range[0], marker.start, `Marker ${marker.id} start. ` + seedMessage)
           assert.equal(range[1], marker.end, `Marker ${marker.id} end. ` + seedMessage)
         }
+      }
+
+      function testDump () {
+        let filterSet = new Set()
+        let expectedSnapshot = {}
+
+        while (random(10) > 0) {
+          let marker = markers[random(markers.length)]
+          filterSet.add(marker.id)
+          expectedSnapshot[marker.id] = {start: marker.start, end: marker.end}
+        }
+
+        let actualSnapshot = markerIndex.dump(filterSet)
+
+        assert.deepEqual(actualSnapshot, expectedSnapshot, seedMessage)
       }
 
       function verifyHighestPossiblePaths (node, alreadySeen) {
