@@ -303,7 +303,7 @@ export default class MarkerIndex {
     }
   }
 
-  rotateNodeRight(pivot) {
+  rotateNodeRight (pivot) {
     let root = pivot.parent
 
     if (root.parent) {

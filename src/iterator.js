@@ -144,7 +144,7 @@ export default class Iterator {
 
     this.seekToLeastUpperBound(start - 1)
 
-    let started = new Set
+    let started = new Set()
     while (this.node && this.nodeOffset <= end) {
       addToSet(started, this.node.startMarkerIds)
       for (let markerId of this.node.endMarkerIds) {
@@ -259,9 +259,9 @@ export default class Iterator {
   }
 
   markRight (markerId, startOffset, endOffset) {
-    if (this.leftAncestorOffset < startOffset
-      && startOffset <= this.nodeOffset
-      && this.rightAncestorOffset <= endOffset) {
+    if (this.leftAncestorOffset < startOffset &&
+      startOffset <= this.nodeOffset &&
+      this.rightAncestorOffset <= endOffset) {
       this.node.rightMarkerIds.add(markerId)
     }
   }

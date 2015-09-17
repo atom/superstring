@@ -6,10 +6,10 @@ export default class Node {
     this.left = null
     this.right = null
     this.leftExtent = leftExtent
-    this.leftMarkerIds = new Set
-    this.rightMarkerIds = new Set
-    this.startMarkerIds = new Set
-    this.endMarkerIds = new Set
+    this.leftMarkerIds = new Set()
+    this.rightMarkerIds = new Set()
+    this.startMarkerIds = new Set()
+    this.endMarkerIds = new Set()
     this.priority = null
     this.id = idCounter++
   }
