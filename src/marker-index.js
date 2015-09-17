@@ -32,8 +32,8 @@ export default class MarkerIndex {
   }
 
   insert (markerId, startOffset, endOffset) {
-    let startNode = this.iterator.insertStart(markerId, startOffset, endOffset)
-    let endNode = this.iterator.insertEnd(markerId, startOffset, endOffset)
+    let startNode = this.iterator.insertMarkerStart(markerId, startOffset, endOffset)
+    let endNode = this.iterator.insertMarkerEnd(markerId, startOffset, endOffset)
 
     startNode.startMarkerIds.add(markerId)
     endNode.endMarkerIds.add(markerId)

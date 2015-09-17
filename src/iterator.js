@@ -15,7 +15,7 @@ export default class Iterator {
     this.rightAncestorOffsetStack = []
   }
 
-  insertStart (markerId, startOffset, endOffset) {
+  insertMarkerStart (markerId, startOffset, endOffset) {
     this.reset()
 
     if (!this.node) {
@@ -51,7 +51,7 @@ export default class Iterator {
     }
   }
 
-  insertEnd (markerId, startOffset, endOffset) {
+  insertMarkerEnd (markerId, startOffset, endOffset) {
     this.reset()
 
     if (!this.node) {
@@ -86,6 +86,30 @@ export default class Iterator {
       }
     }
   }
+
+  insertSpliceBoundary (offset, isInsertionEnd) {
+      this.reset()
+
+      while (true) {
+        if (offset === this.nodeOffset && !isInsertionEnd) {
+          return this.node
+        } else if (offset < this.nodeOffset) {
+          if (this.node.left) {
+            this.descendLeft()
+          } else {
+            this.insertLeftChild(offset)
+            return this.node.left
+          }
+        } else { // endOffset > this.nodeOffset
+          if (this.node.right) {
+            this.descendRight()
+          } else {
+            this.insertRightChild(offset)
+            return this.node.right
+          }
+        }
+      }
+    }
 
   findIntersecting (start, end, resultSet) {
     this.reset()
@@ -226,30 +250,6 @@ export default class Iterator {
     }
 
     if (this.nodeOffset <= offset) this.moveToSuccessor()
-  }
-
-  insertSpliceBoundary (offset, isInsertionEnd) {
-    this.reset()
-
-    while (true) {
-      if (offset === this.nodeOffset && !isInsertionEnd) {
-        return this.node
-      } else if (offset < this.nodeOffset) {
-        if (this.node.left) {
-          this.descendLeft()
-        } else {
-          this.insertLeftChild(offset)
-          return this.node.left
-        }
-      } else { // endOffset > this.nodeOffset
-        if (this.node.right) {
-          this.descendRight()
-        } else {
-          this.insertRightChild(offset)
-          return this.node.right
-        }
-      }
-    }
   }
 
   markLeft (markerId, startOffset, endOffset) {
