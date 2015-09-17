@@ -201,6 +201,14 @@ export default class MarkerIndex {
     return endingIn
   }
 
+  findStartingAt (offset) {
+    return this.findStartingIn(offset, offset)
+  }
+
+  findEndingAt (offset) {
+    return this.findEndingIn(offset, offset)
+  }
+
   getNodeOffset (node) {
     let offset = node.leftExtent
     while (node.parent) {
