@@ -52,6 +52,10 @@ export default class MarkerIndex {
     }
   }
 
+  isExclusive (markerId) {
+    return this.exclusiveMarkers.has(markerId)
+  }
+
   delete (markerId) {
     let startNode = this.startNodesById[markerId]
     let endNode = this.endNodesById[markerId]
