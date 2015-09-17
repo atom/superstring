@@ -275,7 +275,7 @@ describe('MarkerIndex', () => {
       }
 
       function performDelete () {
-        let [{id}] = markers.splice(random(markers.length - 1), 1)
+        let [{id}] = markers.splice(random(markers.length), 1)
         write(() => `delete ${id}`)
         markerIndex.delete(id)
       }
