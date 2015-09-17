@@ -37,6 +37,8 @@ describe('MarkerIndex', () => {
       testFindIntersecting()
       testFindContaining()
       testFindContainedIn()
+      testFindStartingIn()
+      testFindEndingIn()
 
       function verifyRanges () {
         for (let marker of markers) {
@@ -170,9 +172,44 @@ describe('MarkerIndex', () => {
           }
 
           let actualIds = markerIndex.findContainedIn(start, end)
+          assert.equal(actualIds.size, expectedIds.size, seedMessage)
+          for (let id of expectedIds) {
+            assert(actualIds.has(id), `Expected ${id} to be in set. ` + seedMessage)
+          }
+        }
+      }
 
-          // console.log('find contained in', start, end, actualIds, expectedIds);
+      function testFindStartingIn () {
+        for (let i = 0; i < 10; i++) {
+          let [start, end] = getRange()
 
+          let expectedIds = new Set()
+          for (let marker of markers) {
+            if (start <= marker.start && marker.start <= end) {
+              expectedIds.add(marker.id)
+            }
+          }
+
+          let actualIds = markerIndex.findStartingIn(start, end)
+          assert.equal(actualIds.size, expectedIds.size, seedMessage)
+          for (let id of expectedIds) {
+            assert(actualIds.has(id), `Expected ${id} to be in set. ` + seedMessage)
+          }
+        }
+      }
+
+      function testFindEndingIn () {
+        for (let i = 0; i < 10; i++) {
+          let [start, end] = getRange()
+
+          let expectedIds = new Set()
+          for (let marker of markers) {
+            if (start <= marker.end && marker.end <= end) {
+              expectedIds.add(marker.id)
+            }
+          }
+
+          let actualIds = markerIndex.findEndingIn(start, end)
           assert.equal(actualIds.size, expectedIds.size, seedMessage)
           for (let id of expectedIds) {
             assert(actualIds.has(id), `Expected ${id} to be in set. ` + seedMessage)

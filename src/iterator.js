@@ -142,8 +142,49 @@ export default class Iterator {
     this.reset()
     if (!this.node) return
 
+    this.seekToLeastUpperBound(start - 1)
+
+    let started = new Set
+    while (this.node && this.nodeOffset <= end) {
+      addToSet(started, this.node.startMarkerIds)
+      for (let markerId of this.node.endMarkerIds) {
+        if (started.has(markerId)) {
+          resultSet.add(markerId)
+        }
+      }
+      this.moveToSuccessor()
+    }
+  }
+
+  findStartingIn (start, end, resultSet) {
+    this.reset()
+    if (!this.node) return
+
+    this.seekToLeastUpperBound(start - 1)
+
+    while (this.node && this.nodeOffset <= end) {
+      addToSet(resultSet, this.node.startMarkerIds)
+      this.moveToSuccessor()
+    }
+  }
+
+  findEndingIn (start, end, resultSet) {
+    this.reset()
+    if (!this.node) return
+
+    this.seekToLeastUpperBound(start - 1)
+
+    while (this.node && this.nodeOffset <= end) {
+      addToSet(resultSet, this.node.endMarkerIds)
+      this.moveToSuccessor()
+    }
+  }
+
+  seekToLeastUpperBound (offset) {
     while (true) {
-      if (start <= this.nodeOffset) {
+      if (offset === this.nodeOffset) {
+        break
+      } else if (offset < this.nodeOffset) {
         if (this.node.left) {
           this.descendLeft()
         } else {
@@ -158,18 +199,7 @@ export default class Iterator {
       }
     }
 
-    if (this.nodeOffset < start) this.moveToSuccessor()
-
-    let started = new Set
-    while (this.node && this.nodeOffset <= end) {
-      addToSet(started, this.node.startMarkerIds)
-      for (let markerId of this.node.endMarkerIds) {
-        if (started.has(markerId)) {
-          resultSet.add(markerId)
-        }
-      }
-      this.moveToSuccessor()
-    }
+    if (this.nodeOffset <= offset) this.moveToSuccessor()
   }
 
   insertSpliceBoundary (offset, isInsertionEnd) {

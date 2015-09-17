@@ -189,6 +189,18 @@ export default class MarkerIndex {
     return containedIn
   }
 
+  findStartingIn (start, end) {
+    let startingIn = new Set()
+    this.iterator.findStartingIn(start, end, startingIn)
+    return startingIn
+  }
+
+  findEndingIn (start, end) {
+    let endingIn = new Set()
+    this.iterator.findEndingIn(start, end, endingIn)
+    return endingIn
+  }
+
   getNodeOffset (node) {
     let offset = node.leftExtent
     while (node.parent) {
