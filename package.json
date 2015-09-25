@@ -1,6 +1,6 @@
 {
-  "version": "0.0.1",
   "name": "marker-index",
+  "version": "1.0.0",
   "description": "A data structure to track logical text annotations.",
   "main": "dist/marker-index.js",
   "scripts": {
