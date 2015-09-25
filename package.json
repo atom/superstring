@@ -1,6 +1,6 @@
 {
-  "name": "atom-marker-index",
   "version": "0.0.1",
+  "name": "marker-index",
   "description": "A data structure to track logical text annotations.",
   "main": "dist/marker-index.js",
   "scripts": {
@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nathansobo/atom-marker-index.git"
+    "url": "https://github.com/atom/marker-index.git"
   },
   "keywords": [
     "patch data-structure"
@@ -21,9 +21,9 @@
   "author": "Nathan Sobo <nathan@github.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/nathansobo/atom-marker-index/issues"
+    "url": "https://github.com/atom/marker-index/issues"
   },
-  "homepage": "https://github.com/nathansobo/atom-marker-index",
+  "homepage": "https://github.com/atom/marker-index",
   "devDependencies": {
     "babel": "^5.0.0",
     "babel-eslint": "^4.0.5",
