@@ -52,7 +52,7 @@ export default class MarkerIndex {
     if (exclusive) {
       this.exclusiveMarkers.add(markerId)
     } else {
-      this.exclusiveMarkers.remove(markerId)
+      this.exclusiveMarkers.delete(markerId)
     }
   }
 
