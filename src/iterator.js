@@ -171,11 +171,11 @@ export default class Iterator {
     let started = new Set()
     while (this.node && this.nodeOffset <= end) {
       addToSet(started, this.node.startMarkerIds)
-      for (let markerId of this.node.endMarkerIds) {
+      this.node.endMarkerIds.forEach(function (markerId) {
         if (started.has(markerId)) {
           resultSet.add(markerId)
         }
-      }
+      })
       this.moveToSuccessor()
     }
   }
@@ -212,17 +212,17 @@ export default class Iterator {
     let snapshot = {}
 
     while (this.node) {
-      for (let markerId of this.node.startMarkerIds) {
+      this.node.startMarkerIds.forEach(markerId => {
         if (!filterSet || filterSet.has(markerId)) {
           snapshot[markerId] = {start: this.nodeOffset, end: null}
         }
-      }
+      })
 
-      for (let markerId of this.node.endMarkerIds) {
+      this.node.endMarkerIds.forEach(markerId => {
         if (!filterSet || filterSet.has(markerId)) {
           snapshot[markerId].end = this.nodeOffset
         }
-      }
+      })
 
       this.moveToSuccessor()
     }

@@ -104,15 +104,15 @@ export default class MarkerIndex {
     this.bubbleNodeUp(endNode)
 
     if (isInsertion) {
-      for (let markerId of startNode.startMarkerIds) {
+      startNode.startMarkerIds.forEach(markerId => {
         if (this.exclusiveMarkers.has(markerId)) {
           startNode.startMarkerIds.delete(markerId)
           endNode.startMarkerIds.add(markerId)
           endNode.leftMarkerIds.delete(markerId)
           this.startNodesById[markerId] = endNode
         }
-      }
-      for (let markerId of startNode.endMarkerIds) {
+      })
+      startNode.endMarkerIds.forEach(markerId => {
         if (!this.exclusiveMarkers.has(markerId) || endNode.startMarkerIds.has(markerId)) {
           startNode.endMarkerIds.delete(markerId)
           endNode.endMarkerIds.add(markerId)
@@ -121,24 +121,24 @@ export default class MarkerIndex {
           }
           this.endNodesById[markerId] = endNode
         }
-      }
+      })
     } else if (endNode.left) {
       let startMarkerIds = new Set()
       let endMarkerIds = new Set()
       this.getStartingAndEndingsMarkerWithinSubtree(endNode.left, startMarkerIds, endMarkerIds)
 
-      for (let markerId of startMarkerIds) {
+      startMarkerIds.forEach(markerId => {
         endNode.startMarkerIds.add(markerId)
         this.startNodesById[markerId] = endNode
-      }
+      })
 
-      for (let markerId of endMarkerIds) {
+      endMarkerIds.forEach(markerId => {
         endNode.endMarkerIds.add(markerId)
         if (!startMarkerIds.has(markerId)) {
           endNode.leftMarkerIds.add(markerId)
         }
         this.endNodesById[markerId] = endNode
-      }
+      })
 
       endNode.left = null
     }
@@ -146,16 +146,16 @@ export default class MarkerIndex {
     endNode.leftExtent += (newExtent - oldExtent)
 
     if (endNode.leftExtent === 0) {
-      for (let markerId of endNode.startMarkerIds) {
+      endNode.startMarkerIds.forEach(markerId => {
         startNode.startMarkerIds.add(markerId)
         endNode.leftMarkerIds.add(markerId)
         this.startNodesById[markerId] = startNode
-      }
-      for (let markerId of endNode.endMarkerIds) {
+      })
+      endNode.endMarkerIds.forEach(markerId => {
         startNode.endMarkerIds.add(markerId)
         endNode.leftMarkerIds.delete(markerId)
         this.endNodesById[markerId] = startNode
-      }
+      })
       this.deleteNode(endNode)
     } else if (endNode.isMarkerEndpoint()) {
       endNode.priority = this.random(MAX_PRIORITY)
@@ -184,9 +184,9 @@ export default class MarkerIndex {
     if (end !== start) {
       let containingEnd = new Set()
       this.iterator.findContaining(end, containingEnd)
-      for (let markerId of containing) {
+      containing.forEach(function (markerId) {
         if (!containingEnd.has(markerId)) containing.delete(markerId)
-      }
+      })
     }
     return containing
   }
@@ -293,14 +293,14 @@ export default class MarkerIndex {
 
     addToSet(pivot.rightMarkerIds, root.rightMarkerIds)
 
-    for (let markerId of pivot.leftMarkerIds) {
+    pivot.leftMarkerIds.forEach(function (markerId) {
       if (root.leftMarkerIds.has(markerId)) {
         root.leftMarkerIds.delete(markerId)
       } else {
         pivot.leftMarkerIds.delete(markerId)
         root.rightMarkerIds.add(markerId)
       }
-    }
+    })
   }
 
   rotateNodeRight (pivot) {
@@ -327,20 +327,20 @@ export default class MarkerIndex {
 
     root.leftExtent = root.leftExtent - pivot.leftExtent
 
-    for (let markerId of root.leftMarkerIds) {
+    root.leftMarkerIds.forEach(function (markerId) {
       if (!pivot.startMarkerIds.has(markerId)) { // don't do this when pivot is at offset 0
         pivot.leftMarkerIds.add(markerId)
       }
-    }
+    })
 
-    for (let markerId of pivot.rightMarkerIds) {
+    pivot.rightMarkerIds.forEach(function (markerId) {
       if (root.rightMarkerIds.has(markerId)) {
         root.rightMarkerIds.delete(markerId)
       } else {
         pivot.rightMarkerIds.delete(markerId)
         root.leftMarkerIds.add(markerId)
       }
-    }
+    })
   }
 
   getStartingAndEndingsMarkerWithinSubtree (node, startMarkerIds, endMarkerIds) {
