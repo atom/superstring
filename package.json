@@ -4,7 +4,7 @@
   "description": "A data structure to track logical text annotations.",
   "main": "dist/marker-index.js",
   "scripts": {
-    "test": "npm run standard && node_modules/.bin/electron-mocha --renderer --recursive ./test/helpers/setup  test",
+    "test": "npm run standard && node_modules/.bin/mocha --recursive ./test/helpers/setup  test",
     "tdd": "npm run standard && node_modules/.bin/electron-mocha --renderer --interactive --recursive ./test/helpers/setup  test",
     "prepublish": "npm run standard && npm run clean && npm run build",
     "standard": "node_modules/.bin/standard --recursive src test",
