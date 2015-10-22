@@ -1,5 +1,3 @@
-let idCounter = 1
-
 export default class Node {
   constructor (parent, leftExtent) {
     this.parent = parent
@@ -11,10 +9,12 @@ export default class Node {
     this.startMarkerIds = new Set()
     this.endMarkerIds = new Set()
     this.priority = null
-    this.id = idCounter++
+    this.id = this.constructor.idCounter++
   }
 
   isMarkerEndpoint () {
     return (this.startMarkerIds.size + this.endMarkerIds.size) > 0
   }
 }
+
+Node.idCounter = 1
