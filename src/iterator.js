@@ -1,5 +1,6 @@
 import Node from './node'
 import {addToSet} from './helpers'
+import {compare, isZero, traversal, traverse} from './point-helpers'
 
 export default class Iterator {
   constructor (markerIndex) {
@@ -9,8 +10,8 @@ export default class Iterator {
   reset () {
     this.node = this.markerIndex.root
     this.nodeOffset = this.node ? this.node.leftExtent : null
-    this.leftAncestorOffset = 0
-    this.rightAncestorOffset = Infinity
+    this.leftAncestorOffset = {row: 0, column: 0}
+    this.rightAncestorOffset = {row: Infinity, column: Infinity}
     this.leftAncestorOffsetStack = []
     this.rightAncestorOffsetStack = []
   }
@@ -25,10 +26,11 @@ export default class Iterator {
     }
 
     while (true) {
-      if (startOffset === this.nodeOffset) {
+      let comparison = compare(startOffset, this.nodeOffset)
+      if (comparison === 0) {
         this.markRight(markerId, startOffset, endOffset)
         return this.node
-      } else if (startOffset < this.nodeOffset) {
+      } else if (comparison < 0) {
         this.markRight(markerId, startOffset, endOffset)
         if (this.node.left) {
           this.descendLeft()
@@ -61,10 +63,11 @@ export default class Iterator {
     }
 
     while (true) {
-      if (endOffset === this.nodeOffset) {
+      let comparison = compare(endOffset, this.nodeOffset)
+      if (comparison === 0) {
         this.markLeft(markerId, startOffset, endOffset)
         return this.node
-      } else if (endOffset < this.nodeOffset) {
+      } else if (comparison < 0) {
         if (this.node.left) {
           this.descendLeft()
         } else {
@@ -91,9 +94,10 @@ export default class Iterator {
       this.reset()
 
       while (true) {
-        if (offset === this.nodeOffset && !isInsertionEnd) {
+        let comparison = compare(offset, this.nodeOffset)
+        if (comparison === 0 && !isInsertionEnd) {
           return this.node
-        } else if (offset < this.nodeOffset) {
+        } else if (comparison < 0) {
           if (this.node.left) {
             this.descendLeft()
           } else {
@@ -116,7 +120,7 @@ export default class Iterator {
     if (!this.node) return
 
     while (true) {
-      if (start < this.nodeOffset) {
+      if (compare(start, this.nodeOffset) < 0) {
         if (this.node.left) {
           this.checkIntersection(start, end, resultSet)
           this.descendLeft()
@@ -136,7 +140,7 @@ export default class Iterator {
     do {
       this.checkIntersection(start, end, resultSet)
       this.moveToSuccessor()
-    } while (this.node && this.nodeOffset <= end)
+    } while (this.node && compare(this.nodeOffset, end) <= 0)
   }
 
   findContaining (offset, resultSet) {
@@ -146,7 +150,7 @@ export default class Iterator {
     while (true) {
       this.checkIntersection(offset, offset, resultSet)
 
-      if (offset < this.nodeOffset) {
+      if (compare(offset, this.nodeOffset) < 0) {
         if (this.node.left) {
           this.descendLeft()
         } else {
@@ -166,10 +170,10 @@ export default class Iterator {
     this.reset()
     if (!this.node) return
 
-    this.seekToLeastUpperBound(start - 1)
+    this.seekToFirstNodeGreaterThanOrEqualTo(start)
 
     let started = new Set()
-    while (this.node && this.nodeOffset <= end) {
+    while (this.node && compare(this.nodeOffset, end) <= 0) {
       addToSet(started, this.node.startMarkerIds)
       this.node.endMarkerIds.forEach(function (markerId) {
         if (started.has(markerId)) {
@@ -184,9 +188,9 @@ export default class Iterator {
     this.reset()
     if (!this.node) return
 
-    this.seekToLeastUpperBound(start - 1)
+    this.seekToFirstNodeGreaterThanOrEqualTo(start)
 
-    while (this.node && this.nodeOffset <= end) {
+    while (this.node && compare(this.nodeOffset, end) <= 0) {
       addToSet(resultSet, this.node.startMarkerIds)
       this.moveToSuccessor()
     }
@@ -196,9 +200,9 @@ export default class Iterator {
     this.reset()
     if (!this.node) return
 
-    this.seekToLeastUpperBound(start - 1)
+    this.seekToFirstNodeGreaterThanOrEqualTo(start)
 
-    while (this.node && this.nodeOffset <= end) {
+    while (this.node && compare(this.nodeOffset, end) <= 0) {
       addToSet(resultSet, this.node.endMarkerIds)
       this.moveToSuccessor()
     }
@@ -230,11 +234,13 @@ export default class Iterator {
     return snapshot
   }
 
-  seekToLeastUpperBound (offset) {
+  seekToFirstNodeGreaterThanOrEqualTo (offset) {
     while (true) {
-      if (offset === this.nodeOffset) {
+      let comparison = compare(offset, this.nodeOffset)
+
+      if (comparison === 0) {
         break
-      } else if (offset < this.nodeOffset) {
+      } else if (comparison < 0) {
         if (this.node.left) {
           this.descendLeft()
         } else {
@@ -249,19 +255,19 @@ export default class Iterator {
       }
     }
 
-    if (this.nodeOffset <= offset) this.moveToSuccessor()
+    if (compare(this.nodeOffset, offset) < 0) this.moveToSuccessor()
   }
 
   markLeft (markerId, startOffset, endOffset) {
-    if (this.nodeOffset > 0 && startOffset <= this.leftAncestorOffset && this.nodeOffset <= endOffset) {
+    if (!isZero(this.nodeOffset) && compare(startOffset, this.leftAncestorOffset) <= 0 && compare(this.nodeOffset, endOffset) <= 0) {
       this.node.leftMarkerIds.add(markerId)
     }
   }
 
   markRight (markerId, startOffset, endOffset) {
-    if (this.leftAncestorOffset < startOffset &&
-      startOffset <= this.nodeOffset &&
-      this.rightAncestorOffset <= endOffset) {
+    if (compare(this.leftAncestorOffset, startOffset) < 0 &&
+      compare(startOffset, this.nodeOffset) <= 0 &&
+      compare(this.rightAncestorOffset, endOffset) <= 0) {
       this.node.rightMarkerIds.add(markerId)
     }
   }
@@ -276,12 +282,12 @@ export default class Iterator {
       this.leftAncestorOffset = this.leftAncestorOffsetStack.pop()
       this.rightAncestorOffset = this.rightAncestorOffsetStack.pop()
       this.node = this.node.parent
-      this.nodeOffset = this.leftAncestorOffset + this.node.leftExtent
+      this.nodeOffset = traverse(this.leftAncestorOffset, this.node.leftExtent)
     } else {
       this.node = null
       this.nodeOffset = null
-      this.leftAncestorOffset = 0
-      this.rightAncestorOffset = Infinity
+      this.leftAncestorOffset = {row: 0, column: 0}
+      this.rightAncestorOffset = {row: Infinity, column: Infinity}
     }
   }
 
@@ -291,7 +297,7 @@ export default class Iterator {
 
     this.rightAncestorOffset = this.nodeOffset
     this.node = this.node.left
-    this.nodeOffset = this.leftAncestorOffset + this.node.leftExtent
+    this.nodeOffset = traverse(this.leftAncestorOffset, this.node.leftExtent)
   }
 
   descendRight () {
@@ -300,7 +306,7 @@ export default class Iterator {
 
     this.leftAncestorOffset = this.nodeOffset
     this.node = this.node.right
-    this.nodeOffset = this.leftAncestorOffset + this.node.leftExtent
+    this.nodeOffset = traverse(this.leftAncestorOffset, this.node.leftExtent)
   }
 
   moveToSuccessor () {
@@ -320,27 +326,24 @@ export default class Iterator {
   }
 
   insertLeftChild (offset) {
-    this.node.left = new Node(this.node, offset - this.leftAncestorOffset)
+    this.node.left = new Node(this.node, traversal(offset, this.leftAncestorOffset))
   }
 
   insertRightChild (offset) {
-    this.node.right = new Node(this.node, offset - this.nodeOffset)
+    this.node.right = new Node(this.node, traversal(offset, this.nodeOffset))
   }
 
   checkIntersection (start, end, resultSet) {
-    if (this.leftAncestorOffset <= end && start <= this.nodeOffset) {
+    if (compare(this.leftAncestorOffset, end) <= 0 && compare(start, this.nodeOffset) <= 0) {
       addToSet(resultSet, this.node.leftMarkerIds)
     }
 
-    if (start <= this.nodeOffset && this.nodeOffset <= end) {
+    if (compare(start, this.nodeOffset) <= 0 && compare(this.nodeOffset, end) <= 0) {
       addToSet(resultSet, this.node.startMarkerIds)
-    }
-
-    if (start <= this.nodeOffset && this.nodeOffset <= end) {
       addToSet(resultSet, this.node.endMarkerIds)
     }
 
-    if (this.nodeOffset <= end && start <= this.rightAncestorOffset) {
+    if (compare(this.nodeOffset, end) <= 0 && compare(start, this.rightAncestorOffset) <= 0) {
       addToSet(resultSet, this.node.rightMarkerIds)
     }
   }

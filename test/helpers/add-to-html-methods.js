@@ -1,5 +1,6 @@
 import MarkerIndex from '../../src/marker-index'
 import Node from '../../src/node'
+import {traverse, format as formatPoint} from '../../src/point-helpers'
 
 MarkerIndex.prototype.toHTML = function () {
   if (!this.root) return ''
@@ -8,12 +9,12 @@ MarkerIndex.prototype.toHTML = function () {
   s += 'table { width: 100%; }'
   s += 'td { width: 50%; text-align: center; border: 1px solid gray; white-space: nowrap; }'
   s += '</style>'
-  s += this.root.toHTML(0)
+  s += this.root.toHTML({row: 0, column: 0})
   return s
 }
 
 Node.prototype.toHTML = function (leftAncestorOffset) {
-  let offset = leftAncestorOffset + this.leftExtent
+  let offset = traverse(leftAncestorOffset, this.leftExtent)
 
   let s = ''
   s += '<table>'
@@ -23,17 +24,15 @@ Node.prototype.toHTML = function (leftAncestorOffset) {
   for (let id of this.leftMarkerIds) {
     s += id + ' '
   }
-  s += '<< '
+  s += '[ '
   for (let id of this.endMarkerIds) {
     s += id + ' '
   }
-  s += '(( '
-  s += offset
-  s += ' ))'
+  s += formatPoint(offset)
   for (let id of this.startMarkerIds) {
     s += ' ' + id
   }
-  s += ' >>'
+  s += ' ]'
   for (let id of this.rightMarkerIds) {
     s += ' ' + id
   }
