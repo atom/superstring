@@ -1,5 +1,6 @@
 import Random from 'random-seed'
 import MarkerIndex from '../src/marker-index'
+import {traverse, traversal, compare, max, format as formatPoint} from '../src/point-helpers'
 
 describe('MarkerIndex', () => {
   it('maintains correct marker positions during randomized insertions and mutations', function () {
@@ -49,12 +50,14 @@ describe('MarkerIndex', () => {
     function verifyRanges () {
       for (let marker of markers) {
         let range = markerIndex.getRange(marker.id)
-        assert.equal(range[0], marker.start, `Marker ${marker.id} start. ` + seedMessage)
-        assert.equal(range[1], marker.end, `Marker ${marker.id} end. ` + seedMessage)
+        assert.deepEqual(range[0], marker.start, `Marker ${marker.id} start. ` + seedMessage)
+        assert.deepEqual(range[1], marker.end, `Marker ${marker.id} end. ` + seedMessage)
       }
     }
 
     function testDump () {
+      if (markers.length === 0) return
+
       let filterSet = new Set()
       let expectedSnapshot = {}
 
@@ -76,10 +79,10 @@ describe('MarkerIndex', () => {
       }
 
       for (let markerId of node.leftMarkerIds) {
-        assert(!alreadySeen.has(markerId), 'Redundant paths. ' + seedMessage)
+        assert(!alreadySeen.has(markerId), `Redundant path for ${markerId}. ` + seedMessage)
       }
       for (let markerId of node.rightMarkerIds) {
-        assert(!alreadySeen.has(markerId), 'Redundant paths. ' + seedMessage)
+        assert(!alreadySeen.has(markerId), `Redundant paths for ${markerId}. ` + seedMessage)
       }
 
       if (node.left) {
@@ -148,7 +151,7 @@ describe('MarkerIndex', () => {
 
         let expectedIds = new Set()
         for (let marker of markers) {
-          if (marker.start <= end && start <= marker.end) {
+          if (compare(marker.start, end) <= 0 && compare(start, marker.end) <= 0) {
             expectedIds.add(marker.id)
           }
         }
@@ -168,7 +171,7 @@ describe('MarkerIndex', () => {
 
         let expectedIds = new Set()
         for (let marker of markers) {
-          if (marker.start <= start && end <= marker.end) {
+          if (compare(marker.start, start) <= 0 && compare(end, marker.end) <= 0) {
             expectedIds.add(marker.id)
           }
         }
@@ -187,7 +190,7 @@ describe('MarkerIndex', () => {
 
         let expectedIds = new Set()
         for (let marker of markers) {
-          if (start <= marker.start && marker.end <= end) {
+          if (compare(start, marker.start) <= 0 && compare(marker.end, end) <= 0) {
             expectedIds.add(marker.id)
           }
         }
@@ -206,16 +209,16 @@ describe('MarkerIndex', () => {
 
         let expectedIds = new Set()
         for (let marker of markers) {
-          if (start <= marker.start && marker.start <= end) {
+          if (compare(start, marker.start) <= 0 && compare(marker.start, end) <= 0) {
             expectedIds.add(marker.id)
           }
         }
 
         let actualIds = markerIndex.findStartingIn(start, end)
-        assert.equal(actualIds.size, expectedIds.size, seedMessage)
         for (let id of expectedIds) {
-          assert(actualIds.has(id), `Expected ${id} to be in set. ` + seedMessage)
+          assert(actualIds.has(id), `Expected ${id} to start in (${formatPoint(start)}, ${formatPoint(end)}). ` + seedMessage)
         }
+        assert.equal(actualIds.size, expectedIds.size, seedMessage)
       }
     }
 
@@ -225,31 +228,31 @@ describe('MarkerIndex', () => {
 
         let expectedIds = new Set()
         for (let marker of markers) {
-          if (start <= marker.end && marker.end <= end) {
+          if (compare(start, marker.end) <= 0 && compare(marker.end, end) <= 0) {
             expectedIds.add(marker.id)
           }
         }
 
         let actualIds = markerIndex.findEndingIn(start, end)
-        assert.equal(actualIds.size, expectedIds.size, seedMessage)
         for (let id of expectedIds) {
           assert(actualIds.has(id), `Expected ${id} to be in set. ` + seedMessage)
         }
+        assert.equal(actualIds.size, expectedIds.size, seedMessage)
       }
     }
 
     function testFindStartingAt () {
       for (let i = 0; i < 10; i++) {
-        let offset = random(100)
+        let point = {row: random(100), column: random(100)}
 
         let expectedIds = new Set()
         for (let marker of markers) {
-          if (marker.start === offset) {
+          if (compare(marker.start, point) === 0) {
             expectedIds.add(marker.id)
           }
         }
 
-        let actualIds = markerIndex.findStartingAt(offset)
+        let actualIds = markerIndex.findStartingAt(point)
         assert.equal(actualIds.size, expectedIds.size, seedMessage)
         for (let id of expectedIds) {
           assert(actualIds.has(id), `Expected ${id} to be in set. ` + seedMessage)
@@ -259,16 +262,16 @@ describe('MarkerIndex', () => {
 
     function testFindEndingAt () {
       for (let i = 0; i < 10; i++) {
-        let offset = random(100)
+        let point = {row: random(100), column: random(100)}
 
         let expectedIds = new Set()
         for (let marker of markers) {
-          if (marker.end === offset) {
+          if (compare(marker.end, point) === 0) {
             expectedIds.add(marker.id)
           }
         }
 
-        let actualIds = markerIndex.findEndingAt(offset)
+        let actualIds = markerIndex.findEndingAt(point)
         assert.equal(actualIds.size, expectedIds.size, seedMessage)
         for (let id of expectedIds) {
           assert(actualIds.has(id), `Expected ${id} to be in set. ` + seedMessage)
@@ -280,7 +283,7 @@ describe('MarkerIndex', () => {
       let id = String.fromCharCode(idCounter++)
       let [start, end] = getRange()
       let exclusive = !!random(2)
-      write(() => `insert ${id}, ${start}, ${end}, exclusive: ${exclusive}`)
+      write(() => `insert ${id}, ${formatPoint(start)}, ${formatPoint(end)}, exclusive: ${exclusive}`)
       markerIndex.insert(id, start, end)
       if (exclusive) markerIndex.setExclusive(id, true)
       markers.push({id, start, end, exclusive})
@@ -288,7 +291,7 @@ describe('MarkerIndex', () => {
 
     function performSplice () {
       let [start, oldExtent, newExtent] = getSplice()
-      write(() => `splice ${start}, ${oldExtent}, ${newExtent}`)
+      write(() => `splice ${formatPoint(start)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)}`)
       markerIndex.splice(start, oldExtent, newExtent)
       applySplice(markers, start, oldExtent, newExtent)
     }
@@ -300,14 +303,15 @@ describe('MarkerIndex', () => {
     }
 
     function getRange () {
-      let start = random(100)
+      let start = {row: random(100), column: random(100)}
       let end = start
       while (random(3) > 0) {
-        end += random.intBetween(-10, 10)
+        end = traverse(end, {row: random.intBetween(-10, 10), column: random.intBetween(-10, 10)})
       }
-      end = Math.max(end, 0)
+      end.row = Math.max(end.row, 0)
+      end.column = Math.max(end.column, 0)
 
-      if (start <= end) {
+      if (compare(start, end) <= 0) {
         return [start, end]
       } else {
         return [end, start]
@@ -316,33 +320,33 @@ describe('MarkerIndex', () => {
 
     function getSplice () {
       let [start, oldEnd] = getRange()
-      let oldExtent = oldEnd - start
-      let newExtent = 0
+      let oldExtent = traversal(oldEnd, start)
+      let newExtent = {row: 0, column: 0}
       while (random(2)) {
-        newExtent += random(10)
+        newExtent = traverse(newExtent, {row: random(10), column: random(10)})
       }
       return [start, oldExtent, newExtent]
     }
 
     function applySplice (markers, spliceStart, oldExtent, newExtent) {
-      let spliceOldEnd = spliceStart + oldExtent
-      let spliceNewEnd = spliceStart + newExtent
-      let spliceDelta = newExtent - oldExtent
+      let spliceOldEnd = traverse(spliceStart, oldExtent)
+      let spliceNewEnd = traverse(spliceStart, newExtent)
+      let spliceDelta = traversal(newExtent, oldExtent)
 
       for (let marker of markers) {
-        let isEmpty = marker.start === marker.end
+        let isEmpty = compare(marker.start, marker.end) === 0
 
-        if (spliceStart < marker.start || marker.exclusive && spliceOldEnd === marker.start) {
-          if (spliceOldEnd <= marker.start) { // splice precedes marker start
-            marker.start += spliceDelta
+        if (compare(spliceStart, marker.start) < 0 || marker.exclusive && compare(spliceOldEnd, marker.start) === 0) {
+          if (compare(spliceOldEnd, marker.start) <= 0) { // splice precedes marker start
+            marker.start = traverse(spliceNewEnd, traversal(marker.start, spliceOldEnd))
           } else { // splice surrounds marker start
             marker.start = spliceNewEnd
           }
         }
 
-        if (spliceStart < marker.end || (!marker.exclusive || isEmpty) && spliceOldEnd === marker.end) {
-          if (spliceOldEnd <= marker.end) { // splice precedes marker end
-            marker.end += spliceDelta
+        if (compare(spliceStart, marker.end) < 0 || (!marker.exclusive || isEmpty) && compare(spliceOldEnd, marker.end) === 0) {
+          if (compare(spliceOldEnd, marker.end) <= 0) { // splice precedes marker end
+            marker.end = traverse(spliceNewEnd, traversal(marker.end, spliceOldEnd))
           } else { // splice surrounds marker end
             marker.end = spliceNewEnd
           }
