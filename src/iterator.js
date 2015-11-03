@@ -91,29 +91,29 @@ export default class Iterator {
   }
 
   insertSpliceBoundary (offset, isInsertionEnd) {
-      this.reset()
+    this.reset()
 
-      while (true) {
-        let comparison = compare(offset, this.nodeOffset)
-        if (comparison === 0 && !isInsertionEnd) {
-          return this.node
-        } else if (comparison < 0) {
-          if (this.node.left) {
-            this.descendLeft()
-          } else {
-            this.insertLeftChild(offset)
-            return this.node.left
-          }
-        } else { // endOffset > this.nodeOffset
-          if (this.node.right) {
-            this.descendRight()
-          } else {
-            this.insertRightChild(offset)
-            return this.node.right
-          }
+    while (true) {
+      let comparison = compare(offset, this.nodeOffset)
+      if (comparison === 0 && !isInsertionEnd) {
+        return this.node
+      } else if (comparison < 0) {
+        if (this.node.left) {
+          this.descendLeft()
+        } else {
+          this.insertLeftChild(offset)
+          return this.node.left
+        }
+      } else { // endOffset > this.nodeOffset
+        if (this.node.right) {
+          this.descendRight()
+        } else {
+          this.insertRightChild(offset)
+          return this.node.right
         }
       }
     }
+  }
 
   findIntersecting (start, end, resultSet) {
     this.reset()
