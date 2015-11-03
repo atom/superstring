@@ -1,6 +1,7 @@
 import Random from 'random-seed'
 import MarkerIndex from '../src/marker-index'
-import {traverse, traversal, compare, max, format as formatPoint} from '../src/point-helpers'
+import {traverse, traversal, compare, isZero, max, format as formatPoint} from '../src/point-helpers'
+import './helpers/add-to-html-methods'
 
 describe('MarkerIndex', () => {
   it('maintains correct marker positions during randomized insertions and mutations', function () {
@@ -292,8 +293,9 @@ describe('MarkerIndex', () => {
     function performSplice () {
       let [start, oldExtent, newExtent] = getSplice()
       write(() => `splice ${formatPoint(start)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)}`)
-      markerIndex.splice(start, oldExtent, newExtent)
-      applySplice(markers, start, oldExtent, newExtent)
+      let actualInvalidatedSets = markerIndex.splice(start, oldExtent, newExtent)
+      let expectedInvalidatedSets = applySplice(markers, start, oldExtent, newExtent)
+      checkInvalidatedSets(actualInvalidatedSets, expectedInvalidatedSets)
     }
 
     function performDelete () {
@@ -329,11 +331,35 @@ describe('MarkerIndex', () => {
     }
 
     function applySplice (markers, spliceStart, oldExtent, newExtent) {
+      if (isZero(oldExtent) && isZero(newExtent)) return
+
       let spliceOldEnd = traverse(spliceStart, oldExtent)
       let spliceNewEnd = traverse(spliceStart, newExtent)
       let spliceDelta = traversal(newExtent, oldExtent)
 
+      let invalidated = {
+        touch: new Set,
+        inside: new Set,
+        overlap: new Set,
+        surround: new Set
+      }
+
       for (let marker of markers) {
+        if (compare(spliceStart, marker.end) <= 0 && compare(marker.start, spliceOldEnd) <= 0) {
+          invalidated.touch.add(marker.id)
+          if (compare(spliceStart, marker.end) !== 0 && compare(spliceOldEnd, marker.start) !== 0) {
+            invalidated.inside.add(marker.id)
+          }
+          let markerStartsWithinSplice = compare(spliceStart, marker.start) < 0 && compare(marker.start, spliceOldEnd) < 0
+          let markerEndsWithinSplice = compare(spliceStart, marker.end) < 0 && compare(marker.end, spliceOldEnd) < 0
+          if (markerStartsWithinSplice || markerEndsWithinSplice) {
+            invalidated.overlap.add(marker.id)
+          }
+          if (markerStartsWithinSplice && markerEndsWithinSplice) {
+            invalidated.surround.add(marker.id)
+          }
+        }
+
         let isEmpty = compare(marker.start, marker.end) === 0
 
         if (compare(spliceStart, marker.start) < 0 || marker.exclusive && compare(spliceOldEnd, marker.start) === 0) {
@@ -350,6 +376,20 @@ describe('MarkerIndex', () => {
           } else { // splice surrounds marker end
             marker.end = spliceNewEnd
           }
+        }
+      }
+
+      return invalidated
+    }
+
+    function checkInvalidatedSets (actualSets, expectedSets) {
+      for (let strategy in expectedSets) {
+        let expectedSet = expectedSets[strategy]
+        let actualSet = actualSets[strategy]
+
+        assert.equal(actualSet.length, expectedSet.length)
+        for (let markerId of expectedSet) {
+          assert(actualSet.has(markerId), `Expected marker ${markerId} to be invalidated via ${strategy} strategy. Seed ${seed}.`)
         }
       }
     }

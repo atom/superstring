@@ -93,7 +93,14 @@ export default class MarkerIndex {
   }
 
   splice (start, oldExtent, newExtent) {
-    if (!this.root || isZero(oldExtent) && isZero(newExtent)) return
+    let invalidated = {
+      touch: new Set,
+      inside: new Set,
+      overlap: new Set,
+      surround: new Set
+    }
+
+    if (!this.root || isZero(oldExtent) && isZero(newExtent)) return invalidated
 
     let isInsertion = isZero(oldExtent)
     let startNode = this.iterator.insertSpliceBoundary(start, false)
@@ -123,19 +130,26 @@ export default class MarkerIndex {
           this.endNodesById[markerId] = endNode
         }
       })
-    } else if (startNode.right) {
-      let startMarkerIds = new Set()
-      let endMarkerIds = new Set()
-      this.getStartingAndEndingMarkersWithinSubtree(startNode.right, startMarkerIds, endMarkerIds)
+    }
 
-      startMarkerIds.forEach(markerId => {
+    let startingInsideSplice, endingInsideSplice
+    if (startNode.right) {
+      startingInsideSplice = new Set
+      endingInsideSplice = new Set
+      this.getStartingAndEndingMarkersWithinSubtree(startNode.right, startingInsideSplice, endingInsideSplice)
+    }
+
+    this.populateSpliceInvalidationSets(invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice)
+
+    if (startNode.right) {
+      startingInsideSplice.forEach(markerId => {
         endNode.startMarkerIds.add(markerId)
         this.startNodesById[markerId] = endNode
       })
 
-      endMarkerIds.forEach(markerId => {
+      endingInsideSplice.forEach(markerId => {
         endNode.endMarkerIds.add(markerId)
-        if (!startMarkerIds.has(markerId)) {
+        if (!startingInsideSplice.has(markerId)) {
           startNode.rightMarkerIds.add(markerId)
         }
         this.endNodesById[markerId] = endNode
@@ -174,6 +188,8 @@ export default class MarkerIndex {
     } else {
       this.deleteNode(startNode)
     }
+
+    return invalidated
   }
 
   findIntersecting (start, end = start) {
@@ -355,6 +371,32 @@ export default class MarkerIndex {
     }
     if (node.right) {
       this.getStartingAndEndingMarkersWithinSubtree(node.right, startMarkerIds, endMarkerIds)
+    }
+  }
+
+  populateSpliceInvalidationSets (invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice) {
+    addToSet(invalidated.touch, startNode.endMarkerIds)
+    addToSet(invalidated.touch, endNode.startMarkerIds)
+    startNode.rightMarkerIds.forEach(function (markerId) {
+      invalidated.touch.add(markerId)
+      invalidated.inside.add(markerId)
+    })
+    endNode.leftMarkerIds.forEach(function (markerId) {
+      invalidated.touch.add(markerId)
+      invalidated.inside.add(markerId)
+    })
+    if (startingInsideSplice && endingInsideSplice) {
+      startingInsideSplice.forEach(function (markerId) {
+        invalidated.touch.add(markerId)
+        invalidated.inside.add(markerId)
+        invalidated.overlap.add(markerId)
+        if (endingInsideSplice.has(markerId)) invalidated.surround.add(markerId)
+      })
+      endingInsideSplice.forEach(function (markerId) {
+        invalidated.touch.add(markerId)
+        invalidated.inside.add(markerId)
+        invalidated.overlap.add(markerId)
+      })
     }
   }
 }
