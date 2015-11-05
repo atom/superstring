@@ -4,6 +4,7 @@
       "target_name": "marker_index",
       "cflags_cc": ["-std=c++11", "-stdlib=libc++"],
       "sources": [
+        "src/marker-index-wrapper.cc",
         "src/marker-index.cc",
       ],
       "include_dirs": [

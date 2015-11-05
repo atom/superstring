@@ -1,32 +1,14 @@
-#include "nan.h"
+#include "marker-index.h"
+#include <climits>
 #include <random>
+#include <stdlib.h>
 
-using namespace std;
-using namespace v8;
+using std::default_random_engine;
 
-class MarkerIndex : public Nan::ObjectWrap {
-public:
-  static void Init(Local<Object> exports, Local<Object> module) {
-    Local<FunctionTemplate> constructorTemplate =
-        Nan::New<FunctionTemplate>(New);
-    constructorTemplate->SetClassName(
-        Nan::New<String>("MarkerIndex").ToLocalChecked());
-    constructorTemplate->InstanceTemplate()->SetInternalFieldCount(1);
-    module->Set(Nan::New("exports").ToLocalChecked(),
-                constructorTemplate->GetFunction());
-  }
+MarkerIndex::MarkerIndex(unsigned seed)
+  : random_engine{static_cast<default_random_engine::result_type>(seed)},
+    random_distribution{0, INT_MAX} {}
 
-private:
-  static NAN_METHOD(New) {
-    MarkerIndex *scanner = new MarkerIndex(Local<Number>::Cast(info[0]));
-    scanner->Wrap(info.This());
-  }
-
-  MarkerIndex(v8::Local<v8::Number> seed) :
-    random_engine{static_cast<default_random_engine::result_type>(
-      seed->Int32Value())} {}
-
-  std::default_random_engine random_engine;
-};
-
-NODE_MODULE(marker_index, MarkerIndex::Init)
+int MarkerIndex::GenerateRandomNumber() {
+  return random_distribution(random_engine);
+}
