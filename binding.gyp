@@ -4,8 +4,11 @@
       "target_name": "marker_index",
       "cflags_cc": ["-std=c++11", "-stdlib=libc++"],
       "sources": [
+        "src/iterator.cc",
         "src/marker-index-wrapper.cc",
         "src/marker-index.cc",
+        "src/node.cc",
+        "src/point.cc",
       ],
       "include_dirs": [
         "src",
