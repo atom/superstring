@@ -1,14 +1,12 @@
 #include "iterator.h"
 #include "marker-index.h"
 
-using std::unique_ptr;
-
 Iterator::Iterator(MarkerIndex *marker_index) :
   marker_index {marker_index},
   node {nullptr} {}
 
 void Iterator::Reset() {
-  node = marker_index->root.get();
+  node = marker_index->root;
   if (node) {
     node_offset = node->left_extent;
   }
@@ -22,9 +20,7 @@ Node* Iterator::InsertMarkerStart(const MarkerId &id, const Point &start_offset,
   Reset();
 
   if (!node) {
-    Node *node = new Node(nullptr, start_offset);
-    marker_index->root = unique_ptr<Node>(node);
-    return node;
+    return marker_index->root = new Node(nullptr, start_offset);
   }
 
   while (true) {
@@ -34,7 +30,7 @@ Node* Iterator::InsertMarkerStart(const MarkerId &id, const Point &start_offset,
         return node;
       case -1:
         MarkRight(id, start_offset, end_offset);
-        if (node->left.get()) {
+        if (node->left) {
           DescendLeft();
           break;
         } else {
@@ -44,7 +40,7 @@ Node* Iterator::InsertMarkerStart(const MarkerId &id, const Point &start_offset,
           return node;
         }
       case 1:
-        if (node->right.get()) {
+        if (node->right) {
           DescendRight();
           break;
         } else {
@@ -61,9 +57,7 @@ Node* Iterator::InsertMarkerEnd(const MarkerId &id, const Point &start_offset, c
   Reset();
 
   if (!node) {
-    Node *node = new Node(nullptr, end_offset);
-    marker_index->root = unique_ptr<Node>(node);
-    return node;
+    return marker_index->root = new Node(nullptr, end_offset);
   }
 
   while (true) {
@@ -72,7 +66,7 @@ Node* Iterator::InsertMarkerEnd(const MarkerId &id, const Point &start_offset, c
         MarkLeft(id, start_offset, end_offset);
         return node;
       case -1:
-        if (node->left.get()) {
+        if (node->left) {
           DescendLeft();
           break;
         } else {
@@ -83,7 +77,7 @@ Node* Iterator::InsertMarkerEnd(const MarkerId &id, const Point &start_offset, c
         }
       case 1:
         MarkLeft(id, start_offset, end_offset);
-        if (node->right.get()) {
+        if (node->right) {
           DescendRight();
           break;
         } else {
@@ -101,7 +95,7 @@ void Iterator::DescendLeft() {
   right_ancestor_offset_stack.push_back(right_ancestor_offset);
 
   right_ancestor_offset = node_offset;
-  node = node->left.get();
+  node = node->left;
   node_offset = left_ancestor_offset.Traverse(node->left_extent);
 }
 
@@ -110,7 +104,7 @@ void Iterator::DescendRight() {
   right_ancestor_offset_stack.push_back(right_ancestor_offset);
 
   left_ancestor_offset = node_offset;
-  node = node->right.get();
+  node = node->right;
   node_offset = left_ancestor_offset.Traverse(node->left_extent);
 }
 
@@ -129,13 +123,9 @@ void Iterator::MarkLeft(const MarkerId &id, const Point &start_offset, const Poi
 }
 
 Node* Iterator::InsertLeftChild(const Point &offset) {
-  Node *child = new Node(node, offset.Traversal(left_ancestor_offset));
-  node->left = unique_ptr<Node>(child);
-  return child;
+  return node->left = new Node(node, offset.Traversal(left_ancestor_offset));
 }
 
 Node* Iterator::InsertRightChild(const Point &offset) {
-  Node *child = new Node(node, offset.Traversal(node_offset));
-  node->right = unique_ptr<Node>(child);
-  return child;
+  return node->right = new Node(node, offset.Traversal(node_offset));
 }
