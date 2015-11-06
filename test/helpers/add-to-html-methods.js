@@ -1,6 +1,6 @@
-import MarkerIndex from '../../src/marker-index'
-import Node from '../../src/node'
-import {traverse, format as formatPoint} from '../../src/point-helpers'
+import MarkerIndex from '../../src/js/marker-index'
+import Node from '../../src/js/node'
+import {traverse, format as formatPoint} from '../../src/js/point-helpers'
 
 MarkerIndex.prototype.toHTML = function () {
   if (!this.root) return ''

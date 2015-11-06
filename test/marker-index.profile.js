@@ -1,9 +1,12 @@
 import Random from 'random-seed'
-import MarkerIndex from '../src/marker-index'
-import {traverse, traversal, compare} from '../src/point-helpers'
+import NativeMarkerIndex from '../src/native/marker-index'
+import JSMarkerIndex from '../src/js/marker-index'
+import {traverse, traversal, compare} from '../src/js/point-helpers'
 
 describe('MarkerIndex', () => {
   it('profile random insertion', function () {
+    this.timeout(0)
+
     let random = new Random(1)
     let operations = []
     let markerIds = []
@@ -20,18 +23,29 @@ describe('MarkerIndex', () => {
       }
     }
 
-    let markerIndex = new MarkerIndex()
+    let nativeMarkerIndex = new NativeMarkerIndex()
 
-    console.profile()
-    console.time('operations')
+    if (console.profile) console.profile()
+    console.time('native')
     for (let [method, args] of operations) {
-      markerIndex[method](...args)
+      nativeMarkerIndex[method](...args)
     }
-    console.profileEnd()
-    console.timeEnd('operations')
+    if (console.profile) console.profileEnd()
+    console.timeEnd('native')
+
+
+    let jsMarkerIndex = new JSMarkerIndex()
+
+    if (console.profile) console.profile()
+    console.time('js')
+    for (let [method, args] of operations) {
+      jsMarkerIndex[method](...args)
+    }
+    if (console.profile) console.profileEnd()
+    console.timeEnd('js')
 
     function enqueueInsert () {
-      let id = String.fromCharCode(idCounter++)
+      let id = (idCounter++).toString()
       let [start, end] = getRange()
       let exclusive = Boolean(random(2))
       markerIds.push(id)

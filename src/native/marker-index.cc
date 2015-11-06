@@ -15,7 +15,7 @@ int MarkerIndex::GenerateRandomNumber() {
   return random_distribution(random_engine);
 }
 
-void MarkerIndex::Insert(const MarkerId &id, const Point &start, const Point &end) {
+void MarkerIndex::Insert(MarkerId id, Point start, Point end) {
   Node *start_node = iterator.InsertMarkerStart(id, start, end);
   Node *end_node = iterator.InsertMarkerEnd(id, start, end);
 
@@ -78,7 +78,7 @@ void MarkerIndex::RotateNodeLeft(Node *rotation_pivot) {
       ++it;
     } else {
       rotation_root->right_marker_ids.insert(*it);
-      rotation_pivot->left_marker_ids.erase(it);
+      rotation_pivot->left_marker_ids.erase(it++);
     }
   }
 }
@@ -119,7 +119,7 @@ void MarkerIndex::RotateNodeRight(Node *rotation_pivot) {
       ++it;
     } else {
       rotation_root->left_marker_ids.insert(*it);
-      rotation_pivot->right_marker_ids.erase(it);
+      rotation_pivot->right_marker_ids.erase(it++);
     }
   }
 }

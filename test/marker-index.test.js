@@ -1,6 +1,6 @@
 import Random from 'random-seed'
-import MarkerIndex from '../src/marker-index'
-import {traverse, traversal, compare, isZero, max, format as formatPoint} from '../src/point-helpers'
+import MarkerIndex from '../src/js/marker-index'
+import {traverse, traversal, compare, isZero, max, format as formatPoint} from '../src/js/point-helpers'
 import './helpers/add-to-html-methods'
 
 describe('MarkerIndex', () => {
