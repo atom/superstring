@@ -3,6 +3,6 @@
 
 #include <string>
 
-typedef std::string MarkerId;
+typedef unsigned MarkerId;
 
 #endif // MARKER_ID_H_

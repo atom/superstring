@@ -14,11 +14,18 @@ public:
     constructorTemplate->InstanceTemplate()->SetInternalFieldCount(1);
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("generateRandomNumber").ToLocalChecked(), Nan::New<FunctionTemplate>(GenerateRandomNumber)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("insert").ToLocalChecked(), Nan::New<FunctionTemplate>(Insert)->GetFunction());
+
+    row_key.Reset(Nan::Persistent<String>(Nan::New("row").ToLocalChecked()));
+    column_key.Reset(Nan::Persistent<String>(Nan::New("column").ToLocalChecked()));
+
     module->Set(Nan::New("exports").ToLocalChecked(),
                 constructorTemplate->GetFunction());
   }
 
 private:
+  static Nan::Persistent<String> row_key;
+  static Nan::Persistent<String> column_key;
+
   static NAN_METHOD(New) {
     MarkerIndexWrapper *marker_index = new MarkerIndexWrapper(Local<Number>::Cast(info[0]));
     marker_index->Wrap(info.This());
@@ -30,20 +37,49 @@ private:
     info.GetReturnValue().Set(Nan::New<v8::Number>(random));
   }
 
+  static Nan::Maybe<Point> PointFromJS(Nan::MaybeLocal<Object> maybe_object) {
+    Local<Object> object;
+    if (!maybe_object.ToLocal(&object)) {
+      Nan::ThrowTypeError("Expected an object with 'row' and 'column' properties.");
+      return Nan::Nothing<Point>();
+    }
+
+    Nan::MaybeLocal<Integer> maybe_row = Nan::To<Integer>(object->Get(Nan::New(row_key)));
+    Local<Integer> row;
+    if (!maybe_row.ToLocal(&row)) {
+      Nan::ThrowTypeError("Expected an object with 'row' and 'column' properties.");
+      return Nan::Nothing<Point>();
+    }
+
+    Nan::MaybeLocal<Integer> maybe_column = Nan::To<Integer>(object->Get(Nan::New(column_key)));
+    Local<Integer> column;
+    if (!maybe_column.ToLocal(&column)) {
+      Nan::ThrowTypeError("Expected an object with 'row' and 'column' properties.");
+      return Nan::Nothing<Point>();
+    }
+
+    return Nan::Just(Point(
+      static_cast<unsigned>(row->Int32Value()),
+      static_cast<unsigned>(column->Int32Value())
+    ));
+  }
+
   static NAN_METHOD(Insert) {
     MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-    String::Utf8Value id_utf_8_value {info[0]};
-    string id {*id_utf_8_value};
+    Local<Integer> id;
+    Nan::MaybeLocal<Integer> maybe_id = Nan::To<Integer>(info[0]);
+    if (!maybe_id.ToLocal(&id)) {
+      Nan::ThrowTypeError("Expected an integer marker id.");
+      return;
+    }
 
-    Local<Number> start_row = Local<Number>::Cast(info[1]);
-    Local<Number> start_column = Local<Number>::Cast(info[2]);
-    Local<Number> end_row = Local<Number>::Cast(info[3]);
-    Local<Number> end_column = Local<Number>::Cast(info[4]);
-    Point start_point {static_cast<unsigned>(start_row->Int32Value()), static_cast<unsigned>(start_column->Int32Value())};
-    Point end_point {static_cast<unsigned>(end_row->Int32Value()), static_cast<unsigned>(end_column->Int32Value())};
+    Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[1]));
+    Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[2]));
 
-    wrapper->marker_index.Insert(id, start_point, end_point);
+    if (start.IsJust() && end.IsJust()) {
+      wrapper->marker_index.Insert(static_cast<unsigned>(id->Uint32Value()), start.FromJust(), end.FromJust());
+    }
   }
 
   MarkerIndexWrapper(v8::Local<v8::Number> seed) :
@@ -51,5 +87,8 @@ private:
 
   MarkerIndex marker_index;
 };
+
+Nan::Persistent<String> MarkerIndexWrapper::row_key;
+Nan::Persistent<String> MarkerIndexWrapper::column_key;
 
 NODE_MODULE(marker_index, MarkerIndexWrapper::Init)
