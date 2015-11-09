@@ -26,12 +26,12 @@ private:
   static Nan::Persistent<String> row_key;
   static Nan::Persistent<String> column_key;
 
-  static NAN_METHOD(New) {
+  static void New(const Nan::FunctionCallbackInfo<Value> &info) {
     MarkerIndexWrapper *marker_index = new MarkerIndexWrapper(Local<Number>::Cast(info[0]));
     marker_index->Wrap(info.This());
   }
 
-  static NAN_METHOD(GenerateRandomNumber) {
+  static void GenerateRandomNumber(const Nan::FunctionCallbackInfo<Value> &info) {
     MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
     int random = wrapper->marker_index.GenerateRandomNumber();
     info.GetReturnValue().Set(Nan::New<v8::Number>(random));
@@ -64,7 +64,7 @@ private:
     ));
   }
 
-  static NAN_METHOD(Insert) {
+  static void Insert(const Nan::FunctionCallbackInfo<Value> &info) {
     MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
     Local<Integer> id;
