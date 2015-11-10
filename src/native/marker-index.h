@@ -13,10 +13,15 @@ class MarkerIndex {
   MarkerIndex(unsigned seed);
   int GenerateRandomNumber();
   void Insert(MarkerId id, Point start, Point end);
+  Point GetStart(MarkerId id) const;
+  Point GetEnd(MarkerId id) const;
+
+ private:
   void BubbleNodeUp(Node *node);
   void RotateNodeLeft(Node *pivot);
   void RotateNodeRight(Node *pivot);
- private:
+  Point GetNodeOffset(const Node *node) const;
+
   std::default_random_engine random_engine;
   std::uniform_int_distribution<int> random_distribution;
    Node *root;

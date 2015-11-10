@@ -14,6 +14,8 @@ public:
     constructorTemplate->InstanceTemplate()->SetInternalFieldCount(1);
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("generateRandomNumber").ToLocalChecked(), Nan::New<FunctionTemplate>(GenerateRandomNumber)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("insert").ToLocalChecked(), Nan::New<FunctionTemplate>(Insert)->GetFunction());
+    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("getStart").ToLocalChecked(), Nan::New<FunctionTemplate>(GetStart)->GetFunction());
+    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("getEnd").ToLocalChecked(), Nan::New<FunctionTemplate>(GetEnd)->GetFunction());
 
     row_key.Reset(Nan::Persistent<String>(Nan::New("row").ToLocalChecked()));
     column_key.Reset(Nan::Persistent<String>(Nan::New("column").ToLocalChecked()));
@@ -64,21 +66,52 @@ private:
     ));
   }
 
+  static Local<Object> PointToJS(const Point &point) {
+    Local<Object> result = Nan::New<Object>();
+    result->Set(Nan::New(row_key), Nan::New<Integer>(point.row));
+    result->Set(Nan::New(column_key), Nan::New<Integer>(point.column));
+    return result;
+  }
+
+  static Nan::Maybe<MarkerId> MarkerIdFromJS(Nan::MaybeLocal<Integer> maybe_id) {
+    Local<Integer> id;
+    if (!maybe_id.ToLocal(&id)) {
+      Nan::ThrowTypeError("Expected an integer marker id.");
+      return Nan::Nothing<MarkerId>();
+    }
+
+    return Nan::Just<MarkerId>(static_cast<MarkerId>(id->Uint32Value()));
+  }
+
   static void Insert(const Nan::FunctionCallbackInfo<Value> &info) {
     MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-    Local<Integer> id;
-    Nan::MaybeLocal<Integer> maybe_id = Nan::To<Integer>(info[0]);
-    if (!maybe_id.ToLocal(&id)) {
-      Nan::ThrowTypeError("Expected an integer marker id.");
-      return;
-    }
-
+    Nan::Maybe<MarkerId> id = MarkerIdFromJS(Nan::To<Integer>(info[0]));
     Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[1]));
     Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[2]));
 
-    if (start.IsJust() && end.IsJust()) {
-      wrapper->marker_index.Insert(static_cast<unsigned>(id->Uint32Value()), start.FromJust(), end.FromJust());
+    if (id.IsJust() && start.IsJust() && end.IsJust()) {
+      wrapper->marker_index.Insert(id.FromJust(), start.FromJust(), end.FromJust());
+    }
+  }
+
+  static void GetStart(const Nan::FunctionCallbackInfo<Value> &info) {
+    MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
+
+    Nan::Maybe<MarkerId> id = MarkerIdFromJS(Nan::To<Integer>(info[0]));
+    if (id.IsJust()) {
+      Point result = wrapper->marker_index.GetStart(id.FromJust());
+      info.GetReturnValue().Set(PointToJS(result));
+    }
+  }
+
+  static void GetEnd(const Nan::FunctionCallbackInfo<Value> &info) {
+    MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
+
+    Nan::Maybe<MarkerId> id = MarkerIdFromJS(Nan::To<Integer>(info[0]));
+    if (id.IsJust()) {
+      Point result = wrapper->marker_index.GetEnd(id.FromJust());
+      info.GetReturnValue().Set(PointToJS(result));
     }
   }
 

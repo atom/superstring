@@ -36,6 +36,34 @@ void MarkerIndex::Insert(MarkerId id, Point start, Point end) {
   end_nodes_by_id.insert({id, end_node});
 }
 
+Point MarkerIndex::GetStart(MarkerId id) const {
+  auto result = start_nodes_by_id.find(id);
+  if (result == start_nodes_by_id.end())
+    return Point();
+  else
+    return GetNodeOffset(result->second);
+}
+
+Point MarkerIndex::GetEnd(MarkerId id) const {
+  auto result = end_nodes_by_id.find(id);
+  if (result == end_nodes_by_id.end())
+    return Point();
+  else
+    return GetNodeOffset(result->second);
+}
+
+Point MarkerIndex::GetNodeOffset(const Node *node) const {
+  Point offset = node->left_extent;
+  while (node->parent) {
+    if (node->parent->right == node) {
+      offset = node->parent->left_extent.Traverse(offset);
+    }
+
+    node = node->parent;
+  }
+  return offset;
+}
+
 void MarkerIndex::BubbleNodeUp(Node *node) {
   while (node->parent && node->priority < node->parent->priority) {
     if (node == node->parent->left) {
