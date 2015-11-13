@@ -154,6 +154,19 @@ void Iterator::FindStartingIn(const Point &start, const Point &end, std::set<Mar
   }
 }
 
+void Iterator::FindEndingIn(const Point &start, const Point &end, std::set<MarkerId> *result) {
+  Reset();
+
+  if (!node) return;
+
+  SeekToFirstNodeGreaterThanOrEqualTo(start);
+
+  while (node && node_offset <= end) {
+    result->insert(node->end_marker_ids.begin(), node->end_marker_ids.end());
+    MoveToSuccessor();
+  }
+}
+
 void Iterator::Ascend() {
   if (node->parent) {
     if (node->parent->left == node) {

@@ -20,4 +20,8 @@ NativeMarkerIndex.prototype.findStartingIn = function (start, end) {
   return new Set(this._findStartingIn(start, end))
 }
 
+NativeMarkerIndex.prototype.findEndingIn = function (start, end) {
+  return new Set(this._findEndingIn(start, end))
+}
+
 export default NativeMarkerIndex

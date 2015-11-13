@@ -19,6 +19,7 @@ class MarkerIndex {
   std::set<MarkerId> FindContaining(Point start, Point end);
   std::set<MarkerId> FindContainedIn(Point start, Point end);
   std::set<MarkerId> FindStartingIn(Point start, Point end);
+  std::set<MarkerId> FindEndingIn(Point start, Point end);
 
  private:
   void BubbleNodeUp(Node *node);

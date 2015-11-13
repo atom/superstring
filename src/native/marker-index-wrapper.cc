@@ -20,6 +20,7 @@ public:
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findContaining").ToLocalChecked(), Nan::New<FunctionTemplate>(FindContaining)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findContainedIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindContainedIn)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findStartingIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindStartingIn)->GetFunction());
+    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findEndingIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindEndingIn)->GetFunction());
 
     row_key.Reset(Nan::Persistent<String>(Nan::New("row").ToLocalChecked()));
     column_key.Reset(Nan::Persistent<String>(Nan::New("column").ToLocalChecked()));
@@ -173,6 +174,18 @@ private:
 
     if (start.IsJust() && end.IsJust()) {
       set<MarkerId> result = wrapper->marker_index.FindStartingIn(start.FromJust(), end.FromJust());
+      info.GetReturnValue().Set(MarkerIdsToJS(result));
+    }
+  }
+
+  static void FindEndingIn(const Nan::FunctionCallbackInfo<Value> &info) {
+    MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
+
+    Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
+    Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[1]));
+
+    if (start.IsJust() && end.IsJust()) {
+      set<MarkerId> result = wrapper->marker_index.FindEndingIn(start.FromJust(), end.FromJust());
       info.GetReturnValue().Set(MarkerIdsToJS(result));
     }
   }

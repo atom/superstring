@@ -17,6 +17,7 @@ class Iterator {
   void FindIntersecting(const Point &start, const Point &end, std::set<MarkerId> *result);
   void FindContainedIn(const Point &start, const Point &end, std::set<MarkerId> *result);
   void FindStartingIn(const Point &start, const Point &end, std::set<MarkerId> *result);
+  void FindEndingIn(const Point &start, const Point &end, std::set<MarkerId> *result);
 
  private:
   void Ascend();
