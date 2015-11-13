@@ -32,7 +32,6 @@ public:
 private:
   static Nan::Persistent<String> row_key;
   static Nan::Persistent<String> column_key;
-  static Nan::Persistent<String> set_key;
 
   static void New(const Nan::FunctionCallbackInfo<Value> &info) {
     MarkerIndexWrapper *marker_index = new MarkerIndexWrapper(Local<Number>::Cast(info[0]));
@@ -198,6 +197,5 @@ private:
 
 Nan::Persistent<String> MarkerIndexWrapper::row_key;
 Nan::Persistent<String> MarkerIndexWrapper::column_key;
-Nan::Persistent<String> MarkerIndexWrapper::set_key;
 
 NODE_MODULE(marker_index, MarkerIndexWrapper::Init)
