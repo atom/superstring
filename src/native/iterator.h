@@ -1,6 +1,7 @@
 #ifndef ITERATOR_H_
 #define ITERATOR_H_
 
+#include <set>
 #include <vector>
 #include "marker-id.h"
 #include "point.h"
@@ -14,13 +15,19 @@ class Iterator {
   void Reset();
   Node* InsertMarkerStart(const MarkerId &id, const Point &start_offset, const Point &end_offset);
   Node* InsertMarkerEnd(const MarkerId &id, const Point &start_offset, const Point &end_offset);
+  void FindIntersecting(const Point &start, const Point &end, std::set<MarkerId> *result);
+
+ private:
+  void Ascend();
   void DescendLeft();
   void DescendRight();
+  void MoveToSuccessor();
   void MarkRight(const MarkerId &id, const Point &start_offset, const Point &end_offset);
   void MarkLeft(const MarkerId &id, const Point &start_offset, const Point &end_offset);
   Node* InsertLeftChild(const Point &offset);
   Node* InsertRightChild(const Point &offset);
- private:
+  void CheckIntersection(const Point &start, const Point &end, std::set<MarkerId> *results);
+
   MarkerIndex *marker_index;
   Node *node;
   Point node_offset;

@@ -1,8 +1,10 @@
 #include "marker-index.h"
 #include <climits>
 #include <random>
+#include <set>
 #include <stdlib.h>
 
+using std::set;
 using std::default_random_engine;
 
 MarkerIndex::MarkerIndex(unsigned seed)
@@ -50,6 +52,12 @@ Point MarkerIndex::GetEnd(MarkerId id) const {
     return Point();
   else
     return GetNodeOffset(result->second);
+}
+
+set<MarkerId> MarkerIndex::FindIntersecting(Point start, Point end) {
+  set<MarkerId> result;
+  iterator.FindIntersecting(start, end, &result);
+  return result;
 }
 
 Point MarkerIndex::GetNodeOffset(const Node *node) const {

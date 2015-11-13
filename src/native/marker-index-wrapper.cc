@@ -1,8 +1,8 @@
 #include "nan.h"
 #include "marker-index.h"
 
-using namespace std;
 using namespace v8;
+using std::set;
 
 class MarkerIndexWrapper : public Nan::ObjectWrap {
 public:
@@ -16,6 +16,7 @@ public:
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("insert").ToLocalChecked(), Nan::New<FunctionTemplate>(Insert)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("getStart").ToLocalChecked(), Nan::New<FunctionTemplate>(GetStart)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("getEnd").ToLocalChecked(), Nan::New<FunctionTemplate>(GetEnd)->GetFunction());
+    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findIntersecting").ToLocalChecked(), Nan::New<FunctionTemplate>(FindIntersecting)->GetFunction());
 
     row_key.Reset(Nan::Persistent<String>(Nan::New("row").ToLocalChecked()));
     column_key.Reset(Nan::Persistent<String>(Nan::New("column").ToLocalChecked()));
@@ -27,6 +28,7 @@ public:
 private:
   static Nan::Persistent<String> row_key;
   static Nan::Persistent<String> column_key;
+  static Nan::Persistent<String> set_key;
 
   static void New(const Nan::FunctionCallbackInfo<Value> &info) {
     MarkerIndexWrapper *marker_index = new MarkerIndexWrapper(Local<Number>::Cast(info[0]));
@@ -73,6 +75,15 @@ private:
     return result;
   }
 
+  static Local<Array> MarkerIdsToJS(const set<MarkerId> marker_ids) {
+    Local<Array> result_array = Nan::New<Array>(marker_ids.size());
+    uint32_t index = 0;
+    for (auto marker_ids_iter = marker_ids.begin(); marker_ids_iter != marker_ids.end(); marker_ids_iter++) {
+      result_array->Set(index++, Nan::New<Integer>(*marker_ids_iter));
+    }
+    return result_array;
+  }
+
   static Nan::Maybe<MarkerId> MarkerIdFromJS(Nan::MaybeLocal<Integer> maybe_id) {
     Local<Integer> id;
     if (!maybe_id.ToLocal(&id)) {
@@ -115,6 +126,18 @@ private:
     }
   }
 
+  static void FindIntersecting(const Nan::FunctionCallbackInfo<Value> &info) {
+    MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
+
+    Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
+    Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[1]));
+
+    if (start.IsJust() && end.IsJust()) {
+      set<MarkerId> result = wrapper->marker_index.FindIntersecting(start.FromJust(), end.FromJust());
+      info.GetReturnValue().Set(MarkerIdsToJS(result));
+    }
+  }
+
   MarkerIndexWrapper(v8::Local<v8::Number> seed) :
     marker_index{static_cast<unsigned>(seed->Int32Value())} {}
 
@@ -123,5 +146,6 @@ private:
 
 Nan::Persistent<String> MarkerIndexWrapper::row_key;
 Nan::Persistent<String> MarkerIndexWrapper::column_key;
+Nan::Persistent<String> MarkerIndexWrapper::set_key;
 
 NODE_MODULE(marker_index, MarkerIndexWrapper::Init)

@@ -1,6 +1,8 @@
 #include "iterator.h"
 #include "marker-index.h"
 
+using std::set;
+
 Iterator::Iterator(MarkerIndex *marker_index) :
   marker_index {marker_index},
   node {nullptr} {}
@@ -90,6 +92,55 @@ Node* Iterator::InsertMarkerEnd(const MarkerId &id, const Point &start_offset, c
   }
 }
 
+void Iterator::FindIntersecting(const Point &start, const Point &end, std::set<MarkerId> *result) {
+  Reset();
+
+  if (!node) return;
+
+  while (true) {
+    if (start < node_offset) {
+      if (node->left) {
+        CheckIntersection(start, end, result);
+        DescendLeft();
+      } else {
+        break;
+      }
+    } else {
+      if (node->right) {
+        CheckIntersection(start, end, result);
+        DescendRight();
+      } else {
+        break;
+      }
+    }
+  }
+
+  do {
+    CheckIntersection(start, end, result);
+    MoveToSuccessor();
+  } while (node && node_offset <= end);
+}
+
+void Iterator::Ascend() {
+  if (node->parent) {
+    if (node->parent->left == node) {
+      node_offset = right_ancestor_offset;
+    } else {
+      node_offset = left_ancestor_offset;
+    }
+    left_ancestor_offset = left_ancestor_offset_stack.back();
+    left_ancestor_offset_stack.pop_back();
+    right_ancestor_offset = right_ancestor_offset_stack.back();
+    right_ancestor_offset_stack.pop_back();
+    node = node->parent;
+  } else {
+    node = nullptr;
+    node_offset = Point();
+    left_ancestor_offset = Point();
+    right_ancestor_offset = Point::Max();
+  }
+}
+
 void Iterator::DescendLeft() {
   left_ancestor_offset_stack.push_back(left_ancestor_offset);
   right_ancestor_offset_stack.push_back(right_ancestor_offset);
@@ -106,6 +157,22 @@ void Iterator::DescendRight() {
   left_ancestor_offset = node_offset;
   node = node->right;
   node_offset = left_ancestor_offset.Traverse(node->left_extent);
+}
+
+void Iterator::MoveToSuccessor() {
+  if (!node) return;
+
+  if (node->right) {
+    DescendRight();
+    while (node->left) {
+      DescendLeft();
+    }
+  } else {
+    while (node->parent && node->parent->right == node) {
+      Ascend();
+    }
+    Ascend();
+  }
 }
 
 void Iterator::MarkRight(const MarkerId &id, const Point &start_offset, const Point &end_offset) {
@@ -128,4 +195,19 @@ Node* Iterator::InsertLeftChild(const Point &offset) {
 
 Node* Iterator::InsertRightChild(const Point &offset) {
   return node->right = new Node(node, offset.Traversal(node_offset));
+}
+
+void Iterator::CheckIntersection(const Point &start, const Point &end, set<MarkerId> *result) {
+  if (left_ancestor_offset <= end && start <= node_offset) {
+    result->insert(node->left_marker_ids.begin(), node->left_marker_ids.end());
+  }
+
+  if (start <= node_offset && node_offset <= end) {
+    result->insert(node->start_marker_ids.begin(), node->start_marker_ids.end());
+    result->insert(node->end_marker_ids.begin(), node->end_marker_ids.end());
+  }
+
+  if (node_offset <= end && start <= right_ancestor_offset) {
+    result->insert(node->right_marker_ids.begin(), node->right_marker_ids.end());
+  }
 }

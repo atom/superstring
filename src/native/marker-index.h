@@ -15,6 +15,7 @@ class MarkerIndex {
   void Insert(MarkerId id, Point start, Point end);
   Point GetStart(MarkerId id) const;
   Point GetEnd(MarkerId id) const;
+  std::set<MarkerId> FindIntersecting(Point start, Point end);
 
  private:
   void BubbleNodeUp(Node *node);
