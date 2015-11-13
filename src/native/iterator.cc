@@ -1,7 +1,10 @@
+#include <unordered_set>
+#include <vector>
 #include "iterator.h"
 #include "marker-index.h"
 
 using std::set;
+using std::unordered_set;
 
 Iterator::Iterator(MarkerIndex *marker_index) :
   marker_index {marker_index},
@@ -121,6 +124,23 @@ void Iterator::FindIntersecting(const Point &start, const Point &end, std::set<M
   } while (node && node_offset <= end);
 }
 
+void Iterator::FindContainedIn(const Point &start, const Point &end, std::set<MarkerId> *result) {
+  Reset();
+
+  if (!node) return;
+
+  SeekToFirstNodeGreaterThanOrEqualTo(start);
+
+  unordered_set<MarkerId> started;
+  while (node && node_offset <= end) {
+    started.insert(node->start_marker_ids.begin(), node->start_marker_ids.end());
+    for (const MarkerId &id : node->end_marker_ids) {
+      if (started.count(id) > 0) result->insert(id);
+    }
+    MoveToSuccessor();
+  }
+}
+
 void Iterator::Ascend() {
   if (node->parent) {
     if (node->parent->left == node) {
@@ -173,6 +193,28 @@ void Iterator::MoveToSuccessor() {
     }
     Ascend();
   }
+}
+
+void Iterator::SeekToFirstNodeGreaterThanOrEqualTo(const Point &offset) {
+  while (true) {
+    if (offset == node_offset) {
+      break;
+    } else if (offset < node_offset) {
+      if (node->left) {
+        DescendLeft();
+      } else {
+        break;
+      }
+    } else { // offset > node_offset
+      if (node->right) {
+        DescendRight();
+      } else {
+        break;
+      }
+    }
+  }
+
+  if (node_offset < offset) MoveToSuccessor();
 }
 
 void Iterator::MarkRight(const MarkerId &id, const Point &start_offset, const Point &end_offset) {

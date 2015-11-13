@@ -78,6 +78,12 @@ set<MarkerId> MarkerIndex::FindContaining(Point start, Point end) {
   }
 }
 
+set<MarkerId> MarkerIndex::FindContainedIn(Point start, Point end) {
+  set<MarkerId> result;
+  iterator.FindContainedIn(start, end, &result);
+  return result;
+}
+
 Point MarkerIndex::GetNodeOffset(const Node *node) const {
   Point offset = node->left_extent;
   while (node->parent) {
