@@ -282,7 +282,6 @@ export default class Iterator {
       this.leftAncestorOffset = this.leftAncestorOffsetStack.pop()
       this.rightAncestorOffset = this.rightAncestorOffsetStack.pop()
       this.node = this.node.parent
-      this.nodeOffset = traverse(this.leftAncestorOffset, this.node.leftExtent)
     } else {
       this.node = null
       this.nodeOffset = null
