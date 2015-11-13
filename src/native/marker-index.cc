@@ -1,5 +1,7 @@
 #include "marker-index.h"
+#include <algorithm>
 #include <climits>
+#include <iterator>
 #include <random>
 #include <set>
 #include <stdlib.h>
@@ -58,6 +60,22 @@ set<MarkerId> MarkerIndex::FindIntersecting(Point start, Point end) {
   set<MarkerId> result;
   iterator.FindIntersecting(start, end, &result);
   return result;
+}
+
+set<MarkerId> MarkerIndex::FindContaining(Point start, Point end) {
+  set<MarkerId> containing_start;
+  iterator.FindIntersecting(start, start, &containing_start);
+  if (end == start) {
+    return containing_start;
+  } else {
+    set<MarkerId> containing_end;
+    iterator.FindIntersecting(end, end, &containing_end);
+    set<MarkerId> containing_start_and_end;
+    std::set_intersection(containing_start.begin(), containing_start.end(),
+                         containing_end.begin(), containing_end.end(),
+                         std::inserter(containing_start_and_end, containing_start_and_end.begin()));
+    return containing_start_and_end;
+  }
 }
 
 Point MarkerIndex::GetNodeOffset(const Node *node) const {
