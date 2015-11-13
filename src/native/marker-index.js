@@ -16,4 +16,8 @@ NativeMarkerIndex.prototype.findContainedIn = function (start, end) {
   return new Set(this._findContainedIn(start, end))
 }
 
+NativeMarkerIndex.prototype.findStartingIn = function (start, end) {
+  return new Set(this._findStartingIn(start, end))
+}
+
 export default NativeMarkerIndex

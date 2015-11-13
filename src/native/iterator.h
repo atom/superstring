@@ -16,6 +16,7 @@ class Iterator {
   Node* InsertMarkerEnd(const MarkerId &id, const Point &start_offset, const Point &end_offset);
   void FindIntersecting(const Point &start, const Point &end, std::set<MarkerId> *result);
   void FindContainedIn(const Point &start, const Point &end, std::set<MarkerId> *result);
+  void FindStartingIn(const Point &start, const Point &end, std::set<MarkerId> *result);
 
  private:
   void Ascend();
