@@ -14,6 +14,7 @@ public:
     constructorTemplate->InstanceTemplate()->SetInternalFieldCount(1);
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("generateRandomNumber").ToLocalChecked(), Nan::New<FunctionTemplate>(GenerateRandomNumber)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("insert").ToLocalChecked(), Nan::New<FunctionTemplate>(Insert)->GetFunction());
+    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(Delete)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("getStart").ToLocalChecked(), Nan::New<FunctionTemplate>(GetStart)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("getEnd").ToLocalChecked(), Nan::New<FunctionTemplate>(GetEnd)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findIntersecting").ToLocalChecked(), Nan::New<FunctionTemplate>(FindIntersecting)->GetFunction());
@@ -106,6 +107,15 @@ private:
 
     if (id.IsJust() && start.IsJust() && end.IsJust()) {
       wrapper->marker_index.Insert(id.FromJust(), start.FromJust(), end.FromJust());
+    }
+  }
+
+  static void Delete(const Nan::FunctionCallbackInfo<Value> &info) {
+    MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
+
+    Nan::Maybe<MarkerId> id = MarkerIdFromJS(Nan::To<Integer>(info[0]));
+    if (id.IsJust()) {
+      wrapper->marker_index.Delete(id.FromJust());
     }
   }
 

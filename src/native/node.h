@@ -8,6 +8,8 @@
 struct Node {
   Node(Node *parent, Point left_extent);
 
+  bool IsMarkerEndpoint();
+
   Node *parent;
   Node *left;
   Node *right;

@@ -11,7 +11,7 @@ using std::default_random_engine;
 
 MarkerIndex::MarkerIndex(unsigned seed)
   : random_engine {static_cast<default_random_engine::result_type>(seed)},
-    random_distribution{1, INT_MAX},
+    random_distribution{1, INT_MAX - 1},
     root {nullptr},
     iterator {this} {}
 
@@ -38,6 +38,37 @@ void MarkerIndex::Insert(MarkerId id, Point start, Point end) {
 
   start_nodes_by_id.insert({id, start_node});
   end_nodes_by_id.insert({id, end_node});
+}
+
+void MarkerIndex::Delete(MarkerId id) {
+  Node *start_node = start_nodes_by_id.find(id)->second;
+  Node *end_node = end_nodes_by_id.find(id)->second;
+
+  Node *node = start_node;
+  while (node) {
+    node->right_marker_ids.erase(id);
+    node = node->parent;
+  }
+
+  node = end_node;
+  while (node) {
+    node->left_marker_ids.erase(id);
+    node = node->parent;
+  }
+
+  start_node->start_marker_ids.erase(id);
+  end_node->end_marker_ids.erase(id);
+
+  if (!start_node->IsMarkerEndpoint()) {
+    DeleteNode(start_node);
+  }
+
+  if (end_node != start_node && !end_node->IsMarkerEndpoint()) {
+    DeleteNode(end_node);
+  }
+
+  start_nodes_by_id.erase(id);
+  end_nodes_by_id.erase(id);
 }
 
 Point MarkerIndex::GetStart(MarkerId id) const {
@@ -108,12 +139,47 @@ Point MarkerIndex::GetNodeOffset(const Node *node) const {
   return offset;
 }
 
+void MarkerIndex::DeleteNode(Node *node) {
+  node->priority = INT_MAX;
+
+  BubbleNodeDown(node);
+
+  if (node->parent) {
+    if (node->parent->left == node) {
+      node->parent->left = nullptr;
+    } else {
+      node->parent->right = nullptr;
+    }
+  } else {
+    root = nullptr;
+  }
+
+  delete node;
+}
+
 void MarkerIndex::BubbleNodeUp(Node *node) {
   while (node->parent && node->priority < node->parent->priority) {
     if (node == node->parent->left) {
       RotateNodeRight(node);
     } else {
       RotateNodeLeft(node);
+    }
+  }
+}
+
+void MarkerIndex::BubbleNodeDown(Node *node) {
+  while (true) {
+    int left_child_priority = (node->left) ? node->left->priority : INT_MAX;
+    int right_child_priority = (node->right) ? node->right->priority : INT_MAX;
+
+    if (left_child_priority < right_child_priority && left_child_priority < node->priority) {
+      RotateNodeRight(node->left);
+    } else if (right_child_priority < node->priority) {
+      RotateNodeLeft(node->right);
+    } else {
+      assert(!node->left);
+      assert(!node->right);
+      break;
     }
   }
 }
