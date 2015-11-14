@@ -14,6 +14,7 @@ public:
     constructorTemplate->InstanceTemplate()->SetInternalFieldCount(1);
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("generateRandomNumber").ToLocalChecked(), Nan::New<FunctionTemplate>(GenerateRandomNumber)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("insert").ToLocalChecked(), Nan::New<FunctionTemplate>(Insert)->GetFunction());
+    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("setExclusive").ToLocalChecked(), Nan::New<FunctionTemplate>(SetExclusive)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(Delete)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("getStart").ToLocalChecked(), Nan::New<FunctionTemplate>(GetStart)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("getEnd").ToLocalChecked(), Nan::New<FunctionTemplate>(GetEnd)->GetFunction());
@@ -98,6 +99,16 @@ private:
     return Nan::Just<MarkerId>(static_cast<MarkerId>(id->Uint32Value()));
   }
 
+  static Nan::Maybe<bool> BoolFromJS(Nan::MaybeLocal<Boolean> maybe_boolean) {
+    Local<Boolean> boolean;
+    if (!maybe_boolean.ToLocal(&boolean)) {
+      Nan::ThrowTypeError("Expected an boolean.");
+      return Nan::Nothing<bool>();
+    }
+
+    return Nan::Just<bool>(boolean->Value());
+  }
+
   static void Insert(const Nan::FunctionCallbackInfo<Value> &info) {
     MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
@@ -107,6 +118,17 @@ private:
 
     if (id.IsJust() && start.IsJust() && end.IsJust()) {
       wrapper->marker_index.Insert(id.FromJust(), start.FromJust(), end.FromJust());
+    }
+  }
+
+  static void SetExclusive(const Nan::FunctionCallbackInfo<Value> &info) {
+    MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
+
+    Nan::Maybe<MarkerId> id = MarkerIdFromJS(Nan::To<Integer>(info[0]));
+    Nan::Maybe<bool> exclusive = BoolFromJS(Nan::To<Boolean>(info[1]));
+
+    if (id.IsJust() && exclusive.IsJust()) {
+      wrapper->marker_index.SetExclusive(id.FromJust(), exclusive.FromJust());
     }
   }
 

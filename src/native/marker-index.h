@@ -3,6 +3,9 @@
 
 #include <map>
 #include <random>
+#include <set>
+#include <unordered_set>
+
 #include "iterator.h"
 #include "marker-id.h"
 #include "node.h"
@@ -13,6 +16,7 @@ class MarkerIndex {
   MarkerIndex(unsigned seed);
   int GenerateRandomNumber();
   void Insert(MarkerId id, Point start, Point end);
+  void SetExclusive(MarkerId id, bool exclusive);
   void Delete(MarkerId id);
   Point GetStart(MarkerId id) const;
   Point GetEnd(MarkerId id) const;
@@ -36,7 +40,7 @@ class MarkerIndex {
   std::map<MarkerId, Node*> start_nodes_by_id;
   std::map<MarkerId, Node*> end_nodes_by_id;
   Iterator iterator;
-  std::set<MarkerId> exclusive_marker_ids;
+  std::unordered_set<MarkerId> exclusive_marker_ids;
 };
 
 #endif // MARKER_INDEX_H_

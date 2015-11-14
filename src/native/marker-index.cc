@@ -3,7 +3,6 @@
 #include <climits>
 #include <iterator>
 #include <random>
-#include <set>
 #include <stdlib.h>
 
 using std::set;
@@ -38,6 +37,14 @@ void MarkerIndex::Insert(MarkerId id, Point start, Point end) {
 
   start_nodes_by_id.insert({id, start_node});
   end_nodes_by_id.insert({id, end_node});
+}
+
+void MarkerIndex::SetExclusive(MarkerId id, bool exclusive) {
+  if (exclusive) {
+    exclusive_marker_ids.erase(id);
+  } else {
+    exclusive_marker_ids.insert(id);
+  }
 }
 
 void MarkerIndex::Delete(MarkerId id) {
