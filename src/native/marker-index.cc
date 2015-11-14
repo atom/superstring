@@ -4,6 +4,7 @@
 #include <iterator>
 #include <random>
 #include <stdlib.h>
+#include "splice-result.h"
 
 using std::set;
 using std::default_random_engine;
@@ -41,9 +42,9 @@ void MarkerIndex::Insert(MarkerId id, Point start, Point end) {
 
 void MarkerIndex::SetExclusive(MarkerId id, bool exclusive) {
   if (exclusive) {
-    exclusive_marker_ids.erase(id);
-  } else {
     exclusive_marker_ids.insert(id);
+  } else {
+    exclusive_marker_ids.erase(id);
   }
 }
 
@@ -76,6 +77,109 @@ void MarkerIndex::Delete(MarkerId id) {
 
   start_nodes_by_id.erase(id);
   end_nodes_by_id.erase(id);
+}
+
+SpliceResult MarkerIndex::Splice(Point start, Point old_extent, Point new_extent) {
+  SpliceResult invalidated;
+
+  if (!root || (old_extent.IsZero() && new_extent.IsZero())) return invalidated;
+
+  bool is_insertion = old_extent.IsZero();
+  Node *start_node = iterator.InsertSpliceBoundary(start, false);
+  Node *end_node = iterator.InsertSpliceBoundary(start.Traverse(old_extent), is_insertion);
+
+  start_node->priority = -1;
+  BubbleNodeUp(start_node);
+  end_node->priority = -2;
+  BubbleNodeUp(end_node);
+
+  if (is_insertion) {
+    for (auto iter = start_node->start_marker_ids.begin(); iter != start_node->start_marker_ids.end();) {
+      MarkerId id = *iter;
+      if (exclusive_marker_ids.count(id) > 0) {
+        start_node->start_marker_ids.erase(iter++);
+        start_node->right_marker_ids.erase(id);
+        end_node->start_marker_ids.insert(id);
+        start_nodes_by_id[id] = end_node;
+      } else {
+        ++iter;
+      }
+    }
+    for (auto iter = start_node->end_marker_ids.begin(); iter != start_node->end_marker_ids.end();) {
+      MarkerId id = *iter;
+      if (exclusive_marker_ids.count(id) == 0 || end_node->start_marker_ids.count(id) > 0) {
+        start_node->end_marker_ids.erase(iter++);
+        if (end_node->start_marker_ids.count(id) == 0) {
+          start_node->right_marker_ids.insert(id);
+        }
+        end_node->end_marker_ids.insert(id);
+        end_nodes_by_id[id] = end_node;
+      } else {
+        ++iter;
+      }
+    }
+  }
+
+  set<MarkerId> starting_inside_splice;
+  set<MarkerId> ending_inside_splice;
+
+  if (start_node->right) {
+    GetStartingAndEndingMarkersWithinSubtree(start_node->right, &starting_inside_splice, &ending_inside_splice);
+  }
+
+  PopulateSpliceInvalidationSets(&invalidated, start_node, end_node, starting_inside_splice, ending_inside_splice);
+
+  if (start_node->right) {
+    for (const MarkerId &id : starting_inside_splice) {
+      end_node->start_marker_ids.insert(id);
+      start_nodes_by_id[id] = end_node;
+    }
+
+    for (const MarkerId &id : ending_inside_splice) {
+      end_node->end_marker_ids.insert(id);
+      if (starting_inside_splice.count(id) == 0) {
+        start_node->right_marker_ids.insert(id);
+      }
+      end_nodes_by_id[id] = end_node;
+    }
+
+    delete start_node->right;
+    start_node->right = nullptr;
+  }
+
+  end_node->left_extent = start.Traverse(new_extent);
+
+  if (start_node->left_extent == end_node->left_extent) {
+    for (const MarkerId &id : end_node->start_marker_ids) {
+      start_node->start_marker_ids.insert(id);
+      start_node->right_marker_ids.insert(id);
+      start_nodes_by_id[id] = start_node;
+    }
+
+    for (const MarkerId &id : end_node->end_marker_ids) {
+      start_node->end_marker_ids.insert(id);
+      if (end_node->left_marker_ids.count(id) > 0) {
+        start_node->left_marker_ids.insert(id);
+        end_node->left_marker_ids.erase(id);
+      }
+      end_nodes_by_id[id] = start_node;
+    }
+    DeleteNode(end_node);
+  } else if (end_node->IsMarkerEndpoint()) {
+    end_node->priority = GenerateRandomNumber();
+    BubbleNodeDown(end_node);
+  } else {
+    DeleteNode(end_node);
+  }
+
+  if (start_node->IsMarkerEndpoint()) {
+    start_node->priority = GenerateRandomNumber();
+    BubbleNodeDown(start_node);
+  } else {
+    DeleteNode(start_node);
+  }
+
+  return invalidated;
 }
 
 Point MarkerIndex::GetStart(MarkerId id) const {
@@ -184,8 +288,6 @@ void MarkerIndex::BubbleNodeDown(Node *node) {
     } else if (right_child_priority < node->priority) {
       RotateNodeLeft(node->right);
     } else {
-      assert(!node->left);
-      assert(!node->right);
       break;
     }
   }
@@ -266,5 +368,44 @@ void MarkerIndex::RotateNodeRight(Node *rotation_pivot) {
       rotation_root->left_marker_ids.insert(*it);
       rotation_pivot->right_marker_ids.erase(it++);
     }
+  }
+}
+
+void MarkerIndex::GetStartingAndEndingMarkersWithinSubtree(const Node *node, set<MarkerId> *starting, set<MarkerId> *ending) {
+  starting->insert(node->start_marker_ids.begin(), node->start_marker_ids.end());
+  ending->insert(node->end_marker_ids.begin(), node->end_marker_ids.end());
+  if (node->left) {
+    GetStartingAndEndingMarkersWithinSubtree(node->left, starting, ending);
+  }
+  if (node->right) {
+    GetStartingAndEndingMarkersWithinSubtree(node->right, starting, ending);
+  }
+}
+
+void MarkerIndex::PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const set<MarkerId> &starting_inside_splice, const set<MarkerId> &ending_inside_splice) {
+  invalidated->touch.insert(start_node->end_marker_ids.begin(), start_node->end_marker_ids.end());
+  invalidated->touch.insert(end_node->start_marker_ids.begin(), end_node->start_marker_ids.end());
+
+  for (const MarkerId &id : start_node->right_marker_ids) {
+    invalidated->touch.insert(id);
+    invalidated->inside.insert(id);
+  }
+
+  for (const MarkerId &id : end_node->left_marker_ids) {
+    invalidated->touch.insert(id);
+    invalidated->inside.insert(id);
+  }
+
+  for (const MarkerId &id : starting_inside_splice) {
+    invalidated->touch.insert(id);
+    invalidated->inside.insert(id);
+    invalidated->overlap.insert(id);
+    if (ending_inside_splice.count(id)) invalidated->surround.insert(id);
+  }
+
+  for (const MarkerId &id : ending_inside_splice) {
+    invalidated->touch.insert(id);
+    invalidated->inside.insert(id);
+    invalidated->overlap.insert(id);
   }
 }

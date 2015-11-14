@@ -1,5 +1,6 @@
 #include "nan.h"
 #include "marker-index.h"
+#include "splice-result.h"
 
 using namespace v8;
 using std::set;
@@ -16,6 +17,7 @@ public:
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("insert").ToLocalChecked(), Nan::New<FunctionTemplate>(Insert)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("setExclusive").ToLocalChecked(), Nan::New<FunctionTemplate>(SetExclusive)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(Delete)->GetFunction());
+    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_splice").ToLocalChecked(), Nan::New<FunctionTemplate>(Splice)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("getStart").ToLocalChecked(), Nan::New<FunctionTemplate>(GetStart)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("getEnd").ToLocalChecked(), Nan::New<FunctionTemplate>(GetEnd)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findIntersecting").ToLocalChecked(), Nan::New<FunctionTemplate>(FindIntersecting)->GetFunction());
@@ -26,6 +28,10 @@ public:
 
     row_key.Reset(Nan::Persistent<String>(Nan::New("row").ToLocalChecked()));
     column_key.Reset(Nan::Persistent<String>(Nan::New("column").ToLocalChecked()));
+    touch_key.Reset(Nan::Persistent<String>(Nan::New("touch").ToLocalChecked()));
+    inside_key.Reset(Nan::Persistent<String>(Nan::New("inside").ToLocalChecked()));
+    overlap_key.Reset(Nan::Persistent<String>(Nan::New("overlap").ToLocalChecked()));
+    surround_key.Reset(Nan::Persistent<String>(Nan::New("surround").ToLocalChecked()));
 
     module->Set(Nan::New("exports").ToLocalChecked(),
                 constructorTemplate->GetFunction());
@@ -34,6 +40,10 @@ public:
 private:
   static Nan::Persistent<String> row_key;
   static Nan::Persistent<String> column_key;
+  static Nan::Persistent<String> touch_key;
+  static Nan::Persistent<String> inside_key;
+  static Nan::Persistent<String> overlap_key;
+  static Nan::Persistent<String> surround_key;
 
   static void New(const Nan::FunctionCallbackInfo<Value> &info) {
     MarkerIndexWrapper *marker_index = new MarkerIndexWrapper(Local<Number>::Cast(info[0]));
@@ -141,6 +151,25 @@ private:
     }
   }
 
+  static void Splice(const Nan::FunctionCallbackInfo<Value> &info) {
+    MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
+
+    Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
+    Nan::Maybe<Point> old_extent = PointFromJS(Nan::To<Object>(info[1]));
+    Nan::Maybe<Point> new_extent = PointFromJS(Nan::To<Object>(info[2]));
+    if (start.IsJust() && old_extent.IsJust() && new_extent.IsJust()) {
+      SpliceResult result = wrapper->marker_index.Splice(start.FromJust(), old_extent.FromJust(), new_extent.FromJust());
+
+      Local<Object> invalidated = Nan::New<Object>();
+      invalidated->Set(Nan::New(touch_key), MarkerIdsToJS(result.touch));
+      invalidated->Set(Nan::New(inside_key), MarkerIdsToJS(result.inside));
+      invalidated->Set(Nan::New(inside_key), MarkerIdsToJS(result.inside));
+      invalidated->Set(Nan::New(overlap_key), MarkerIdsToJS(result.overlap));
+      invalidated->Set(Nan::New(surround_key), MarkerIdsToJS(result.surround));
+      info.GetReturnValue().Set(invalidated);
+    }
+  }
+
   static void GetStart(const Nan::FunctionCallbackInfo<Value> &info) {
     MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
@@ -229,5 +258,9 @@ private:
 
 Nan::Persistent<String> MarkerIndexWrapper::row_key;
 Nan::Persistent<String> MarkerIndexWrapper::column_key;
+Nan::Persistent<String> MarkerIndexWrapper::touch_key;
+Nan::Persistent<String> MarkerIndexWrapper::inside_key;
+Nan::Persistent<String> MarkerIndexWrapper::overlap_key;
+Nan::Persistent<String> MarkerIndexWrapper::surround_key;
 
 NODE_MODULE(marker_index, MarkerIndexWrapper::Init)

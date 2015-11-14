@@ -10,6 +10,8 @@
 #include "marker-id.h"
 #include "node.h"
 
+struct SpliceResult;
+
 class MarkerIndex {
   friend class Iterator;
  public:
@@ -18,6 +20,7 @@ class MarkerIndex {
   void Insert(MarkerId id, Point start, Point end);
   void SetExclusive(MarkerId id, bool exclusive);
   void Delete(MarkerId id);
+  SpliceResult Splice(Point start, Point old_extent, Point new_extent);
   Point GetStart(MarkerId id) const;
   Point GetEnd(MarkerId id) const;
   std::set<MarkerId> FindIntersecting(Point start, Point end);
@@ -33,6 +36,8 @@ class MarkerIndex {
   void BubbleNodeDown(Node *node);
   void RotateNodeLeft(Node *pivot);
   void RotateNodeRight(Node *pivot);
+  void GetStartingAndEndingMarkersWithinSubtree(const Node *node, std::set<MarkerId> *starting, std::set<MarkerId> *ending);
+  void PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const std::set<MarkerId> &starting_inside_splice, const std::set<MarkerId> &ending_inside_splice);
 
   std::default_random_engine random_engine;
   std::uniform_int_distribution<int> random_distribution;

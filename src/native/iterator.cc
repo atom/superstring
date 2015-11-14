@@ -95,6 +95,31 @@ Node* Iterator::InsertMarkerEnd(const MarkerId &id, const Point &start_offset, c
   }
 }
 
+Node* Iterator::InsertSpliceBoundary(const Point &offset, bool is_insertion_end) {
+  Reset();
+
+  while (true) {
+    int comparison = offset.Compare(node_offset);
+    if (comparison == 0 && !is_insertion_end) {
+      return node;
+    } else if (comparison < 0) {
+      if (node->left) {
+        DescendLeft();
+      } else {
+        InsertLeftChild(offset);
+        return node->left;
+      }
+    } else { // comparison > 0
+      if (node->right) {
+        DescendRight();
+      } else {
+        InsertRightChild(offset);
+        return node->right;
+      }
+    }
+  }
+}
+
 void Iterator::FindIntersecting(const Point &start, const Point &end, std::set<MarkerId> *result) {
   Reset();
 

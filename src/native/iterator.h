@@ -14,6 +14,7 @@ class Iterator {
   void Reset();
   Node* InsertMarkerStart(const MarkerId &id, const Point &start_offset, const Point &end_offset);
   Node* InsertMarkerEnd(const MarkerId &id, const Point &start_offset, const Point &end_offset);
+  Node* InsertSpliceBoundary(const Point &offset, bool is_insertion_end);
   void FindIntersecting(const Point &start, const Point &end, std::set<MarkerId> *result);
   void FindContainedIn(const Point &start, const Point &end, std::set<MarkerId> *result);
   void FindStartingIn(const Point &start, const Point &end, std::set<MarkerId> *result);

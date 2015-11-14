@@ -1,5 +1,16 @@
 import NativeMarkerIndex from '../../build/Release/marker_index'
 
+NativeMarkerIndex.prototype.splice = function (start, oldExtent, newExtent) {
+  let invalidated = this._splice(start, oldExtent, newExtent);
+
+  invalidated.touch = new Set(invalidated.touch);
+  invalidated.inside = new Set(invalidated.inside);
+  invalidated.overlap = new Set(invalidated.overlap);
+  invalidated.surround = new Set(invalidated.surround);
+
+  return invalidated;
+}
+
 NativeMarkerIndex.prototype.getRange = function (id) {
   return [this.getStart(id), this.getEnd(id)]
 }
