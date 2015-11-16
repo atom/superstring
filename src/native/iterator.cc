@@ -2,7 +2,9 @@
 #include <vector>
 #include "iterator.h"
 #include "marker-index.h"
+#include "range.h"
 
+using std::unordered_map;
 using std::unordered_set;
 
 Iterator::Iterator(MarkerIndex *marker_index) :
@@ -189,6 +191,30 @@ void Iterator::FindEndingIn(const Point &start, const Point &end, std::unordered
     result->insert(node->end_marker_ids.begin(), node->end_marker_ids.end());
     MoveToSuccessor();
   }
+}
+
+unordered_map<MarkerId, Range> Iterator::Dump() {
+  Reset();
+
+  unordered_map<MarkerId, Range> snapshot;
+
+  if (!node) return snapshot;
+
+  while (node && node->left) DescendLeft();
+
+  while (node) {
+    for (const MarkerId &id : node->start_marker_ids) {
+      Range range;
+      range.start = node_offset;
+      snapshot.insert({id, range});
+    }
+    for (const MarkerId &id : node->end_marker_ids) {
+      snapshot[id].end = node_offset;
+    }
+    MoveToSuccessor();
+  }
+
+  return snapshot;
 }
 
 void Iterator::Ascend() {

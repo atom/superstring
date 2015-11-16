@@ -3,12 +3,14 @@
 
 #include <map>
 #include <random>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "iterator.h"
 #include "marker-id.h"
 #include "node.h"
 
+struct Range;
 struct SpliceResult;
 
 class MarkerIndex {
@@ -27,6 +29,7 @@ class MarkerIndex {
   std::unordered_set<MarkerId> FindContainedIn(Point start, Point end);
   std::unordered_set<MarkerId> FindStartingIn(Point start, Point end);
   std::unordered_set<MarkerId> FindEndingIn(Point start, Point end);
+  std::unordered_map<MarkerId, Range> Dump();
 
  private:
   Point GetNodeOffset(const Node *node) const;

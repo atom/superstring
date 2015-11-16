@@ -208,7 +208,7 @@ export default class Iterator {
     }
   }
 
-  dump (filterSet) {
+  dump () {
     this.reset()
 
     while (this.node && this.node.left) this.descendLeft()
@@ -217,15 +217,11 @@ export default class Iterator {
 
     while (this.node) {
       this.node.startMarkerIds.forEach(markerId => {
-        if (!filterSet || filterSet.has(markerId)) {
-          snapshot[markerId] = {start: this.nodeOffset, end: null}
-        }
+        snapshot[markerId] = {start: this.nodeOffset, end: null}
       })
 
       this.node.endMarkerIds.forEach(markerId => {
-        if (!filterSet || filterSet.has(markerId)) {
-          snapshot[markerId].end = this.nodeOffset
-        }
+        snapshot[markerId].end = this.nodeOffset
       })
 
       this.moveToSuccessor()

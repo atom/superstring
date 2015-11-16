@@ -4,8 +4,10 @@
 #include <random>
 #include <stdlib.h>
 #include "splice-result.h"
+#include "range.h"
 
 using std::default_random_engine;
+using std::unordered_map;
 using std::unordered_set;
 
 MarkerIndex::MarkerIndex(unsigned seed)
@@ -237,6 +239,10 @@ unordered_set<MarkerId> MarkerIndex::FindEndingIn(Point start, Point end) {
   unordered_set<MarkerId> result;
   iterator.FindEndingIn(start, end, &result);
   return result;
+}
+
+unordered_map<MarkerId, Range> MarkerIndex::Dump() {
+  return iterator.Dump();
 }
 
 Point MarkerIndex::GetNodeOffset(const Node *node) const {

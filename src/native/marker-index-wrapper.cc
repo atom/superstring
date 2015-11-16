@@ -1,9 +1,12 @@
+#include <unordered_map>
 #include "nan.h"
 #include "marker-index.h"
+#include "range.h"
 #include "splice-result.h"
 
 using namespace v8;
 using std::unordered_set;
+using std::unordered_map;
 
 class MarkerIndexWrapper : public Nan::ObjectWrap {
 public:
@@ -25,9 +28,12 @@ public:
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findContainedIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindContainedIn)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findStartingIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindStartingIn)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findEndingIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindEndingIn)->GetFunction());
+    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("dump").ToLocalChecked(), Nan::New<FunctionTemplate>(Dump)->GetFunction());
 
     row_key.Reset(Nan::Persistent<String>(Nan::New("row").ToLocalChecked()));
     column_key.Reset(Nan::Persistent<String>(Nan::New("column").ToLocalChecked()));
+    start_key.Reset(Nan::Persistent<String>(Nan::New("start").ToLocalChecked()));
+    end_key.Reset(Nan::Persistent<String>(Nan::New("end").ToLocalChecked()));
     touch_key.Reset(Nan::Persistent<String>(Nan::New("touch").ToLocalChecked()));
     inside_key.Reset(Nan::Persistent<String>(Nan::New("inside").ToLocalChecked()));
     overlap_key.Reset(Nan::Persistent<String>(Nan::New("overlap").ToLocalChecked()));
@@ -40,6 +46,8 @@ public:
 private:
   static Nan::Persistent<String> row_key;
   static Nan::Persistent<String> column_key;
+  static Nan::Persistent<String> start_key;
+  static Nan::Persistent<String> end_key;
   static Nan::Persistent<String> touch_key;
   static Nan::Persistent<String> inside_key;
   static Nan::Persistent<String> overlap_key;
@@ -97,6 +105,17 @@ private:
       result_array->Set(index++, Nan::New<Integer>(id));
     }
     return result_array;
+  }
+
+  static Local<Object> SnapshotToJS(const unordered_map<MarkerId, Range> &snapshot) {
+    Local<Object> result_object = Nan::New<Object>();
+    for (auto &pair : snapshot) {
+      Local<Object> range = Nan::New<Object>();
+      range->Set(Nan::New(start_key), PointToJS(pair.second.start));
+      range->Set(Nan::New(end_key), PointToJS(pair.second.end));
+      result_object->Set(Nan::New<Integer>(pair.first), range);
+    }
+    return result_object;
   }
 
   static Nan::Maybe<MarkerId> MarkerIdFromJS(Nan::MaybeLocal<Integer> maybe_id) {
@@ -250,6 +269,12 @@ private:
     }
   }
 
+  static void Dump(const Nan::FunctionCallbackInfo<Value> &info) {
+    MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
+    unordered_map<MarkerId, Range> snapshot = wrapper->marker_index.Dump();
+    info.GetReturnValue().Set(SnapshotToJS(snapshot));
+  }
+
   MarkerIndexWrapper(v8::Local<v8::Number> seed) :
     marker_index{static_cast<unsigned>(seed->Int32Value())} {}
 
@@ -258,6 +283,8 @@ private:
 
 Nan::Persistent<String> MarkerIndexWrapper::row_key;
 Nan::Persistent<String> MarkerIndexWrapper::column_key;
+Nan::Persistent<String> MarkerIndexWrapper::start_key;
+Nan::Persistent<String> MarkerIndexWrapper::end_key;
 Nan::Persistent<String> MarkerIndexWrapper::touch_key;
 Nan::Persistent<String> MarkerIndexWrapper::inside_key;
 Nan::Persistent<String> MarkerIndexWrapper::overlap_key;

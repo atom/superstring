@@ -1,12 +1,14 @@
 #ifndef ITERATOR_H_
 #define ITERATOR_H_
 
+#include <unordered_map>
 #include <unordered_set>
 #include "marker-id.h"
 #include "point.h"
 
 class MarkerIndex;
 struct Node;
+struct Range;
 
 class Iterator {
  public:
@@ -19,6 +21,7 @@ class Iterator {
   void FindContainedIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
   void FindStartingIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
   void FindEndingIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
+  std::unordered_map<MarkerId, Range> Dump();
 
  private:
   void Ascend();

@@ -16,8 +16,8 @@ export default class MarkerIndex {
     this.exclusiveMarkers = new Set()
   }
 
-  dump (filterSet) {
-    return this.iterator.dump(filterSet)
+  dump () {
+    return this.iterator.dump()
   }
 
   getRange (markerId) {
