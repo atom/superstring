@@ -127,7 +127,7 @@ SpliceResult MarkerIndex::Splice(Point start, Point old_extent, Point new_extent
     GetStartingAndEndingMarkersWithinSubtree(start_node->right, &starting_inside_splice, &ending_inside_splice);
   }
 
-  PopulateSpliceInvalidationSets(&invalidated, start_node, end_node, starting_inside_splice, ending_inside_splice);
+  PopulateSpliceInvalidationSets(&invalidated, start_node, end_node, starting_inside_splice, ending_inside_splice, is_insertion);
 
   if (start_node->right) {
     for (const MarkerId &id : starting_inside_splice) {
@@ -382,13 +382,15 @@ void MarkerIndex::GetStartingAndEndingMarkersWithinSubtree(const Node *node, set
   }
 }
 
-void MarkerIndex::PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const set<MarkerId> &starting_inside_splice, const set<MarkerId> &ending_inside_splice) {
+void MarkerIndex::PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const set<MarkerId> &starting_inside_splice, const set<MarkerId> &ending_inside_splice, bool is_insertion) {
   invalidated->touch.insert(start_node->end_marker_ids.begin(), start_node->end_marker_ids.end());
   invalidated->touch.insert(end_node->start_marker_ids.begin(), end_node->start_marker_ids.end());
 
   for (const MarkerId &id : start_node->right_marker_ids) {
     invalidated->touch.insert(id);
-    invalidated->inside.insert(id);
+    if (!(is_insertion && (start_node->start_marker_ids.count(id) > 0 || end_node->end_marker_ids.count(id) > 0))) {
+      invalidated->inside.insert(id);
+    }
   }
 
   for (const MarkerId &id : end_node->left_marker_ids) {

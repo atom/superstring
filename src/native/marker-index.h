@@ -37,7 +37,7 @@ class MarkerIndex {
   void RotateNodeLeft(Node *pivot);
   void RotateNodeRight(Node *pivot);
   void GetStartingAndEndingMarkersWithinSubtree(const Node *node, std::set<MarkerId> *starting, std::set<MarkerId> *ending);
-  void PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const std::set<MarkerId> &starting_inside_splice, const std::set<MarkerId> &ending_inside_splice);
+  void PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const std::set<MarkerId> &starting_inside_splice, const std::set<MarkerId> &ending_inside_splice, bool is_insertion);
 
   std::default_random_engine random_engine;
   std::uniform_int_distribution<int> random_distribution;
