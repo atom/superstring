@@ -104,7 +104,7 @@ export default class Iterator {
           this.insertLeftChild(offset)
           return this.node.left
         }
-      } else { // endOffset > this.nodeOffset
+      } else { // offset > this.nodeOffset
         if (this.node.right) {
           this.descendRight()
         } else {
