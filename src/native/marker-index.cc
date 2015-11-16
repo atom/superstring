@@ -1,13 +1,12 @@
 #include "marker-index.h"
-#include <algorithm>
 #include <climits>
 #include <iterator>
 #include <random>
 #include <stdlib.h>
 #include "splice-result.h"
 
-using std::set;
 using std::default_random_engine;
+using std::unordered_set;
 
 MarkerIndex::MarkerIndex(unsigned seed)
   : random_engine {static_cast<default_random_engine::result_type>(seed)},
@@ -120,8 +119,8 @@ SpliceResult MarkerIndex::Splice(Point start, Point old_extent, Point new_extent
     }
   }
 
-  set<MarkerId> starting_inside_splice;
-  set<MarkerId> ending_inside_splice;
+  unordered_set<MarkerId> starting_inside_splice;
+  unordered_set<MarkerId> ending_inside_splice;
 
   if (start_node->right) {
     GetStartingAndEndingMarkersWithinSubtree(start_node->right, &starting_inside_splice, &ending_inside_splice);
@@ -198,42 +197,44 @@ Point MarkerIndex::GetEnd(MarkerId id) const {
     return GetNodeOffset(result->second);
 }
 
-set<MarkerId> MarkerIndex::FindIntersecting(Point start, Point end) {
-  set<MarkerId> result;
+unordered_set<MarkerId> MarkerIndex::FindIntersecting(Point start, Point end) {
+  unordered_set<MarkerId> result;
   iterator.FindIntersecting(start, end, &result);
   return result;
 }
 
-set<MarkerId> MarkerIndex::FindContaining(Point start, Point end) {
-  set<MarkerId> containing_start;
+unordered_set<MarkerId> MarkerIndex::FindContaining(Point start, Point end) {
+  unordered_set<MarkerId> containing_start;
   iterator.FindIntersecting(start, start, &containing_start);
   if (end == start) {
     return containing_start;
   } else {
-    set<MarkerId> containing_end;
+    unordered_set<MarkerId> containing_end;
     iterator.FindIntersecting(end, end, &containing_end);
-    set<MarkerId> containing_start_and_end;
-    std::set_intersection(containing_start.begin(), containing_start.end(),
-                         containing_end.begin(), containing_end.end(),
-                         std::inserter(containing_start_and_end, containing_start_and_end.begin()));
+    unordered_set<MarkerId> containing_start_and_end;
+    for (const MarkerId &id : containing_start) {
+      if (containing_end.count(id) > 0) {
+        containing_start_and_end.insert(id);
+      }
+    }
     return containing_start_and_end;
   }
 }
 
-set<MarkerId> MarkerIndex::FindContainedIn(Point start, Point end) {
-  set<MarkerId> result;
+unordered_set<MarkerId> MarkerIndex::FindContainedIn(Point start, Point end) {
+  unordered_set<MarkerId> result;
   iterator.FindContainedIn(start, end, &result);
   return result;
 }
 
-set<MarkerId> MarkerIndex::FindStartingIn(Point start, Point end) {
-  set<MarkerId> result;
+unordered_set<MarkerId> MarkerIndex::FindStartingIn(Point start, Point end) {
+  unordered_set<MarkerId> result;
   iterator.FindStartingIn(start, end, &result);
   return result;
 }
 
-set<MarkerId> MarkerIndex::FindEndingIn(Point start, Point end) {
-  set<MarkerId> result;
+unordered_set<MarkerId> MarkerIndex::FindEndingIn(Point start, Point end) {
+  unordered_set<MarkerId> result;
   iterator.FindEndingIn(start, end, &result);
   return result;
 }
@@ -371,7 +372,7 @@ void MarkerIndex::RotateNodeRight(Node *rotation_pivot) {
   }
 }
 
-void MarkerIndex::GetStartingAndEndingMarkersWithinSubtree(const Node *node, set<MarkerId> *starting, set<MarkerId> *ending) {
+void MarkerIndex::GetStartingAndEndingMarkersWithinSubtree(const Node *node, unordered_set<MarkerId> *starting, unordered_set<MarkerId> *ending) {
   starting->insert(node->start_marker_ids.begin(), node->start_marker_ids.end());
   ending->insert(node->end_marker_ids.begin(), node->end_marker_ids.end());
   if (node->left) {
@@ -382,7 +383,7 @@ void MarkerIndex::GetStartingAndEndingMarkersWithinSubtree(const Node *node, set
   }
 }
 
-void MarkerIndex::PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const set<MarkerId> &starting_inside_splice, const set<MarkerId> &ending_inside_splice, bool is_insertion) {
+void MarkerIndex::PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const unordered_set<MarkerId> &starting_inside_splice, const unordered_set<MarkerId> &ending_inside_splice, bool is_insertion) {
   invalidated->touch.insert(start_node->end_marker_ids.begin(), start_node->end_marker_ids.end());
   invalidated->touch.insert(end_node->start_marker_ids.begin(), end_node->start_marker_ids.end());
 

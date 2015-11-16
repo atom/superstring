@@ -3,7 +3,7 @@
 #include "splice-result.h"
 
 using namespace v8;
-using std::set;
+using std::unordered_set;
 
 class MarkerIndexWrapper : public Nan::ObjectWrap {
 public:
@@ -90,7 +90,7 @@ private:
     return result;
   }
 
-  static Local<Array> MarkerIdsToJS(const set<MarkerId> marker_ids) {
+  static Local<Array> MarkerIdsToJS(const unordered_set<MarkerId> &marker_ids) {
     Local<Array> result_array = Nan::New<Array>(marker_ids.size());
     uint32_t index = 0;
     for (auto marker_ids_iter = marker_ids.begin(); marker_ids_iter != marker_ids.end(); marker_ids_iter++) {
@@ -197,7 +197,7 @@ private:
     Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[1]));
 
     if (start.IsJust() && end.IsJust()) {
-      set<MarkerId> result = wrapper->marker_index.FindIntersecting(start.FromJust(), end.FromJust());
+      unordered_set<MarkerId> result = wrapper->marker_index.FindIntersecting(start.FromJust(), end.FromJust());
       info.GetReturnValue().Set(MarkerIdsToJS(result));
     }
   }
@@ -209,7 +209,7 @@ private:
     Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[1]));
 
     if (start.IsJust() && end.IsJust()) {
-      set<MarkerId> result = wrapper->marker_index.FindContaining(start.FromJust(), end.FromJust());
+      unordered_set<MarkerId> result = wrapper->marker_index.FindContaining(start.FromJust(), end.FromJust());
       info.GetReturnValue().Set(MarkerIdsToJS(result));
     }
   }
@@ -221,7 +221,7 @@ private:
     Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[1]));
 
     if (start.IsJust() && end.IsJust()) {
-      set<MarkerId> result = wrapper->marker_index.FindContainedIn(start.FromJust(), end.FromJust());
+      unordered_set<MarkerId> result = wrapper->marker_index.FindContainedIn(start.FromJust(), end.FromJust());
       info.GetReturnValue().Set(MarkerIdsToJS(result));
     }
   }
@@ -233,7 +233,7 @@ private:
     Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[1]));
 
     if (start.IsJust() && end.IsJust()) {
-      set<MarkerId> result = wrapper->marker_index.FindStartingIn(start.FromJust(), end.FromJust());
+      unordered_set<MarkerId> result = wrapper->marker_index.FindStartingIn(start.FromJust(), end.FromJust());
       info.GetReturnValue().Set(MarkerIdsToJS(result));
     }
   }
@@ -245,7 +245,7 @@ private:
     Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[1]));
 
     if (start.IsJust() && end.IsJust()) {
-      set<MarkerId> result = wrapper->marker_index.FindEndingIn(start.FromJust(), end.FromJust());
+      unordered_set<MarkerId> result = wrapper->marker_index.FindEndingIn(start.FromJust(), end.FromJust());
       info.GetReturnValue().Set(MarkerIdsToJS(result));
     }
   }

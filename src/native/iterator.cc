@@ -3,7 +3,6 @@
 #include "iterator.h"
 #include "marker-index.h"
 
-using std::set;
 using std::unordered_set;
 
 Iterator::Iterator(MarkerIndex *marker_index) :
@@ -120,7 +119,7 @@ Node* Iterator::InsertSpliceBoundary(const Point &offset, bool is_insertion_end)
   }
 }
 
-void Iterator::FindIntersecting(const Point &start, const Point &end, std::set<MarkerId> *result) {
+void Iterator::FindIntersecting(const Point &start, const Point &end, std::unordered_set<MarkerId> *result) {
   Reset();
 
   if (!node) return;
@@ -149,7 +148,7 @@ void Iterator::FindIntersecting(const Point &start, const Point &end, std::set<M
   } while (node && node_offset <= end);
 }
 
-void Iterator::FindContainedIn(const Point &start, const Point &end, std::set<MarkerId> *result) {
+void Iterator::FindContainedIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result) {
   Reset();
 
   if (!node) return;
@@ -166,7 +165,7 @@ void Iterator::FindContainedIn(const Point &start, const Point &end, std::set<Ma
   }
 }
 
-void Iterator::FindStartingIn(const Point &start, const Point &end, std::set<MarkerId> *result) {
+void Iterator::FindStartingIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result) {
   Reset();
 
   if (!node) return;
@@ -179,7 +178,7 @@ void Iterator::FindStartingIn(const Point &start, const Point &end, std::set<Mar
   }
 }
 
-void Iterator::FindEndingIn(const Point &start, const Point &end, std::set<MarkerId> *result) {
+void Iterator::FindEndingIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result) {
   Reset();
 
   if (!node) return;
@@ -290,7 +289,7 @@ Node* Iterator::InsertRightChild(const Point &offset) {
   return node->right = new Node(node, offset.Traversal(node_offset));
 }
 
-void Iterator::CheckIntersection(const Point &start, const Point &end, set<MarkerId> *result) {
+void Iterator::CheckIntersection(const Point &start, const Point &end, unordered_set<MarkerId> *result) {
   if (left_ancestor_offset <= end && start <= node_offset) {
     result->insert(node->left_marker_ids.begin(), node->left_marker_ids.end());
   }

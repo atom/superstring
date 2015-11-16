@@ -1,9 +1,9 @@
-#include <set>
+#include <unordered_set>
 #include "marker-id.h"
 
 struct SpliceResult {
-  std::set<MarkerId> touch;
-  std::set<MarkerId> inside;
-  std::set<MarkerId> overlap;
-  std::set<MarkerId> surround;
+  std::unordered_set<MarkerId> touch;
+  std::unordered_set<MarkerId> inside;
+  std::unordered_set<MarkerId> overlap;
+  std::unordered_set<MarkerId> surround;
 };

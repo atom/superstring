@@ -3,7 +3,6 @@
 
 #include <map>
 #include <random>
-#include <set>
 #include <unordered_set>
 
 #include "iterator.h"
@@ -23,11 +22,11 @@ class MarkerIndex {
   SpliceResult Splice(Point start, Point old_extent, Point new_extent);
   Point GetStart(MarkerId id) const;
   Point GetEnd(MarkerId id) const;
-  std::set<MarkerId> FindIntersecting(Point start, Point end);
-  std::set<MarkerId> FindContaining(Point start, Point end);
-  std::set<MarkerId> FindContainedIn(Point start, Point end);
-  std::set<MarkerId> FindStartingIn(Point start, Point end);
-  std::set<MarkerId> FindEndingIn(Point start, Point end);
+  std::unordered_set<MarkerId> FindIntersecting(Point start, Point end);
+  std::unordered_set<MarkerId> FindContaining(Point start, Point end);
+  std::unordered_set<MarkerId> FindContainedIn(Point start, Point end);
+  std::unordered_set<MarkerId> FindStartingIn(Point start, Point end);
+  std::unordered_set<MarkerId> FindEndingIn(Point start, Point end);
 
  private:
   Point GetNodeOffset(const Node *node) const;
@@ -36,8 +35,8 @@ class MarkerIndex {
   void BubbleNodeDown(Node *node);
   void RotateNodeLeft(Node *pivot);
   void RotateNodeRight(Node *pivot);
-  void GetStartingAndEndingMarkersWithinSubtree(const Node *node, std::set<MarkerId> *starting, std::set<MarkerId> *ending);
-  void PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const std::set<MarkerId> &starting_inside_splice, const std::set<MarkerId> &ending_inside_splice, bool is_insertion);
+  void GetStartingAndEndingMarkersWithinSubtree(const Node *node, std::unordered_set<MarkerId> *starting, std::unordered_set<MarkerId> *ending);
+  void PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const std::unordered_set<MarkerId> &starting_inside_splice, const std::unordered_set<MarkerId> &ending_inside_splice, bool is_insertion);
 
   std::default_random_engine random_engine;
   std::uniform_int_distribution<int> random_distribution;

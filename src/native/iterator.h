@@ -1,7 +1,7 @@
 #ifndef ITERATOR_H_
 #define ITERATOR_H_
 
-#include <set>
+#include <unordered_set>
 #include "marker-id.h"
 #include "point.h"
 
@@ -15,10 +15,10 @@ class Iterator {
   Node* InsertMarkerStart(const MarkerId &id, const Point &start_offset, const Point &end_offset);
   Node* InsertMarkerEnd(const MarkerId &id, const Point &start_offset, const Point &end_offset);
   Node* InsertSpliceBoundary(const Point &offset, bool is_insertion_end);
-  void FindIntersecting(const Point &start, const Point &end, std::set<MarkerId> *result);
-  void FindContainedIn(const Point &start, const Point &end, std::set<MarkerId> *result);
-  void FindStartingIn(const Point &start, const Point &end, std::set<MarkerId> *result);
-  void FindEndingIn(const Point &start, const Point &end, std::set<MarkerId> *result);
+  void FindIntersecting(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
+  void FindContainedIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
+  void FindStartingIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
+  void FindEndingIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
 
  private:
   void Ascend();
@@ -30,7 +30,7 @@ class Iterator {
   void MarkLeft(const MarkerId &id, const Point &start_offset, const Point &end_offset);
   Node* InsertLeftChild(const Point &offset);
   Node* InsertRightChild(const Point &offset);
-  void CheckIntersection(const Point &start, const Point &end, std::set<MarkerId> *results);
+  void CheckIntersection(const Point &start, const Point &end, std::unordered_set<MarkerId> *results);
 
   MarkerIndex *marker_index;
   Node *node;
