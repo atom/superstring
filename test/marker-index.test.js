@@ -387,7 +387,7 @@ describe('MarkerIndex', () => {
         let expectedSet = expectedSets[strategy]
         let actualSet = actualSets[strategy]
 
-        assert.equal(actualSet.length, expectedSet.length)
+        assert.equal(actualSet.size, expectedSet.size)
         for (let markerId of expectedSet) {
           assert(actualSet.has(markerId), `Expected marker ${markerId} to be invalidated via ${strategy} strategy. Seed ${seed}.`)
         }

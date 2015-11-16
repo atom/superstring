@@ -139,7 +139,7 @@ export default class MarkerIndex {
       this.getStartingAndEndingMarkersWithinSubtree(startNode.right, startingInsideSplice, endingInsideSplice)
     }
 
-    this.populateSpliceInvalidationSets(invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice)
+    this.populateSpliceInvalidationSets(invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice, isInsertion)
 
     if (startNode.right) {
       startingInsideSplice.forEach(markerId => {
@@ -374,12 +374,14 @@ export default class MarkerIndex {
     }
   }
 
-  populateSpliceInvalidationSets (invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice) {
+  populateSpliceInvalidationSets (invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice, isInsertion) {
     addToSet(invalidated.touch, startNode.endMarkerIds)
     addToSet(invalidated.touch, endNode.startMarkerIds)
     startNode.rightMarkerIds.forEach(function (markerId) {
       invalidated.touch.add(markerId)
-      invalidated.inside.add(markerId)
+      if (!(isInsertion && (startNode.startMarkerIds.has(markerId) || endNode.endMarkerIds.has(markerId)))) {
+        invalidated.inside.add(markerId)
+      }
     })
     endNode.leftMarkerIds.forEach(function (markerId) {
       invalidated.touch.add(markerId)
