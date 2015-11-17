@@ -2,7 +2,7 @@
   "name": "marker-index",
   "version": "2.1.1",
   "description": "A data structure to track logical text annotations.",
-  "main": "dist/marker-index.js",
+  "main": "dist/native/marker-index.js",
   "scripts": {
     "test": "npm run standard && node_modules/.bin/mocha ./test/helpers/setup  test/marker-index.test.js",
     "tdd": "npm run standard && node_modules/.bin/electron-mocha --renderer --interactive --recursive ./test/helpers/setup  test/marker-index.test.js",
