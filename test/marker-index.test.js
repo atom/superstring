@@ -1,5 +1,6 @@
 import Random from 'random-seed'
-import MarkerIndex from '../src/js/marker-index'
+import JSMarkerIndex from '../src/js/marker-index'
+import NativeMarkerIndex from '../src/native/marker-index'
 import {traverse, traversal, compare, isZero, max, format as formatPoint} from '../src/js/point-helpers'
 import './helpers/add-to-html-methods'
 
@@ -9,38 +10,45 @@ describe('MarkerIndex', () => {
 
     let seed, seedMessage, random, markerIndex, markers, idCounter
 
-    for (let i = 0; i < 1000; i++) {
-      seed = Date.now()
-      seedMessage = `Random Seed: ${seed}`
-      random = new Random(seed)
-      markerIndex = new MarkerIndex(seed)
-      markers = []
-      idCounter = 65
+    runTests(JSMarkerIndex)
+    runTests(NativeMarkerIndex)
 
-      for (let j = 0; j < 50; j++) {
-        let n = random(10)
-        if (n >= 4) { // 60% insert
-          performInsert()
-        } else if (n >= 2) { // 20% splice
-          performSplice()
-        } else if (markers.length > 0) {
-          performDelete()
+    function runTests (MarkerIndex) {
+      for (let i = 0; i < 1000; i++) {
+        seed = Date.now()
+        seedMessage = `Random Seed: ${seed}`
+        random = new Random(seed)
+        markerIndex = new MarkerIndex(seed)
+        markers = []
+        idCounter = 1
+
+        for (let j = 0; j < 50; j++) {
+          let n = random(10)
+          if (n >= 4) { // 60% insert
+            performInsert()
+          } else if (n >= 2) { // 20% splice
+            performSplice()
+          } else if (markers.length > 0) {
+            performDelete()
+          }
+
+          verifyRanges()
+          write(() => markerIndex.toHTML())
+          write(() => '<hr>')
+          if (MarkerIndex === JSMarkerIndex) verifyHighestPossiblePaths()
+          if (MarkerIndex === NativeMarkerIndex) verifyHighestPossiblePaths()
         }
-        write(() => markerIndex.toHTML())
-        write(() => '<hr>')
-        verifyHighestPossiblePaths()
-        verifyContinuousPaths()
-      }
 
-      verifyRanges()
-      testDump()
-      testFindIntersecting()
-      testFindContaining()
-      testFindContainedIn()
-      testFindStartingIn()
-      testFindEndingIn()
-      testFindStartingAt()
-      testFindEndingAt()
+        verifyRanges()
+        testDump()
+        testFindIntersecting()
+        testFindContaining()
+        testFindContainedIn()
+        testFindStartingIn()
+        testFindEndingIn()
+        testFindStartingAt()
+        testFindEndingAt()
+      }
     }
 
     //  uncomment for debug output in electron (`npm run tdd`)
@@ -59,16 +67,13 @@ describe('MarkerIndex', () => {
     function testDump () {
       if (markers.length === 0) return
 
-      let filterSet = new Set()
       let expectedSnapshot = {}
 
-      while (random(10) > 0) {
-        let marker = markers[random(markers.length)]
-        filterSet.add(marker.id)
+      for (let marker of markers) {
         expectedSnapshot[marker.id] = {start: marker.start, end: marker.end}
       }
 
-      let actualSnapshot = markerIndex.dump(filterSet)
+      let actualSnapshot = markerIndex.dump()
 
       assert.deepEqual(actualSnapshot, expectedSnapshot, seedMessage)
     }
@@ -281,7 +286,7 @@ describe('MarkerIndex', () => {
     }
 
     function performInsert () {
-      let id = String.fromCharCode(idCounter++)
+      let id = idCounter++
       let [start, end] = getRange()
       let exclusive = !!random(2)
       write(() => `insert ${id}, ${formatPoint(start)}, ${formatPoint(end)}, exclusive: ${exclusive}`)
