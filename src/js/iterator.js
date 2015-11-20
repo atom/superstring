@@ -8,8 +8,8 @@ export default class Iterator {
   }
 
   reset () {
-    this.node = this.markerIndex.root
-    this.nodePosition = this.node ? this.node.leftExtent : null
+    this.currentNode = this.markerIndex.root
+    this.currentNodePosition = this.currentNode ? this.currentNode.leftExtent : null
     this.leftAncestorPosition = {row: 0, column: 0}
     this.rightAncestorPosition = {row: Infinity, column: Infinity}
     this.leftAncestorPositionStack = []
@@ -19,35 +19,35 @@ export default class Iterator {
   insertMarkerStart (markerId, startPosition, endPosition) {
     this.reset()
 
-    if (!this.node) {
+    if (!this.currentNode) {
       let node = new Node(null, startPosition)
       this.markerIndex.root = node
       return node
     }
 
     while (true) {
-      let comparison = compare(startPosition, this.nodePosition)
+      let comparison = compare(startPosition, this.currentNodePosition)
       if (comparison === 0) {
         this.markRight(markerId, startPosition, endPosition)
-        return this.node
+        return this.currentNode
       } else if (comparison < 0) {
         this.markRight(markerId, startPosition, endPosition)
-        if (this.node.left) {
+        if (this.currentNode.left) {
           this.descendLeft()
         } else {
           this.insertLeftChild(startPosition)
           this.descendLeft()
           this.markRight(markerId, startPosition, endPosition)
-          return this.node
+          return this.currentNode
         }
-      } else { // startPosition > this.nodePosition
-        if (this.node.right) {
+      } else { // startPosition > this.currentNodePosition
+        if (this.currentNode.right) {
           this.descendRight()
         } else {
           this.insertRightChild(startPosition)
           this.descendRight()
           this.markRight(markerId, startPosition, endPosition)
-          return this.node
+          return this.currentNode
         }
       }
     }
@@ -56,35 +56,35 @@ export default class Iterator {
   insertMarkerEnd (markerId, startPosition, endPosition) {
     this.reset()
 
-    if (!this.node) {
+    if (!this.currentNode) {
       let node = new Node(null, endPosition)
       this.markerIndex.root = node
       return node
     }
 
     while (true) {
-      let comparison = compare(endPosition, this.nodePosition)
+      let comparison = compare(endPosition, this.currentNodePosition)
       if (comparison === 0) {
         this.markLeft(markerId, startPosition, endPosition)
-        return this.node
+        return this.currentNode
       } else if (comparison < 0) {
-        if (this.node.left) {
+        if (this.currentNode.left) {
           this.descendLeft()
         } else {
           this.insertLeftChild(endPosition)
           this.descendLeft()
           this.markLeft(markerId, startPosition, endPosition)
-          return this.node
+          return this.currentNode
         }
-      } else { // endPosition > this.nodePosition
+      } else { // endPosition > this.currentNodePosition
         this.markLeft(markerId, startPosition, endPosition)
-        if (this.node.right) {
+        if (this.currentNode.right) {
           this.descendRight()
         } else {
           this.insertRightChild(endPosition)
           this.descendRight()
           this.markLeft(markerId, startPosition, endPosition)
-          return this.node
+          return this.currentNode
         }
       }
     }
@@ -94,22 +94,22 @@ export default class Iterator {
     this.reset()
 
     while (true) {
-      let comparison = compare(position, this.nodePosition)
+      let comparison = compare(position, this.currentNodePosition)
       if (comparison === 0 && !isInsertionEnd) {
-        return this.node
+        return this.currentNode
       } else if (comparison < 0) {
-        if (this.node.left) {
+        if (this.currentNode.left) {
           this.descendLeft()
         } else {
           this.insertLeftChild(position)
-          return this.node.left
+          return this.currentNode.left
         }
-      } else { // position > this.nodePosition
-        if (this.node.right) {
+      } else { // position > this.currentNodePosition
+        if (this.currentNode.right) {
           this.descendRight()
         } else {
           this.insertRightChild(position)
-          return this.node.right
+          return this.currentNode.right
         }
       }
     }
@@ -117,18 +117,18 @@ export default class Iterator {
 
   findIntersecting (start, end, resultSet) {
     this.reset()
-    if (!this.node) return
+    if (!this.currentNode) return
 
     while (true) {
-      if (compare(start, this.nodePosition) < 0) {
-        if (this.node.left) {
+      if (compare(start, this.currentNodePosition) < 0) {
+        if (this.currentNode.left) {
           this.checkIntersection(start, end, resultSet)
           this.descendLeft()
         } else {
           break
         }
       } else {
-        if (this.node.right) {
+        if (this.currentNode.right) {
           this.checkIntersection(start, end, resultSet)
           this.descendRight()
         } else {
@@ -140,24 +140,24 @@ export default class Iterator {
     do {
       this.checkIntersection(start, end, resultSet)
       this.moveToSuccessor()
-    } while (this.node && compare(this.nodePosition, end) <= 0)
+    } while (this.currentNode && compare(this.currentNodePosition, end) <= 0)
   }
 
   findContaining (position, resultSet) {
     this.reset()
-    if (!this.node) return
+    if (!this.currentNode) return
 
     while (true) {
       this.checkIntersection(position, position, resultSet)
 
-      if (compare(position, this.nodePosition) < 0) {
-        if (this.node.left) {
+      if (compare(position, this.currentNodePosition) < 0) {
+        if (this.currentNode.left) {
           this.descendLeft()
         } else {
           break
         }
       } else {
-        if (this.node.right) {
+        if (this.currentNode.right) {
           this.descendRight()
         } else {
           break
@@ -168,14 +168,14 @@ export default class Iterator {
 
   findContainedIn (start, end, resultSet) {
     this.reset()
-    if (!this.node) return
+    if (!this.currentNode) return
 
     this.seekToFirstNodeGreaterThanOrEqualTo(start)
 
     let started = new Set()
-    while (this.node && compare(this.nodePosition, end) <= 0) {
-      addToSet(started, this.node.startMarkerIds)
-      this.node.endMarkerIds.forEach(function (markerId) {
+    while (this.currentNode && compare(this.currentNodePosition, end) <= 0) {
+      addToSet(started, this.currentNode.startMarkerIds)
+      this.currentNode.endMarkerIds.forEach(function (markerId) {
         if (started.has(markerId)) {
           resultSet.add(markerId)
         }
@@ -186,24 +186,24 @@ export default class Iterator {
 
   findStartingIn (start, end, resultSet) {
     this.reset()
-    if (!this.node) return
+    if (!this.currentNode) return
 
     this.seekToFirstNodeGreaterThanOrEqualTo(start)
 
-    while (this.node && compare(this.nodePosition, end) <= 0) {
-      addToSet(resultSet, this.node.startMarkerIds)
+    while (this.currentNode && compare(this.currentNodePosition, end) <= 0) {
+      addToSet(resultSet, this.currentNode.startMarkerIds)
       this.moveToSuccessor()
     }
   }
 
   findEndingIn (start, end, resultSet) {
     this.reset()
-    if (!this.node) return
+    if (!this.currentNode) return
 
     this.seekToFirstNodeGreaterThanOrEqualTo(start)
 
-    while (this.node && compare(this.nodePosition, end) <= 0) {
-      addToSet(resultSet, this.node.endMarkerIds)
+    while (this.currentNode && compare(this.currentNodePosition, end) <= 0) {
+      addToSet(resultSet, this.currentNode.endMarkerIds)
       this.moveToSuccessor()
     }
   }
@@ -211,17 +211,17 @@ export default class Iterator {
   dump () {
     this.reset()
 
-    while (this.node && this.node.left) this.descendLeft()
+    while (this.currentNode && this.currentNode.left) this.descendLeft()
 
     let snapshot = {}
 
-    while (this.node) {
-      this.node.startMarkerIds.forEach(markerId => {
-        snapshot[markerId] = {start: this.nodePosition, end: null}
+    while (this.currentNode) {
+      this.currentNode.startMarkerIds.forEach(markerId => {
+        snapshot[markerId] = {start: this.currentNodePosition, end: null}
       })
 
-      this.node.endMarkerIds.forEach(markerId => {
-        snapshot[markerId].end = this.nodePosition
+      this.currentNode.endMarkerIds.forEach(markerId => {
+        snapshot[markerId].end = this.currentNodePosition
       })
 
       this.moveToSuccessor()
@@ -232,18 +232,18 @@ export default class Iterator {
 
   seekToFirstNodeGreaterThanOrEqualTo (position) {
     while (true) {
-      let comparison = compare(position, this.nodePosition)
+      let comparison = compare(position, this.currentNodePosition)
 
       if (comparison === 0) {
         break
       } else if (comparison < 0) {
-        if (this.node.left) {
+        if (this.currentNode.left) {
           this.descendLeft()
         } else {
           break
         }
       } else {
-        if (this.node.right) {
+        if (this.currentNode.right) {
           this.descendRight()
         } else {
           break
@@ -251,36 +251,36 @@ export default class Iterator {
       }
     }
 
-    if (compare(this.nodePosition, position) < 0) this.moveToSuccessor()
+    if (compare(this.currentNodePosition, position) < 0) this.moveToSuccessor()
   }
 
   markLeft (markerId, startPosition, endPosition) {
-    if (!isZero(this.nodePosition) && compare(startPosition, this.leftAncestorPosition) <= 0 && compare(this.nodePosition, endPosition) <= 0) {
-      this.node.leftMarkerIds.add(markerId)
+    if (!isZero(this.currentNodePosition) && compare(startPosition, this.leftAncestorPosition) <= 0 && compare(this.currentNodePosition, endPosition) <= 0) {
+      this.currentNode.leftMarkerIds.add(markerId)
     }
   }
 
   markRight (markerId, startPosition, endPosition) {
     if (compare(this.leftAncestorPosition, startPosition) < 0 &&
-      compare(startPosition, this.nodePosition) <= 0 &&
+      compare(startPosition, this.currentNodePosition) <= 0 &&
       compare(this.rightAncestorPosition, endPosition) <= 0) {
-      this.node.rightMarkerIds.add(markerId)
+      this.currentNode.rightMarkerIds.add(markerId)
     }
   }
 
   ascend () {
-    if (this.node.parent) {
-      if (this.node.parent.left === this.node) {
-        this.nodePosition = this.rightAncestorPosition
+    if (this.currentNode.parent) {
+      if (this.currentNode.parent.left === this.currentNode) {
+        this.currentNodePosition = this.rightAncestorPosition
       } else {
-        this.nodePosition = this.leftAncestorPosition
+        this.currentNodePosition = this.leftAncestorPosition
       }
       this.leftAncestorPosition = this.leftAncestorPositionStack.pop()
       this.rightAncestorPosition = this.rightAncestorPositionStack.pop()
-      this.node = this.node.parent
+      this.currentNode = this.currentNode.parent
     } else {
-      this.node = null
-      this.nodePosition = null
+      this.currentNode = null
+      this.currentNodePosition = null
       this.leftAncestorPosition = {row: 0, column: 0}
       this.rightAncestorPosition = {row: Infinity, column: Infinity}
     }
@@ -290,30 +290,30 @@ export default class Iterator {
     this.leftAncestorPositionStack.push(this.leftAncestorPosition)
     this.rightAncestorPositionStack.push(this.rightAncestorPosition)
 
-    this.rightAncestorPosition = this.nodePosition
-    this.node = this.node.left
-    this.nodePosition = traverse(this.leftAncestorPosition, this.node.leftExtent)
+    this.rightAncestorPosition = this.currentNodePosition
+    this.currentNode = this.currentNode.left
+    this.currentNodePosition = traverse(this.leftAncestorPosition, this.currentNode.leftExtent)
   }
 
   descendRight () {
     this.leftAncestorPositionStack.push(this.leftAncestorPosition)
     this.rightAncestorPositionStack.push(this.rightAncestorPosition)
 
-    this.leftAncestorPosition = this.nodePosition
-    this.node = this.node.right
-    this.nodePosition = traverse(this.leftAncestorPosition, this.node.leftExtent)
+    this.leftAncestorPosition = this.currentNodePosition
+    this.currentNode = this.currentNode.right
+    this.currentNodePosition = traverse(this.leftAncestorPosition, this.currentNode.leftExtent)
   }
 
   moveToSuccessor () {
-    if (!this.node) return
+    if (!this.currentNode) return
 
-    if (this.node.right) {
+    if (this.currentNode.right) {
       this.descendRight()
-      while (this.node.left) {
+      while (this.currentNode.left) {
         this.descendLeft()
       }
     } else {
-      while (this.node.parent && this.node.parent.right === this.node) {
+      while (this.currentNode.parent && this.currentNode.parent.right === this.currentNode) {
         this.ascend()
       }
       this.ascend()
@@ -321,25 +321,25 @@ export default class Iterator {
   }
 
   insertLeftChild (position) {
-    this.node.left = new Node(this.node, traversal(position, this.leftAncestorPosition))
+    this.currentNode.left = new Node(this.currentNode, traversal(position, this.leftAncestorPosition))
   }
 
   insertRightChild (position) {
-    this.node.right = new Node(this.node, traversal(position, this.nodePosition))
+    this.currentNode.right = new Node(this.currentNode, traversal(position, this.currentNodePosition))
   }
 
   checkIntersection (start, end, resultSet) {
-    if (compare(this.leftAncestorPosition, end) <= 0 && compare(start, this.nodePosition) <= 0) {
-      addToSet(resultSet, this.node.leftMarkerIds)
+    if (compare(this.leftAncestorPosition, end) <= 0 && compare(start, this.currentNodePosition) <= 0) {
+      addToSet(resultSet, this.currentNode.leftMarkerIds)
     }
 
-    if (compare(start, this.nodePosition) <= 0 && compare(this.nodePosition, end) <= 0) {
-      addToSet(resultSet, this.node.startMarkerIds)
-      addToSet(resultSet, this.node.endMarkerIds)
+    if (compare(start, this.currentNodePosition) <= 0 && compare(this.currentNodePosition, end) <= 0) {
+      addToSet(resultSet, this.currentNode.startMarkerIds)
+      addToSet(resultSet, this.currentNode.endMarkerIds)
     }
 
-    if (compare(this.nodePosition, end) <= 0 && compare(start, this.rightAncestorPosition) <= 0) {
-      addToSet(resultSet, this.node.rightMarkerIds)
+    if (compare(this.currentNodePosition, end) <= 0 && compare(start, this.rightAncestorPosition) <= 0) {
+      addToSet(resultSet, this.currentNode.rightMarkerIds)
     }
   }
 }
