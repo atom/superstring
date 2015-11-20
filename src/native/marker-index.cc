@@ -131,12 +131,12 @@ SpliceResult MarkerIndex::Splice(Point start, Point old_extent, Point new_extent
   PopulateSpliceInvalidationSets(&invalidated, start_node, end_node, starting_inside_splice, ending_inside_splice, is_insertion);
 
   if (start_node->right) {
-    for (const MarkerId &id : starting_inside_splice) {
+    for (MarkerId id : starting_inside_splice) {
       end_node->start_marker_ids.insert(id);
       start_nodes_by_id[id] = end_node;
     }
 
-    for (const MarkerId &id : ending_inside_splice) {
+    for (MarkerId id : ending_inside_splice) {
       end_node->end_marker_ids.insert(id);
       if (starting_inside_splice.count(id) == 0) {
         start_node->right_marker_ids.insert(id);
@@ -151,13 +151,13 @@ SpliceResult MarkerIndex::Splice(Point start, Point old_extent, Point new_extent
   end_node->left_extent = start.Traverse(new_extent);
 
   if (start_node->left_extent == end_node->left_extent) {
-    for (const MarkerId &id : end_node->start_marker_ids) {
+    for (MarkerId id : end_node->start_marker_ids) {
       start_node->start_marker_ids.insert(id);
       start_node->right_marker_ids.insert(id);
       start_nodes_by_id[id] = start_node;
     }
 
-    for (const MarkerId &id : end_node->end_marker_ids) {
+    for (MarkerId id : end_node->end_marker_ids) {
       start_node->end_marker_ids.insert(id);
       if (end_node->left_marker_ids.count(id) > 0) {
         start_node->left_marker_ids.insert(id);
@@ -214,7 +214,7 @@ unordered_set<MarkerId> MarkerIndex::FindContaining(Point start, Point end) {
     unordered_set<MarkerId> containing_end;
     iterator.FindIntersecting(end, end, &containing_end);
     unordered_set<MarkerId> containing_start_and_end;
-    for (const MarkerId &id : containing_start) {
+    for (MarkerId id : containing_start) {
       if (containing_end.count(id) > 0) {
         containing_start_and_end.insert(id);
       }
@@ -393,26 +393,26 @@ void MarkerIndex::PopulateSpliceInvalidationSets(SpliceResult *invalidated, cons
   invalidated->touch.insert(start_node->end_marker_ids.begin(), start_node->end_marker_ids.end());
   invalidated->touch.insert(end_node->start_marker_ids.begin(), end_node->start_marker_ids.end());
 
-  for (const MarkerId &id : start_node->right_marker_ids) {
+  for (MarkerId id : start_node->right_marker_ids) {
     invalidated->touch.insert(id);
     if (!(is_insertion && (start_node->start_marker_ids.count(id) > 0 || end_node->end_marker_ids.count(id) > 0))) {
       invalidated->inside.insert(id);
     }
   }
 
-  for (const MarkerId &id : end_node->left_marker_ids) {
+  for (MarkerId id : end_node->left_marker_ids) {
     invalidated->touch.insert(id);
     invalidated->inside.insert(id);
   }
 
-  for (const MarkerId &id : starting_inside_splice) {
+  for (MarkerId id : starting_inside_splice) {
     invalidated->touch.insert(id);
     invalidated->inside.insert(id);
     invalidated->overlap.insert(id);
     if (ending_inside_splice.count(id)) invalidated->surround.insert(id);
   }
 
-  for (const MarkerId &id : ending_inside_splice) {
+  for (MarkerId id : ending_inside_splice) {
     invalidated->touch.insert(id);
     invalidated->inside.insert(id);
     invalidated->overlap.insert(id);

@@ -101,7 +101,7 @@ private:
   static Local<Array> MarkerIdsToJS(const unordered_set<MarkerId> &marker_ids) {
     Local<Array> result_array = Nan::New<Array>(marker_ids.size());
     uint32_t index = 0;
-    for (const MarkerId &id : marker_ids) {
+    for (MarkerId id : marker_ids) {
       result_array->Set(index++, Nan::New<Integer>(id));
     }
     return result_array;

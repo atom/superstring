@@ -160,7 +160,7 @@ void Iterator::FindContainedIn(const Point &start, const Point &end, std::unorde
   unordered_set<MarkerId> started;
   while (current_node && current_node_position <= end) {
     started.insert(current_node->start_marker_ids.begin(), current_node->start_marker_ids.end());
-    for (const MarkerId &id : current_node->end_marker_ids) {
+    for (MarkerId id : current_node->end_marker_ids) {
       if (started.count(id) > 0) result->insert(id);
     }
     MoveToSuccessor();
@@ -203,12 +203,12 @@ unordered_map<MarkerId, Range> Iterator::Dump() {
   while (current_node && current_node->left) DescendLeft();
 
   while (current_node) {
-    for (const MarkerId &id : current_node->start_marker_ids) {
+    for (MarkerId id : current_node->start_marker_ids) {
       Range range;
       range.start = current_node_position;
       snapshot.insert({id, range});
     }
-    for (const MarkerId &id : current_node->end_marker_ids) {
+    for (MarkerId id : current_node->end_marker_ids) {
       snapshot[id].end = current_node_position;
     }
     MoveToSuccessor();
