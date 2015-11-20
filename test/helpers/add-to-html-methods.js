@@ -13,8 +13,8 @@ MarkerIndex.prototype.toHTML = function () {
   return s
 }
 
-Node.prototype.toHTML = function (leftAncestorOffset) {
-  let offset = traverse(leftAncestorOffset, this.leftExtent)
+Node.prototype.toHTML = function (leftAncestorPosition) {
+  let position = traverse(leftAncestorPosition, this.leftExtent)
 
   let s = ''
   s += '<table>'
@@ -28,7 +28,7 @@ Node.prototype.toHTML = function (leftAncestorOffset) {
   for (let id of this.endMarkerIds) {
     s += id + ' '
   }
-  s += formatPoint(offset)
+  s += formatPoint(position)
   for (let id of this.startMarkerIds) {
     s += ' ' + id
   }
@@ -43,14 +43,14 @@ Node.prototype.toHTML = function (leftAncestorOffset) {
     s += '<tr>'
     s += '<td>'
     if (this.left) {
-      s += this.left.toHTML(leftAncestorOffset)
+      s += this.left.toHTML(leftAncestorPosition)
     } else {
       s += '&nbsp;'
     }
     s += '</td>'
     s += '<td>'
     if (this.right) {
-      s += this.right.toHTML(offset)
+      s += this.right.toHTML(position)
     } else {
       s += '&nbsp;'
     }

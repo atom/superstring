@@ -188,7 +188,7 @@ Point MarkerIndex::GetStart(MarkerId id) const {
   if (result == start_nodes_by_id.end())
     return Point();
   else
-    return GetNodeOffset(result->second);
+    return GetNodePosition(result->second);
 }
 
 Point MarkerIndex::GetEnd(MarkerId id) const {
@@ -196,7 +196,7 @@ Point MarkerIndex::GetEnd(MarkerId id) const {
   if (result == end_nodes_by_id.end())
     return Point();
   else
-    return GetNodeOffset(result->second);
+    return GetNodePosition(result->second);
 }
 
 unordered_set<MarkerId> MarkerIndex::FindIntersecting(Point start, Point end) {
@@ -245,16 +245,16 @@ unordered_map<MarkerId, Range> MarkerIndex::Dump() {
   return iterator.Dump();
 }
 
-Point MarkerIndex::GetNodeOffset(const Node *node) const {
-  Point offset = node->left_extent;
+Point MarkerIndex::GetNodePosition(const Node *node) const {
+  Point position = node->left_extent;
   while (node->parent) {
     if (node->parent->right == node) {
-      offset = node->parent->left_extent.Traverse(offset);
+      position = node->parent->left_extent.Traverse(position);
     }
 
     node = node->parent;
   }
-  return offset;
+  return position;
 }
 
 void MarkerIndex::DeleteNode(Node *node) {

@@ -14,9 +14,9 @@ class Iterator {
  public:
   Iterator(MarkerIndex *marker_index);
   void Reset();
-  Node* InsertMarkerStart(const MarkerId &id, const Point &start_offset, const Point &end_offset);
-  Node* InsertMarkerEnd(const MarkerId &id, const Point &start_offset, const Point &end_offset);
-  Node* InsertSpliceBoundary(const Point &offset, bool is_insertion_end);
+  Node* InsertMarkerStart(const MarkerId &id, const Point &start_position, const Point &end_position);
+  Node* InsertMarkerEnd(const MarkerId &id, const Point &start_position, const Point &end_position);
+  Node* InsertSpliceBoundary(const Point &position, bool is_insertion_end);
   void FindIntersecting(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
   void FindContainedIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
   void FindStartingIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
@@ -28,20 +28,20 @@ class Iterator {
   void DescendLeft();
   void DescendRight();
   void MoveToSuccessor();
-  void SeekToFirstNodeGreaterThanOrEqualTo(const Point &offset);
-  void MarkRight(const MarkerId &id, const Point &start_offset, const Point &end_offset);
-  void MarkLeft(const MarkerId &id, const Point &start_offset, const Point &end_offset);
-  Node* InsertLeftChild(const Point &offset);
-  Node* InsertRightChild(const Point &offset);
+  void SeekToFirstNodeGreaterThanOrEqualTo(const Point &position);
+  void MarkRight(const MarkerId &id, const Point &start_position, const Point &end_position);
+  void MarkLeft(const MarkerId &id, const Point &start_position, const Point &end_position);
+  Node* InsertLeftChild(const Point &position);
+  Node* InsertRightChild(const Point &position);
   void CheckIntersection(const Point &start, const Point &end, std::unordered_set<MarkerId> *results);
 
   MarkerIndex *marker_index;
   Node *node;
-  Point node_offset;
-  Point left_ancestor_offset;
-  Point right_ancestor_offset;
-  std::vector<Point> left_ancestor_offset_stack;
-  std::vector<Point> right_ancestor_offset_stack;
+  Point node_position;
+  Point left_ancestor_position;
+  Point right_ancestor_position;
+  std::vector<Point> left_ancestor_position_stack;
+  std::vector<Point> right_ancestor_position_stack;
 };
 
 #endif // ITERATOR_H_

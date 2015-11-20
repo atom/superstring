@@ -32,7 +32,7 @@ class MarkerIndex {
   std::unordered_map<MarkerId, Range> Dump();
 
  private:
-  Point GetNodeOffset(const Node *node) const;
+  Point GetNodePosition(const Node *node) const;
   void DeleteNode(Node *node);
   void BubbleNodeUp(Node *node);
   void BubbleNodeDown(Node *node);

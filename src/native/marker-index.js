@@ -35,12 +35,12 @@ NativeMarkerIndex.prototype.findEndingIn = function (start, end) {
   return new Set(this._findEndingIn(start, end))
 }
 
-NativeMarkerIndex.prototype.findStartingAt = function (offset) {
-  return new Set(this._findStartingIn(offset, offset))
+NativeMarkerIndex.prototype.findStartingAt = function (position) {
+  return new Set(this._findStartingIn(position, position))
 }
 
-NativeMarkerIndex.prototype.findEndingAt = function (offset) {
-  return new Set(this._findEndingIn(offset, offset))
+NativeMarkerIndex.prototype.findEndingAt = function (position) {
+  return new Set(this._findEndingIn(position, position))
 }
 
 export default NativeMarkerIndex
