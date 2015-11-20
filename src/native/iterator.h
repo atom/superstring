@@ -36,8 +36,8 @@ class Iterator {
   void CheckIntersection(const Point &start, const Point &end, std::unordered_set<MarkerId> *results);
 
   MarkerIndex *marker_index;
-  Node *node;
-  Point node_position;
+  Node *current_node;
+  Point current_node_position;
   Point left_ancestor_position;
   Point right_ancestor_position;
   std::vector<Point> left_ancestor_position_stack;
