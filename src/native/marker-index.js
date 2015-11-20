@@ -15,11 +15,12 @@ NativeMarkerIndex.prototype.getRange = function (id) {
   return [this.getStart(id), this.getEnd(id)]
 }
 
-NativeMarkerIndex.prototype.findIntersecting = function (start, end) {
+NativeMarkerIndex.prototype.findIntersecting = function (start, end = start) {
   return new Set(this._findIntersecting(start, end))
 }
 
-NativeMarkerIndex.prototype.findContaining = function (start, end) {
+NativeMarkerIndex.prototype.findContaining = function (start, end = start) {
+  end = end || start
   return new Set(this._findContaining(start, end))
 }
 
