@@ -2,11 +2,12 @@
   "name": "marker-index",
   "version": "2.1.1",
   "description": "A data structure to track logical text annotations.",
-  "main": "dist/marker-index.js",
+  "main": "dist/native/marker-index.js",
   "scripts": {
-    "test": "npm run standard && node_modules/.bin/mocha --recursive ./test/helpers/setup  test/marker-index.test.js",
+    "test": "npm run standard && node_modules/.bin/mocha ./test/helpers/setup  test/marker-index.test.js",
     "tdd": "npm run standard && node_modules/.bin/electron-mocha --renderer --interactive --recursive ./test/helpers/setup  test/marker-index.test.js",
     "profile": "npm run standard && node_modules/.bin/electron-mocha --renderer --interactive --recursive ./test/helpers/setup  test/marker-index.profile.js",
+    "benchmark": "npm run standard && node test/marker-index.benchmark.js",
     "prepublish": "npm run standard && npm run clean && npm run build",
     "standard": "node_modules/.bin/standard --recursive src test",
     "build": "node_modules/.bin/babel src --out-dir dist",
@@ -35,6 +36,7 @@
     "standard": "^4.5.4"
   },
   "dependencies": {
+    "nan": "^2.1.0",
     "random-seed": "^0.2.0"
   },
   "standard": {

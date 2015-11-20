@@ -16,8 +16,8 @@ export default class MarkerIndex {
     this.exclusiveMarkers = new Set()
   }
 
-  dump (filterSet) {
-    return this.iterator.dump(filterSet)
+  dump () {
+    return this.iterator.dump()
   }
 
   getRange (markerId) {
@@ -25,11 +25,11 @@ export default class MarkerIndex {
   }
 
   getStart (markerId) {
-    return this.getNodeOffset(this.startNodesById[markerId])
+    return this.getNodePosition(this.startNodesById[markerId])
   }
 
   getEnd (markerId) {
-    return this.getNodeOffset(this.endNodesById[markerId])
+    return this.getNodePosition(this.endNodesById[markerId])
   }
 
   insert (markerId, start, end) {
@@ -229,23 +229,23 @@ export default class MarkerIndex {
     return endingIn
   }
 
-  findStartingAt (offset) {
-    return this.findStartingIn(offset, offset)
+  findStartingAt (position) {
+    return this.findStartingIn(position, position)
   }
 
-  findEndingAt (offset) {
-    return this.findEndingIn(offset, offset)
+  findEndingAt (position) {
+    return this.findEndingIn(position, position)
   }
 
-  getNodeOffset (node) {
-    let offset = node.leftExtent
+  getNodePosition (node) {
+    let position = node.leftExtent
     while (node.parent) {
       if (node.parent.right === node) {
-        offset = traverse(node.parent.leftExtent, offset)
+        position = traverse(node.parent.leftExtent, position)
       }
       node = node.parent
     }
-    return offset
+    return position
   }
 
   deleteNode (node) {
@@ -348,7 +348,7 @@ export default class MarkerIndex {
     root.leftExtent = traversal(root.leftExtent, pivot.leftExtent)
 
     root.leftMarkerIds.forEach(function (markerId) {
-      if (!pivot.startMarkerIds.has(markerId)) { // don't do this when pivot is at offset 0
+      if (!pivot.startMarkerIds.has(markerId)) { // don't do this when pivot is at position 0
         pivot.leftMarkerIds.add(markerId)
       }
     })
