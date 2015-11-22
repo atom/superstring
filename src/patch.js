@@ -309,7 +309,7 @@ export default class Patch {
   getChanges () {
     let changes = []
     let iterator = this.buildIterator()
-    while (iterator.node && iterator.node.left) {
+    while (iterator.currentNode && iterator.currentNode.left) {
       iterator.descendLeft()
     }
 

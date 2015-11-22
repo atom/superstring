@@ -8,11 +8,11 @@ const DONE = {done: true}
 export default class Iterator {
   constructor (tree) {
     this.tree = tree
-    this.inputOffset = ZERO_POINT
-    this.outputOffset = ZERO_POINT
-    this.inputOffsetStack = []
-    this.outputOffsetStack = []
-    this.setNode(tree.root)
+    this.leftAncestorInputPosition = ZERO_POINT
+    this.leftAncestorOutputPosition = ZERO_POINT
+    this.leftAncestorInputPositionStack = []
+    this.leftAncestorOutputPositionStack = []
+    this.setCurrentNode(tree.root)
   }
 
   getInputStart () {
@@ -32,27 +32,27 @@ export default class Iterator {
   }
 
   inChange () {
-    return !!this.node && !this.node.isChangeStart
+    return !!this.currentNode && !this.currentNode.isChangeStart
   }
 
   getChangeText () {
-    return this.node.changeText
+    return this.currentNode.changeText
   }
 
-  setNode (node) {
-    this.node = node
+  setCurrentNode (node) {
+    this.currentNode = node
 
     if (node) {
       if (node.left) {
-        this.inputStart = traverse(this.inputOffset, node.left.inputExtent)
-        this.outputStart = traverse(this.outputOffset, node.left.outputExtent)
+        this.inputStart = traverse(this.leftAncestorInputPosition, node.left.inputExtent)
+        this.outputStart = traverse(this.leftAncestorOutputPosition, node.left.outputExtent)
       } else {
-        this.inputStart = this.inputOffset
-        this.outputStart = this.outputOffset
+        this.inputStart = this.leftAncestorInputPosition
+        this.outputStart = this.leftAncestorOutputPosition
       }
 
-      this.inputEnd = traverse(this.inputOffset, node.inputLeftExtent)
-      this.outputEnd = traverse(this.outputOffset, node.outputLeftExtent)
+      this.inputEnd = traverse(this.leftAncestorInputPosition, node.inputLeftExtent)
+      this.outputEnd = traverse(this.leftAncestorOutputPosition, node.outputLeftExtent)
     } else {
       this.inputStart = ZERO_POINT
       this.inputEnd = INFINITY_POINT
@@ -62,21 +62,21 @@ export default class Iterator {
   }
 
   next () {
-    if (!this.node) {
+    if (!this.currentNode) {
       return DONE
     }
 
-    if (this.node.right) {
+    if (this.currentNode.right) {
       this.descendRight()
-      while (this.node.left) {
+      while (this.currentNode.left) {
         this.descendLeft()
       }
       return NOT_DONE
     } else {
-      while (this.node.parent && this.node.parent.right === this.node) {
+      while (this.currentNode.parent && this.currentNode.parent.right === this.currentNode) {
         this.ascend()
       }
-      if (this.node.parent) {
+      if (this.currentNode.parent) {
         this.ascend()
         return NOT_DONE
       } else {
@@ -86,22 +86,22 @@ export default class Iterator {
   }
 
   ascend () {
-    this.inputOffset = this.inputOffsetStack.pop()
-    this.outputOffset = this.outputOffsetStack.pop()
-    this.setNode(this.node.parent)
+    this.leftAncestorInputPosition = this.leftAncestorInputPositionStack.pop()
+    this.leftAncestorOutputPosition = this.leftAncestorOutputPositionStack.pop()
+    this.setCurrentNode(this.currentNode.parent)
   }
 
   descendLeft () {
-    this.inputOffsetStack.push(this.inputOffset)
-    this.outputOffsetStack.push(this.outputOffset)
-    this.setNode(this.node.left)
+    this.leftAncestorInputPositionStack.push(this.leftAncestorInputPosition)
+    this.leftAncestorOutputPositionStack.push(this.leftAncestorOutputPosition)
+    this.setCurrentNode(this.currentNode.left)
   }
 
   descendRight () {
-    this.inputOffsetStack.push(this.inputOffset)
-    this.outputOffsetStack.push(this.outputOffset)
-    this.inputOffset = traverse(this.inputOffset, this.node.inputLeftExtent)
-    this.outputOffset = traverse(this.outputOffset, this.node.outputLeftExtent)
-    this.setNode(this.node.right)
+    this.leftAncestorInputPositionStack.push(this.leftAncestorInputPosition)
+    this.leftAncestorOutputPositionStack.push(this.leftAncestorOutputPosition)
+    this.leftAncestorInputPosition = traverse(this.leftAncestorInputPosition, this.currentNode.inputLeftExtent)
+    this.leftAncestorOutputPosition = traverse(this.leftAncestorOutputPosition, this.currentNode.outputLeftExtent)
+    this.setCurrentNode(this.currentNode.right)
   }
 }
