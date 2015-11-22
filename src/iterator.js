@@ -100,8 +100,8 @@ export default class Iterator {
   descendRight () {
     this.leftAncestorInputPositionStack.push(this.leftAncestorInputPosition)
     this.leftAncestorOutputPositionStack.push(this.leftAncestorOutputPosition)
-    this.leftAncestorInputPosition = traverse(this.leftAncestorInputPosition, this.currentNode.inputLeftExtent)
-    this.leftAncestorOutputPosition = traverse(this.leftAncestorOutputPosition, this.currentNode.outputLeftExtent)
+    this.leftAncestorInputPosition = this.inputEnd
+    this.leftAncestorOutputPosition = this.outputEnd
     this.setCurrentNode(this.currentNode.right)
   }
 }
