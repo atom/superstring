@@ -1,3 +1,6 @@
+export const ZERO_POINT = Object.freeze({row: 0, column: 0})
+export const INFINITY_POINT = Object.freeze({row: Infinity, column: Infinity})
+
 export function compare (a, b) {
   if (a.row === b.row) {
     return compareNumbers(a.column, b.column)
