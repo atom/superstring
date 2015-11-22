@@ -325,12 +325,4 @@ export default class Patch {
 
     return changes
   }
-
-  toHTML () {
-    if (this.root) {
-      return this.root.toHTML()
-    } else {
-      return ''
-    }
-  }
 }

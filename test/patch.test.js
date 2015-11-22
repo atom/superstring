@@ -1,6 +1,7 @@
 import Patch from '../src/patch'
 import TestDocument from './helpers/test-document'
 import {format as formatPoint} from '../src/point-helpers'
+import './helpers/add-to-html-methods'
 
 describe('Patch', function () {
   it('correctly records basic non-overlapping splices', function () {
