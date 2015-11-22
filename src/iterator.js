@@ -1,5 +1,3 @@
-'use babel'
-
 import {ZERO_POINT, INFINITY_POINT, traverse, traversalDistance, compare as comparePoints, min as minPoint} from './point-helpers'
 import {getPrefix, getSuffix} from './text-helpers'
 import Node from './node'
