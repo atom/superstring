@@ -7,8 +7,8 @@ describe('Patch', function () {
   it('correctly records basic non-overlapping splices', function () {
     let seed = 123
     let patch = new Patch(seed)
-    patch.spliceText({row: 0, column: 3}, {row: 0, column: 4}, 'hello')
-    patch.spliceText({row: 0, column: 10}, {row: 0, column: 5}, 'world')
+    patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello')
+    patch.spliceWithText({row: 0, column: 10}, {row: 0, column: 5}, 'world')
     assert.deepEqual(patch.getChanges(), [
       {start: {row: 0, column: 3}, replacedExtent: {row: 0, column: 4}, replacementText: 'hello'},
       {start: {row: 0, column: 10}, replacedExtent: {row: 0, column: 5}, replacementText: 'world'}
@@ -18,8 +18,8 @@ describe('Patch', function () {
   it('correctly records basic overlapping splices', function () {
     let seed = 123
     let patch = new Patch(seed)
-    patch.spliceText({row: 0, column: 3}, {row: 0, column: 4}, 'hello world')
-    patch.spliceText({row: 0, column: 9}, {row: 0, column: 7}, 'sun')
+    patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello world')
+    patch.spliceWithText({row: 0, column: 9}, {row: 0, column: 7}, 'sun')
     assert.deepEqual(patch.getChanges(), [
       {start: {row: 0, column: 3}, replacedExtent: {row: 0, column: 6}, replacementText: 'hello sun'},
     ])
@@ -36,7 +36,7 @@ describe('Patch', function () {
 
       for (let j = 0; j < 30; j++) {
         let {start, replacedExtent, replacementText} = output.performRandomSplice()
-        patch.spliceText(start, replacedExtent, replacementText)
+        patch.spliceWithText(start, replacedExtent, replacementText)
         verifyPatch(patch, input.clone(), output, seed)
       }
     }

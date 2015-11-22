@@ -10,7 +10,7 @@ export default class Patch {
     this.root = null
   }
 
-  spliceText (start, replacedExtent, replacementText) {
+  spliceWithText (start, replacedExtent, replacementText) {
     this.splice(start, replacedExtent, getExtent(replacementText), {text: replacementText})
   }
 
