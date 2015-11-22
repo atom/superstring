@@ -1,13 +1,13 @@
 import Random from 'random-seed'
-import {ZERO_POINT, INFINITY_POINT, traverse, traversalDistance, compare as comparePoints, min as minPoint} from './point-helpers'
-import {getExtent, getPrefix, getSuffix} from './text-helpers'
+import {ZERO_POINT, INFINITY_POINT, traverse, traversalDistance} from './point-helpers'
+import {getExtent} from './text-helpers'
 import Iterator from './iterator'
-import Node from './node'
 
 export default class Patch {
   constructor (seed = Date.now()) {
     this.randomGenerator = new Random(seed)
     this.root = null
+    this.iterator = new Iterator(this)
   }
 
   spliceWithText (start, replacedExtent, replacementText) {
@@ -18,8 +18,8 @@ export default class Patch {
     let outputOldEnd = traverse(outputStart, replacedExtent)
     let outputNewEnd = traverse(outputStart, replacementExtent)
 
-    let {startNode, prefix} = this.insertSpliceStart(outputStart)
-    let {endNode, suffix, suffixExtent} = this.insertSpliceEnd(outputOldEnd)
+    let {startNode, prefix} = this.iterator.insertSpliceStart(outputStart)
+    let {endNode, suffix, suffixExtent} = this.iterator.insertSpliceEnd(outputOldEnd)
     startNode.priority = -1
     this.bubbleNodeUp(startNode)
     endNode.priority = -2
@@ -38,177 +38,6 @@ export default class Patch {
     this.bubbleNodeDown(startNode)
     endNode.priority = this.generateRandom()
     this.bubbleNodeDown(endNode)
-  }
-
-  insertSpliceStart (spliceOutputStart) {
-    let {startNode, endNode, startNodeOutputPosition} = this.insertSpliceBoundary(spliceOutputStart, true)
-
-    let prefix
-    if (comparePoints(spliceOutputStart, startNodeOutputPosition) === 0) {
-      prefix = ''
-    } else {
-      prefix = getPrefix(endNode.changeText, traversalDistance(spliceOutputStart, startNodeOutputPosition))
-    }
-
-    return {startNode, prefix}
-  }
-
-  insertSpliceEnd (spliceOutputEnd) {
-    let {startNode, endNode, startNodeOutputPosition, endNodeOutputPosition} = this.insertSpliceBoundary(spliceOutputEnd, false)
-
-    let suffix, suffixExtent
-    if (comparePoints(spliceOutputEnd, endNodeOutputPosition) === 0) {
-      suffix = ''
-      suffixExtent = ZERO_POINT
-    } else {
-      suffix = getSuffix(endNode.changeText, traversalDistance(spliceOutputEnd, startNodeOutputPosition))
-      suffixExtent = traversalDistance(endNodeOutputPosition, spliceOutputEnd)
-    }
-
-    return {endNode, suffix, suffixExtent}
-  }
-
-  insertSpliceBoundary (boundaryOutputPosition, insertingChangeStart) {
-    let node = this.root
-
-    if (!node) {
-      this.root = new Node(null, boundaryOutputPosition, boundaryOutputPosition)
-      this.root.isChangeStart = insertingChangeStart
-      return buildInsertedNodeResult(this.root)
-    }
-
-    let inputOffset = ZERO_POINT
-    let outputOffset = ZERO_POINT
-    let maxInputPosition = INFINITY_POINT
-    let nodeInputPosition, nodeOutputPosition
-    let containingStartNode, containingEndNode
-    let containingStartNodeOutputPosition, containingEndNodeOutputPosition
-
-    while (true) {
-      nodeInputPosition = traverse(inputOffset, node.inputLeftExtent)
-      nodeOutputPosition = traverse(outputOffset, node.outputLeftExtent)
-
-      if (node.isChangeStart) {
-        let result = visitChangeStart()
-        if (result) return result
-      } else {
-        let result = visitChangeEnd()
-        if (result) return result
-      }
-    }
-
-    function visitChangeStart() {
-      if (comparePoints(boundaryOutputPosition, nodeOutputPosition) < 0) { // boundaryOutputPosition < nodeOutputPosition
-        containingEndNode = null
-        containingEndNodeOutputPosition = null
-
-        if (node.left) {
-          descendLeft()
-          return null
-        } else {
-          return insertLeftNode()
-        }
-      } else { // boundaryOutputPosition >= nodeOutputPosition
-        containingStartNode = node
-        containingStartNodeOutputPosition = nodeOutputPosition
-
-        if (node.right) {
-          descendRight()
-          return null
-        } else {
-          if (insertingChangeStart || containingEndNode) {
-            return {
-              startNode: containingStartNode,
-              endNode: containingEndNode,
-              startNodeOutputPosition: containingStartNodeOutputPosition,
-              endNodeOutputPosition: containingEndNodeOutputPosition
-            }
-          } else {
-            return insertRightNode()
-          }
-        }
-      }
-    }
-
-    function visitChangeEnd () {
-      if (comparePoints(boundaryOutputPosition, nodeOutputPosition) <= 0) { // boundaryOutputPosition <= nodeOutputPosition
-        containingEndNode = node
-        containingEndNodeOutputPosition = nodeOutputPosition
-
-        if (node.left) {
-          descendLeft()
-          return null
-        } else {
-          if (!insertingChangeStart || containingStartNode) {
-            return {
-              startNode: containingStartNode,
-              endNode: containingEndNode,
-              startNodeOutputPosition: containingStartNodeOutputPosition,
-              endNodeOutputPosition: containingEndNodeOutputPosition
-            }
-          } else {
-            return insertLeftNode()
-          }
-        }
-      } else { // boundaryOutputPosition > nodeOutputPosition
-        containingStartNode = null
-        containingStartNodeOutputPosition = null
-
-        if (node.right) {
-          descendRight()
-          return null
-        } else {
-          return insertRightNode()
-        }
-      }
-    }
-
-    function descendLeft () {
-      maxInputPosition = nodeInputPosition
-      node = node.left
-    }
-
-    function descendRight () {
-      inputOffset = traverse(inputOffset, node.inputLeftExtent)
-      outputOffset = traverse(outputOffset, node.outputLeftExtent)
-      node = node.right
-    }
-
-    function insertLeftNode () {
-      let outputLeftExtent = traversalDistance(boundaryOutputPosition, outputOffset)
-      let inputLeftExtent = minPoint(outputLeftExtent, node.inputLeftExtent)
-      let newNode = new Node(node, inputLeftExtent, outputLeftExtent)
-      newNode.isChangeStart = insertingChangeStart
-      node.left = newNode
-      return buildInsertedNodeResult(newNode)
-    }
-
-    function insertRightNode () {
-      let outputLeftExtent = traversalDistance(boundaryOutputPosition, nodeOutputPosition)
-      let inputLeftExtent = minPoint(outputLeftExtent, traversalDistance(maxInputPosition, nodeInputPosition))
-      let newNode = new Node(node, inputLeftExtent, outputLeftExtent)
-      newNode.isChangeStart = insertingChangeStart
-      node.right = newNode
-      return buildInsertedNodeResult(newNode)
-    }
-
-    function buildInsertedNodeResult (insertedNode) {
-      if (insertingChangeStart) {
-        return {
-          startNode: insertedNode,
-          startNodeOutputPosition: boundaryOutputPosition,
-          endNode: containingEndNode,
-          endNodeOutputPosition: containingEndNodeOutputPosition
-        }
-      } else {
-        return {
-          startNode: containingStartNode,
-          startNodeOutputPosition: containingStartNodeOutputPosition,
-          endNode: insertedNode,
-          endNodeOutputPosition: boundaryOutputPosition
-        }
-      }
-    }
   }
 
   bubbleNodeUp (node) {
@@ -302,27 +131,7 @@ export default class Patch {
     return this.randomGenerator.random()
   }
 
-  buildIterator () {
-    return new Iterator(this)
-  }
-
   getChanges () {
-    let changes = []
-    let iterator = this.buildIterator()
-    while (iterator.currentNode && iterator.currentNode.left) {
-      iterator.descendLeft()
-    }
-
-    while (!iterator.next().done) {
-      if (iterator.inChange()) {
-        changes.push({
-          start: iterator.getOutputStart(),
-          replacedExtent: traversalDistance(iterator.getInputEnd(), iterator.getInputStart()),
-          replacementText: iterator.getChangeText()
-        })
-      }
-    }
-
-    return changes
+    return this.iterator.getChanges()
   }
 }
