@@ -23,9 +23,9 @@ export default class SegmentTree {
     return new SegmentTreeIterator(this, true)
   }
 
-  splice (outputStart, replacedExtent, replacementText) {
+  splice (outputStart, replacedExtent, replacementExtent, options) {
     let outputOldEnd = traverse(outputStart, replacedExtent)
-    let outputNewEnd = traverse(outputStart, getExtent(replacementText))
+    let outputNewEnd = traverse(outputStart, replacementExtent)
 
     let {startNode, prefix} = this.insertSpliceStart(outputStart)
     let {endNode, suffix, suffixExtent} = this.insertSpliceEnd(outputOldEnd)
@@ -41,7 +41,7 @@ export default class SegmentTree {
     let endNodeOutputRightExtent = traversalDistance(endNode.outputExtent, endNode.outputLeftExtent)
     endNode.outputLeftExtent = traverse(outputNewEnd, suffixExtent)
     endNode.outputExtent = traverse(endNode.outputLeftExtent, endNodeOutputRightExtent)
-    endNode.changeText = prefix + replacementText + suffix
+    endNode.changeText = prefix + options.text + suffix
 
     startNode.priority = this.generateRandom()
     this.bubbleNodeDown(startNode)

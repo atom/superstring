@@ -1,13 +1,18 @@
 import SegmentTree from './segment-tree'
 import {traversalDistance} from './point-helpers'
+import {getExtent} from './text-helpers'
 
 export default class Patch {
   constructor (seed) {
     this.segmentTree = new SegmentTree(seed)
   }
 
-  splice (start, replacedExtent, replacementText) {
-    this.segmentTree.splice(start, replacedExtent, replacementText)
+  splice (start, replacedExtent, replacementExtent, options) {
+    this.segmentTree.splice(start, replacedExtent, replacementExtent, options)
+  }
+
+  spliceText (start, replacedExtent, replacementText) {
+    this.splice(start, replacedExtent, getExtent(replacementText), {text: replacementText})
   }
 
   getChanges () {
