@@ -1,6 +1,6 @@
-import Patch from '../../src/patch'
-import TestDocument from '../helpers/test-document'
-import {format as formatPoint} from '../../src/point-helpers'
+import Patch from '../src/patch'
+import TestDocument from './helpers/test-document'
+import {format as formatPoint} from '../src/point-helpers'
 
 describe('Patch', function () {
   it('correctly records basic non-overlapping splices', function () {
@@ -8,7 +8,7 @@ describe('Patch', function () {
     let patch = new Patch(seed)
     patch.splice({row: 0, column: 3}, {row: 0, column: 4}, 'hello')
     patch.splice({row: 0, column: 10}, {row: 0, column: 5}, 'world')
-    expect(patch.getChanges()).to.eql([
+    assert.deepEqual(patch.getChanges(), [
       {start: {row: 0, column: 3}, replacedExtent: {row: 0, column: 4}, replacementText: 'hello'},
       {start: {row: 0, column: 10}, replacedExtent: {row: 0, column: 5}, replacementText: 'world'}
     ])
@@ -19,7 +19,7 @@ describe('Patch', function () {
     let patch = new Patch(seed)
     patch.splice({row: 0, column: 3}, {row: 0, column: 4}, 'hello world')
     patch.splice({row: 0, column: 9}, {row: 0, column: 7}, 'sun')
-    expect(patch.getChanges()).to.eql([
+    assert.deepEqual(patch.getChanges(), [
       {start: {row: 0, column: 3}, replacedExtent: {row: 0, column: 6}, replacementText: 'hello sun'},
     ])
   })
