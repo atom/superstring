@@ -10,10 +10,20 @@ export default class Iterator {
   }
 
   reset () {
+    this.leftAncestor = null
     this.leftAncestorInputPosition = ZERO_POINT
     this.leftAncestorOutputPosition = ZERO_POINT
+    this.leftAncestorStack = []
     this.leftAncestorInputPositionStack = []
     this.leftAncestorOutputPositionStack = []
+
+    this.rightAncestor = null
+    this.rightAncestorInputPosition = INFINITY_POINT
+    this.rightAncestorOutputPosition = INFINITY_POINT
+    this.rightAncestorStack = []
+    this.rightAncestorInputPositionStack = []
+    this.rightAncestorOutputPositionStack = []
+
     this.setCurrentNode(this.patch.root)
   }
 
@@ -72,142 +82,61 @@ export default class Iterator {
   }
 
   insertSpliceBoundary (boundaryOutputPosition, insertingChangeStart) {
-    let node = this.currentNode
-    if (!node) {
+    if (!this.currentNode) {
       this.patch.root = new Node(null, boundaryOutputPosition, boundaryOutputPosition)
       this.patch.root.isChangeStart = insertingChangeStart
-      return buildInsertedNodeResult(this.patch.root)
+      return this.buildInsertedNodeResult(this.patch.root, boundaryOutputPosition)
     }
-
-    let inputOffset = ZERO_POINT
-    let outputOffset = ZERO_POINT
-    let maxInputPosition = INFINITY_POINT
-    let nodeInputPosition, nodeOutputPosition
-    let containingStartNode, containingEndNode
-    let containingStartNodeOutputPosition, containingEndNodeOutputPosition
 
     while (true) {
-      nodeInputPosition = traverse(inputOffset, node.inputLeftExtent)
-      nodeOutputPosition = traverse(outputOffset, node.outputLeftExtent)
+      this.inputEnd = traverse(this.leftAncestorInputPosition, this.currentNode.inputLeftExtent)
+      this.outputEnd = traverse(this.leftAncestorOutputPosition, this.currentNode.outputLeftExtent)
 
-      if (node.isChangeStart) {
-        let result = visitChangeStart()
-        if (result) return result
-      } else {
-        let result = visitChangeEnd()
-        if (result) return result
-      }
-    }
-
-    function visitChangeStart() {
-      if (comparePoints(boundaryOutputPosition, nodeOutputPosition) < 0) { // boundaryOutputPosition < nodeOutputPosition
-        containingEndNode = null
-        containingEndNodeOutputPosition = null
-
-        if (node.left) {
-          descendLeft()
-          return null
-        } else {
-          return insertLeftNode()
-        }
-      } else { // boundaryOutputPosition >= nodeOutputPosition
-        containingStartNode = node
-        containingStartNodeOutputPosition = nodeOutputPosition
-
-        if (node.right) {
-          descendRight()
-          return null
-        } else {
-          if (insertingChangeStart || containingEndNode) {
-            return {
-              startNode: containingStartNode,
-              endNode: containingEndNode,
-              startNodeOutputPosition: containingStartNodeOutputPosition,
-              endNodeOutputPosition: containingEndNodeOutputPosition
-            }
+      if (this.currentNode.isChangeStart) {
+        if (comparePoints(boundaryOutputPosition, this.outputEnd) < 0) { // boundaryOutputPosition < this.outputEnd
+          if (this.currentNode.left) {
+            this.descendLeft()
           } else {
-            return insertRightNode()
+            return this.insertLeftNode(boundaryOutputPosition, insertingChangeStart)
+          }
+        } else { // boundaryOutputPosition >= this.outputEnd
+          if (this.currentNode.right) {
+            this.descendRight()
+          } else {
+            if (insertingChangeStart || this.rightAncestorIsChangeEnd()) {
+              return {
+                startNode: this.currentNode,
+                endNode: this.rightAncestorIsChangeEnd() ? this.rightAncestor : null,
+                startNodeOutputPosition: this.outputEnd,
+                endNodeOutputPosition: this.rightAncestorIsChangeEnd() ? this.rightAncestorOutputPosition : null
+              }
+            } else {
+              return this.insertRightNode(boundaryOutputPosition, insertingChangeStart)
+            }
           }
         }
-      }
-    }
-
-    function visitChangeEnd () {
-      if (comparePoints(boundaryOutputPosition, nodeOutputPosition) <= 0) { // boundaryOutputPosition <= nodeOutputPosition
-        containingEndNode = node
-        containingEndNodeOutputPosition = nodeOutputPosition
-
-        if (node.left) {
-          descendLeft()
-          return null
-        } else {
-          if (!insertingChangeStart || containingStartNode) {
-            return {
-              startNode: containingStartNode,
-              endNode: containingEndNode,
-              startNodeOutputPosition: containingStartNodeOutputPosition,
-              endNodeOutputPosition: containingEndNodeOutputPosition
-            }
+      } else { // !this.currentNode.isChangeStart (it's a change end)
+        if (comparePoints(boundaryOutputPosition, this.outputEnd) <= 0) { // boundaryOutputPosition <= this.outputEnd
+          if (this.currentNode.left) {
+            this.descendLeft()
           } else {
-            return insertLeftNode()
+            if (!insertingChangeStart || this.leftAncestorIsChangeStart()) {
+              return {
+                startNode: this.leftAncestorIsChangeStart() ? this.leftAncestor : null,
+                endNode: this.currentNode,
+                startNodeOutputPosition: this.leftAncestorIsChangeStart() ? this.leftAncestorOutputPosition : null,
+                endNodeOutputPosition: this.outputEnd
+              }
+            } else {
+              return this.insertLeftNode(boundaryOutputPosition, insertingChangeStart)
+            }
           }
-        }
-      } else { // boundaryOutputPosition > nodeOutputPosition
-        containingStartNode = null
-        containingStartNodeOutputPosition = null
-
-        if (node.right) {
-          descendRight()
-          return null
-        } else {
-          return insertRightNode()
-        }
-      }
-    }
-
-    function descendLeft () {
-      maxInputPosition = nodeInputPosition
-      node = node.left
-    }
-
-    function descendRight () {
-      inputOffset = traverse(inputOffset, node.inputLeftExtent)
-      outputOffset = traverse(outputOffset, node.outputLeftExtent)
-      node = node.right
-    }
-
-    function insertLeftNode () {
-      let outputLeftExtent = traversalDistance(boundaryOutputPosition, outputOffset)
-      let inputLeftExtent = minPoint(outputLeftExtent, node.inputLeftExtent)
-      let newNode = new Node(node, inputLeftExtent, outputLeftExtent)
-      newNode.isChangeStart = insertingChangeStart
-      node.left = newNode
-      return buildInsertedNodeResult(newNode)
-    }
-
-    function insertRightNode () {
-      let outputLeftExtent = traversalDistance(boundaryOutputPosition, nodeOutputPosition)
-      let inputLeftExtent = minPoint(outputLeftExtent, traversalDistance(maxInputPosition, nodeInputPosition))
-      let newNode = new Node(node, inputLeftExtent, outputLeftExtent)
-      newNode.isChangeStart = insertingChangeStart
-      node.right = newNode
-      return buildInsertedNodeResult(newNode)
-    }
-
-    function buildInsertedNodeResult (insertedNode) {
-      if (insertingChangeStart) {
-        return {
-          startNode: insertedNode,
-          startNodeOutputPosition: boundaryOutputPosition,
-          endNode: containingEndNode,
-          endNodeOutputPosition: containingEndNodeOutputPosition
-        }
-      } else {
-        return {
-          startNode: containingStartNode,
-          startNodeOutputPosition: containingStartNodeOutputPosition,
-          endNode: insertedNode,
-          endNodeOutputPosition: boundaryOutputPosition
+        } else { // boundaryOutputPosition > this.outputEnd
+          if (this.currentNode.right) {
+            this.descendRight()
+          } else {
+            return this.insertRightNode(boundaryOutputPosition, insertingChangeStart)
+          }
         }
       }
     }
@@ -258,22 +187,81 @@ export default class Iterator {
   }
 
   ascend () {
+    this.leftAncestor = this.leftAncestorStack.pop()
     this.leftAncestorInputPosition = this.leftAncestorInputPositionStack.pop()
     this.leftAncestorOutputPosition = this.leftAncestorOutputPositionStack.pop()
+    this.rightAncestor = this.rightAncestorStack.pop()
+    this.rightAncestorInputPosition = this.rightAncestorInputPositionStack.pop()
+    this.rightAncestorOutputPosition = this.rightAncestorOutputPositionStack.pop()
     this.setCurrentNode(this.currentNode.parent)
   }
 
   descendLeft () {
-    this.leftAncestorInputPositionStack.push(this.leftAncestorInputPosition)
-    this.leftAncestorOutputPositionStack.push(this.leftAncestorOutputPosition)
+    this.pushToAncestorStacks()
+    this.rightAncestor = this.currentNode
+    this.rightAncestorInputPosition = this.inputEnd
+    this.rightAncestorOutputPosition = this.outputEnd
     this.setCurrentNode(this.currentNode.left)
   }
 
   descendRight () {
-    this.leftAncestorInputPositionStack.push(this.leftAncestorInputPosition)
-    this.leftAncestorOutputPositionStack.push(this.leftAncestorOutputPosition)
+    this.pushToAncestorStacks()
+    this.leftAncestor = this.currentNode
     this.leftAncestorInputPosition = this.inputEnd
     this.leftAncestorOutputPosition = this.outputEnd
     this.setCurrentNode(this.currentNode.right)
+  }
+
+  pushToAncestorStacks () {
+    this.leftAncestorStack.push(this.leftAncestor)
+    this.leftAncestorInputPositionStack.push(this.leftAncestorInputPosition)
+    this.leftAncestorOutputPositionStack.push(this.leftAncestorOutputPosition)
+    this.rightAncestorStack.push(this.rightAncestor)
+    this.rightAncestorInputPositionStack.push(this.rightAncestorInputPosition)
+    this.rightAncestorOutputPositionStack.push(this.rightAncestorOutputPosition)
+  }
+
+  leftAncestorIsChangeStart () {
+    return this.leftAncestor && this.leftAncestor.isChangeStart
+  }
+
+  rightAncestorIsChangeEnd () {
+    return this.rightAncestor && !this.rightAncestor.isChangeStart
+  }
+
+  insertLeftNode (outputPosition, isChangeStart) {
+    let outputLeftExtent = traversalDistance(outputPosition, this.leftAncestorOutputPosition)
+    let inputLeftExtent = minPoint(outputLeftExtent, this.currentNode.inputLeftExtent)
+    let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
+    newNode.isChangeStart = isChangeStart
+    this.currentNode.left = newNode
+    return this.buildInsertedNodeResult(newNode, outputPosition)
+  }
+
+  insertRightNode (outputPosition, isChangeStart) {
+    let outputLeftExtent = traversalDistance(outputPosition, this.outputEnd)
+    let inputLeftExtent = minPoint(outputLeftExtent, traversalDistance(this.rightAncestorInputPosition, this.inputEnd))
+    let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
+    newNode.isChangeStart = isChangeStart
+    this.currentNode.right = newNode
+    return this.buildInsertedNodeResult(newNode, outputPosition)
+  }
+
+  buildInsertedNodeResult (insertedNode, insertedNodeOutputPosition) {
+    if (insertedNode.isChangeStart) {
+      return {
+        startNode: insertedNode,
+        startNodeOutputPosition: insertedNodeOutputPosition,
+        endNode: this.rightAncestorIsChangeEnd() ? this.rightAncestor : null,
+        endNodeOutputPosition: this.rightAncestorIsChangeEnd() ? this.rightAncestorOutputPosition : null
+      }
+    } else {
+      return {
+        startNode: this.leftAncestorIsChangeStart() ? this.leftAncestor : null,
+        startNodeOutputPosition: this.leftAncestorIsChangeStart() ? this.leftAncestorOutputPosition : null,
+        endNode: insertedNode,
+        endNodeOutputPosition: insertedNodeOutputPosition
+      }
+    }
   }
 }
