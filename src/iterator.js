@@ -6,19 +6,13 @@ const NOT_DONE = {done: false}
 const DONE = {done: true}
 
 export default class Iterator {
-  constructor (tree, rewind) {
+  constructor (tree) {
     this.tree = tree
     this.inputOffset = ZERO_POINT
     this.outputOffset = ZERO_POINT
     this.inputOffsetStack = []
     this.outputOffsetStack = []
     this.setNode(tree.root)
-
-    if (rewind && this.node) {
-      while (this.node.left) {
-        this.descendLeft()
-      }
-    }
   }
 
   getInputStart () {

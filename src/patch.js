@@ -306,13 +306,12 @@ export default class Patch {
     return new Iterator(this)
   }
 
-  buildIteratorAtStart () {
-    return new Iterator(this, true)
-  }
-
   getChanges () {
     let changes = []
-    let iterator = this.buildIteratorAtStart()
+    let iterator = this.buildIterator()
+    while (iterator.node && iterator.node.left) {
+      iterator.descendLeft()
+    }
 
     while (!iterator.next().done) {
       if (iterator.inChange()) {
