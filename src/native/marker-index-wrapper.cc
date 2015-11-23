@@ -22,21 +22,31 @@ public:
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("insert").ToLocalChecked(), Nan::New<FunctionTemplate>(Insert)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("setExclusive").ToLocalChecked(), Nan::New<FunctionTemplate>(SetExclusive)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(Delete)->GetFunction());
-    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_splice").ToLocalChecked(), Nan::New<FunctionTemplate>(Splice)->GetFunction());
+    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(Splice)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("getStart").ToLocalChecked(), Nan::New<FunctionTemplate>(GetStart)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("getEnd").ToLocalChecked(), Nan::New<FunctionTemplate>(GetEnd)->GetFunction());
-    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findIntersecting").ToLocalChecked(), Nan::New<FunctionTemplate>(FindIntersecting)->GetFunction());
-    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findContaining").ToLocalChecked(), Nan::New<FunctionTemplate>(FindContaining)->GetFunction());
-    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findContainedIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindContainedIn)->GetFunction());
-    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findStartingIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindStartingIn)->GetFunction());
-    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findEndingIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindEndingIn)->GetFunction());
+    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("findIntersecting").ToLocalChecked(), Nan::New<FunctionTemplate>(FindIntersecting)->GetFunction());
+    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("findContaining").ToLocalChecked(), Nan::New<FunctionTemplate>(FindContaining)->GetFunction());
+    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("findContainedIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindContainedIn)->GetFunction());
+    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("findStartingIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindStartingIn)->GetFunction());
+    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("findEndingIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindEndingIn)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("dump").ToLocalChecked(), Nan::New<FunctionTemplate>(Dump)->GetFunction());
 
     // assign Number.isFinite for use from C++
     Local<String> number_string = Nan::New("Number").ToLocalChecked();
     Local<String> is_finite_string = Nan::New("isFinite").ToLocalChecked();
-    Local<Object> number_global = Nan::To<Object>(Nan::GetCurrentContext()->Global()->Get(number_string)).ToLocalChecked();
-    is_finite_function.Reset(Nan::Persistent<Object>(Nan::To<Object>(number_global->Get(is_finite_string)).ToLocalChecked()));
+    Local<Object> number_constructor_local = Nan::To<Object>(Nan::GetCurrentContext()->Global()->Get(number_string)).ToLocalChecked();
+    is_finite_function.Reset(Nan::Persistent<Object>(Nan::To<Object>(number_constructor_local->Get(is_finite_string)).ToLocalChecked()));
+
+    // assign Set constructor and Set.add method for use from C++
+    Local<String> set_string = Nan::New("Set").ToLocalChecked();
+    Local<String> add_string = Nan::New("add").ToLocalChecked();
+    Local<String> prototype_string = Nan::New("prototype").ToLocalChecked();
+    Local<Object> set_constructor_local = Nan::To<Object>(Nan::GetCurrentContext()->Global()->Get(set_string)).ToLocalChecked();
+    Local<Object> set_prototype_local = Nan::To<Object>(set_constructor_local->Get(prototype_string)).ToLocalChecked();
+    Local<Object> set_add_method_local = Nan::To<Object>(set_prototype_local->Get(add_string)).ToLocalChecked();
+    set_constructor.Reset(Nan::Persistent<Object>(set_constructor_local));
+    set_add_method.Reset(Nan::Persistent<Object>(set_add_method_local));
 
     row_string.Reset(Nan::Persistent<String>(Nan::New("row").ToLocalChecked()));
     column_string.Reset(Nan::Persistent<String>(Nan::New("column").ToLocalChecked()));
@@ -53,6 +63,8 @@ public:
 
 private:
   static Nan::Persistent<Object> is_finite_function;
+  static Nan::Persistent<Object> set_constructor;
+  static Nan::Persistent<Object> set_add_method;
   static Nan::Persistent<String> row_string;
   static Nan::Persistent<String> column_string;
   static Nan::Persistent<String> start_string;
@@ -123,13 +135,15 @@ private:
     return result;
   }
 
-  static Local<Array> MarkerIdsToJS(const unordered_set<MarkerId> &marker_ids) {
-    Local<Array> result_array = Nan::New<Array>(marker_ids.size());
-    uint32_t index = 0;
+  static Local<Object> MarkerIdsToJS(const unordered_set<MarkerId> &marker_ids) {
+    Local<Object> js_set = Nan::To<Object>(Nan::New(set_constructor)->CallAsConstructor(0, nullptr)).ToLocalChecked();
+    Local<Object> set_add_method_local = Nan::New(set_add_method);
+
     for (MarkerId id : marker_ids) {
-      result_array->Set(index++, Nan::New<Integer>(id));
+      Local<Value> argv[] {Nan::New<Integer>(id)};
+      set_add_method_local->CallAsFunction(js_set, 1, argv);
     }
-    return result_array;
+    return js_set;
   }
 
   static Local<Object> SnapshotToJS(const unordered_map<MarkerId, Range> &snapshot) {
@@ -307,6 +321,8 @@ private:
 };
 
 Nan::Persistent<Object> MarkerIndexWrapper::is_finite_function;
+Nan::Persistent<Object> MarkerIndexWrapper::set_constructor;
+Nan::Persistent<Object> MarkerIndexWrapper::set_add_method;
 Nan::Persistent<String> MarkerIndexWrapper::row_string;
 Nan::Persistent<String> MarkerIndexWrapper::column_string;
 Nan::Persistent<String> MarkerIndexWrapper::start_string;
