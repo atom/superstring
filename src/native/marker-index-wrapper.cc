@@ -4,6 +4,8 @@
 #include "range.h"
 #include "splice-result.h"
 
+#include <iostream>
+
 using namespace v8;
 using std::unordered_set;
 using std::unordered_map;
@@ -30,28 +32,28 @@ public:
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findEndingIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindEndingIn)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("dump").ToLocalChecked(), Nan::New<FunctionTemplate>(Dump)->GetFunction());
 
-    row_key.Reset(Nan::Persistent<String>(Nan::New("row").ToLocalChecked()));
-    column_key.Reset(Nan::Persistent<String>(Nan::New("column").ToLocalChecked()));
-    start_key.Reset(Nan::Persistent<String>(Nan::New("start").ToLocalChecked()));
-    end_key.Reset(Nan::Persistent<String>(Nan::New("end").ToLocalChecked()));
-    touch_key.Reset(Nan::Persistent<String>(Nan::New("touch").ToLocalChecked()));
-    inside_key.Reset(Nan::Persistent<String>(Nan::New("inside").ToLocalChecked()));
-    overlap_key.Reset(Nan::Persistent<String>(Nan::New("overlap").ToLocalChecked()));
-    surround_key.Reset(Nan::Persistent<String>(Nan::New("surround").ToLocalChecked()));
+    row_string.Reset(Nan::Persistent<String>(Nan::New("row").ToLocalChecked()));
+    column_string.Reset(Nan::Persistent<String>(Nan::New("column").ToLocalChecked()));
+    start_string.Reset(Nan::Persistent<String>(Nan::New("start").ToLocalChecked()));
+    end_string.Reset(Nan::Persistent<String>(Nan::New("end").ToLocalChecked()));
+    touch_string.Reset(Nan::Persistent<String>(Nan::New("touch").ToLocalChecked()));
+    inside_string.Reset(Nan::Persistent<String>(Nan::New("inside").ToLocalChecked()));
+    overlap_string.Reset(Nan::Persistent<String>(Nan::New("overlap").ToLocalChecked()));
+    surround_string.Reset(Nan::Persistent<String>(Nan::New("surround").ToLocalChecked()));
 
     module->Set(Nan::New("exports").ToLocalChecked(),
                 constructorTemplate->GetFunction());
   }
 
 private:
-  static Nan::Persistent<String> row_key;
-  static Nan::Persistent<String> column_key;
-  static Nan::Persistent<String> start_key;
-  static Nan::Persistent<String> end_key;
-  static Nan::Persistent<String> touch_key;
-  static Nan::Persistent<String> inside_key;
-  static Nan::Persistent<String> overlap_key;
-  static Nan::Persistent<String> surround_key;
+  static Nan::Persistent<String> row_string;
+  static Nan::Persistent<String> column_string;
+  static Nan::Persistent<String> start_string;
+  static Nan::Persistent<String> end_string;
+  static Nan::Persistent<String> touch_string;
+  static Nan::Persistent<String> inside_string;
+  static Nan::Persistent<String> overlap_string;
+  static Nan::Persistent<String> surround_string;
 
   static void New(const Nan::FunctionCallbackInfo<Value> &info) {
     MarkerIndexWrapper *marker_index = new MarkerIndexWrapper(Local<Number>::Cast(info[0]));
@@ -71,19 +73,21 @@ private:
       return Nan::Nothing<Point>();
     }
 
-    Nan::MaybeLocal<Integer> maybe_row = Nan::To<Integer>(object->Get(Nan::New(row_key)));
+    Nan::MaybeLocal<Integer> maybe_row = Nan::To<Integer>(object->Get(Nan::New(row_string)));
     Local<Integer> row;
     if (!maybe_row.ToLocal(&row)) {
       Nan::ThrowTypeError("Expected an object with 'row' and 'column' properties.");
       return Nan::Nothing<Point>();
     }
 
-    Nan::MaybeLocal<Integer> maybe_column = Nan::To<Integer>(object->Get(Nan::New(column_key)));
+    Nan::MaybeLocal<Integer> maybe_column = Nan::To<Integer>(object->Get(Nan::New(column_string)));
     Local<Integer> column;
     if (!maybe_column.ToLocal(&column)) {
       Nan::ThrowTypeError("Expected an object with 'row' and 'column' properties.");
       return Nan::Nothing<Point>();
     }
+
+    std::cout << "Point converted (" << row->Int32Value() << ", " << column->Int32Value() << ")\n";
 
     return Nan::Just(Point(
       static_cast<unsigned>(row->Int32Value()),
@@ -93,8 +97,8 @@ private:
 
   static Local<Object> PointToJS(const Point &point) {
     Local<Object> result = Nan::New<Object>();
-    result->Set(Nan::New(row_key), Nan::New<Integer>(point.row));
-    result->Set(Nan::New(column_key), Nan::New<Integer>(point.column));
+    result->Set(Nan::New(row_string), Nan::New<Integer>(point.row));
+    result->Set(Nan::New(column_string), Nan::New<Integer>(point.column));
     return result;
   }
 
@@ -111,8 +115,8 @@ private:
     Local<Object> result_object = Nan::New<Object>();
     for (auto &pair : snapshot) {
       Local<Object> range = Nan::New<Object>();
-      range->Set(Nan::New(start_key), PointToJS(pair.second.start));
-      range->Set(Nan::New(end_key), PointToJS(pair.second.end));
+      range->Set(Nan::New(start_string), PointToJS(pair.second.start));
+      range->Set(Nan::New(end_string), PointToJS(pair.second.end));
       result_object->Set(Nan::New<Integer>(pair.first), range);
     }
     return result_object;
@@ -180,11 +184,11 @@ private:
       SpliceResult result = wrapper->marker_index.Splice(start.FromJust(), old_extent.FromJust(), new_extent.FromJust());
 
       Local<Object> invalidated = Nan::New<Object>();
-      invalidated->Set(Nan::New(touch_key), MarkerIdsToJS(result.touch));
-      invalidated->Set(Nan::New(inside_key), MarkerIdsToJS(result.inside));
-      invalidated->Set(Nan::New(inside_key), MarkerIdsToJS(result.inside));
-      invalidated->Set(Nan::New(overlap_key), MarkerIdsToJS(result.overlap));
-      invalidated->Set(Nan::New(surround_key), MarkerIdsToJS(result.surround));
+      invalidated->Set(Nan::New(touch_string), MarkerIdsToJS(result.touch));
+      invalidated->Set(Nan::New(inside_string), MarkerIdsToJS(result.inside));
+      invalidated->Set(Nan::New(inside_string), MarkerIdsToJS(result.inside));
+      invalidated->Set(Nan::New(overlap_string), MarkerIdsToJS(result.overlap));
+      invalidated->Set(Nan::New(surround_string), MarkerIdsToJS(result.surround));
       info.GetReturnValue().Set(invalidated);
     }
   }
@@ -281,13 +285,13 @@ private:
   MarkerIndex marker_index;
 };
 
-Nan::Persistent<String> MarkerIndexWrapper::row_key;
-Nan::Persistent<String> MarkerIndexWrapper::column_key;
-Nan::Persistent<String> MarkerIndexWrapper::start_key;
-Nan::Persistent<String> MarkerIndexWrapper::end_key;
-Nan::Persistent<String> MarkerIndexWrapper::touch_key;
-Nan::Persistent<String> MarkerIndexWrapper::inside_key;
-Nan::Persistent<String> MarkerIndexWrapper::overlap_key;
-Nan::Persistent<String> MarkerIndexWrapper::surround_key;
+Nan::Persistent<String> MarkerIndexWrapper::row_string;
+Nan::Persistent<String> MarkerIndexWrapper::column_string;
+Nan::Persistent<String> MarkerIndexWrapper::start_string;
+Nan::Persistent<String> MarkerIndexWrapper::end_string;
+Nan::Persistent<String> MarkerIndexWrapper::touch_string;
+Nan::Persistent<String> MarkerIndexWrapper::inside_string;
+Nan::Persistent<String> MarkerIndexWrapper::overlap_string;
+Nan::Persistent<String> MarkerIndexWrapper::surround_string;
 
 NODE_MODULE(marker_index, MarkerIndexWrapper::Init)
