@@ -400,3 +400,12 @@ describe('MarkerIndex', () => {
     }
   })
 })
+
+describe('NativeMarkerIndex', () => {
+  it('handles range queries involving Infinity', () => {
+    let index = new NativeMarkerIndex()
+    index.insert(1, {row: 10, column: 10}, {row: 20, column: 20})
+    let result = index.findEndingIn({row: 0, column: 0}, {row: Infinity, column: Infinity})
+    assert(result.has(1))
+  })
+})

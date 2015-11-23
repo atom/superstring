@@ -32,6 +32,12 @@ public:
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("_findEndingIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindEndingIn)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("dump").ToLocalChecked(), Nan::New<FunctionTemplate>(Dump)->GetFunction());
 
+    // assign Number.isFinite for use from C++
+    Local<String> number_string = Nan::New("Number").ToLocalChecked();
+    Local<String> is_finite_string = Nan::New("isFinite").ToLocalChecked();
+    Local<Object> number_global = Nan::To<Object>(Nan::GetCurrentContext()->Global()->Get(number_string)).ToLocalChecked();
+    is_finite_function.Reset(Nan::Persistent<Object>(Nan::To<Object>(number_global->Get(is_finite_string)).ToLocalChecked()));
+
     row_string.Reset(Nan::Persistent<String>(Nan::New("row").ToLocalChecked()));
     column_string.Reset(Nan::Persistent<String>(Nan::New("column").ToLocalChecked()));
     start_string.Reset(Nan::Persistent<String>(Nan::New("start").ToLocalChecked()));
@@ -46,6 +52,7 @@ public:
   }
 
 private:
+  static Nan::Persistent<Object> is_finite_function;
   static Nan::Persistent<String> row_string;
   static Nan::Persistent<String> column_string;
   static Nan::Persistent<String> start_string;
@@ -74,25 +81,39 @@ private:
     }
 
     Nan::MaybeLocal<Integer> maybe_row = Nan::To<Integer>(object->Get(Nan::New(row_string)));
-    Local<Integer> row;
-    if (!maybe_row.ToLocal(&row)) {
+    Local<Integer> js_row;
+    if (!maybe_row.ToLocal(&js_row)) {
       Nan::ThrowTypeError("Expected an object with 'row' and 'column' properties.");
       return Nan::Nothing<Point>();
     }
 
     Nan::MaybeLocal<Integer> maybe_column = Nan::To<Integer>(object->Get(Nan::New(column_string)));
-    Local<Integer> column;
-    if (!maybe_column.ToLocal(&column)) {
+    Local<Integer> js_column;
+    if (!maybe_column.ToLocal(&js_column)) {
       Nan::ThrowTypeError("Expected an object with 'row' and 'column' properties.");
       return Nan::Nothing<Point>();
     }
 
-    std::cout << "Point converted (" << row->Int32Value() << ", " << column->Int32Value() << ")\n";
+    unsigned row, column;
+    if (IsFinite(js_row)) {
+      row = static_cast<unsigned>(js_row->Int32Value());
+    } else {
+      row = UINT_MAX;
+    }
 
-    return Nan::Just(Point(
-      static_cast<unsigned>(row->Int32Value()),
-      static_cast<unsigned>(column->Int32Value())
-    ));
+    if (IsFinite(js_column)) {
+      column = static_cast<unsigned>(js_column->Int32Value());
+    } else {
+      column = UINT_MAX;
+    }
+
+    return Nan::Just(Point(row, column));
+  }
+
+  static bool IsFinite(Local<Integer> number) {
+    Local<Value> argv[] = {number};
+    Local<Value> result = Nan::New(is_finite_function)->CallAsFunction(Nan::Null(), 1, argv);
+    return result->BooleanValue();
   }
 
   static Local<Object> PointToJS(const Point &point) {
@@ -285,6 +306,7 @@ private:
   MarkerIndex marker_index;
 };
 
+Nan::Persistent<Object> MarkerIndexWrapper::is_finite_function;
 Nan::Persistent<String> MarkerIndexWrapper::row_string;
 Nan::Persistent<String> MarkerIndexWrapper::column_string;
 Nan::Persistent<String> MarkerIndexWrapper::start_string;
