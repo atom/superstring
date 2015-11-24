@@ -1,4 +1,4 @@
-import {format as formatPoint} from '../../src/point-helpers'
+import {ZERO_POINT, traverse, format as formatPoint} from '../../src/point-helpers'
 import Patch from '../../src/patch'
 import Node from '../../src/node'
 
@@ -10,7 +10,7 @@ Patch.prototype.toHTML = function () {
   }
 }
 
-Node.prototype.toHTML = function () {
+Node.prototype.toHTML = function (leftAncestorInputPosition = ZERO_POINT, leftAncestorOutputPosition = ZERO_POINT) {
   let s = '<style>';
   s += 'table { width: 100%; }';
   s += 'td { width: 50%; text-align: center; border: 1px solid gray; white-space: nowrap; }';
@@ -19,25 +19,25 @@ Node.prototype.toHTML = function () {
   s += '<table>';
 
   s += '<tr>';
-
   let changeStart = this.isChangeStart ? '&lt;&lt; ' : '';
   let changeEnd = !this.isChangeStart ? ' &gt;&gt;' : '';
-
-  s += '<td colspan="2">' + changeStart + formatPoint(this.inputLeftExtent) + ' / ' + formatPoint(this.outputLeftExtent) + changeEnd + '</td>';
+  let inputPosition = traverse(leftAncestorInputPosition, this.inputLeftExtent)
+  let outputPosition = traverse(leftAncestorOutputPosition, this.outputLeftExtent)
+  s += '<td colspan="2">' + changeStart + formatPoint(inputPosition) + ' / ' + formatPoint(outputPosition) + changeEnd + '</td>';
   s += '</tr>';
 
   if (this.left || this.right) {
     s += '<tr>';
     s += '<td>';
     if (this.left) {
-      s += this.left.toHTML();
+      s += this.left.toHTML(leftAncestorInputPosition, leftAncestorOutputPosition);
     } else {
       s += '&nbsp;';
     }
     s += '</td>';
     s += '<td>';
     if (this.right) {
-      s += this.right.toHTML();
+      s += this.right.toHTML(inputPosition, outputPosition);
     } else {
       s += '&nbsp;';
     }
