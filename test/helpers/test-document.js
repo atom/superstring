@@ -15,6 +15,10 @@ export default class TestDocument {
     return clone
   }
 
+  getLines () {
+    return this.lines.slice()
+  }
+
   getText () {
     return this.lines.join('\n')
   }
@@ -38,6 +42,10 @@ export default class TestDocument {
       replacementLines[replacementLines.length - 1] + this.lines[end.row].substring(end.column)
 
     this.lines.splice(start.row, replacedExtent.row + 1, ...replacementLines)
+  }
+
+  characterAtPosition ({row, column}) {
+    return this.lines[row][column]
   }
 
   buildRandomLines (max, upperCase) {

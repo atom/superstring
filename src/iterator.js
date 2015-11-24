@@ -22,6 +22,9 @@ export default class Iterator {
     this.rightAncestorInputPositionStack = []
     this.rightAncestorOutputPositionStack = []
 
+    this.inputStart = ZERO_POINT
+    this.outputStart = ZERO_POINT
+
     this.setCurrentNode(this.patch.root)
   }
 
@@ -45,6 +48,68 @@ export default class Iterator {
     }
 
     return changes
+  }
+
+  inChange () {
+    return this.currentNode && !this.currentNode.isChangeStart
+  }
+
+  getInputStart () {
+    return this.inputStart
+  }
+
+  getInputEnd () {
+    return this.inputEnd
+  }
+
+  getInputExtent () {
+    return traversalDistance(this.inputEnd, this.inputStart)
+  }
+
+  getOutputStart () {
+    return this.outputStart
+  }
+
+  getOutputEnd () {
+    return this.outputEnd
+  }
+
+  getOutputExtent () {
+    return traversalDistance(this.outputEnd, this.outputStart)
+  }
+
+  seekToInputPosition (inputPosition) {
+    this.reset()
+
+    while (true) {
+      if (comparePoints(inputPosition, this.inputEnd) < 0) {
+        if (comparePoints(inputPosition, this.inputStart) >= 0) {
+          return
+        } else {
+          if (!this.currentNode.left) throw new Error('Unexpected iterator state')
+          this.descendLeft()
+        }
+      } else {
+        this.descendRight()
+      }
+    }
+  }
+
+  seekToOutputPosition (outputPosition) {
+    this.reset()
+
+    while (true) {
+      if (comparePoints(outputPosition, this.outputEnd) < 0) {
+        if (comparePoints(outputPosition, this.outputStart) >= 0) {
+          return
+        } else {
+          if (!this.currentNode.left) throw new Error('Unexpected iterator state')
+          this.descendLeft()
+        }
+      } else {
+        this.descendRight()
+      }
+    }
   }
 
   insertSpliceStart (spliceOutputStart) {
@@ -143,23 +208,16 @@ export default class Iterator {
   setCurrentNode (node) {
     this.currentNode = node
 
-    if (node) {
-      if (node.left) {
-        this.inputStart = traverse(this.leftAncestorInputPosition, node.left.inputExtent)
-        this.outputStart = traverse(this.leftAncestorOutputPosition, node.left.outputExtent)
-      } else {
-        this.inputStart = this.leftAncestorInputPosition
-        this.outputStart = this.leftAncestorOutputPosition
-      }
-
-      this.inputEnd = traverse(this.leftAncestorInputPosition, node.inputLeftExtent)
-      this.outputEnd = traverse(this.leftAncestorOutputPosition, node.outputLeftExtent)
+    if (node && node.left) {
+      this.inputStart = traverse(this.leftAncestorInputPosition, node.left.inputExtent)
+      this.outputStart = traverse(this.leftAncestorOutputPosition, node.left.outputExtent)
     } else {
-      this.inputStart = ZERO_POINT
-      this.inputEnd = INFINITY_POINT
-      this.outputStart = ZERO_POINT
-      this.outputEnd = INFINITY_POINT
+      this.inputStart = this.leftAncestorInputPosition
+      this.outputStart = this.leftAncestorOutputPosition
     }
+
+    this.inputEnd = traverse(this.leftAncestorInputPosition, node ? node.inputLeftExtent : INFINITY_POINT)
+    this.outputEnd = traverse(this.leftAncestorOutputPosition, node ? node.outputLeftExtent : INFINITY_POINT)
   }
 
   moveToSuccessor () {

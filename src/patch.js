@@ -1,5 +1,5 @@
 import Random from 'random-seed'
-import {ZERO_POINT, INFINITY_POINT, traverse, traversalDistance} from './point-helpers'
+import {ZERO_POINT, INFINITY_POINT, traverse, traversalDistance, min as minPoint} from './point-helpers'
 import {getExtent} from './text-helpers'
 import Iterator from './iterator'
 
@@ -38,6 +38,32 @@ export default class Patch {
     this.bubbleNodeDown(startNode)
     endNode.priority = this.generateRandom()
     this.bubbleNodeDown(endNode)
+  }
+
+  isChangedAtInputPosition (inputPosition) {
+    this.iterator.seekToInputPosition(inputPosition)
+    return this.iterator.inChange()
+  }
+
+  isChangedAtOutputPosition (outputPosition) {
+    this.iterator.seekToOutputPosition(outputPosition)
+    return this.iterator.inChange()
+  }
+
+  translateInputPosition (inputPosition) {
+    this.iterator.seekToInputPosition(inputPosition)
+    let overshoot = traversalDistance(inputPosition, this.iterator.getInputStart())
+    return traverse(this.iterator.getOutputStart(), minPoint(overshoot, this.iterator.getOutputExtent()))
+  }
+
+  translateOutputPosition (outputPosition) {
+    this.iterator.seekToOutputPosition(outputPosition)
+    let overshoot = traversalDistance(outputPosition, this.iterator.getOutputStart())
+    return traverse(this.iterator.getInputStart(), minPoint(overshoot, this.iterator.getInputExtent()))
+  }
+
+  getChanges () {
+    return this.iterator.getChanges()
   }
 
   bubbleNodeUp (node) {
@@ -129,9 +155,5 @@ export default class Patch {
 
   generateRandom () {
     return this.randomGenerator.random()
-  }
-
-  getChanges () {
-    return this.iterator.getChanges()
   }
 }

@@ -1,6 +1,5 @@
 import Patch from '../src/patch'
 import TestDocument from './helpers/test-document'
-import {format as formatPoint} from '../src/point-helpers'
 import './helpers/add-to-html-methods'
 
 describe('Patch', function () {
@@ -28,7 +27,7 @@ describe('Patch', function () {
   it('correctly records random splices', function () {
     this.timeout(Infinity)
 
-    for (let i = 0; i < 500; i++) {
+    for (let i = 0; i < 50; i++) {
       let seed = Date.now()
       let input = new TestDocument(seed)
       let output = input.clone()
@@ -41,11 +40,47 @@ describe('Patch', function () {
       }
     }
 
-    function verifyPatch (patch, input, output, seed) {
+    function verifyPatch (patch, input, output, seed, random) {
+      let seedMessage = `Random seed: ${seed}`
+
+      verifyInputPositionTranslation(patch, input, output, seedMessage, random)
+      verifyOutputPositionTranslation(patch, input, output, seedMessage, random)
       for (let {start, replacedExtent, replacementText} of patch.getChanges()) {
         input.splice(start, replacedExtent, replacementText)
       }
-      assert.equal(input.getText(), output.getText(), `Random seed: ${seed}`)
+      assert.equal(input.getText(), output.getText(), seedMessage)
+    }
+
+    function verifyInputPositionTranslation (patch, input, output, seedMessage) {
+      let row = 0
+      for (let line of input.getLines()) {
+        let column = 0
+        for (let character of line) {
+          let inputPosition = {row, column}
+          if (!patch.isChangedAtInputPosition(inputPosition)) {
+            let outputPosition = patch.translateInputPosition(inputPosition)
+            assert.equal(output.characterAtPosition(outputPosition), character, seedMessage)
+          }
+          column++
+        }
+        row++
+      }
+    }
+
+    function verifyOutputPositionTranslation (patch, input, output, seedMessage) {
+      let row = 0
+      for (let line of output.getLines()) {
+        let column = 0
+        for (let character of line) {
+          let outputPosition = {row, column}
+          if (!patch.isChangedAtOutputPosition(outputPosition)) {
+            let inputPosition = patch.translateOutputPosition(outputPosition)
+            assert.equal(input.characterAtPosition(inputPosition), character, seedMessage)
+          }
+          column++
+        }
+        row++
+      }
     }
   })
 })
