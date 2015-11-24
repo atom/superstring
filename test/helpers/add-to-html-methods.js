@@ -11,41 +11,41 @@ Patch.prototype.toHTML = function () {
 }
 
 Node.prototype.toHTML = function (leftAncestorInputPosition = ZERO_POINT, leftAncestorOutputPosition = ZERO_POINT) {
-  let s = '<style>';
-  s += 'table { width: 100%; }';
-  s += 'td { width: 50%; text-align: center; border: 1px solid gray; white-space: nowrap; }';
-  s += '</style>';
+  let s = '<style>'
+  s += 'table { width: 100%; }'
+  s += 'td { width: 50%; text-align: center; border: 1px solid gray; white-space: nowrap; }'
+  s += '</style>'
 
-  s += '<table>';
+  s += '<table>'
 
-  s += '<tr>';
-  let changeStart = this.isChangeStart ? '&lt;&lt; ' : '';
-  let changeEnd = !this.isChangeStart ? ' &gt;&gt;' : '';
+  s += '<tr>'
+  let changeStart = this.isChangeStart ? '&gt;&gt; ' : ''
+  let changeEnd = !this.isChangeStart ? ' &lt;&lt;' : ''
   let inputPosition = traverse(leftAncestorInputPosition, this.inputLeftExtent)
   let outputPosition = traverse(leftAncestorOutputPosition, this.outputLeftExtent)
-  s += '<td colspan="2">' + changeStart + formatPoint(inputPosition) + ' / ' + formatPoint(outputPosition) + changeEnd + '</td>';
-  s += '</tr>';
+  s += '<td colspan="2">' + changeEnd + formatPoint(inputPosition) + ' / ' + formatPoint(outputPosition) + ' {' + JSON.stringify(this.changeText)  + '} ' + changeStart + '</td>'
+  s += '</tr>'
 
   if (this.left || this.right) {
-    s += '<tr>';
-    s += '<td>';
+    s += '<tr>'
+    s += '<td>'
     if (this.left) {
-      s += this.left.toHTML(leftAncestorInputPosition, leftAncestorOutputPosition);
+      s += this.left.toHTML(leftAncestorInputPosition, leftAncestorOutputPosition)
     } else {
-      s += '&nbsp;';
+      s += '&nbsp;'
     }
-    s += '</td>';
-    s += '<td>';
+    s += '</td>'
+    s += '<td>'
     if (this.right) {
-      s += this.right.toHTML(inputPosition, outputPosition);
+      s += this.right.toHTML(inputPosition, outputPosition)
     } else {
-      s += '&nbsp;';
+      s += '&nbsp;'
     }
-    s += '</td>';
-    s += '</tr>';
+    s += '</td>'
+    s += '</tr>'
   }
 
-  s += '</table>';
+  s += '</table>'
 
-  return s;
+  return s
 }

@@ -40,6 +40,44 @@ export default class Patch {
     this.bubbleNodeDown(endNode)
   }
 
+  spliceInput (inputStart, replacedExtent, replacementExtent) {
+    let inputOldEnd = traverse(inputStart, replacedExtent)
+    let inputNewEnd = traverse(inputStart, replacementExtent)
+
+    let startNode = this.iterator.insertSpliceInputBoundary(inputStart, true)
+    let endNode = this.iterator.insertSpliceInputBoundary(inputOldEnd, false)
+
+    startNode.priority = -1
+    this.bubbleNodeUp(startNode)
+    endNode.priority = -2
+    this.bubbleNodeUp(endNode)
+
+    startNode.right = null
+    startNode.inputExtent = startNode.inputLeftExtent
+    startNode.outputExtent = startNode.outputLeftExtent
+
+    let endNodeInputRightExtent = traversalDistance(endNode.inputExtent, endNode.inputLeftExtent)
+    let endNodeOutputRightExtent = traversalDistance(endNode.outputExtent, endNode.outputLeftExtent)
+    endNode.inputLeftExtent = inputNewEnd
+    endNode.inputExtent = traverse(endNode.inputLeftExtent, endNodeInputRightExtent)
+    endNode.outputLeftExtent = traverse(startNode.outputLeftExtent, replacementExtent)
+    endNode.outputExtent = traverse(endNode.outputLeftExtent, endNodeOutputRightExtent)
+
+    if (startNode.isChangeStart) {
+      this.deleteNode(startNode)
+    } else {
+      startNode.priority = this.generateRandom()
+      this.bubbleNodeDown(startNode)
+    }
+
+    if (endNode.isChangeStart) {
+      endNode.priority = this.generateRandom()
+      this.bubbleNodeDown(endNode)
+    } else {
+      this.deleteNode(endNode)
+    }
+  }
+
   isChangedAtInputPosition (inputPosition) {
     this.iterator.seekToInputPosition(inputPosition)
     return this.iterator.inChange()
@@ -64,6 +102,20 @@ export default class Patch {
 
   getChanges () {
     return this.iterator.getChanges()
+  }
+
+  deleteNode (node) {
+    node.priority = Infinity
+    this.bubbleNodeDown(node)
+    if (node.parent) {
+      if (node.parent.left === node) {
+        node.parent.left = null
+      } else {
+        node.parent.right = null
+      }
+    } else {
+      this.root = null
+    }
   }
 
   bubbleNodeUp (node) {

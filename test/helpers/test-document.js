@@ -1,11 +1,12 @@
 import Random from 'random-seed'
-import phonetic from 'phonetic'
+import WORDS from './words'
 import * as pointHelpers from '../../src/point-helpers'
+import * as textHelpers from '../../src/text-helpers'
 
 export default class TestDocument {
   constructor (randomSeed, text) {
     this.random = new Random(randomSeed)
-    this.lines = this.buildRandomLines(100)
+    this.lines = this.buildRandomLines(10)
   }
 
   clone () {
@@ -27,9 +28,10 @@ export default class TestDocument {
     let range = this.buildRandomRange()
     let start = range.start
     let replacedExtent = pointHelpers.traversalDistance(range.end, range.start)
-    let replacementText = this.buildRandomLines(5, true).join('\n')
+    let replacementText = this.buildRandomLines(2, true).join('\n')
+    let replacementExtent = textHelpers.getExtent(replacementText)
     this.splice(start, replacedExtent, replacementText)
-    return {start, replacedExtent, replacementText}
+    return {start, replacedExtent, replacementExtent, replacementText}
   }
 
   splice (start, replacedExtent, replacementText) {
@@ -67,11 +69,7 @@ export default class TestDocument {
   }
 
   buildRandomWord (upperCase) {
-    let word = phonetic.generate({
-      seed: this.random(1000),
-      syllables: this.random(4) + 1,
-      capFirst: false
-    })
+    let word = WORDS[this.random(WORDS.length)]
     if (upperCase) word = word.toUpperCase()
     return word
   }

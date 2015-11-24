@@ -1,4 +1,6 @@
+import Random from 'random-seed'
 import Patch from '../src/patch'
+import {traverse, traversalDistance, format as formatPoint} from '../src/point-helpers'
 import TestDocument from './helpers/test-document'
 import './helpers/add-to-html-methods'
 
@@ -24,18 +26,30 @@ describe('Patch', function () {
     ])
   })
 
-  it('correctly records random splices', function () {
+  it.only('correctly records random splices', function () {
     this.timeout(Infinity)
 
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 100000; i++) {
       let seed = Date.now()
+      let random = new Random(seed)
       let input = new TestDocument(seed)
       let output = input.clone()
       let patch = new Patch(seed)
 
       for (let j = 0; j < 30; j++) {
-        let {start, replacedExtent, replacementText} = output.performRandomSplice()
-        patch.spliceWithText(start, replacedExtent, replacementText)
+        if (random(10) < 2) { // 20% splice input
+          let {start: inputStart, replacedExtent, replacementExtent, replacementText} = input.performRandomSplice()
+          let outputStart = patch.translateInputPosition(inputStart)
+          let outputReplacedExtent = traversalDistance(
+            patch.translateInputPosition(traverse(inputStart, replacedExtent)),
+            outputStart
+          )
+          output.splice(outputStart, outputReplacedExtent, replacementText)
+          patch.spliceInput(inputStart, replacedExtent, replacementExtent)
+        } else { // 80% normal splice
+          let {start, replacedExtent, replacementExtent, replacementText} = output.performRandomSplice()
+          patch.spliceWithText(start, replacedExtent, replacementText)
+        }
         verifyPatch(patch, input.clone(), output, seed)
       }
     }
