@@ -34,6 +34,7 @@ class MarkerIndex {
  private:
   Point GetNodePosition(const Node *node) const;
   void DeleteNode(Node *node);
+  void DeleteSubtree(Node *node);
   void BubbleNodeUp(Node *node);
   void BubbleNodeDown(Node *node);
   void RotateNodeLeft(Node *pivot);

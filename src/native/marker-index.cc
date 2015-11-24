@@ -144,7 +144,7 @@ SpliceResult MarkerIndex::Splice(Point start, Point old_extent, Point new_extent
       end_nodes_by_id[id] = end_node;
     }
 
-    delete start_node->right;
+    DeleteSubtree(start_node->right);
     start_node->right = nullptr;
   }
 
@@ -272,6 +272,12 @@ void MarkerIndex::DeleteNode(Node *node) {
     root = nullptr;
   }
 
+  delete node;
+}
+
+void MarkerIndex::DeleteSubtree(Node *node) {
+  if (node->left) DeleteSubtree(node->left);
+  if (node->right) DeleteSubtree(node->right);
   delete node;
 }
 
