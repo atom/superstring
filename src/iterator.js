@@ -28,12 +28,16 @@ export default class Iterator {
     this.setCurrentNode(this.patch.root)
   }
 
-  getChanges () {
+  rewind () {
     this.reset()
 
     while (this.currentNode && this.currentNode.left) {
       this.descendLeft()
     }
+  }
+
+  getChanges () {
+    this.rewind()
 
     let changes = []
     while (this.moveToSuccessor()) {
