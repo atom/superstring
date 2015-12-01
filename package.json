@@ -2,7 +2,7 @@
   "name": "atom-patch",
   "version": "0.0.1",
   "description": "A data structure to efficiently represent the results of applying patches.",
-  "main": "dist/index.js",
+  "main": "dist/patch.js",
   "scripts": {
     "test": "npm run standard && node_modules/.bin/mocha ./test/helpers/setup  test/*",
     "tdd": "npm run standard && node_modules/.bin/electron-mocha --renderer --interactive --recursive ./test/helpers/setup  test/",
