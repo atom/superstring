@@ -265,6 +265,9 @@ export default class Iterator {
       }
       return true
     } else {
+      let previousInputEnd = this.inputEnd
+      let previousOutputEnd = this.outputEnd
+
       while (this.currentNode.parent && this.currentNode.parent.right === this.currentNode) {
         this.ascend()
       }
@@ -272,6 +275,10 @@ export default class Iterator {
         this.ascend()
         return true
       } else {
+        this.inputStart = previousInputEnd
+        this.outputStart = previousOutputEnd
+        this.inputEnd = INFINITY_POINT
+        this.outputEnd = INFINITY_POINT
         return false
       }
     }
