@@ -82,6 +82,10 @@ export default class Iterator {
     return traversalDistance(this.outputEnd, this.outputStart)
   }
 
+  getReplacementText () {
+    return this.currentNode.changeText
+  }
+
   seekToInputPosition (inputPosition) {
     this.reset()
 
