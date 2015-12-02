@@ -11,16 +11,16 @@ export default class Iterator {
     this.leftAncestor = null
     this.leftAncestorInputPosition = ZERO_POINT
     this.leftAncestorOutputPosition = ZERO_POINT
-    this.leftAncestorStack = []
-    this.leftAncestorInputPositionStack = []
-    this.leftAncestorOutputPositionStack = []
+    this.leftAncestorStack = [null]
+    this.leftAncestorInputPositionStack = [ZERO_POINT]
+    this.leftAncestorOutputPositionStack = [ZERO_POINT]
 
     this.rightAncestor = null
     this.rightAncestorInputPosition = INFINITY_POINT
     this.rightAncestorOutputPosition = INFINITY_POINT
-    this.rightAncestorStack = []
-    this.rightAncestorInputPositionStack = []
-    this.rightAncestorOutputPositionStack = []
+    this.rightAncestorStack = [null]
+    this.rightAncestorInputPositionStack = [INFINITY_POINT]
+    this.rightAncestorOutputPositionStack = [INFINITY_POINT]
 
     this.inputStart = ZERO_POINT
     this.outputStart = ZERO_POINT
@@ -41,7 +41,7 @@ export default class Iterator {
 
     let changes = []
     while (this.moveToSuccessor()) {
-      let inChange = !this.currentNode.isChangeStart
+      let inChange = this.inChange()
       if (inChange) {
         changes.push({
           start: this.outputStart,
@@ -271,16 +271,15 @@ export default class Iterator {
       while (this.currentNode.parent && this.currentNode.parent.right === this.currentNode) {
         this.ascend()
       }
-      if (this.currentNode.parent) {
-        this.ascend()
-        return true
-      } else {
+      this.ascend()
+
+      if (!this.currentNode) { // advanced off right edge of tree
         this.inputStart = previousInputEnd
         this.outputStart = previousOutputEnd
         this.inputEnd = INFINITY_POINT
         this.outputEnd = INFINITY_POINT
-        return false
       }
+      return true
     }
   }
 

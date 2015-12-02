@@ -24,6 +24,20 @@ export default class TestDocument {
     return this.lines.join('\n')
   }
 
+  getTextInRange (start, end) {
+    let endRow = Math.min(end.row, this.lines.length - 1)
+    if (start.row === endRow) {
+      return this.lines[start.row].substring(start.column, end.column)
+    } else {
+      let text = this.lines[start.row].substring(start.column) + '\n'
+      for (let row = start.row + 1; row < endRow; row++) {
+        text += this.lines[row] + '\n'
+      }
+      text += this.lines[endRow].substring(0, end.column)
+      return text
+    }
+  }
+
   performRandomSplice () {
     let range = this.buildRandomRange()
     let start = range.start

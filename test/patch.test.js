@@ -29,7 +29,7 @@ describe('Patch', function () {
   it.only('correctly records random splices', function () {
     this.timeout(Infinity)
 
-    for (let i = 0; i < 100000; i++) {
+    for (let i = 0; i < 1000; i++) {
       let seed = Date.now()
       let random = new Random(seed)
       let input = new TestDocument(seed)
@@ -59,6 +59,19 @@ describe('Patch', function () {
 
       verifyInputPositionTranslation(patch, input, output, seedMessage, random)
       verifyOutputPositionTranslation(patch, input, output, seedMessage, random)
+
+      let synthesizedOutput = ''
+      patch.iterator.rewind()
+      do {
+        if (patch.iterator.inChange()) {
+          synthesizedOutput += patch.iterator.getReplacementText()
+        } else {
+          synthesizedOutput += input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd())
+        }
+      } while (patch.iterator.moveToSuccessor())
+
+      assert.equal(synthesizedOutput, output.getText(), seedMessage)
+
       for (let {start, replacedExtent, replacementText} of patch.getChanges()) {
         input.splice(start, replacedExtent, replacementText)
       }

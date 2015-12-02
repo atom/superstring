@@ -112,6 +112,14 @@ export default class Patch {
         node.parent.left = null
       } else {
         node.parent.right = null
+        node.parent.inputExtent = node.parent.inputLeftExtent
+        node.parent.outputExtent = node.parent.outputLeftExtent
+        let ancestor = node.parent
+        while (ancestor.parent && ancestor.parent.right === ancestor) {
+          ancestor.parent.inputExtent = traverse(ancestor.parent.inputLeftExtent, ancestor.inputExtent)
+          ancestor.parent.outputExtent = traverse(ancestor.parent.outputLeftExtent, ancestor.outputExtent)
+          ancestor = ancestor.parent
+        }
       }
     } else {
       this.root = null
