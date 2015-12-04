@@ -120,6 +120,24 @@ export default class Iterator {
     }
   }
 
+  translateInputPosition (inputPosition) {
+    if (comparePoints(inputPosition, this.inputStart) < 0 || comparePoints(inputPosition, this.inputEnd) > 0) {
+      throw new Error('Point out of range')
+    }
+
+    let overshoot = traversalDistance(inputPosition, this.inputStart)
+    return minPoint(traverse(this.outputStart, overshoot), this.outputEnd)
+  }
+
+  translateOutputPosition (outputPosition) {
+    if (comparePoints(outputPosition, this.outputStart) < 0 || comparePoints(outputPosition, this.outputEnd) > 0) {
+      throw new Error('Point out of range')
+    }
+
+    let overshoot = traversalDistance(outputPosition, this.outputStart)
+    return minPoint(traverse(this.inputStart, overshoot), this.inputEnd)
+  }
+
   insertSpliceStart (spliceOutputStart) {
     this.reset()
 
