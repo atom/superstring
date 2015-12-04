@@ -91,13 +91,13 @@ export default class Patch {
   translateInputPosition (inputPosition) {
     this.iterator.seekToInputPosition(inputPosition)
     let overshoot = traversalDistance(inputPosition, this.iterator.getInputStart())
-    return traverse(this.iterator.getOutputStart(), minPoint(overshoot, this.iterator.getOutputExtent()))
+    return minPoint(traverse(this.iterator.getOutputStart(), overshoot), this.iterator.getOutputEnd())
   }
 
   translateOutputPosition (outputPosition) {
     this.iterator.seekToOutputPosition(outputPosition)
     let overshoot = traversalDistance(outputPosition, this.iterator.getOutputStart())
-    return traverse(this.iterator.getInputStart(), minPoint(overshoot, this.iterator.getInputExtent()))
+    return minPoint(traverse(this.iterator.getInputStart(), overshoot), this.iterator.getInputEnd())
   }
 
   getChanges () {
