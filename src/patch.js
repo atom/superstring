@@ -7,7 +7,11 @@ export default class Patch {
   constructor (seed = Date.now()) {
     this.randomGenerator = new Random(seed)
     this.root = null
-    this.iterator = new Iterator(this)
+    this.iterator = this.buildIterator()
+  }
+
+  buildIterator () {
+    return new Iterator(this)
   }
 
   spliceWithText (start, replacedExtent, replacementText) {
