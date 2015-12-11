@@ -26,17 +26,18 @@ describe('Patch', function () {
     ])
   })
 
-  it.only('correctly records random splices', function () {
+  it('correctly records random splices', function () {
     this.timeout(Infinity)
 
     for (let i = 0; i < 1000; i++) {
       let seed = Date.now()
+      let seedMessage = `Random seed: ${seed}`
       let random = new Random(seed)
       let input = new TestDocument(seed)
       let output = input.clone()
       let patch = new Patch(seed)
 
-      for (let j = 0; j < 30; j++) {
+      for (let j = 0; j < 2; j++) {
         if (random(10) < 2) { // 20% splice input
           let {start: inputStart, replacedExtent, replacementExtent, replacementText} = input.performRandomSplice()
           let outputStart = patch.translateInputPosition(inputStart)
@@ -45,18 +46,19 @@ describe('Patch', function () {
             outputStart
           )
           output.splice(outputStart, outputReplacedExtent, replacementText)
-          patch.spliceInput(inputStart, replacedExtent, replacementExtent)
+          let result = patch.spliceInput(inputStart, replacedExtent, replacementExtent)
+          assert.deepEqual(result.start, outputStart, seedMessage)
+          assert.deepEqual(result.replacedExtent, outputReplacedExtent, seedMessage)
+          assert.deepEqual(result.replacementExtent, replacementExtent, seedMessage)
         } else { // 80% normal splice
           let {start, replacedExtent, replacementExtent, replacementText} = output.performRandomSplice()
           patch.spliceWithText(start, replacedExtent, replacementText)
         }
-        verifyPatch(patch, input.clone(), output, seed)
+        verifyPatch(patch, input.clone(), output, random, seedMessage)
       }
     }
 
-    function verifyPatch (patch, input, output, seed, random) {
-      let seedMessage = `Random seed: ${seed}`
-
+    function verifyPatch (patch, input, output, random, seedMessage) {
       verifyInputPositionTranslation(patch, input, output, seedMessage, random)
       verifyOutputPositionTranslation(patch, input, output, seedMessage, random)
 

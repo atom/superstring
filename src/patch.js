@@ -60,12 +60,17 @@ export default class Patch {
     startNode.inputExtent = startNode.inputLeftExtent
     startNode.outputExtent = startNode.outputLeftExtent
 
+    let outputStart = startNode.outputLeftExtent
+    let outputReplacedExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
+
     let endNodeInputRightExtent = traversalDistance(endNode.inputExtent, endNode.inputLeftExtent)
     let endNodeOutputRightExtent = traversalDistance(endNode.outputExtent, endNode.outputLeftExtent)
     endNode.inputLeftExtent = inputNewEnd
     endNode.inputExtent = traverse(endNode.inputLeftExtent, endNodeInputRightExtent)
     endNode.outputLeftExtent = traverse(startNode.outputLeftExtent, replacementExtent)
     endNode.outputExtent = traverse(endNode.outputLeftExtent, endNodeOutputRightExtent)
+
+    let outputReplacementExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
 
     if (startNode.isChangeStart) {
       this.deleteNode(startNode)
@@ -79,6 +84,12 @@ export default class Patch {
       this.bubbleNodeDown(endNode)
     } else {
       this.deleteNode(endNode)
+    }
+
+    return {
+      start: outputStart,
+      replacedExtent: outputReplacedExtent,
+      replacementExtent: outputReplacementExtent
     }
   }
 
