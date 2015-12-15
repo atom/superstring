@@ -1,5 +1,5 @@
 import Random from 'random-seed'
-import {ZERO_POINT, INFINITY_POINT, traverse, traversalDistance, min as minPoint} from './point-helpers'
+import {ZERO_POINT, INFINITY_POINT, traverse, traversalDistance, min as minPoint, isZero as isZeroPoint} from './point-helpers'
 import {getExtent} from './text-helpers'
 import Iterator from './iterator'
 
@@ -19,11 +19,17 @@ export default class Patch {
   }
 
   splice (outputStart, replacedExtent, replacementExtent, options) {
+    if (isZeroPoint(replacedExtent) && isZeroPoint(replacementExtent)) return
+
     let outputOldEnd = traverse(outputStart, replacedExtent)
     let outputNewEnd = traverse(outputStart, replacementExtent)
 
-    let {startNode, prefix} = this.iterator.insertSpliceStart(outputStart)
-    let {endNode, suffix, suffixExtent} = this.iterator.insertSpliceEnd(outputOldEnd)
+    let startNode = this.iterator.insertSpliceBoundary(outputStart)
+    startNode.isChangeStart = true
+
+    let endNode = this.iterator.insertSpliceBoundary(outputOldEnd, startNode)
+    endNode.isChangeEnd = true
+
     startNode.priority = -1
     this.bubbleNodeUp(startNode)
     endNode.priority = -2
@@ -33,23 +39,40 @@ export default class Patch {
     startNode.inputExtent = startNode.inputLeftExtent
     startNode.outputExtent = startNode.outputLeftExtent
 
-    let endNodeOutputRightExtent = traversalDistance(endNode.outputExtent, endNode.outputLeftExtent)
-    endNode.outputLeftExtent = traverse(outputNewEnd, suffixExtent)
-    endNode.outputExtent = traverse(endNode.outputLeftExtent, endNodeOutputRightExtent)
-    endNode.changeText = prefix + options.text + suffix
+    endNode.outputExtent = traverse(outputNewEnd, traversalDistance(endNode.outputExtent, endNode.outputLeftExtent))
+    endNode.outputLeftExtent = outputNewEnd
+    endNode.changeText = options.text
 
-    startNode.priority = this.generateRandom()
-    this.bubbleNodeDown(startNode)
-    endNode.priority = this.generateRandom()
-    this.bubbleNodeDown(endNode)
+    if (startNode.isChangeEnd) {
+      endNode.changeText = startNode.changeText + endNode.changeText
+      this.deleteNode(startNode)
+    } else {
+      startNode.priority = this.generateRandom()
+      this.bubbleNodeDown(startNode)
+    }
+
+    if (endNode.isChangeStart) {
+      endNode.priority = Infinity
+      let rightAncestor = this.bubbleNodeDown(endNode)
+      rightAncestor.changeText = endNode.changeText + rightAncestor.changeText
+      this.deleteNode(endNode)
+    } else {
+      endNode.priority = this.generateRandom()
+      this.bubbleNodeDown(endNode)
+    }
   }
 
   spliceInput (inputStart, replacedExtent, replacementExtent) {
+    if (isZeroPoint(replacedExtent) && isZeroPoint(replacementExtent)) {
+      let outputStart = this.translateInputPosition(inputStart)
+      return {start: outputStart, replacedExtent, replacementExtent}
+    }
+
     let inputOldEnd = traverse(inputStart, replacedExtent)
     let inputNewEnd = traverse(inputStart, replacementExtent)
 
-    let startNode = this.iterator.insertSpliceInputBoundary(inputStart, true)
-    let endNode = this.iterator.insertSpliceInputBoundary(inputOldEnd, false)
+    let startNode = this.iterator.insertSpliceInputBoundary(inputStart)
+    let endNode = this.iterator.insertSpliceInputBoundary(inputOldEnd, startNode)
 
     startNode.priority = -1
     this.bubbleNodeUp(startNode)
@@ -72,11 +95,11 @@ export default class Patch {
 
     let outputReplacementExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
 
-    if (startNode.isChangeStart) {
-      this.deleteNode(startNode)
-    } else {
+    if (startNode.isChangeEnd) {
       startNode.priority = this.generateRandom()
       this.bubbleNodeDown(startNode)
+    } else {
+      this.deleteNode(startNode)
     }
 
     if (endNode.isChangeStart) {
@@ -152,6 +175,8 @@ export default class Patch {
   }
 
   bubbleNodeDown (node) {
+    let rightAncestor
+
     while (true) {
       let leftChildPriority = node.left ? node.left.priority : Infinity
       let rightChildPriority = node.right ? node.right.priority : Infinity
@@ -159,11 +184,14 @@ export default class Patch {
       if (leftChildPriority < rightChildPriority && leftChildPriority < node.priority) {
         this.rotateNodeRight(node.left)
       } else if (rightChildPriority < node.priority) {
+        rightAncestor = node.right
         this.rotateNodeLeft(node.right)
       } else {
         break
       }
     }
+
+    return rightAncestor
   }
 
   rotateNodeLeft (pivot) {

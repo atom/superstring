@@ -20,7 +20,7 @@ export function getSuffix (text, prefixExtent) {
   return text.substring(characterIndexForPoint(text, prefixExtent))
 }
 
-function characterIndexForPoint(text, point) {
+export function characterIndexForPoint(text, point) {
   let {row, column} = point
   NEWLINE_REG_EXP.lastIndex = 0
   while (row-- > 0) NEWLINE_REG_EXP.exec(text)

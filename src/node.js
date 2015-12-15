@@ -13,6 +13,7 @@ export default class Node {
     this.id = ++idCounter
     this.priority = Infinity
     this.isChangeStart = false
+    this.isChangeEnd = false
     this.changeText = null
   }
 }

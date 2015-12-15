@@ -20,7 +20,7 @@ Node.prototype.toHTML = function (leftAncestorInputPosition = ZERO_POINT, leftAn
 
   s += '<tr>'
   let changeStart = this.isChangeStart ? '&gt;&gt; ' : ''
-  let changeEnd = !this.isChangeStart ? ' &lt;&lt;' : ''
+  let changeEnd = this.isChangeEnd ? ' &lt;&lt;' : ''
   let inputPosition = traverse(leftAncestorInputPosition, this.inputLeftExtent)
   let outputPosition = traverse(leftAncestorOutputPosition, this.outputLeftExtent)
   s += '<td colspan="2">' + ' {' + JSON.stringify(this.changeText)  + '} ' + changeEnd + formatPoint(inputPosition) + ' / ' + formatPoint(outputPosition) + changeStart + '</td>'

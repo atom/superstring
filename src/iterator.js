@@ -1,5 +1,5 @@
 import {ZERO_POINT, INFINITY_POINT, traverse, traversalDistance, compare as comparePoints, min as minPoint} from './point-helpers'
-import {getPrefix, getSuffix} from './text-helpers'
+import {getPrefix, getSuffix, characterIndexForPoint} from './text-helpers'
 import Node from './node'
 
 export default class Iterator {
@@ -55,7 +55,7 @@ export default class Iterator {
   }
 
   inChange () {
-    return this.currentNode && !this.currentNode.isChangeStart
+    return this.currentNode && this.currentNode.isChangeEnd
   }
 
   getInputStart () {
@@ -138,124 +138,110 @@ export default class Iterator {
     return minPoint(traverse(this.inputStart, overshoot), this.inputEnd)
   }
 
-  insertSpliceStart (spliceOutputStart) {
+  insertSpliceBoundary (boundaryOutputPosition, spliceStartNode) {
     this.reset()
 
-    let {startNode, endNode, startNodeOutputPosition} = this.insertSpliceBoundary(spliceOutputStart, true)
+    let insertingStart = (spliceStartNode == null)
 
-    let prefix
-    if (comparePoints(spliceOutputStart, startNodeOutputPosition) === 0) {
-      prefix = ''
-    } else {
-      prefix = getPrefix(endNode.changeText, traversalDistance(spliceOutputStart, startNodeOutputPosition))
-    }
-
-    return {startNode, prefix}
-  }
-
-  insertSpliceEnd (spliceOutputEnd) {
-    this.reset()
-
-    let {startNode, endNode, startNodeOutputPosition, endNodeOutputPosition} = this.insertSpliceBoundary(spliceOutputEnd, false)
-
-    let suffix, suffixExtent
-    if (comparePoints(spliceOutputEnd, endNodeOutputPosition) === 0) {
-      suffix = ''
-      suffixExtent = ZERO_POINT
-    } else {
-      suffix = getSuffix(endNode.changeText, traversalDistance(spliceOutputEnd, startNodeOutputPosition))
-      suffixExtent = traversalDistance(endNodeOutputPosition, spliceOutputEnd)
-    }
-
-    return {endNode, suffix, suffixExtent}
-  }
-
-  insertSpliceBoundary (boundaryOutputPosition, insertingChangeStart) {
     if (!this.currentNode) {
       this.patch.root = new Node(null, boundaryOutputPosition, boundaryOutputPosition)
-      this.patch.root.isChangeStart = insertingChangeStart
-      return this.buildInsertedSpliceBoundaryResult(this.patch.root, boundaryOutputPosition)
+      return this.patch.root
     }
 
     while (true) {
       this.inputEnd = traverse(this.leftAncestorInputPosition, this.currentNode.inputLeftExtent)
       this.outputEnd = traverse(this.leftAncestorOutputPosition, this.currentNode.outputLeftExtent)
 
-      if (this.currentNode.isChangeStart) {
-        if (comparePoints(boundaryOutputPosition, this.outputEnd) < 0) { // boundaryOutputPosition < this.outputEnd
-          if (this.currentNode.left) {
-            this.descendLeft()
-          } else {
-            return this.insertLeftChildDuringSplice(boundaryOutputPosition, insertingChangeStart)
-          }
-        } else { // boundaryOutputPosition >= this.outputEnd
-          if (this.currentNode.right) {
-            this.descendRight()
-          } else {
-            if (insertingChangeStart || this.rightAncestorIsChangeEnd()) {
-              return {
-                startNode: this.currentNode,
-                endNode: this.rightAncestorIsChangeEnd() ? this.rightAncestor : null,
-                startNodeOutputPosition: this.outputEnd,
-                endNodeOutputPosition: this.rightAncestorIsChangeEnd() ? this.rightAncestorOutputPosition : null
-              }
-            } else {
-              return this.insertRightChildDuringSplice(boundaryOutputPosition, insertingChangeStart)
-            }
-          }
-        }
-      } else { // !this.currentNode.isChangeStart (it's a change end)
-        if (comparePoints(boundaryOutputPosition, this.outputEnd) <= 0) { // boundaryOutputPosition <= this.outputEnd
-          if (this.currentNode.left) {
-            this.descendLeft()
-          } else {
-            if (!insertingChangeStart || this.leftAncestorIsChangeStart()) {
-              return {
-                startNode: this.leftAncestorIsChangeStart() ? this.leftAncestor : null,
-                endNode: this.currentNode,
-                startNodeOutputPosition: this.leftAncestorIsChangeStart() ? this.leftAncestorOutputPosition : null,
-                endNodeOutputPosition: this.outputEnd
-              }
-            } else {
-              return this.insertLeftChildDuringSplice(boundaryOutputPosition, insertingChangeStart)
-            }
-          }
-        } else { // boundaryOutputPosition > this.outputEnd
-          if (this.currentNode.right) {
-            this.descendRight()
-          } else {
-            return this.insertRightChildDuringSplice(boundaryOutputPosition, insertingChangeStart)
-          }
-        }
-      }
-    }
-  }
-
-  insertSpliceInputBoundary (inputPosition, insertingSpliceStart) {
-    this.reset()
-
-    if (!this.currentNode) {
-      let node = new Node(null, inputPosition, inputPosition)
-      node.isChangeStart = true
-      this.patch.root = node
-      return node
-    }
-
-    while (true) {
-      if (comparePoints(inputPosition, this.inputEnd) < 0) {
+      let comparison = comparePoints(boundaryOutputPosition, this.outputEnd)
+      if (comparison < 0) {
         if (this.currentNode.left) {
           this.descendLeft()
         } else {
-          return this.insertLeftChildDuringSpliceInput(inputPosition, insertingSpliceStart)
+          let outputLeftExtent = traversalDistance(boundaryOutputPosition, this.leftAncestorOutputPosition)
+          let inputLeftExtent = minPoint(outputLeftExtent, this.currentNode.inputLeftExtent)
+          let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
+          this.currentNode.left = newNode
+          this.descendLeft()
+          break
         }
-      } else {
+      } else if (comparison === 0 && this.currentNode !== spliceStartNode) {
+        return this.currentNode
+      } else { // comparison > 0
         if (this.currentNode.right) {
           this.descendRight()
         } else {
-          return this.insertRightChildDuringSpliceInput(inputPosition, insertingSpliceStart)
+          let outputLeftExtent = traversalDistance(boundaryOutputPosition, this.outputEnd)
+          let inputLeftExtent = minPoint(outputLeftExtent, traversalDistance(this.rightAncestorInputPosition, this.inputEnd))
+          let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
+          this.currentNode.right = newNode
+          this.descendRight()
+          break
         }
       }
     }
+
+    if (this.rightAncestor && this.rightAncestor.isChangeEnd) {
+      this.currentNode.isChangeStart = true
+      this.currentNode.isChangeEnd = true
+      let {changeText} = this.rightAncestor
+      let boundaryIndex = characterIndexForPoint(changeText, traversalDistance(boundaryOutputPosition, this.leftAncestorOutputPosition))
+      if (insertingStart) this.currentNode.changeText = changeText.substring(0, boundaryIndex)
+      this.rightAncestor.changeText = changeText.substring(boundaryIndex)
+    }
+
+    return this.currentNode
+  }
+
+  insertSpliceInputBoundary (boundaryInputPosition, spliceStartNode) {
+    this.reset()
+
+    let insertingStart = (spliceStartNode == null)
+
+    if (!this.currentNode) {
+      this.patch.root = new Node(null, boundaryInputPosition, boundaryInputPosition)
+      return this.patch.root
+    }
+
+    while (true) {
+      this.inputEnd = traverse(this.leftAncestorInputPosition, this.currentNode.inputLeftExtent)
+      this.outputEnd = traverse(this.leftAncestorOutputPosition, this.currentNode.outputLeftExtent)
+
+      let comparison = comparePoints(boundaryInputPosition, this.inputEnd)
+      if (comparison < 0) {
+        if (this.currentNode.left) {
+          this.descendLeft()
+        } else {
+          let inputLeftExtent = traversalDistance(boundaryInputPosition, this.leftAncestorInputPosition)
+          let outputLeftExtent = minPoint(inputLeftExtent, this.currentNode.outputLeftExtent)
+          let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
+          this.currentNode.left = newNode
+          this.descendLeft()
+          break
+        }
+      } else { // comparison >= 0
+        if (this.currentNode.right) {
+          this.descendRight()
+        } else {
+          let inputLeftExtent = traversalDistance(boundaryInputPosition, this.inputEnd)
+          let outputLeftExtent = minPoint(inputLeftExtent, traversalDistance(this.rightAncestorOutputPosition, this.outputEnd))
+          let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
+          this.currentNode.right = newNode
+          this.descendRight()
+          break
+        }
+      }
+    }
+
+    if (this.rightAncestor && this.rightAncestor.isChangeEnd) {
+      this.currentNode.isChangeStart = !insertingStart
+      this.currentNode.isChangeEnd = insertingStart
+      let {changeText} = this.rightAncestor
+      let boundaryIndex = characterIndexForPoint(changeText, traversalDistance(this.outputEnd, this.leftAncestorOutputPosition))
+      if (insertingStart) this.currentNode.changeText = changeText.substring(0, boundaryIndex)
+      this.rightAncestor.changeText = changeText.substring(boundaryIndex)
+    }
+
+    return this.currentNode
   }
 
   setCurrentNode (node) {
@@ -334,88 +320,5 @@ export default class Iterator {
     this.rightAncestorStack.push(this.rightAncestor)
     this.rightAncestorInputPositionStack.push(this.rightAncestorInputPosition)
     this.rightAncestorOutputPositionStack.push(this.rightAncestorOutputPosition)
-  }
-
-  leftAncestorIsChangeStart () {
-    return this.leftAncestor && this.leftAncestor.isChangeStart
-  }
-
-  rightAncestorIsChangeEnd () {
-    return this.rightAncestor && !this.rightAncestor.isChangeStart
-  }
-
-  insertLeftChildDuringSplice (outputPosition, isChangeStart) {
-    let outputLeftExtent = traversalDistance(outputPosition, this.leftAncestorOutputPosition)
-    let inputLeftExtent = minPoint(outputLeftExtent, this.currentNode.inputLeftExtent)
-    let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
-    newNode.isChangeStart = isChangeStart
-    this.currentNode.left = newNode
-    return this.buildInsertedSpliceBoundaryResult(newNode, outputPosition)
-  }
-
-  insertRightChildDuringSplice (outputPosition, isChangeStart) {
-    let outputLeftExtent = traversalDistance(outputPosition, this.outputEnd)
-    let inputLeftExtent = minPoint(outputLeftExtent, traversalDistance(this.rightAncestorInputPosition, this.inputEnd))
-    let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
-    newNode.isChangeStart = isChangeStart
-    this.currentNode.right = newNode
-    return this.buildInsertedSpliceBoundaryResult(newNode, outputPosition)
-  }
-
-  buildInsertedSpliceBoundaryResult (insertedNode, insertedNodeOutputPosition) {
-    if (insertedNode.isChangeStart) {
-      return {
-        startNode: insertedNode,
-        startNodeOutputPosition: insertedNodeOutputPosition,
-        endNode: this.rightAncestorIsChangeEnd() ? this.rightAncestor : null,
-        endNodeOutputPosition: this.rightAncestorIsChangeEnd() ? this.rightAncestorOutputPosition : null
-      }
-    } else {
-      return {
-        startNode: this.leftAncestorIsChangeStart() ? this.leftAncestor : null,
-        startNodeOutputPosition: this.leftAncestorIsChangeStart() ? this.leftAncestorOutputPosition : null,
-        endNode: insertedNode,
-        endNodeOutputPosition: insertedNodeOutputPosition
-      }
-    }
-  }
-
-  insertLeftChildDuringSpliceInput (inputPosition, insertingSpliceStart) {
-    let inputLeftExtent = traversalDistance(inputPosition, this.leftAncestorInputPosition)
-    let outputLeftExtent = minPoint(inputLeftExtent, this.currentNode.outputLeftExtent)
-    let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
-    this.currentNode.left = newNode
-    this.descendLeft()
-    this.initializeSpliceInputNode(newNode, insertingSpliceStart)
-    return newNode
-  }
-
-  insertRightChildDuringSpliceInput (inputPosition, insertingSpliceStart) {
-    let inputLeftExtent = traversalDistance(inputPosition, this.inputEnd)
-    let outputLeftExtent = minPoint(inputLeftExtent, traversalDistance(this.rightAncestorOutputPosition, this.outputEnd))
-    let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
-    this.currentNode.right = newNode
-    this.descendRight()
-    this.initializeSpliceInputNode(newNode, insertingSpliceStart)
-    return newNode
-  }
-
-  initializeSpliceInputNode (newNode, insertingSpliceStart) {
-    if (insertingSpliceStart) {
-      if (this.leftAncestor && this.leftAncestor.isChangeStart) {
-        newNode.isChangeStart = false
-        newNode.changeText = getPrefix(this.rightAncestor.changeText, traversalDistance(this.outputEnd, this.outputStart))
-        this.rightAncestor.changeText = getSuffix(this.rightAncestor.changeText, traversalDistance(this.outputEnd, this.outputStart))
-      } else {
-        newNode.isChangeStart = true // this will cause the node to be deleted after the splice
-      }
-    } else { // inserting splice end
-      if (this.rightAncestor && !this.rightAncestor.isChangeStart) {
-        newNode.isChangeStart = true
-        this.rightAncestor.changeText = getSuffix(this.rightAncestor.changeText, traversalDistance(this.outputEnd, this.outputStart))
-      } else {
-        newNode.isChangeStart = false // this will cause the node to be deleted after the splice
-      }
-    }
   }
 }

@@ -9,6 +9,10 @@ export function compare (a, b) {
   }
 }
 
+export function isZero (point) {
+  return (point.row === 0 && point.column === 0)
+}
+
 export function min (a, b) {
   if (compare(a, b) <= 0) {
     return a

@@ -37,7 +37,7 @@ describe('Patch', function () {
       let output = input.clone()
       let patch = new Patch(seed)
 
-      for (let j = 0; j < 2; j++) {
+      for (let j = 0; j < 10; j++) {
         if (random(10) < 2) { // 20% splice input
           let {start: inputStart, replacedExtent, replacementExtent, replacementText} = input.performRandomSplice()
           let outputStart = patch.translateInputPosition(inputStart)
@@ -46,6 +46,9 @@ describe('Patch', function () {
             outputStart
           )
           output.splice(outputStart, outputReplacedExtent, replacementText)
+          // document.write(`<div>after spliceInput(${formatPoint(inputStart)}, ${formatPoint(replacedExtent)}, ${formatPoint(replacementExtent)}, ${replacementText})</div>`)
+          // document.write(patch.toHTML())
+          // document.write('<hr>')
           let result = patch.spliceInput(inputStart, replacedExtent, replacementExtent)
           assert.deepEqual(result.start, outputStart, seedMessage)
           assert.deepEqual(result.replacedExtent, outputReplacedExtent, seedMessage)
@@ -53,7 +56,11 @@ describe('Patch', function () {
         } else { // 80% normal splice
           let {start, replacedExtent, replacementExtent, replacementText} = output.performRandomSplice()
           patch.spliceWithText(start, replacedExtent, replacementText)
+          // document.write(`<div>after splice(${formatPoint(start)}, ${formatPoint(replacedExtent)}, ${formatPoint(replacementExtent)}, ${replacementText})</div>`)
+          // document.write(patch.toHTML())
+          // document.write('<hr>')
         }
+
         verifyPatch(patch, input.clone(), output, random, seedMessage)
       }
     }
