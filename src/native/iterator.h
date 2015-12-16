@@ -35,6 +35,7 @@ class Iterator {
   Node* InsertLeftChild(const Point &position);
   Node* InsertRightChild(const Point &position);
   void CheckIntersection(const Point &start, const Point &end, std::unordered_set<MarkerId> *results);
+  void CacheNodePosition() const;
 
   MarkerIndex *marker_index;
   Node *current_node;

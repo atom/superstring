@@ -127,6 +127,7 @@ void Iterator::FindIntersecting(const Point &start, const Point &end, std::unord
   if (!current_node) return;
 
   while (true) {
+    CacheNodePosition();
     if (start < current_node_position) {
       if (current_node->left) {
         CheckIntersection(start, end, result);
@@ -147,6 +148,7 @@ void Iterator::FindIntersecting(const Point &start, const Point &end, std::unord
   do {
     CheckIntersection(start, end, result);
     MoveToSuccessor();
+    CacheNodePosition();
   } while (current_node && current_node_position <= end);
 }
 
@@ -163,6 +165,7 @@ void Iterator::FindContainedIn(const Point &start, const Point &end, std::unorde
     for (MarkerId id : current_node->end_marker_ids) {
       if (started.count(id) > 0) result->insert(id);
     }
+    CacheNodePosition();
     MoveToSuccessor();
   }
 }
@@ -176,6 +179,7 @@ void Iterator::FindStartingIn(const Point &start, const Point &end, std::unorder
 
   while (current_node && current_node_position <= end) {
     result->insert(current_node->start_marker_ids.begin(), current_node->start_marker_ids.end());
+    CacheNodePosition();
     MoveToSuccessor();
   }
 }
@@ -189,6 +193,7 @@ void Iterator::FindEndingIn(const Point &start, const Point &end, std::unordered
 
   while (current_node && current_node_position <= end) {
     result->insert(current_node->end_marker_ids.begin(), current_node->end_marker_ids.end());
+    CacheNodePosition();
     MoveToSuccessor();
   }
 }
@@ -200,7 +205,10 @@ unordered_map<MarkerId, Range> Iterator::Dump() {
 
   if (!current_node) return snapshot;
 
-  while (current_node && current_node->left) DescendLeft();
+  while (current_node && current_node->left) {
+    CacheNodePosition();
+    DescendLeft();
+  }
 
   while (current_node) {
     for (MarkerId id : current_node->start_marker_ids) {
@@ -208,9 +216,12 @@ unordered_map<MarkerId, Range> Iterator::Dump() {
       range.start = current_node_position;
       snapshot.insert({id, range});
     }
+
     for (MarkerId id : current_node->end_marker_ids) {
       snapshot[id].end = current_node_position;
     }
+
+    CacheNodePosition();
     MoveToSuccessor();
   }
 
@@ -273,6 +284,7 @@ void Iterator::MoveToSuccessor() {
 
 void Iterator::SeekToFirstNodeGreaterThanOrEqualTo(const Point &position) {
   while (true) {
+    CacheNodePosition();
     if (position == current_node_position) {
       break;
     } else if (position < current_node_position) {
@@ -328,4 +340,8 @@ void Iterator::CheckIntersection(const Point &start, const Point &end, unordered
   if (current_node_position <= end && start <= right_ancestor_position) {
     result->insert(current_node->right_marker_ids.begin(), current_node->right_marker_ids.end());
   }
+}
+
+void Iterator::CacheNodePosition() const {
+  marker_index->node_position_cache.insert({current_node, current_node_position});
 }

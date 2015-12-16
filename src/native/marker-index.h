@@ -49,6 +49,7 @@ class MarkerIndex {
   std::map<MarkerId, Node*> end_nodes_by_id;
   Iterator iterator;
   std::unordered_set<MarkerId> exclusive_marker_ids;
+  mutable std::unordered_map<const Node*, Point> node_position_cache;
 };
 
 #endif // MARKER_INDEX_H_
