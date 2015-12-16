@@ -204,6 +204,17 @@ Point MarkerIndex::GetEnd(MarkerId id) const {
     return GetNodePosition(result->second);
 }
 
+int MarkerIndex::Compare(MarkerId id1, MarkerId id2) const {
+  switch (GetStart(id1).Compare(GetStart(id2))) {
+    case -1:
+      return -1;
+    case 1:
+      return 1;
+    default:
+      return GetEnd(id1).Compare(GetEnd(id2));
+  }
+}
+
 unordered_set<MarkerId> MarkerIndex::FindIntersecting(Point start, Point end) {
   unordered_set<MarkerId> result;
   iterator.FindIntersecting(start, end, &result);

@@ -25,6 +25,7 @@ public:
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(Splice)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("getStart").ToLocalChecked(), Nan::New<FunctionTemplate>(GetStart)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("getEnd").ToLocalChecked(), Nan::New<FunctionTemplate>(GetEnd)->GetFunction());
+    constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("compare").ToLocalChecked(), Nan::New<FunctionTemplate>(Compare)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("findIntersecting").ToLocalChecked(), Nan::New<FunctionTemplate>(FindIntersecting)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("findContaining").ToLocalChecked(), Nan::New<FunctionTemplate>(FindContaining)->GetFunction());
     constructorTemplate->PrototypeTemplate()->Set(Nan::New<String>("findContainedIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindContainedIn)->GetFunction());
@@ -245,6 +246,15 @@ private:
     if (id.IsJust()) {
       Point result = wrapper->marker_index.GetEnd(id.FromJust());
       info.GetReturnValue().Set(PointToJS(result));
+    }
+  }
+
+  static void Compare(const Nan::FunctionCallbackInfo<Value> &info) {
+    MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
+    Nan::Maybe<MarkerId> id1 = MarkerIdFromJS(Nan::To<Integer>(info[0]));
+    Nan::Maybe<MarkerId> id2 = MarkerIdFromJS(Nan::To<Integer>(info[1]));
+    if (id1.IsJust() && id2.IsJust()) {
+      info.GetReturnValue().Set(wrapper->marker_index.Compare(id1.FromJust(), id2.FromJust()));
     }
   }
 

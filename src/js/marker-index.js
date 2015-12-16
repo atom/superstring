@@ -33,6 +33,17 @@ export default class MarkerIndex {
     return this.getNodePosition(this.endNodesById[markerId])
   }
 
+  compare (markerId1, markerId2) {
+    switch (compare(this.getStart(markerId1), this.getStart(markerId2))) {
+      case -1:
+        return -1;
+      case 1:
+        return 1;
+      default:
+        return compare(this.getEnd(markerId1), this.getEnd(markerId2))
+    }
+  }
+
   insert (markerId, start, end) {
     let startNode = this.iterator.insertMarkerStart(markerId, start, end)
     let endNode = this.iterator.insertMarkerEnd(markerId, start, end)
