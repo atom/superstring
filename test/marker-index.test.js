@@ -39,15 +39,19 @@ describe('MarkerIndex', () => {
           if (MarkerIndex === NativeMarkerIndex) verifyHighestPossiblePaths()
         }
 
-        verifyRanges()
-        testDump()
-        testFindIntersecting()
-        testFindContaining()
-        testFindContainedIn()
-        testFindStartingIn()
-        testFindEndingIn()
-        testFindStartingAt()
-        testFindEndingAt()
+        const verifications = [
+          verifyRanges,
+          testDump,
+          testFindIntersecting,
+          testFindContaining,
+          testFindContainedIn,
+          testFindStartingIn,
+          testFindEndingIn,
+          testFindStartingAt,
+          testFindEndingAt,
+        ].sort((a, b) => random.intBetween(-1, 1))
+
+        verifications.forEach(verification => verification())
       }
     }
 
