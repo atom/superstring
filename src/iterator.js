@@ -46,6 +46,7 @@ export default class Iterator {
         changes.push({
           start: this.outputStart,
           replacedExtent: traversalDistance(this.inputEnd, this.inputStart),
+          replacementExtent: traversalDistance(this.outputEnd, this.outputStart),
           replacementText: this.currentNode.changeText
         })
       }
