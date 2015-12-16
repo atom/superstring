@@ -120,6 +120,7 @@ export default class Iterator {
     if (!this.currentNode) return
 
     while (true) {
+      this.cacheNodePosition()
       if (compare(start, this.currentNodePosition) < 0) {
         if (this.currentNode.left) {
           this.checkIntersection(start, end, resultSet)
@@ -140,6 +141,7 @@ export default class Iterator {
     do {
       this.checkIntersection(start, end, resultSet)
       this.moveToSuccessor()
+      this.cacheNodePosition()
     } while (this.currentNode && compare(this.currentNodePosition, end) <= 0)
   }
 
@@ -149,6 +151,7 @@ export default class Iterator {
 
     while (true) {
       this.checkIntersection(position, position, resultSet)
+      this.cacheNodePosition()
 
       if (compare(position, this.currentNodePosition) < 0) {
         if (this.currentNode.left) {
@@ -180,6 +183,7 @@ export default class Iterator {
           resultSet.add(markerId)
         }
       })
+      this.cacheNodePosition()
       this.moveToSuccessor()
     }
   }
@@ -192,6 +196,7 @@ export default class Iterator {
 
     while (this.currentNode && compare(this.currentNodePosition, end) <= 0) {
       addToSet(resultSet, this.currentNode.startMarkerIds)
+      this.cacheNodePosition()
       this.moveToSuccessor()
     }
   }
@@ -204,6 +209,7 @@ export default class Iterator {
 
     while (this.currentNode && compare(this.currentNodePosition, end) <= 0) {
       addToSet(resultSet, this.currentNode.endMarkerIds)
+      this.cacheNodePosition()
       this.moveToSuccessor()
     }
   }
@@ -211,7 +217,10 @@ export default class Iterator {
   dump () {
     this.reset()
 
-    while (this.currentNode && this.currentNode.left) this.descendLeft()
+    while (this.currentNode && this.currentNode.left) {
+      this.cacheNodePosition()
+      this.descendLeft()
+    }
 
     let snapshot = {}
 
@@ -224,6 +233,7 @@ export default class Iterator {
         snapshot[markerId].end = this.currentNodePosition
       })
 
+      this.cacheNodePosition()
       this.moveToSuccessor()
     }
 
@@ -234,6 +244,7 @@ export default class Iterator {
     while (true) {
       let comparison = compare(position, this.currentNodePosition)
 
+      this.cacheNodePosition()
       if (comparison === 0) {
         break
       } else if (comparison < 0) {
@@ -326,6 +337,10 @@ export default class Iterator {
 
   insertRightChild (position) {
     this.currentNode.right = new Node(this.currentNode, traversal(position, this.currentNodePosition))
+  }
+
+  cacheNodePosition () {
+    this.markerIndex.nodePositionCache.set(this.currentNode, this.currentNodePosition)
   }
 
   checkIntersection (start, end, resultSet) {

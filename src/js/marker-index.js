@@ -14,6 +14,7 @@ export default class MarkerIndex {
     this.endNodesById = {}
     this.iterator = new Iterator(this)
     this.exclusiveMarkers = new Set()
+    this.nodePositionCache = new Map()
   }
 
   dump () {
@@ -35,6 +36,9 @@ export default class MarkerIndex {
   insert (markerId, start, end) {
     let startNode = this.iterator.insertMarkerStart(markerId, start, end)
     let endNode = this.iterator.insertMarkerEnd(markerId, start, end)
+
+    this.nodePositionCache.set(startNode, start)
+    this.nodePositionCache.set(endNode, end)
 
     startNode.startMarkerIds.add(markerId)
     endNode.endMarkerIds.add(markerId)
@@ -93,6 +97,8 @@ export default class MarkerIndex {
   }
 
   splice (start, oldExtent, newExtent) {
+    this.nodePositionCache.clear()
+
     let invalidated = {
       touch: new Set,
       inside: new Set,
@@ -238,17 +244,23 @@ export default class MarkerIndex {
   }
 
   getNodePosition (node) {
-    let position = node.leftExtent
-    while (node.parent) {
-      if (node.parent.right === node) {
-        position = traverse(node.parent.leftExtent, position)
+    let position = this.nodePositionCache.get(node)
+    if (!position) {
+      position = node.leftExtent
+      let currentNode = node
+      while (currentNode.parent) {
+        if (currentNode.parent.right === currentNode) {
+          position = traverse(currentNode.parent.leftExtent, position)
+        }
+        currentNode = currentNode.parent
       }
-      node = node.parent
+      this.nodePositionCache.set(node, position)
     }
     return position
   }
 
   deleteNode (node) {
+    this.nodePositionCache.delete(node)
     node.priority = Infinity
     this.bubbleNodeDown(node)
     if (node.parent) {
