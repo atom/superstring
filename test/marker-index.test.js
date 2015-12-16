@@ -399,6 +399,21 @@ for (let [name, MarkerIndex] of [['js', JSMarkerIndex], ['native', NativeMarkerI
       }
     })
 
+    it('can compare marker ranges', function () {
+      let index = new MarkerIndex()
+      index.insert(1, {row: 1, column: 2}, {row: 3, column: 4})
+      index.insert(2, {row: 1, column: 2}, {row: 3, column: 4})
+      index.insert(3, {row: 2, column: 2}, {row: 3, column: 4})
+      index.insert(4, {row: 1, column: 2}, {row: 3, column: 5})
+
+      assert.equal(index.compare(1, 2), 0)
+      assert.equal(index.compare(2, 1), 0)
+      assert.equal(index.compare(1, 3), -1)
+      assert.equal(index.compare(3, 1), 1)
+      assert.equal(index.compare(1, 4), -1)
+      assert.equal(index.compare(4, 1), 1)
+    })
+
     it('handles range queries involving Infinity', () => {
       let index = new MarkerIndex()
       index.insert(1, {row: 10, column: 10}, {row: 20, column: 20})
