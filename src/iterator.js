@@ -90,6 +90,8 @@ export default class Iterator {
   seekToInputPosition (inputPosition) {
     this.reset()
 
+    if (!this.currentNode) return
+
     while (true) {
       if (comparePoints(inputPosition, this.inputEnd) < 0) {
         if (comparePoints(inputPosition, this.inputStart) >= 0) {
@@ -106,6 +108,8 @@ export default class Iterator {
 
   seekToOutputPosition (outputPosition) {
     this.reset()
+
+    if (!this.currentNode) return
 
     while (true) {
       if (comparePoints(outputPosition, this.outputEnd) < 0) {
