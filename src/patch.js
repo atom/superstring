@@ -4,8 +4,9 @@ import {getExtent} from './text-helpers'
 import Iterator from './iterator'
 
 export default class Patch {
-  constructor (seed = Date.now()) {
-    this.randomGenerator = new Random(seed)
+  constructor (params = {}) {
+    this.combineChanges = (params.combineChanges != null) ? Boolean(params.combineChanges) : true
+    this.randomGenerator = new Random(params.seed || Date.now())
     this.root = null
     this.iterator = this.buildIterator()
   }
@@ -43,7 +44,7 @@ export default class Patch {
     endNode.outputLeftExtent = outputNewEnd
     endNode.changeText = options.text
 
-    if (startNode.isChangeEnd) {
+    if (startNode.isChangeEnd && this.combineChanges) {
       endNode.changeText = startNode.changeText + endNode.changeText
       this.deleteNode(startNode)
     } else {
@@ -51,7 +52,7 @@ export default class Patch {
       this.bubbleNodeDown(startNode)
     }
 
-    if (endNode.isChangeStart) {
+    if (endNode.isChangeStart && this.combineChanges) {
       endNode.priority = Infinity
       let rightAncestor = this.bubbleNodeDown(endNode)
       rightAncestor.changeText = endNode.changeText + rightAncestor.changeText

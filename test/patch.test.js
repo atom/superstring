@@ -35,7 +35,8 @@ describe('Patch', function () {
       let random = new Random(seed)
       let input = new TestDocument(seed)
       let output = input.clone()
-      let patch = new Patch(seed)
+      let combineChanges = Boolean(random(2))
+      let patch = new Patch({seed, combineChanges})
 
       for (let j = 0; j < 10; j++) {
         if (random(10) < 2) { // 20% splice input
