@@ -40,7 +40,7 @@ export default class MarkerIndex {
       case 1:
         return 1;
       default:
-        return compare(this.getEnd(markerId1), this.getEnd(markerId2))
+        return compare(this.getEnd(markerId2), this.getEnd(markerId1))
     }
   }
 

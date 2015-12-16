@@ -410,8 +410,8 @@ for (let [name, MarkerIndex] of [['js', JSMarkerIndex], ['native', NativeMarkerI
       assert.equal(index.compare(2, 1), 0)
       assert.equal(index.compare(1, 3), -1)
       assert.equal(index.compare(3, 1), 1)
-      assert.equal(index.compare(1, 4), -1)
-      assert.equal(index.compare(4, 1), 1)
+      assert.equal(index.compare(1, 4), 1)
+      assert.equal(index.compare(4, 1), -1)
     })
 
     it('handles range queries involving Infinity', () => {

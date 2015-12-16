@@ -211,7 +211,7 @@ int MarkerIndex::Compare(MarkerId id1, MarkerId id2) const {
     case 1:
       return 1;
     default:
-      return GetEnd(id1).Compare(GetEnd(id2));
+      return GetEnd(id2).Compare(GetEnd(id1));
   }
 }
 
