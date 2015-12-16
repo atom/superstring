@@ -1,6 +1,7 @@
 #ifndef ITERATOR_H_
 #define ITERATOR_H_
 
+#include <vector>
 #include <unordered_map>
 #include <unordered_set>
 #include "marker-id.h"
