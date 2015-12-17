@@ -24,6 +24,9 @@ void MarkerIndex::Insert(MarkerId id, Point start, Point end) {
   Node *start_node = iterator.InsertMarkerStart(id, start, end);
   Node *end_node = iterator.InsertMarkerEnd(id, start, end);
 
+  node_position_cache.insert({start_node, start});
+  node_position_cache.insert({end_node, end});
+
   start_node->start_marker_ids.insert(id);
   end_node->end_marker_ids.insert(id);
 
@@ -81,6 +84,8 @@ void MarkerIndex::Delete(MarkerId id) {
 }
 
 SpliceResult MarkerIndex::Splice(Point start, Point old_extent, Point new_extent) {
+  node_position_cache.clear();
+
   SpliceResult invalidated;
 
   if (!root || (old_extent.IsZero() && new_extent.IsZero())) return invalidated;
@@ -199,6 +204,17 @@ Point MarkerIndex::GetEnd(MarkerId id) const {
     return GetNodePosition(result->second);
 }
 
+int MarkerIndex::Compare(MarkerId id1, MarkerId id2) const {
+  switch (GetStart(id1).Compare(GetStart(id2))) {
+    case -1:
+      return -1;
+    case 1:
+      return 1;
+    default:
+      return GetEnd(id2).Compare(GetEnd(id1));
+  }
+}
+
 unordered_set<MarkerId> MarkerIndex::FindIntersecting(Point start, Point end) {
   unordered_set<MarkerId> result;
   iterator.FindIntersecting(start, end, &result);
@@ -246,18 +262,26 @@ unordered_map<MarkerId, Range> MarkerIndex::Dump() {
 }
 
 Point MarkerIndex::GetNodePosition(const Node *node) const {
-  Point position = node->left_extent;
-  while (node->parent) {
-    if (node->parent->right == node) {
-      position = node->parent->left_extent.Traverse(position);
-    }
+  auto cache_entry = node_position_cache.find(node);
+  if (cache_entry == node_position_cache.end()) {
+    Point position = node->left_extent;
+    const Node *current_node = node;
+    while (current_node->parent) {
+      if (current_node->parent->right == current_node) {
+        position = current_node->parent->left_extent.Traverse(position);
+      }
 
-    node = node->parent;
+      current_node = current_node->parent;
+    }
+    node_position_cache.insert({node, position});
+    return position;
+  } else {
+    return cache_entry->second;
   }
-  return position;
 }
 
 void MarkerIndex::DeleteNode(Node *node) {
+  node_position_cache.erase(node);
   node->priority = INT_MAX;
 
   BubbleNodeDown(node);

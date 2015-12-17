@@ -24,6 +24,7 @@ class MarkerIndex {
   SpliceResult Splice(Point start, Point old_extent, Point new_extent);
   Point GetStart(MarkerId id) const;
   Point GetEnd(MarkerId id) const;
+  int Compare(MarkerId id1, MarkerId id2) const;
   std::unordered_set<MarkerId> FindIntersecting(Point start, Point end);
   std::unordered_set<MarkerId> FindContaining(Point start, Point end);
   std::unordered_set<MarkerId> FindContainedIn(Point start, Point end);
@@ -49,6 +50,7 @@ class MarkerIndex {
   std::map<MarkerId, Node*> end_nodes_by_id;
   Iterator iterator;
   std::unordered_set<MarkerId> exclusive_marker_ids;
+  mutable std::unordered_map<const Node*, Point> node_position_cache;
 };
 
 #endif // MARKER_INDEX_H_

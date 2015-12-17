@@ -17,6 +17,7 @@ let jsMarkerIndex = new JSMarkerIndex()
 let insertOperations = []
 let spliceOperations = []
 let deleteOperations = []
+let rangeQueryOperations = []
 
 function runBenchmark () {
   for (let i = 0; i < 20000; i++) {
@@ -24,7 +25,13 @@ function runBenchmark () {
     enqueueSplice()
     enqueueDelete()
   }
+
+  for (let i = 0; i < 500; i++) {
+    enqueueRangeQuery()
+  }
+
   profileOperations('inserts', insertOperations)
+  profileOperations('rangeQueries', rangeQueryOperations)
   profileOperations('splices', spliceOperations)
   profileOperations('deletes', deleteOperations)
 }
@@ -58,6 +65,10 @@ function enqueueInsert () {
 
 function enqueueSplice () {
   spliceOperations.push(['splice', getSplice()])
+}
+
+function enqueueRangeQuery() {
+  rangeQueryOperations.push(['findIntersecting', getRange()])
 }
 
 function enqueueDelete () {
