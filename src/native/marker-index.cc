@@ -275,9 +275,9 @@ Point MarkerIndex::GetNodePosition(const Node *node) const {
     }
     node_position_cache.insert({node, position});
     return position;
+  } else {
+    return cache_entry->second;
   }
-
-  return cache_entry->second;
 }
 
 void MarkerIndex::DeleteNode(Node *node) {
