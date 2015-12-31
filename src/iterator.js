@@ -120,7 +120,12 @@ export default class Iterator {
           this.descendLeft()
         }
       } else {
-        this.descendRight()
+        if (this.currentNode) {
+          this.descendRight()
+        } else {
+          if (comparePoints(outputPosition, INFINITY_POINT) !== 0) throw new Error('Unexpected iterator state')
+          return
+        }
       }
     }
   }
