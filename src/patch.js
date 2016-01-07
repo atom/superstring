@@ -1,5 +1,5 @@
 import Random from 'random-seed'
-import {ZERO_POINT, INFINITY_POINT, traverse, traversalDistance, min as minPoint, isZero as isZeroPoint} from './point-helpers'
+import {ZERO_POINT, INFINITY_POINT, traverse, traversalDistance, min as minPoint, isZero as isZeroPoint, compare as comparePoints} from './point-helpers'
 import {getExtent} from './text-helpers'
 import Iterator from './iterator'
 
@@ -44,22 +44,28 @@ export default class Patch {
     endNode.outputLeftExtent = outputNewEnd
     endNode.changeText = options.text
 
-    if (startNode.isChangeEnd && this.combineChanges) {
-      endNode.changeText = startNode.changeText + endNode.changeText
-      this.deleteNode(startNode)
-    } else {
-      startNode.priority = this.generateRandom()
-      this.bubbleNodeDown(startNode)
-    }
-
     if (endNode.isChangeStart && this.combineChanges) {
       endNode.priority = Infinity
       let rightAncestor = this.bubbleNodeDown(endNode)
       rightAncestor.changeText = endNode.changeText + rightAncestor.changeText
       this.deleteNode(endNode)
+    } else if (comparePoints(endNode.outputLeftExtent, startNode.outputLeftExtent) === 0
+        && comparePoints(endNode.inputLeftExtent, startNode.inputLeftExtent) === 0) {
+      startNode.isChangeStart = endNode.isChangeStart
+      this.deleteNode(endNode)
     } else {
       endNode.priority = this.generateRandom()
       this.bubbleNodeDown(endNode)
+    }
+
+    if (startNode.isChangeStart && startNode.isChangeEnd && this.combineChanges) {
+      startNode.priority = Infinity
+      let rightAncestor = this.bubbleNodeDown(startNode)
+      rightAncestor.changeText = startNode.changeText + rightAncestor.changeText
+      this.deleteNode(startNode)
+    } else {
+      startNode.priority = this.generateRandom()
+      this.bubbleNodeDown(startNode)
     }
   }
 
