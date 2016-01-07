@@ -1,4 +1,4 @@
-import {ZERO_POINT, INFINITY_POINT, traverse, traversalDistance, compare as comparePoints, min as minPoint} from './point-helpers'
+import {ZERO_POINT, INFINITY_POINT, traverse, traversalDistance, compare as comparePoints, min as minPoint, isZero as isZeroPoint} from './point-helpers'
 import {getPrefix, getSuffix, characterIndexForPoint} from './text-helpers'
 import Node from './node'
 
@@ -202,10 +202,8 @@ export default class Iterator {
     return this.currentNode
   }
 
-  insertSpliceInputBoundary (boundaryInputPosition, spliceStartNode) {
+  insertSpliceInputBoundary (boundaryInputPosition, insertingStart, isInsertion) {
     this.reset()
-
-    let insertingStart = (spliceStartNode == null)
 
     if (!this.currentNode) {
       this.patch.root = new Node(null, boundaryInputPosition, boundaryInputPosition)
@@ -221,6 +219,10 @@ export default class Iterator {
         if (this.currentNode.left) {
           this.descendLeft()
         } else {
+          if ((insertingStart || !isInsertion) && this.leftAncestor && comparePoints(boundaryInputPosition, this.leftAncestorInputPosition) === 0) {
+            return this.leftAncestor
+          }
+
           let inputLeftExtent = traversalDistance(boundaryInputPosition, this.leftAncestorInputPosition)
           let outputLeftExtent = minPoint(inputLeftExtent, this.currentNode.outputLeftExtent)
           let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
@@ -228,10 +230,20 @@ export default class Iterator {
           this.descendLeft()
           break
         }
-      } else { // comparison >= 0
+      } else {
         if (this.currentNode.right) {
           this.descendRight()
         } else {
+          if (insertingStart || !isInsertion) {
+            if (comparePoints(boundaryInputPosition, this.inputEnd) === 0) {
+              return this.currentNode
+            }
+
+            if (this.leftAncestor && comparePoints(boundaryInputPosition, this.leftAncestorInputPosition) === 0) {
+              return this.leftAncestor
+            }
+          }
+
           let inputLeftExtent = traversalDistance(boundaryInputPosition, this.inputEnd)
           let outputLeftExtent = minPoint(inputLeftExtent, traversalDistance(this.rightAncestorOutputPosition, this.outputEnd))
           let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)

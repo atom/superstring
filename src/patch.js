@@ -64,7 +64,9 @@ export default class Patch {
   }
 
   spliceInput (inputStart, replacedExtent, replacementExtent) {
-    if (isZeroPoint(replacedExtent) && isZeroPoint(replacementExtent)) {
+    let replacedExtentIsZero = isZeroPoint(replacedExtent)
+
+    if (replacedExtentIsZero && isZeroPoint(replacementExtent)) {
       let outputStart = this.translateInputPosition(inputStart)
       return {start: outputStart, replacedExtent, replacementExtent}
     }
@@ -72,8 +74,8 @@ export default class Patch {
     let inputOldEnd = traverse(inputStart, replacedExtent)
     let inputNewEnd = traverse(inputStart, replacementExtent)
 
-    let startNode = this.iterator.insertSpliceInputBoundary(inputStart)
-    let endNode = this.iterator.insertSpliceInputBoundary(inputOldEnd, startNode)
+    let startNode = this.iterator.insertSpliceInputBoundary(inputStart, true, replacedExtentIsZero)
+    let endNode = this.iterator.insertSpliceInputBoundary(inputOldEnd, false, replacedExtentIsZero)
 
     startNode.priority = -1
     this.bubbleNodeUp(startNode)
@@ -83,6 +85,7 @@ export default class Patch {
     startNode.right = null
     startNode.inputExtent = startNode.inputLeftExtent
     startNode.outputExtent = startNode.outputLeftExtent
+    startNode.isChangeStart = false
 
     let outputStart = startNode.outputLeftExtent
     let outputReplacedExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
@@ -93,6 +96,8 @@ export default class Patch {
     endNode.inputExtent = traverse(endNode.inputLeftExtent, endNodeInputRightExtent)
     endNode.outputLeftExtent = traverse(startNode.outputLeftExtent, replacementExtent)
     endNode.outputExtent = traverse(endNode.outputLeftExtent, endNodeOutputRightExtent)
+    endNode.isChangeEnd = false
+    endNode.changeText = null
 
     let outputReplacementExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
 

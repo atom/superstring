@@ -1,6 +1,6 @@
 import Random from 'random-seed'
 import Patch from '../src/patch'
-import {traverse, traversalDistance, format as formatPoint} from '../src/point-helpers'
+import {traverse, traversalDistance, format as formatPoint, isZero as isZeroPoint} from '../src/point-helpers'
 import TestDocument from './helpers/test-document'
 import './helpers/add-to-html-methods'
 
@@ -11,8 +11,8 @@ describe('Patch', function () {
     patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello')
     patch.spliceWithText({row: 0, column: 10}, {row: 0, column: 5}, 'world')
     assert.deepEqual(patch.getChanges(), [
-      {start: {row: 0, column: 3}, replacedExtent: {row: 0, column: 4}, replacementText: 'hello'},
-      {start: {row: 0, column: 10}, replacedExtent: {row: 0, column: 5}, replacementText: 'world'}
+      {start: {row: 0, column: 3}, replacedExtent: {row: 0, column: 4}, replacementExtent: {row: 0, column: 5}, replacementText: 'hello'},
+      {start: {row: 0, column: 10}, replacedExtent: {row: 0, column: 5}, replacementExtent: {row: 0, column: 5}, replacementText: 'world'}
     ])
   })
 
@@ -22,7 +22,7 @@ describe('Patch', function () {
     patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello world')
     patch.spliceWithText({row: 0, column: 9}, {row: 0, column: 7}, 'sun')
     assert.deepEqual(patch.getChanges(), [
-      {start: {row: 0, column: 3}, replacedExtent: {row: 0, column: 6}, replacementText: 'hello sun'},
+      {start: {row: 0, column: 3}, replacedExtent: {row: 0, column: 6}, replacementExtent: {row: 0, column: 9}, replacementText: 'hello sun'},
     ])
   })
 
@@ -74,6 +74,7 @@ describe('Patch', function () {
       patch.iterator.rewind()
       do {
         if (patch.iterator.inChange()) {
+          assert(!(isZeroPoint(patch.iterator.getInputExtent()) && isZeroPoint(patch.iterator.getOutputExtent())), "Empty region found. " + seedMessage);
           synthesizedOutput += patch.iterator.getReplacementText()
         } else {
           synthesizedOutput += input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd())
