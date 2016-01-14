@@ -42,12 +42,14 @@ export default class Patch {
 
     endNode.outputExtent = traverse(outputNewEnd, traversalDistance(endNode.outputExtent, endNode.outputLeftExtent))
     endNode.outputLeftExtent = outputNewEnd
-    endNode.changeText = options.text
+    endNode.changeText = options && options.text
 
     if (endNode.isChangeStart && this.combineChanges) {
       endNode.priority = Infinity
       let rightAncestor = this.bubbleNodeDown(endNode)
-      rightAncestor.changeText = endNode.changeText + rightAncestor.changeText
+      if (endNode.changeText != null) {
+        rightAncestor.changeText = endNode.changeText + rightAncestor.changeText
+      }
       this.deleteNode(endNode)
     } else if (comparePoints(endNode.outputLeftExtent, startNode.outputLeftExtent) === 0
         && comparePoints(endNode.inputLeftExtent, startNode.inputLeftExtent) === 0) {
@@ -61,7 +63,9 @@ export default class Patch {
     if (startNode.isChangeStart && startNode.isChangeEnd && this.combineChanges) {
       startNode.priority = Infinity
       let rightAncestor = this.bubbleNodeDown(startNode)
-      rightAncestor.changeText = startNode.changeText + rightAncestor.changeText
+      if (startNode.changeText != null) {
+        rightAncestor.changeText = startNode.changeText + rightAncestor.changeText
+      }
       this.deleteNode(startNode)
     } else {
       startNode.priority = this.generateRandom()

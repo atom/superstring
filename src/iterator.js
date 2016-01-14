@@ -43,12 +43,15 @@ export default class Iterator {
     while (this.moveToSuccessor()) {
       let inChange = this.inChange()
       if (inChange) {
-        changes.push({
+        let change = {
           start: this.outputStart,
           replacedExtent: traversalDistance(this.inputEnd, this.inputStart),
           replacementExtent: traversalDistance(this.outputEnd, this.outputStart),
-          replacementText: this.currentNode.changeText
-        })
+        }
+        if (this.currentNode.changeText != null) {
+          change.replacementText = this.currentNode.changeText
+        }
+        changes.push(change)
       }
     }
 
@@ -194,9 +197,11 @@ export default class Iterator {
       this.currentNode.isChangeStart = true
       this.currentNode.isChangeEnd = true
       let {changeText} = this.rightAncestor
-      let boundaryIndex = characterIndexForPoint(changeText, traversalDistance(boundaryOutputPosition, this.leftAncestorOutputPosition))
-      if (insertingStart) this.currentNode.changeText = changeText.substring(0, boundaryIndex)
-      this.rightAncestor.changeText = changeText.substring(boundaryIndex)
+      if (changeText != null) {
+        let boundaryIndex = characterIndexForPoint(changeText, traversalDistance(boundaryOutputPosition, this.leftAncestorOutputPosition))
+        if (insertingStart) this.currentNode.changeText = changeText.substring(0, boundaryIndex)
+        this.rightAncestor.changeText = changeText.substring(boundaryIndex)
+      }
     }
 
     return this.currentNode
@@ -258,9 +263,11 @@ export default class Iterator {
       this.currentNode.isChangeStart = !insertingStart
       this.currentNode.isChangeEnd = insertingStart
       let {changeText} = this.rightAncestor
-      let boundaryIndex = characterIndexForPoint(changeText, traversalDistance(this.outputEnd, this.leftAncestorOutputPosition))
-      if (insertingStart) this.currentNode.changeText = changeText.substring(0, boundaryIndex)
-      this.rightAncestor.changeText = changeText.substring(boundaryIndex)
+      if (changeText != null) {
+        let boundaryIndex = characterIndexForPoint(changeText, traversalDistance(this.outputEnd, this.leftAncestorOutputPosition))
+        if (insertingStart) this.currentNode.changeText = changeText.substring(0, boundaryIndex)
+        this.rightAncestor.changeText = changeText.substring(boundaryIndex)
+      }
     }
 
     return this.currentNode
