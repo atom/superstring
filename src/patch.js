@@ -6,7 +6,11 @@ import Iterator from './iterator'
 export default class Patch {
   constructor (params = {}) {
     this.combineChanges = (params.combineChanges != null) ? Boolean(params.combineChanges) : true
-    this.randomGenerator = new Random(params.seed || Date.now())
+    if (params.seed) {
+      let randomGenerator = new Random(params.seed)
+      this.generateRandom = randomGenerator.random.bind(randomGenerator)
+    }
+
     this.root = null
     this.iterator = this.buildIterator()
   }
@@ -273,6 +277,6 @@ export default class Patch {
   }
 
   generateRandom () {
-    return this.randomGenerator.random()
+    return Math.random()
   }
 }
