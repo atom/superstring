@@ -90,6 +90,10 @@ export default class Iterator {
     return this.currentNode.changeText
   }
 
+  getMetadata () {
+    return this.currentNode.metadata
+  }
+
   seekToInputPosition (inputPosition) {
     this.reset()
 

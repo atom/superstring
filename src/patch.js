@@ -19,8 +19,9 @@ export default class Patch {
     return new Iterator(this)
   }
 
-  spliceWithText (start, replacedExtent, replacementText) {
-    this.splice(start, replacedExtent, getExtent(replacementText), {text: replacementText})
+  spliceWithText (start, replacedExtent, replacementText, options) {
+    let metadata = options ? options.metadata : null
+    this.splice(start, replacedExtent, getExtent(replacementText), {text: replacementText, metadata})
   }
 
   splice (outputStart, replacedExtent, replacementExtent, options) {
@@ -34,6 +35,7 @@ export default class Patch {
 
     let endNode = this.iterator.insertSpliceBoundary(outputOldEnd, startNode)
     endNode.isChangeEnd = true
+    if (options && options.metadata) endNode.metadata = options.metadata
 
     startNode.priority = -1
     this.bubbleNodeUp(startNode)

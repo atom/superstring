@@ -26,6 +26,28 @@ describe('Patch', function () {
     ])
   })
 
+  it('allows metadata to be associated with splices', () => {
+    let seed = 123
+    let patch = new Patch(seed)
+    patch.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, {metadata: {a: 1}})
+    patch.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5}, {metadata: {b: 2}})
+
+    let iterator = patch.buildIterator()
+    iterator.rewind()
+    assert(!iterator.inChange())
+
+    iterator.moveToSuccessor()
+    assert(iterator.inChange())
+    assert.deepEqual(iterator.getMetadata(), {a: 1})
+
+    iterator.moveToSuccessor()
+    assert(!iterator.inChange())
+
+    iterator.moveToSuccessor()
+    assert(iterator.inChange())
+    assert.deepEqual(iterator.getMetadata(), {b: 2})
+  })
+
   it('correctly records random splices', function () {
     this.timeout(Infinity)
 
