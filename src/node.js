@@ -14,7 +14,7 @@ export default class Node {
     this.priority = Infinity
     this.isChangeStart = false
     this.isChangeEnd = false
-    this.changeText = null
+    this.newText = null
     this.metadata = null
   }
 }

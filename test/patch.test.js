@@ -11,8 +11,8 @@ describe('Patch', function () {
     patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello')
     patch.spliceWithText({row: 0, column: 10}, {row: 0, column: 5}, 'world')
     assert.deepEqual(patch.getChanges(), [
-      {start: {row: 0, column: 3}, replacedExtent: {row: 0, column: 4}, replacementExtent: {row: 0, column: 5}, replacementText: 'hello'},
-      {start: {row: 0, column: 10}, replacedExtent: {row: 0, column: 5}, replacementExtent: {row: 0, column: 5}, replacementText: 'world'}
+      {start: {row: 0, column: 3}, oldExtent: {row: 0, column: 4}, newExtent: {row: 0, column: 5}, newText: 'hello'},
+      {start: {row: 0, column: 10}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 5}, newText: 'world'}
     ])
   })
 
@@ -22,7 +22,7 @@ describe('Patch', function () {
     patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello world')
     patch.spliceWithText({row: 0, column: 9}, {row: 0, column: 7}, 'sun')
     assert.deepEqual(patch.getChanges(), [
-      {start: {row: 0, column: 3}, replacedExtent: {row: 0, column: 6}, replacementExtent: {row: 0, column: 9}, replacementText: 'hello sun'},
+      {start: {row: 0, column: 3}, oldExtent: {row: 0, column: 6}, newExtent: {row: 0, column: 9}, newText: 'hello sun'},
     ])
   })
 
@@ -62,24 +62,24 @@ describe('Patch', function () {
 
       for (let j = 0; j < 10; j++) {
         if (random(10) < 2) { // 20% splice input
-          let {start: inputStart, replacedExtent, replacementExtent, replacementText} = input.performRandomSplice()
+          let {start: inputStart, oldExtent, newExtent, newText} = input.performRandomSplice()
           let outputStart = patch.translateInputPosition(inputStart)
-          let outputReplacedExtent = traversalDistance(
-            patch.translateInputPosition(traverse(inputStart, replacedExtent)),
+          let outputoldExtent = traversalDistance(
+            patch.translateInputPosition(traverse(inputStart, oldExtent)),
             outputStart
           )
-          output.splice(outputStart, outputReplacedExtent, replacementText)
-          // document.write(`<div>after spliceInput(${formatPoint(inputStart)}, ${formatPoint(replacedExtent)}, ${formatPoint(replacementExtent)}, ${replacementText})</div>`)
+          output.splice(outputStart, outputoldExtent, newText)
+          // document.write(`<div>after spliceInput(${formatPoint(inputStart)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)}, ${newText})</div>`)
           // document.write(patch.toHTML())
           // document.write('<hr>')
-          let result = patch.spliceInput(inputStart, replacedExtent, replacementExtent)
+          let result = patch.spliceInput(inputStart, oldExtent, newExtent)
           assert.deepEqual(result.start, outputStart, seedMessage)
-          assert.deepEqual(result.replacedExtent, outputReplacedExtent, seedMessage)
-          assert.deepEqual(result.replacementExtent, replacementExtent, seedMessage)
+          assert.deepEqual(result.oldExtent, outputoldExtent, seedMessage)
+          assert.deepEqual(result.newExtent, newExtent, seedMessage)
         } else { // 80% normal splice
-          let {start, replacedExtent, replacementExtent, replacementText} = output.performRandomSplice()
-          patch.spliceWithText(start, replacedExtent, replacementText)
-          // document.write(`<div>after splice(${formatPoint(start)}, ${formatPoint(replacedExtent)}, ${formatPoint(replacementExtent)}, ${replacementText})</div>`)
+          let {start, oldExtent, newExtent, newText} = output.performRandomSplice()
+          patch.spliceWithText(start, oldExtent, newText)
+          // document.write(`<div>after splice(${formatPoint(start)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)}, ${newText})</div>`)
           // document.write(patch.toHTML())
           // document.write('<hr>')
         }
@@ -97,7 +97,7 @@ describe('Patch', function () {
       do {
         if (patch.iterator.inChange()) {
           assert(!(isZeroPoint(patch.iterator.getInputExtent()) && isZeroPoint(patch.iterator.getOutputExtent())), "Empty region found. " + seedMessage);
-          synthesizedOutput += patch.iterator.getReplacementText()
+          synthesizedOutput += patch.iterator.getNewText()
         } else {
           synthesizedOutput += input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd())
         }
@@ -105,8 +105,8 @@ describe('Patch', function () {
 
       assert.equal(synthesizedOutput, output.getText(), seedMessage)
 
-      for (let {start, replacedExtent, replacementText} of patch.getChanges()) {
-        input.splice(start, replacedExtent, replacementText)
+      for (let {start, oldExtent, newText} of patch.getChanges()) {
+        input.splice(start, oldExtent, newText)
       }
       assert.equal(input.getText(), output.getText(), seedMessage)
     }

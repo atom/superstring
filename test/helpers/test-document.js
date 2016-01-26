@@ -41,23 +41,23 @@ export default class TestDocument {
   performRandomSplice () {
     let range = this.buildRandomRange()
     let start = range.start
-    let replacedExtent = pointHelpers.traversalDistance(range.end, range.start)
-    let replacementText = this.buildRandomLines(2, true).join('\n')
-    let replacementExtent = textHelpers.getExtent(replacementText)
-    this.splice(start, replacedExtent, replacementText)
-    return {start, replacedExtent, replacementExtent, replacementText}
+    let oldExtent = pointHelpers.traversalDistance(range.end, range.start)
+    let newText = this.buildRandomLines(2, true).join('\n')
+    let newExtent = textHelpers.getExtent(newText)
+    this.splice(start, oldExtent, newText)
+    return {start, oldExtent, newExtent, newText}
   }
 
-  splice (start, replacedExtent, replacementText) {
-    let end = pointHelpers.traverse(start, replacedExtent)
-    let replacementLines = replacementText.split('\n')
+  splice (start, oldExtent, newText) {
+    let end = pointHelpers.traverse(start, oldExtent)
+    let replacementLines = newText.split('\n')
 
     replacementLines[0] =
       this.lines[start.row].substring(0, start.column) + replacementLines[0]
     replacementLines[replacementLines.length - 1] =
       replacementLines[replacementLines.length - 1] + this.lines[end.row].substring(end.column)
 
-    this.lines.splice(start.row, replacedExtent.row + 1, ...replacementLines)
+    this.lines.splice(start.row, oldExtent.row + 1, ...replacementLines)
   }
 
   characterAtPosition ({row, column}) {
