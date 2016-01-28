@@ -91,7 +91,7 @@ export default class Iterator {
   }
 
   getMetadata () {
-    return this.currentNode.metadata
+    return this.currentNode ? this.currentNode.metadata : null
   }
 
   seekToInputPosition (inputPosition) {
