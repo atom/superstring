@@ -68,7 +68,9 @@ export default class Patch {
         && comparePoints(endNode.inputLeftExtent, startNode.inputLeftExtent) === 0) {
       startNode.isChangeStart = endNode.isChangeStart
       this.deleteNode(endNode)
-    } else if (!this.batchMode) {
+    } else if (this.batchMode) {
+      this.rotateNodeRight(startNode)
+    } else {
       endNode.priority = this.generateRandom()
       this.bubbleNodeDown(endNode)
     }
@@ -119,7 +121,7 @@ export default class Patch {
     startNode.isChangeStart = false
 
     let outputStart = startNode.outputLeftExtent
-    let outputoldExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
+    let outputOldExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
 
     let endNodeInputRightExtent = traversalDistance(endNode.inputExtent, endNode.inputLeftExtent)
     let endNodeOutputRightExtent = traversalDistance(endNode.outputExtent, endNode.outputLeftExtent)
@@ -130,11 +132,7 @@ export default class Patch {
     endNode.isChangeEnd = false
     endNode.newText = null
 
-    // document.write(`<div>after adjusting nodes(${formatPoint(inputStart)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)})</div>`)
-    // document.write(this.toHTML())
-    // document.write('<hr>')
-
-    let outputnewExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
+    let outputNewExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
 
     if (startNode.isChangeEnd) {
       if (!this.batchMode) {
@@ -156,8 +154,8 @@ export default class Patch {
 
     return {
       start: outputStart,
-      oldExtent: outputoldExtent,
-      newExtent: outputnewExtent
+      oldExtent: outputOldExtent,
+      newExtent: outputNewExtent
     }
   }
 
