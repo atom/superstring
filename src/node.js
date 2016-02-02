@@ -11,7 +11,7 @@ export default class Node {
     this.outputExtent = outputLeftExtent
 
     this.id = ++idCounter
-    this.priority = Infinity
+    this.priority = 0
     this.isChangeStart = false
     this.isChangeEnd = false
     this.newText = null
