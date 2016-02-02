@@ -6,6 +6,7 @@ import Iterator from './iterator'
 export default class Patch {
   constructor (params = {}) {
     this.combineChanges = (params.combineChanges != null) ? Boolean(params.combineChanges) : true
+    this.batchMode = (params.batchMode != null) ? Boolean(params.batchMode) : false
     if (params.seed) {
       let randomGenerator = new Random(params.seed)
       this.generateRandom = randomGenerator.random.bind(randomGenerator)
@@ -214,6 +215,55 @@ export default class Patch {
     }
 
     return rightAncestor
+  }
+
+  splayNode (node) {
+    while (true) {
+      if (this.isNodeRightChildOfLeftChild(node)) {
+        this.rotateNodeLeft(node)
+        this.rotateNodeRight(node)
+      } else if (this.isNodeLeftChildOfRightChild(node)) {
+        this.rotateNodeRight(node)
+        this.rotateNodeLeft(node)
+      } else if (this.isNodeLeftChildOfLeftChild(node)) {
+        this.rotateNodeRight(node.parent)
+        this.rotateNodeRight(node)
+      } else if (this.isNodeRightChildOfRightChild(node)) {
+        this.rotateNodeLeft(node.parent)
+        this.rotateNodeLeft(node)
+      } else {
+        if (this.isNodeLeftChild(node))
+          this.rotateNodeRight(node)
+        else if (this.isNodeRightChild(node))
+          this.rotateNodeLeft(node)
+
+        return
+      }
+    }
+  }
+
+  isNodeLeftChildOfRightChild (node) {
+    return this.isNodeRightChild(node.parent) && this.isNodeLeftChild(node)
+  }
+
+  isNodeRightChildOfLeftChild (node) {
+    return this.isNodeLeftChild(node.parent) && this.isNodeRightChild(node)
+  }
+
+  isNodeLeftChildOfLeftChild (node) {
+    return this.isNodeLeftChild(node.parent) && this.isNodeLeftChild(node)
+  }
+
+  isNodeRightChildOfRightChild (node) {
+    return this.isNodeRightChild(node.parent) && this.isNodeRightChild(node)
+  }
+
+  isNodeLeftChild (node) {
+    return node != null && node.parent != null && node.parent.left === node
+  }
+
+  isNodeRightChild (node) {
+    return node != null && node.parent != null && node.parent.right === node
   }
 
   rotateNodeLeft (pivot) {
