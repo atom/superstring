@@ -68,14 +68,15 @@ export default class Patch {
         && comparePoints(endNode.inputLeftExtent, startNode.inputLeftExtent) === 0) {
       startNode.isChangeStart = endNode.isChangeStart
       this.deleteNode(endNode)
-    } else if (this.batchMode) {
-      this.rotateNodeRight(startNode)
-    } else {
+    } else if (!this.batchMode) {
       endNode.priority = this.generateRandom()
       this.bubbleNodeDown(endNode)
     }
 
     if (startNode.isChangeStart && startNode.isChangeEnd && this.combineChanges) {
+      if (this.batchMode && this.root !== startNode) {
+        this.rotateNodeRight(startNode)
+      }
       startNode.priority = Infinity
       let rightAncestor = this.bubbleNodeDown(startNode)
       if (startNode.newText != null) {
@@ -241,43 +242,28 @@ export default class Patch {
 
   splayNode (node) {
     while (true) {
-      if (this.isNodeRightChildOfLeftChild(node)) {
+      if (this.isNodeLeftChild(node.parent) && this.isNodeRightChild(node)) { // zig-zag
         this.rotateNodeLeft(node)
         this.rotateNodeRight(node)
-      } else if (this.isNodeLeftChildOfRightChild(node)) {
+      } else if (this.isNodeRightChild(node.parent) && this.isNodeLeftChild(node)) { // zig-zag
         this.rotateNodeRight(node)
         this.rotateNodeLeft(node)
-      } else if (this.isNodeLeftChildOfLeftChild(node)) {
+      } else if (this.isNodeLeftChild(node.parent) && this.isNodeLeftChild(node)) { // zig-zig
         this.rotateNodeRight(node.parent)
         this.rotateNodeRight(node)
-      } else if (this.isNodeRightChildOfRightChild(node)) {
+      } else if (this.isNodeRightChild(node.parent) && this.isNodeRightChild(node)) { // zig-zig
         this.rotateNodeLeft(node.parent)
         this.rotateNodeLeft(node)
-      } else {
-        if (this.isNodeLeftChild(node))
+      } else { // zig
+        if (this.isNodeLeftChild(node)) {
           this.rotateNodeRight(node)
-        else if (this.isNodeRightChild(node))
+        } else if (this.isNodeRightChild(node)) {
           this.rotateNodeLeft(node)
+        }
 
         return
       }
     }
-  }
-
-  isNodeLeftChildOfRightChild (node) {
-    return this.isNodeRightChild(node.parent) && this.isNodeLeftChild(node)
-  }
-
-  isNodeRightChildOfLeftChild (node) {
-    return this.isNodeLeftChild(node.parent) && this.isNodeRightChild(node)
-  }
-
-  isNodeLeftChildOfLeftChild (node) {
-    return this.isNodeLeftChild(node.parent) && this.isNodeLeftChild(node)
-  }
-
-  isNodeRightChildOfRightChild (node) {
-    return this.isNodeRightChild(node.parent) && this.isNodeRightChild(node)
   }
 
   isNodeLeftChild (node) {
