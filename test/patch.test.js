@@ -48,7 +48,7 @@ describe('Patch', function () {
     assert.deepEqual(iterator.getMetadata(), {b: 2})
   })
 
-  it.only('correctly records random splices', function () {
+  it('correctly records random splices', function () {
     this.timeout(Infinity)
 
     for (let i = 0; i < 1000; i++) {
