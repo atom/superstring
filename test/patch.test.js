@@ -69,10 +69,10 @@ describe('Patch', function () {
             outputStart
           )
           output.splice(outputStart, outputoldExtent, newText)
+          let result = patch.spliceInput(inputStart, oldExtent, newExtent)
           // document.write(`<div>after spliceInput(${formatPoint(inputStart)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)}, ${newText})</div>`)
           // document.write(patch.toHTML())
           // document.write('<hr>')
-          let result = patch.spliceInput(inputStart, oldExtent, newExtent)
           assert.deepEqual(result.start, outputStart, seedMessage)
           assert.deepEqual(result.oldExtent, outputoldExtent, seedMessage)
           assert.deepEqual(result.newExtent, newExtent, seedMessage)

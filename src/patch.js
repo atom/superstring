@@ -41,7 +41,7 @@ export default class Patch {
     if (this.batchMode) {
       this.splayNode(startNode)
       this.splayNode(endNode)
-      if (endNode.left !== startNode) this.rotateNodeRight(startNode)
+      if (startNode !== endNode && endNode.left !== startNode) this.rotateNodeRight(startNode)
     } else {
       startNode.priority = -1
       this.bubbleNodeUp(startNode)
@@ -68,7 +68,7 @@ export default class Patch {
         && comparePoints(endNode.inputLeftExtent, startNode.inputLeftExtent) === 0) {
       startNode.isChangeStart = endNode.isChangeStart
       this.deleteNode(endNode)
-    } else if (!this.isBatchMode) {
+    } else if (!this.batchMode) {
       endNode.priority = this.generateRandom()
       this.bubbleNodeDown(endNode)
     }
@@ -80,7 +80,7 @@ export default class Patch {
         rightAncestor.newText = startNode.newText + rightAncestor.newText
       }
       this.deleteNode(startNode)
-    } else if (!this.isBatchMode) {
+    } else if (!this.batchMode) {
       startNode.priority = this.generateRandom()
       this.bubbleNodeDown(startNode)
     }
@@ -103,7 +103,9 @@ export default class Patch {
     if (this.batchMode) {
       this.splayNode(startNode)
       this.splayNode(endNode)
-      if (endNode.left !== startNode) this.rotateNodeRight(startNode)
+      if (startNode !== endNode && endNode.left !== startNode) {
+        this.rotateNodeRight(startNode)
+      }
     } else {
       startNode.priority = -1
       this.bubbleNodeUp(startNode)
@@ -128,10 +130,14 @@ export default class Patch {
     endNode.isChangeEnd = false
     endNode.newText = null
 
+    // document.write(`<div>after adjusting nodes(${formatPoint(inputStart)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)})</div>`)
+    // document.write(this.toHTML())
+    // document.write('<hr>')
+
     let outputnewExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
 
     if (startNode.isChangeEnd) {
-      if (!this.isBatchMode) {
+      if (!this.batchMode) {
         startNode.priority = this.generateRandom()
         this.bubbleNodeDown(startNode)
       }
@@ -140,7 +146,7 @@ export default class Patch {
     }
 
     if (endNode.isChangeStart) {
-      if (!this.isBatchMode) {
+      if (!this.batchMode) {
         endNode.priority = this.generateRandom()
         this.bubbleNodeDown(endNode)
       }
