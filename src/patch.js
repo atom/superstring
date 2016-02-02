@@ -74,11 +74,8 @@ export default class Patch {
     }
 
     if (startNode.isChangeStart && startNode.isChangeEnd && this.combineChanges) {
-      if (this.batchMode && this.root !== startNode) {
-        this.rotateNodeRight(startNode)
-      }
       startNode.priority = Infinity
-      let rightAncestor = this.bubbleNodeDown(startNode)
+      let rightAncestor = this.bubbleNodeDown(startNode) || endNode
       if (startNode.newText != null) {
         rightAncestor.newText = startNode.newText + rightAncestor.newText
       }
