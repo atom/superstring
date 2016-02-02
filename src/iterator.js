@@ -58,6 +58,10 @@ export default class Iterator {
     return changes
   }
 
+  getCurrentNode () {
+    return this.currentNode
+  }
+
   inChange () {
     return this.currentNode && this.currentNode.isChangeEnd
   }

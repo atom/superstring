@@ -170,13 +170,17 @@ export default class Patch {
   translateInputPosition (inputPosition) {
     this.iterator.seekToInputPosition(inputPosition)
     let overshoot = traversalDistance(inputPosition, this.iterator.getInputStart())
-    return minPoint(traverse(this.iterator.getOutputStart(), overshoot), this.iterator.getOutputEnd())
+    let outputPosition = minPoint(traverse(this.iterator.getOutputStart(), overshoot), this.iterator.getOutputEnd())
+    this.splayNode(this.iterator.getCurrentNode())
+    return outputPosition
   }
 
   translateOutputPosition (outputPosition) {
     this.iterator.seekToOutputPosition(outputPosition)
     let overshoot = traversalDistance(outputPosition, this.iterator.getOutputStart())
-    return minPoint(traverse(this.iterator.getInputStart(), overshoot), this.iterator.getInputEnd())
+    let inputPosition = minPoint(traverse(this.iterator.getInputStart(), overshoot), this.iterator.getInputEnd())
+    this.splayNode(this.iterator.getCurrentNode())
+    return inputPosition
   }
 
   getChanges () {
@@ -238,6 +242,8 @@ export default class Patch {
   }
 
   splayNode (node) {
+    if (node == null) return
+
     while (true) {
       if (this.isNodeLeftChild(node.parent) && this.isNodeRightChild(node)) { // zig-zag
         this.rotateNodeLeft(node)
