@@ -33,14 +33,14 @@ export default class Patch {
 
     let startNode = this.iterator.insertSpliceBoundary(outputStart)
     startNode.isChangeStart = true
+    if (this.batchMode) this.splayNode(startNode)
 
     let endNode = this.iterator.insertSpliceBoundary(outputOldEnd, startNode)
     endNode.isChangeEnd = true
+    if (this.batchMode) this.splayNode(endNode)
     if (options && options.metadata) endNode.metadata = options.metadata
 
     if (this.batchMode) {
-      this.splayNode(startNode)
-      this.splayNode(endNode)
       if (startNode !== endNode && endNode.left !== startNode) this.rotateNodeRight(startNode)
     } else {
       startNode.priority = -1
@@ -98,14 +98,12 @@ export default class Patch {
     let inputNewEnd = traverse(inputStart, newExtent)
 
     let startNode = this.iterator.insertSpliceInputBoundary(inputStart, true, oldExtentIsZero)
+    if (this.batchMode) this.splayNode(startNode)
     let endNode = this.iterator.insertSpliceInputBoundary(inputOldEnd, false, oldExtentIsZero)
+    if (this.batchMode) this.splayNode(endNode)
 
     if (this.batchMode) {
-      this.splayNode(startNode)
-      this.splayNode(endNode)
-      if (startNode !== endNode && endNode.left !== startNode) {
-        this.rotateNodeRight(startNode)
-      }
+      if (startNode !== endNode && endNode.left !== startNode) this.rotateNodeRight(startNode)
     } else {
       startNode.priority = -1
       this.bubbleNodeUp(startNode)
