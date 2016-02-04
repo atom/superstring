@@ -43,14 +43,14 @@ export default class Patch {
   createBalancedTree() {
     let n = this.nodesCount
     let m = Math.pow(2, Math.floor(Math.log2(n + 1))) - 1
-    this.performLeftRotations(n - m)
+    this.performRebalancingRotations(n - m)
     while (m > 1) {
       m /= 2
-      this.performLeftRotations(m - 1)
+      this.performRebalancingRotations(m - 1)
     }
   }
 
-  performLeftRotations (count) {
+  performRebalancingRotations (count) {
     let root = this.root
     for (var i = 0; i < count; i++) {
       if (root == null) return
