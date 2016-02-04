@@ -22,6 +22,27 @@ export default class Patch {
   }
 
   rebalance () {
+    this.createBackbone()
+    this.createPerfectTree()
+  }
+
+  createBackbone () {
+    while (this.root != null) {
+      if (this.root.left != null) {
+        this.rotateNodeRight(pseudoRoot.left)
+      } else {
+        this.root = this.root.right
+      }
+    }
+  }
+
+  createPerfectTree () {
+    for (var i = 0; i < Math.log(this.nodesCount, 2); i++) {
+      this.rotateNodeLeft(this.root.right)
+      for (var j = 0; j < this.nodesCount / 2 - 1; j++) {
+        this.rotateNodeLeft(this.root.right)
+      }
+    }
   }
 
   spliceWithText (start, oldExtent, newText, options) {
