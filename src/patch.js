@@ -72,7 +72,7 @@ export default class Patch {
     this.splayNode(endNode)
     if (options && options.metadata) endNode.metadata = options.metadata
 
-    if (startNode !== endNode && endNode.left !== startNode) {
+    if (endNode.left !== startNode) {
       this.rotateNodeRight(startNode)
     }
 
@@ -121,7 +121,7 @@ export default class Patch {
     let endNode = this.iterator.insertSpliceInputBoundary(inputOldEnd, false, oldExtentIsZero)
     this.splayNode(endNode)
 
-    if (startNode !== endNode && endNode.left !== startNode) {
+    if (endNode.left !== startNode) {
       this.rotateNodeRight(startNode)
     }
 
