@@ -85,6 +85,9 @@ describe('Patch', function () {
           // document.write('<hr>')
         }
 
+        let shouldRebalance = Boolean(random(2))
+        if (batchMode && shouldRebalance) patch.rebalance()
+
         verifyPatch(patch, input.clone(), output, random, seedMessage)
       }
     }
