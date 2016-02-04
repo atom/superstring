@@ -58,8 +58,7 @@ describe('Patch', function () {
       let input = new TestDocument(seed)
       let output = input.clone()
       let combineChanges = Boolean(random(2))
-      let batchMode = Boolean(random(2))
-      let patch = new Patch({seed, combineChanges, batchMode})
+      let patch = new Patch({seed, combineChanges})
 
       for (let j = 0; j < 10; j++) {
         if (random(10) < 2) { // 20% splice input
@@ -86,7 +85,7 @@ describe('Patch', function () {
         }
 
         let shouldRebalance = Boolean(random(2))
-        if (batchMode && shouldRebalance) patch.rebalance()
+        if (shouldRebalance) patch.rebalance()
 
         verifyPatch(patch, input.clone(), output, random, seedMessage)
       }
