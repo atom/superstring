@@ -97,7 +97,7 @@ export default class Patch {
     }
 
     if (startNode.isChangeStart && startNode.isChangeEnd && this.combineChanges) {
-      let rightAncestor = this.bubbleNodeDown(startNode) || endNode
+      let rightAncestor = this.bubbleNodeDown(startNode) || this.root
       if (startNode.newText != null) {
         rightAncestor.newText = startNode.newText + rightAncestor.newText
       }
