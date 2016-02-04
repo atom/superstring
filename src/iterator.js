@@ -166,6 +166,7 @@ export default class Iterator {
 
     if (!this.currentNode) {
       this.patch.root = new Node(null, boundaryOutputPosition, boundaryOutputPosition)
+      this.patch.nodesCount++
       return this.patch.root
     }
 
@@ -183,6 +184,7 @@ export default class Iterator {
           let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
           this.currentNode.left = newNode
           this.descendLeft()
+          this.patch.nodesCount++
           break
         }
       } else if (comparison === 0 && this.currentNode !== spliceStartNode) {
@@ -196,6 +198,7 @@ export default class Iterator {
           let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
           this.currentNode.right = newNode
           this.descendRight()
+          this.patch.nodesCount++
           break
         }
       }
@@ -220,6 +223,7 @@ export default class Iterator {
 
     if (!this.currentNode) {
       this.patch.root = new Node(null, boundaryInputPosition, boundaryInputPosition)
+      this.patch.nodesCount++
       return this.patch.root
     }
 
@@ -241,6 +245,7 @@ export default class Iterator {
           let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
           this.currentNode.left = newNode
           this.descendLeft()
+          this.patch.nodesCount++
           break
         }
       } else {
@@ -262,6 +267,7 @@ export default class Iterator {
           let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
           this.currentNode.right = newNode
           this.descendRight()
+          this.patch.nodesCount++
           break
         }
       }

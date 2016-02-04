@@ -13,11 +13,15 @@ export default class Patch {
     }
 
     this.root = null
+    this.nodesCount = 0
     this.iterator = this.buildIterator()
   }
 
   buildIterator () {
     return new Iterator(this)
+  }
+
+  rebalance () {
   }
 
   spliceWithText (start, oldExtent, newText, options) {
@@ -207,6 +211,8 @@ export default class Patch {
     } else {
       this.root = null
     }
+
+    this.nodesCount--
   }
 
   bubbleNodeUp (node) {
