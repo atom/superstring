@@ -23,25 +23,41 @@ export default class Patch {
 
   rebalance () {
     this.createBackbone()
-    this.createPerfectTree()
+    this.createBalancedTree()
   }
 
   createBackbone () {
-    while (this.root != null) {
-      if (this.root.left != null) {
-        this.rotateNodeRight(pseudoRoot.left)
+    let pseudoRoot = this.root
+    while (pseudoRoot != null) {
+      let leftChild = pseudoRoot.left
+      let rightChild = pseudoRoot.right
+      if (leftChild != null) {
+        this.rotateNodeRight(leftChild)
+        pseudoRoot = leftChild
       } else {
-        this.root = this.root.right
+        pseudoRoot = rightChild
       }
     }
   }
 
-  createPerfectTree () {
-    for (var i = 0; i < Math.log(this.nodesCount, 2); i++) {
-      this.rotateNodeLeft(this.root.right)
-      for (var j = 0; j < this.nodesCount / 2 - 1; j++) {
-        this.rotateNodeLeft(this.root.right)
-      }
+  createBalancedTree() {
+    let n = this.nodesCount
+    let m = Math.pow(2, Math.floor(Math.log2(n + 1))) - 1
+    this.performLeftRotations(n - m)
+    while (m > 1) {
+      m /= 2
+      this.performLeftRotations(m - 1)
+    }
+  }
+
+  performLeftRotations (count) {
+    let root = this.root
+    for (var i = 0; i < count; i++) {
+      if (root == null) return
+      let rightChild = root.right
+      if (rightChild == null) return
+      root = rightChild.right
+      this.rotateNodeLeft(rightChild)
     }
   }
 
