@@ -64,17 +64,17 @@ describe('Patch', function () {
         if (random(10) < 2) { // 20% splice input
           let {start: inputStart, oldExtent, newExtent, newText} = input.performRandomSplice()
           let outputStart = patch.translateInputPosition(inputStart)
-          let outputoldExtent = traversalDistance(
+          let outputOldExtent = traversalDistance(
             patch.translateInputPosition(traverse(inputStart, oldExtent)),
             outputStart
           )
-          output.splice(outputStart, outputoldExtent, newText)
+          output.splice(outputStart, outputOldExtent, newText)
           let result = patch.spliceInput(inputStart, oldExtent, newExtent)
           // document.write(`<div>after spliceInput(${formatPoint(inputStart)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)}, ${newText})</div>`)
           // document.write(patch.toHTML())
           // document.write('<hr>')
           assert.deepEqual(result.start, outputStart, seedMessage)
-          assert.deepEqual(result.oldExtent, outputoldExtent, seedMessage)
+          assert.deepEqual(result.oldExtent, outputOldExtent, seedMessage)
           assert.deepEqual(result.newExtent, newExtent, seedMessage)
         } else { // 80% normal splice
           let {start, oldExtent, newExtent, newText} = output.performRandomSplice()
