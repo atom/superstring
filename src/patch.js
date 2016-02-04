@@ -45,8 +45,8 @@ export default class Patch {
     let m = Math.pow(2, Math.floor(Math.log2(n + 1))) - 1
     this.performRebalancingRotations(n - m)
     while (m > 1) {
-      m /= 2
-      this.performRebalancingRotations(m - 1)
+      m = Math.floor(m / 2)
+      this.performRebalancingRotations(m)
     }
   }
 
