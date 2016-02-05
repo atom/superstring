@@ -15,11 +15,11 @@ export default class Patch {
   }
 
   rebalance () {
-    this.createBackbone()
-    this.createBalancedTree()
+    this.transformTreeToVine()
+    this.transformVineToBalancedTree()
   }
 
-  createBackbone () {
+  transformTreeToVine () {
     let pseudoRoot = this.root
     while (pseudoRoot) {
       if (pseudoRoot.left) {
@@ -31,7 +31,7 @@ export default class Patch {
     }
   }
 
-  createBalancedTree() {
+  transformVineToBalancedTree() {
     let n = this.nodesCount
     let m = Math.pow(2, Math.floor(Math.log2(n + 1))) - 1
     this.performRebalancingRotations(n - m)
