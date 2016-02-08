@@ -11,14 +11,14 @@ export default class Iterator {
     this.leftAncestor = null
     this.leftAncestorInputPosition = ZERO_POINT
     this.leftAncestorOutputPosition = ZERO_POINT
-    this.leftAncestorStack = [null]
+    this.leftAncestorStack = []
     this.leftAncestorInputPositionStack = [ZERO_POINT]
     this.leftAncestorOutputPositionStack = [ZERO_POINT]
 
     this.rightAncestor = null
     this.rightAncestorInputPosition = INFINITY_POINT
     this.rightAncestorOutputPosition = INFINITY_POINT
-    this.rightAncestorStack = [null]
+    this.rightAncestorStack = []
     this.rightAncestorInputPositionStack = [INFINITY_POINT]
     this.rightAncestorOutputPositionStack = [INFINITY_POINT]
 
