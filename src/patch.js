@@ -1,3 +1,4 @@
+import Random from 'random-seed'
 import {ZERO_POINT, INFINITY_POINT, traverse, traversalDistance, min as minPoint, isZero as isZeroPoint, compare as comparePoints} from './point-helpers'
 import {getExtent} from './text-helpers'
 import Iterator from './iterator'
@@ -5,6 +6,12 @@ import Iterator from './iterator'
 export default class Patch {
   constructor (params = {}) {
     this.combineChanges = (params.combineChanges != null) ? Boolean(params.combineChanges) : true
+    this.batchMode = (params.batchMode != null) ? Boolean(params.batchMode) : false
+    if (params.seed) {
+      let randomGenerator = new Random(params.seed)
+      this.generateRandom = randomGenerator.random.bind(randomGenerator)
+    }
+
     this.root = null
     this.nodesCount = 0
     this.iterator = this.buildIterator()
@@ -21,12 +28,14 @@ export default class Patch {
 
   transformTreeToVine () {
     let pseudoRoot = this.root
-    while (pseudoRoot) {
-      if (pseudoRoot.left) {
-        this.rotateNodeRight(pseudoRoot.left)
-        pseudoRoot = pseudoRoot.left
+    while (pseudoRoot != null) {
+      let leftChild = pseudoRoot.left
+      let rightChild = pseudoRoot.right
+      if (leftChild != null) {
+        this.rotateNodeRight(leftChild)
+        pseudoRoot = leftChild
       } else {
-        pseudoRoot = pseudoRoot.right
+        pseudoRoot = rightChild
       }
     }
   }
@@ -44,9 +53,9 @@ export default class Patch {
   performRebalancingRotations (count) {
     let root = this.root
     for (var i = 0; i < count; i++) {
-      if (!root) return
+      if (root == null) return
       let rightChild = root.right
-      if (!rightChild) return
+      if (rightChild == null) return
       root = rightChild.right
       this.rotateNodeLeft(rightChild)
     }
@@ -65,15 +74,20 @@ export default class Patch {
 
     let startNode = this.iterator.insertSpliceBoundary(outputStart)
     startNode.isChangeStart = true
-    this.splayNode(startNode)
+    if (this.batchMode) this.splayNode(startNode)
 
     let endNode = this.iterator.insertSpliceBoundary(outputOldEnd, startNode)
     endNode.isChangeEnd = true
-    this.splayNode(endNode)
+    if (this.batchMode) this.splayNode(endNode)
     if (options && options.metadata) endNode.metadata = options.metadata
 
-    if (endNode.left !== startNode) {
-      this.rotateNodeRight(startNode)
+    if (this.batchMode) {
+      if (endNode.left !== startNode) this.rotateNodeRight(startNode)
+    } else {
+      startNode.priority = -1
+      this.bubbleNodeUp(startNode)
+      endNode.priority = -2
+      this.bubbleNodeUp(endNode)
     }
 
     startNode.right = null
@@ -85,6 +99,7 @@ export default class Patch {
     endNode.newText = options && options.text
 
     if (endNode.isChangeStart && this.combineChanges) {
+      endNode.priority = Infinity
       let rightAncestor = this.bubbleNodeDown(endNode)
       if (endNode.newText != null) {
         rightAncestor.newText = endNode.newText + rightAncestor.newText
@@ -94,14 +109,21 @@ export default class Patch {
         && comparePoints(endNode.inputLeftExtent, startNode.inputLeftExtent) === 0) {
       startNode.isChangeStart = endNode.isChangeStart
       this.deleteNode(endNode)
+    } else if (!this.batchMode) {
+      endNode.priority = this.generateRandom()
+      this.bubbleNodeDown(endNode)
     }
 
     if (startNode.isChangeStart && startNode.isChangeEnd && this.combineChanges) {
+      startNode.priority = Infinity
       let rightAncestor = this.bubbleNodeDown(startNode) || this.root
       if (startNode.newText != null) {
         rightAncestor.newText = startNode.newText + rightAncestor.newText
       }
       this.deleteNode(startNode)
+    } else if (!this.batchMode) {
+      startNode.priority = this.generateRandom()
+      this.bubbleNodeDown(startNode)
     }
   }
 
@@ -117,12 +139,17 @@ export default class Patch {
     let inputNewEnd = traverse(inputStart, newExtent)
 
     let startNode = this.iterator.insertSpliceInputBoundary(inputStart, true, oldExtentIsZero)
-    this.splayNode(startNode)
+    if (this.batchMode) this.splayNode(startNode)
     let endNode = this.iterator.insertSpliceInputBoundary(inputOldEnd, false, oldExtentIsZero)
-    this.splayNode(endNode)
+    if (this.batchMode) this.splayNode(endNode)
 
-    if (endNode.left !== startNode) {
-      this.rotateNodeRight(startNode)
+    if (this.batchMode) {
+      if (endNode.left !== startNode) this.rotateNodeRight(startNode)
+    } else {
+      startNode.priority = -1
+      this.bubbleNodeUp(startNode)
+      endNode.priority = -2
+      this.bubbleNodeUp(endNode)
     }
 
     startNode.right = null
@@ -144,11 +171,21 @@ export default class Patch {
 
     let outputNewExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
 
-    if (!startNode.isChangeEnd) {
+    if (startNode.isChangeEnd) {
+      if (!this.batchMode) {
+        startNode.priority = this.generateRandom()
+        this.bubbleNodeDown(startNode)
+      }
+    } else {
       this.deleteNode(startNode)
     }
 
-    if (!endNode.isChangeStart) {
+    if (endNode.isChangeStart) {
+      if (!this.batchMode) {
+        endNode.priority = this.generateRandom()
+        this.bubbleNodeDown(endNode)
+      }
+    } else {
       this.deleteNode(endNode)
     }
 
@@ -190,6 +227,7 @@ export default class Patch {
   }
 
   deleteNode (node) {
+    node.priority = Infinity
     this.bubbleNodeDown(node)
     if (node.parent) {
       if (node.parent.left === node) {
@@ -206,7 +244,7 @@ export default class Patch {
         }
       }
 
-      this.splayNode(node.parent)
+      if (this.batchMode) this.splayNode(node.parent)
     } else {
       this.root = null
     }
@@ -214,15 +252,28 @@ export default class Patch {
     this.nodesCount--
   }
 
+  bubbleNodeUp (node) {
+    while (node.parent && node.priority < node.parent.priority) {
+      if (node === node.parent.left) {
+        this.rotateNodeRight(node)
+      } else {
+        this.rotateNodeLeft(node)
+      }
+    }
+  }
+
   bubbleNodeDown (node) {
     let rightAncestor
 
     while (true) {
-      if (node.right) {
+      let leftChildPriority = node.left ? node.left.priority : Infinity
+      let rightChildPriority = node.right ? node.right.priority : Infinity
+
+      if (leftChildPriority < rightChildPriority && leftChildPriority < node.priority) {
+        this.rotateNodeRight(node.left)
+      } else if (rightChildPriority < node.priority) {
         rightAncestor = node.right
         this.rotateNodeLeft(node.right)
-      } else if (node.left) {
-        this.rotateNodeRight(node.left)
       } else {
         break
       }
@@ -327,5 +378,9 @@ export default class Patch {
     root.outputLeftExtent = traversalDistance(root.outputLeftExtent, pivot.outputLeftExtent)
     root.outputExtent = traversalDistance(root.outputExtent, pivot.outputLeftExtent)
     pivot.outputExtent = traverse(pivot.outputLeftExtent, root.outputExtent)
+  }
+
+  generateRandom () {
+    return Math.random()
   }
 }
