@@ -6,17 +6,59 @@ import Iterator from './iterator'
 export default class Patch {
   constructor (params = {}) {
     this.combineChanges = (params.combineChanges != null) ? Boolean(params.combineChanges) : true
+    this.batchMode = (params.batchMode != null) ? Boolean(params.batchMode) : false
     if (params.seed) {
       let randomGenerator = new Random(params.seed)
       this.generateRandom = randomGenerator.random.bind(randomGenerator)
     }
 
     this.root = null
+    this.nodesCount = 0
     this.iterator = this.buildIterator()
   }
 
   buildIterator () {
     return new Iterator(this)
+  }
+
+  rebalance () {
+    this.transformTreeToVine()
+    this.transformVineToBalancedTree()
+  }
+
+  transformTreeToVine () {
+    let pseudoRoot = this.root
+    while (pseudoRoot != null) {
+      let leftChild = pseudoRoot.left
+      let rightChild = pseudoRoot.right
+      if (leftChild != null) {
+        this.rotateNodeRight(leftChild)
+        pseudoRoot = leftChild
+      } else {
+        pseudoRoot = rightChild
+      }
+    }
+  }
+
+  transformVineToBalancedTree() {
+    let n = this.nodesCount
+    let m = Math.pow(2, Math.floor(Math.log2(n + 1))) - 1
+    this.performRebalancingRotations(n - m)
+    while (m > 1) {
+      m = Math.floor(m / 2)
+      this.performRebalancingRotations(m)
+    }
+  }
+
+  performRebalancingRotations (count) {
+    let root = this.root
+    for (var i = 0; i < count; i++) {
+      if (root == null) return
+      let rightChild = root.right
+      if (rightChild == null) return
+      root = rightChild.right
+      this.rotateNodeLeft(rightChild)
+    }
   }
 
   spliceWithText (start, oldExtent, newText, options) {
@@ -32,15 +74,21 @@ export default class Patch {
 
     let startNode = this.iterator.insertSpliceBoundary(outputStart)
     startNode.isChangeStart = true
+    if (this.batchMode) this.splayNode(startNode)
 
     let endNode = this.iterator.insertSpliceBoundary(outputOldEnd, startNode)
     endNode.isChangeEnd = true
+    if (this.batchMode) this.splayNode(endNode)
     if (options && options.metadata) endNode.metadata = options.metadata
 
-    startNode.priority = -1
-    this.bubbleNodeUp(startNode)
-    endNode.priority = -2
-    this.bubbleNodeUp(endNode)
+    if (this.batchMode) {
+      if (endNode.left !== startNode) this.rotateNodeRight(startNode)
+    } else {
+      startNode.priority = -1
+      this.bubbleNodeUp(startNode)
+      endNode.priority = -2
+      this.bubbleNodeUp(endNode)
+    }
 
     startNode.right = null
     startNode.inputExtent = startNode.inputLeftExtent
@@ -61,19 +109,19 @@ export default class Patch {
         && comparePoints(endNode.inputLeftExtent, startNode.inputLeftExtent) === 0) {
       startNode.isChangeStart = endNode.isChangeStart
       this.deleteNode(endNode)
-    } else {
+    } else if (!this.batchMode) {
       endNode.priority = this.generateRandom()
       this.bubbleNodeDown(endNode)
     }
 
     if (startNode.isChangeStart && startNode.isChangeEnd && this.combineChanges) {
       startNode.priority = Infinity
-      let rightAncestor = this.bubbleNodeDown(startNode)
+      let rightAncestor = this.bubbleNodeDown(startNode) || this.root
       if (startNode.newText != null) {
         rightAncestor.newText = startNode.newText + rightAncestor.newText
       }
       this.deleteNode(startNode)
-    } else {
+    } else if (!this.batchMode) {
       startNode.priority = this.generateRandom()
       this.bubbleNodeDown(startNode)
     }
@@ -91,12 +139,18 @@ export default class Patch {
     let inputNewEnd = traverse(inputStart, newExtent)
 
     let startNode = this.iterator.insertSpliceInputBoundary(inputStart, true, oldExtentIsZero)
+    if (this.batchMode) this.splayNode(startNode)
     let endNode = this.iterator.insertSpliceInputBoundary(inputOldEnd, false, oldExtentIsZero)
+    if (this.batchMode) this.splayNode(endNode)
 
-    startNode.priority = -1
-    this.bubbleNodeUp(startNode)
-    endNode.priority = -2
-    this.bubbleNodeUp(endNode)
+    if (this.batchMode) {
+      if (endNode.left !== startNode) this.rotateNodeRight(startNode)
+    } else {
+      startNode.priority = -1
+      this.bubbleNodeUp(startNode)
+      endNode.priority = -2
+      this.bubbleNodeUp(endNode)
+    }
 
     startNode.right = null
     startNode.inputExtent = startNode.inputLeftExtent
@@ -104,7 +158,7 @@ export default class Patch {
     startNode.isChangeStart = false
 
     let outputStart = startNode.outputLeftExtent
-    let outputoldExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
+    let outputOldExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
 
     let endNodeInputRightExtent = traversalDistance(endNode.inputExtent, endNode.inputLeftExtent)
     let endNodeOutputRightExtent = traversalDistance(endNode.outputExtent, endNode.outputLeftExtent)
@@ -115,26 +169,30 @@ export default class Patch {
     endNode.isChangeEnd = false
     endNode.newText = null
 
-    let outputnewExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
+    let outputNewExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
 
     if (startNode.isChangeEnd) {
-      startNode.priority = this.generateRandom()
-      this.bubbleNodeDown(startNode)
+      if (!this.batchMode) {
+        startNode.priority = this.generateRandom()
+        this.bubbleNodeDown(startNode)
+      }
     } else {
       this.deleteNode(startNode)
     }
 
     if (endNode.isChangeStart) {
-      endNode.priority = this.generateRandom()
-      this.bubbleNodeDown(endNode)
+      if (!this.batchMode) {
+        endNode.priority = this.generateRandom()
+        this.bubbleNodeDown(endNode)
+      }
     } else {
       this.deleteNode(endNode)
     }
 
     return {
       start: outputStart,
-      oldExtent: outputoldExtent,
-      newExtent: outputnewExtent
+      oldExtent: outputOldExtent,
+      newExtent: outputNewExtent
     }
   }
 
@@ -151,13 +209,17 @@ export default class Patch {
   translateInputPosition (inputPosition) {
     this.iterator.seekToInputPosition(inputPosition)
     let overshoot = traversalDistance(inputPosition, this.iterator.getInputStart())
-    return minPoint(traverse(this.iterator.getOutputStart(), overshoot), this.iterator.getOutputEnd())
+    let outputPosition = minPoint(traverse(this.iterator.getOutputStart(), overshoot), this.iterator.getOutputEnd())
+    this.splayNode(this.iterator.getCurrentNode())
+    return outputPosition
   }
 
   translateOutputPosition (outputPosition) {
     this.iterator.seekToOutputPosition(outputPosition)
     let overshoot = traversalDistance(outputPosition, this.iterator.getOutputStart())
-    return minPoint(traverse(this.iterator.getInputStart(), overshoot), this.iterator.getInputEnd())
+    let inputPosition = minPoint(traverse(this.iterator.getInputStart(), overshoot), this.iterator.getInputEnd())
+    this.splayNode(this.iterator.getCurrentNode())
+    return inputPosition
   }
 
   getChanges () {
@@ -181,9 +243,13 @@ export default class Patch {
           ancestor = ancestor.parent
         }
       }
+
+      if (this.batchMode) this.splayNode(node.parent)
     } else {
       this.root = null
     }
+
+    this.nodesCount--
   }
 
   bubbleNodeUp (node) {
@@ -214,6 +280,42 @@ export default class Patch {
     }
 
     return rightAncestor
+  }
+
+  splayNode (node) {
+    if (node == null) return
+
+    while (true) {
+      if (this.isNodeLeftChild(node.parent) && this.isNodeRightChild(node)) { // zig-zag
+        this.rotateNodeLeft(node)
+        this.rotateNodeRight(node)
+      } else if (this.isNodeRightChild(node.parent) && this.isNodeLeftChild(node)) { // zig-zag
+        this.rotateNodeRight(node)
+        this.rotateNodeLeft(node)
+      } else if (this.isNodeLeftChild(node.parent) && this.isNodeLeftChild(node)) { // zig-zig
+        this.rotateNodeRight(node.parent)
+        this.rotateNodeRight(node)
+      } else if (this.isNodeRightChild(node.parent) && this.isNodeRightChild(node)) { // zig-zig
+        this.rotateNodeLeft(node.parent)
+        this.rotateNodeLeft(node)
+      } else { // zig
+        if (this.isNodeLeftChild(node)) {
+          this.rotateNodeRight(node)
+        } else if (this.isNodeRightChild(node)) {
+          this.rotateNodeLeft(node)
+        }
+
+        return
+      }
+    }
+  }
+
+  isNodeLeftChild (node) {
+    return node != null && node.parent != null && node.parent.left === node
+  }
+
+  isNodeRightChild (node) {
+    return node != null && node.parent != null && node.parent.right === node
   }
 
   rotateNodeLeft (pivot) {
