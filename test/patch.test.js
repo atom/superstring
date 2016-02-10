@@ -26,6 +26,24 @@ describe('Patch', function () {
     ])
   })
 
+  it('includes regions with empty input extents when splicing input', () => {
+    for (let i = 0; i < 100; i++) {
+      let patch = new Patch({seed: Date.now(), combineChanges: false})
+
+      patch.spliceWithText({row: 0, column: 1}, {row: 0, column: 1}, 'X')
+      patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 0}, 'hello')
+      patch.spliceWithText({row: 0, column: 8}, {row: 0, column: 0}, ' world')
+      patch.spliceWithText({row: 0, column: 16}, {row: 0, column: 1}, 'X')
+
+      patch.spliceInput({row: 0, column: 3}, {row: 0, column: 0}, {row: 0, column: 0})
+
+      assert.deepEqual(patch.getChanges(), [
+        {start: {row: 0, column: 1}, oldExtent: {row: 0, column: 1}, newExtent: {row: 0, column: 1}, newText: 'X'},
+        {start: {row: 0, column: 5}, oldExtent: {row: 0, column: 1}, newExtent: {row: 0, column: 1}, newText: 'X'}
+      ])
+    }
+  })
+
   it('allows metadata to be associated with splices', () => {
     let seed = 123
     let patch = new Patch(seed)

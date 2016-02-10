@@ -218,7 +218,7 @@ export default class Iterator {
     return this.currentNode
   }
 
-  insertSpliceInputBoundary (boundaryInputPosition, insertingStart, isInsertion) {
+  insertSpliceInputBoundary (boundaryInputPosition, insertingStart, startNode) {
     this.reset()
 
     if (!this.currentNode) {
@@ -232,13 +232,12 @@ export default class Iterator {
       this.outputEnd = traverse(this.leftAncestorOutputPosition, this.currentNode.outputLeftExtent)
 
       let comparison = comparePoints(boundaryInputPosition, this.inputEnd)
-      if (comparison < 0) {
+      if (comparison < 0 || comparison === 0 && insertingStart) {
         if (this.currentNode.left) {
           this.descendLeft()
         } else {
-          if ((insertingStart || !isInsertion) && this.leftAncestor && comparePoints(boundaryInputPosition, this.leftAncestorInputPosition) === 0) {
-            return this.leftAncestor
-          }
+          let existingNode = this.reuseExistingNodeForSpliceInput(boundaryInputPosition, insertingStart, startNode)
+          if (existingNode) return existingNode
 
           let inputLeftExtent = traversalDistance(boundaryInputPosition, this.leftAncestorInputPosition)
           let outputLeftExtent = minPoint(inputLeftExtent, this.currentNode.outputLeftExtent)
@@ -252,15 +251,8 @@ export default class Iterator {
         if (this.currentNode.right) {
           this.descendRight()
         } else {
-          if (insertingStart || !isInsertion) {
-            if (comparePoints(boundaryInputPosition, this.inputEnd) === 0) {
-              return this.currentNode
-            }
-
-            if (this.leftAncestor && comparePoints(boundaryInputPosition, this.leftAncestorInputPosition) === 0) {
-              return this.leftAncestor
-            }
-          }
+          let existingNode = this.reuseExistingNodeForSpliceInput(boundaryInputPosition, insertingStart, startNode)
+          if (existingNode) return existingNode
 
           let inputLeftExtent = traversalDistance(boundaryInputPosition, this.inputEnd)
           let outputLeftExtent = minPoint(inputLeftExtent, traversalDistance(this.rightAncestorOutputPosition, this.outputEnd))
@@ -285,6 +277,27 @@ export default class Iterator {
     }
 
     return this.currentNode
+  }
+
+  reuseExistingNodeForSpliceInput (boundaryInputPosition, insertingStart, startNode) {
+    if (insertingStart) {
+      if (this.leftAncestor && comparePoints(boundaryInputPosition, this.leftAncestorInputPosition) === 0) {
+        return this.leftAncestor
+      } else if (comparePoints(boundaryInputPosition, this.inputEnd) === 0) {
+        return this.currentNode
+      } else if (this.rightAncestor && comparePoints(boundaryInputPosition, this.rightAncestorInputPosition) === 0) {
+        return this.rightAncestor
+      }
+    } else {
+      if (this.rightAncestor && this.rightAncestor !== startNode && comparePoints(boundaryInputPosition, this.rightAncestorInputPosition) === 0) {
+        return this.rightAncestor
+      } else if (this.currentNode !== startNode && comparePoints(boundaryInputPosition, this.inputEnd) === 0) {
+        return this.currentNode
+      } else if (this.leftAncestor && this.leftAncestor !== startNode && comparePoints(boundaryInputPosition, this.leftAncestorInputPosition) === 0) {
+        return this.leftAncestor
+      }
+    }
+    return null
   }
 
   setCurrentNode (node) {

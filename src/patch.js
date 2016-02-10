@@ -130,17 +130,17 @@ export default class Patch {
   spliceInput (inputStart, oldExtent, newExtent) {
     let oldExtentIsZero = isZeroPoint(oldExtent)
 
-    if (oldExtentIsZero && isZeroPoint(newExtent)) {
-      let outputStart = this.translateInputPosition(inputStart)
-      return {start: outputStart, oldExtent, newExtent}
-    }
+    // if (oldExtentIsZero && isZeroPoint(newExtent)) {
+    //   let outputStart = this.translateInputPosition(inputStart)
+    //   return {start: outputStart, oldExtent, newExtent}
+    // }
 
     let inputOldEnd = traverse(inputStart, oldExtent)
     let inputNewEnd = traverse(inputStart, newExtent)
 
-    let startNode = this.iterator.insertSpliceInputBoundary(inputStart, true, oldExtentIsZero)
+    let startNode = this.iterator.insertSpliceInputBoundary(inputStart, true, null)
     if (this.batchMode) this.splayNode(startNode)
-    let endNode = this.iterator.insertSpliceInputBoundary(inputOldEnd, false, oldExtentIsZero)
+    let endNode = this.iterator.insertSpliceInputBoundary(inputOldEnd, false, startNode)
     if (this.batchMode) this.splayNode(endNode)
 
     if (this.batchMode) {
