@@ -42,6 +42,19 @@ describe('Patch', function () {
     }
   })
 
+  it('clips to the left of regions with empty input extents when translating input positions', () => {
+    for (let i = 0; i < 100; i++) {
+      let patch = new Patch({seed: Date.now(), combineChanges: false})
+
+      patch.spliceWithText({row: 0, column: 1}, {row: 0, column: 1}, 'X')
+      patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 0}, 'hello')
+      patch.spliceWithText({row: 0, column: 8}, {row: 0, column: 0}, ' world')
+      patch.spliceWithText({row: 0, column: 16}, {row: 0, column: 1}, 'X')
+
+      assert.deepEqual(patch.translateInputPosition({row: 0, column: 3}), {row: 0, column: 3})
+    }
+  })
+
   it('allows metadata to be associated with splices', () => {
     let patch = new Patch({seed: 123})
     patch.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, {metadata: {a: 1}})

@@ -104,16 +104,22 @@ export default class Iterator {
     if (!this.currentNode) return
 
     while (true) {
-      if (comparePoints(inputPosition, this.inputEnd) < 0) {
-        if (comparePoints(inputPosition, this.inputStart) >= 0) {
-          return
+      if (comparePoints(inputPosition, this.inputEnd) <= 0) {
+        if (comparePoints(inputPosition, this.inputStart) > 0 || !this.currentNode.left) {
+          break
         } else {
-          if (!this.currentNode.left) throw new Error('Unexpected iterator state')
           this.descendLeft()
         }
       } else {
         this.descendRight()
       }
+    }
+
+    let isEmptyRegion = comparePoints(this.inputStart, this.inputEnd) === 0
+    let atEndOfNonEmptyRegion = !isEmptyRegion && comparePoints(inputPosition, this.inputEnd) === 0
+    let isEmptyNonChangeRegion = isEmptyRegion && this.currentNode && !this.currentNode.isChangeEnd
+    if (atEndOfNonEmptyRegion || isEmptyNonChangeRegion) {
+      this.moveToSuccessor()
     }
   }
 
