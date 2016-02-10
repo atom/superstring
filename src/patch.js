@@ -128,13 +128,6 @@ export default class Patch {
   }
 
   spliceInput (inputStart, oldExtent, newExtent) {
-    let oldExtentIsZero = isZeroPoint(oldExtent)
-
-    // if (oldExtentIsZero && isZeroPoint(newExtent)) {
-    //   let outputStart = this.translateInputPosition(inputStart)
-    //   return {start: outputStart, oldExtent, newExtent}
-    // }
-
     let inputOldEnd = traverse(inputStart, oldExtent)
     let inputNewEnd = traverse(inputStart, newExtent)
 
