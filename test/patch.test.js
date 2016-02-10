@@ -94,7 +94,7 @@ describe('Patch', function () {
           let {start: inputStart, oldExtent, newExtent, newText} = input.performRandomSplice()
           let outputStart = patch.translateInputPosition(inputStart)
           let outputOldExtent = traversalDistance(
-            patch.translateInputPosition(traverse(inputStart, oldExtent)),
+            patch.translateInputPosition(traverse(inputStart, oldExtent), true),
             outputStart
           )
           output.splice(outputStart, outputOldExtent, newText)

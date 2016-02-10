@@ -206,8 +206,13 @@ export default class Patch {
     return this.iterator.inChange()
   }
 
-  translateInputPosition (inputPosition) {
+  translateInputPosition (inputPosition, skipEmpty) {
     this.iterator.seekToInputPosition(inputPosition)
+    if (skipEmpty) {
+      while (isZeroPoint(this.iterator.getInputExtent())) {
+        this.iterator.moveToSuccessor()
+      }
+    }
     let overshoot = traversalDistance(inputPosition, this.iterator.getInputStart())
     let outputPosition = minPoint(traverse(this.iterator.getOutputStart(), overshoot), this.iterator.getOutputEnd())
     this.splayNode(this.iterator.getCurrentNode())
