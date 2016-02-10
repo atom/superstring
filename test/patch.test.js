@@ -6,8 +6,7 @@ import './helpers/add-to-html-methods'
 
 describe('Patch', function () {
   it('correctly records basic non-overlapping splices', function () {
-    let seed = 123
-    let patch = new Patch(seed)
+    let patch = new Patch({seed: 123})
     patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello')
     patch.spliceWithText({row: 0, column: 10}, {row: 0, column: 5}, 'world')
     assert.deepEqual(patch.getChanges(), [
@@ -17,8 +16,7 @@ describe('Patch', function () {
   })
 
   it('correctly records basic overlapping splices', function () {
-    let seed = 123
-    let patch = new Patch(seed)
+    let patch = new Patch({seed: 123})
     patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello world')
     patch.spliceWithText({row: 0, column: 9}, {row: 0, column: 7}, 'sun')
     assert.deepEqual(patch.getChanges(), [
@@ -45,8 +43,7 @@ describe('Patch', function () {
   })
 
   it('allows metadata to be associated with splices', () => {
-    let seed = 123
-    let patch = new Patch(seed)
+    let patch = new Patch({seed: 123})
     patch.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, {metadata: {a: 1}})
     patch.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5}, {metadata: {b: 2}})
 
