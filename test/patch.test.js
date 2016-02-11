@@ -116,14 +116,17 @@ describe('Patch', function () {
         let shouldRebalance = Boolean(random(2))
         if (batchMode && shouldRebalance) patch.rebalance()
 
-        verifyPatch(patch, input.clone(), output, random, seedMessage)
+        verifyPatch(patch, input.clone(), output, seedMessage)
       }
     }
 
-    function verifyPatch (patch, input, output, random, seedMessage) {
-      verifyInputPositionTranslation(patch, input, output, seedMessage, random)
-      verifyOutputPositionTranslation(patch, input, output, seedMessage, random)
+    function verifyPatch (patch, input, output, seedMessage) {
+      verifySynthesizedOutput(patch, input, output, seedMessage)
+      verifyInputPositionTranslation(patch, input, output, seedMessage)
+      verifyOutputPositionTranslation(patch, input, output, seedMessage)
+    }
 
+    function verifySynthesizedOutput (patch, input, output, seedMessage) {
       let synthesizedOutput = ''
       patch.iterator.rewind()
       do {
@@ -137,6 +140,7 @@ describe('Patch', function () {
 
       assert.equal(synthesizedOutput, output.getText(), seedMessage)
 
+      input = input.clone()
       for (let {start, oldExtent, newText} of patch.getChanges()) {
         input.splice(start, oldExtent, newText)
       }
