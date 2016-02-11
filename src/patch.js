@@ -164,22 +164,30 @@ export default class Patch {
 
     let outputNewExtent = traversalDistance(endNode.outputLeftExtent, startNode.outputLeftExtent)
 
-    if (startNode.isChangeEnd) {
+    if (isZeroPoint(newExtent) && startNode.isChangeEnd || !endNode.isChangeStart) {
+      startNode.isChangeStart = endNode.isChangeStart
+      this.deleteNode(endNode)
+    } else {
       if (!this.batchMode) {
+        endNode.priority = this.generateRandom()
+        this.bubbleNodeDown(endNode)
+      }
+    }
+
+    if (startNode.isChangeEnd) {
+      if (startNode.isChangeStart) {
+        startNode.priority = Infinity
+        let rightAncestor = this.bubbleNodeDown(startNode)
+        if (startNode.newText != null) {
+          rightAncestor.newText = startNode.newText + rightAncestor.newText
+        }
+        this.deleteNode(startNode)
+      } else if (!this.batchMode) {
         startNode.priority = this.generateRandom()
         this.bubbleNodeDown(startNode)
       }
     } else {
       this.deleteNode(startNode)
-    }
-
-    if (endNode.isChangeStart) {
-      if (!this.batchMode) {
-        endNode.priority = this.generateRandom()
-        this.bubbleNodeDown(endNode)
-      }
-    } else {
-      this.deleteNode(endNode)
     }
 
     return {
