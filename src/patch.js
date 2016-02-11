@@ -216,7 +216,7 @@ export default class Patch {
     }
     let overshoot = traversalDistance(inputPosition, this.iterator.getInputStart())
     let outputPosition = minPoint(traverse(this.iterator.getOutputStart(), overshoot), this.iterator.getOutputEnd())
-    this.splayNode(this.iterator.getCurrentNode())
+    if (this.batchMode) this.splayNode(this.iterator.getCurrentNode())
     return outputPosition
   }
 
@@ -224,7 +224,7 @@ export default class Patch {
     this.iterator.seekToOutputPosition(outputPosition)
     let overshoot = traversalDistance(outputPosition, this.iterator.getOutputStart())
     let inputPosition = minPoint(traverse(this.iterator.getInputStart(), overshoot), this.iterator.getInputEnd())
-    this.splayNode(this.iterator.getCurrentNode())
+    if (this.batchMode) this.splayNode(this.iterator.getCurrentNode())
     return inputPosition
   }
 
