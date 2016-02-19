@@ -1,4 +1,4 @@
-import {ZERO_POINT, INFINITY_POINT, traverse, traversalDistance, min as minPoint, isZero as isZeroPoint, compare as comparePoints} from './point-helpers'
+import {ZERO_POINT, traverse, traversalDistance, min as minPoint, isZero as isZeroPoint, compare as comparePoints} from './point-helpers'
 import {getExtent} from './text-helpers'
 import Iterator from './iterator'
 
@@ -84,7 +84,6 @@ export default class Patch {
     endNode.newText = options && options.text
 
     if (endNode.isChangeStart) {
-      endNode.priority = Infinity
       let rightAncestor = this.bubbleNodeDown(endNode)
       if (endNode.newText != null) {
         rightAncestor.newText = endNode.newText + rightAncestor.newText
@@ -97,7 +96,6 @@ export default class Patch {
     }
 
     if (startNode.isChangeStart && startNode.isChangeEnd) {
-      startNode.priority = Infinity
       let rightAncestor = this.bubbleNodeDown(startNode) || this.root
       if (startNode.newText != null) {
         rightAncestor.newText = startNode.newText + rightAncestor.newText
@@ -142,7 +140,6 @@ export default class Patch {
   }
 
   deleteNode (node) {
-    node.priority = Infinity
     this.bubbleNodeDown(node)
     if (node.parent) {
       if (node.parent.left === node) {
@@ -171,12 +168,9 @@ export default class Patch {
     let rightAncestor
 
     while (true) {
-      let leftChildPriority = node.left ? node.left.priority : Infinity
-      let rightChildPriority = node.right ? node.right.priority : Infinity
-
-      if (leftChildPriority < rightChildPriority && leftChildPriority < node.priority) {
+      if (node.left) {
         this.rotateNodeRight(node.left)
-      } else if (rightChildPriority < node.priority) {
+      } else if (node.right) {
         rightAncestor = node.right
         this.rotateNodeLeft(node.right)
       } else {
