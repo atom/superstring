@@ -24,24 +24,6 @@ describe('Patch', function () {
     ])
   })
 
-  it('includes regions with empty input extents when splicing input', () => {
-    for (let i = 0; i < 100; i++) {
-      let patch = new Patch({seed: Date.now(), combineChanges: false})
-
-      patch.spliceWithText({row: 0, column: 1}, {row: 0, column: 1}, 'X')
-      patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 0}, 'hello')
-      patch.spliceWithText({row: 0, column: 8}, {row: 0, column: 0}, ' world')
-      patch.spliceWithText({row: 0, column: 16}, {row: 0, column: 1}, 'X')
-
-      patch.spliceInput({row: 0, column: 3}, {row: 0, column: 0}, {row: 0, column: 0})
-
-      assert.deepEqual(patch.getChanges(), [
-        {start: {row: 0, column: 1}, oldExtent: {row: 0, column: 1}, newExtent: {row: 0, column: 1}, newText: 'X'},
-        {start: {row: 0, column: 5}, oldExtent: {row: 0, column: 1}, newExtent: {row: 0, column: 1}, newText: 'X'}
-      ])
-    }
-  })
-
   it('clips to the left of regions with empty input extents when translating input positions', () => {
     for (let i = 0; i < 100; i++) {
       let patch = new Patch({seed: Date.now(), combineChanges: false})
@@ -85,36 +67,18 @@ describe('Patch', function () {
       let random = new Random(seed)
       let input = new TestDocument(seed)
       let output = input.clone()
-      let combineChanges = Boolean(random(2))
-      let batchMode = Boolean(random(2))
-      let patch = new Patch({seed, combineChanges, batchMode})
+      let combineChanges = true
+      let patch = new Patch({seed, combineChanges})
 
       for (let j = 0; j < 10; j++) {
-        if (random(10) < 2) { // 20% splice input
-          let {start: inputStart, oldExtent, newExtent, newText} = input.performRandomSplice()
-          let outputStart = patch.translateInputPosition(inputStart)
-          let outputOldExtent = traversalDistance(
-            patch.translateInputPosition(traverse(inputStart, oldExtent), true),
-            outputStart
-          )
-          output.splice(outputStart, outputOldExtent, newText)
-          let result = patch.spliceInput(inputStart, oldExtent, newExtent)
-          // document.write(`<div>after spliceInput(${formatPoint(inputStart)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)}, ${newText})</div>`)
-          // document.write(patch.toHTML())
-          // document.write('<hr>')
-          assert.deepEqual(result.start, outputStart, seedMessage)
-          assert.deepEqual(result.oldExtent, outputOldExtent, seedMessage)
-          assert.deepEqual(result.newExtent, newExtent, seedMessage)
-        } else { // 80% normal splice
-          let {start, oldExtent, newExtent, newText} = output.performRandomSplice()
-          patch.spliceWithText(start, oldExtent, newText)
-          // document.write(`<div>after splice(${formatPoint(start)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)}, ${newText})</div>`)
-          // document.write(patch.toHTML())
-          // document.write('<hr>')
-        }
+        let {start, oldExtent, newExtent, newText} = output.performRandomSplice()
+        patch.spliceWithText(start, oldExtent, newText)
+        // document.write(`<div>after splice(${formatPoint(start)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)}, ${newText})</div>`)
+        // document.write(patch.toHTML())
+        // document.write('<hr>')
 
         let shouldRebalance = Boolean(random(2))
-        if (batchMode && shouldRebalance) patch.rebalance()
+        if (shouldRebalance) patch.rebalance()
 
         verifyPatch(patch, input.clone(), output, seedMessage)
       }
