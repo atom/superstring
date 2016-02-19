@@ -71,9 +71,9 @@ export default class Patch {
     let endNode = this.iterator.insertSpliceBoundary(outputOldEnd, startNode)
     endNode.isChangeEnd = true
     this.splayNode(endNode)
-    if (options && options.metadata) endNode.metadata = options.metadata
-
     if (endNode.left !== startNode) this.rotateNodeRight(startNode)
+
+    if (options && options.metadata) endNode.metadata = options.metadata
 
     startNode.right = null
     startNode.inputExtent = startNode.inputLeftExtent
