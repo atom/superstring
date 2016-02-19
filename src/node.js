@@ -14,6 +14,5 @@ export default class Node {
     this.isChangeStart = false
     this.isChangeEnd = false
     this.newText = null
-    this.metadata = null
   }
 }

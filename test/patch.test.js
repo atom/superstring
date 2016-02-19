@@ -24,40 +24,6 @@ describe('Patch', function () {
     ])
   })
 
-  it('clips to the left of regions with empty input extents when translating input positions', () => {
-    for (let i = 0; i < 100; i++) {
-      let patch = new Patch()
-
-      patch.spliceWithText({row: 0, column: 1}, {row: 0, column: 1}, 'X')
-      patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 0}, 'hello')
-      patch.spliceWithText({row: 0, column: 8}, {row: 0, column: 0}, ' world')
-      patch.spliceWithText({row: 0, column: 16}, {row: 0, column: 1}, 'X')
-
-      assert.deepEqual(patch.translateInputPosition({row: 0, column: 3}), {row: 0, column: 3})
-    }
-  })
-
-  it('allows metadata to be associated with splices', () => {
-    let patch = new Patch()
-    patch.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, {metadata: {a: 1}})
-    patch.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5}, {metadata: {b: 2}})
-
-    let iterator = patch.buildIterator()
-    iterator.rewind()
-    assert(!iterator.inChange())
-
-    iterator.moveToSuccessor()
-    assert(iterator.inChange())
-    assert.deepEqual(iterator.getMetadata(), {a: 1})
-
-    iterator.moveToSuccessor()
-    assert(!iterator.inChange())
-
-    iterator.moveToSuccessor()
-    assert(iterator.inChange())
-    assert.deepEqual(iterator.getMetadata(), {b: 2})
-  })
-
   it('correctly records random splices', function () {
     this.timeout(Infinity)
 
@@ -79,14 +45,8 @@ describe('Patch', function () {
         let shouldRebalance = Boolean(random(2))
         if (shouldRebalance) patch.rebalance()
 
-        verifyPatch(patch, input.clone(), output, seedMessage)
+        verifySynthesizedOutput(patch, input, output, seedMessage)
       }
-    }
-
-    function verifyPatch (patch, input, output, seedMessage) {
-      verifySynthesizedOutput(patch, input, output, seedMessage)
-      verifyInputPositionTranslation(patch, input, output, seedMessage)
-      verifyOutputPositionTranslation(patch, input, output, seedMessage)
     }
 
     function verifySynthesizedOutput (patch, input, output, seedMessage) {
@@ -108,38 +68,6 @@ describe('Patch', function () {
         input.splice(start, oldExtent, newText)
       }
       assert.equal(input.getText(), output.getText(), seedMessage)
-    }
-
-    function verifyInputPositionTranslation (patch, input, output, seedMessage) {
-      let row = 0
-      for (let line of input.getLines()) {
-        let column = 0
-        for (let character of line) {
-          let inputPosition = {row, column}
-          if (!patch.isChangedAtInputPosition(inputPosition)) {
-            let outputPosition = patch.translateInputPosition(inputPosition)
-            assert.equal(output.characterAtPosition(outputPosition), character, seedMessage)
-          }
-          column++
-        }
-        row++
-      }
-    }
-
-    function verifyOutputPositionTranslation (patch, input, output, seedMessage) {
-      let row = 0
-      for (let line of output.getLines()) {
-        let column = 0
-        for (let character of line) {
-          let outputPosition = {row, column}
-          if (!patch.isChangedAtOutputPosition(outputPosition)) {
-            let inputPosition = patch.translateOutputPosition(outputPosition)
-            assert.equal(input.characterAtPosition(inputPosition), character, seedMessage)
-          }
-          column++
-        }
-        row++
-      }
     }
   })
 })

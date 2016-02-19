@@ -54,8 +54,7 @@ export default class Patch {
   }
 
   spliceWithText (start, oldExtent, newText, options) {
-    let metadata = options ? options.metadata : null
-    this.splice(start, oldExtent, getExtent(newText), {text: newText, metadata})
+    this.splice(start, oldExtent, getExtent(newText), {text: newText})
   }
 
   splice (outputStart, oldExtent, newExtent, options) {
@@ -72,8 +71,6 @@ export default class Patch {
     endNode.isChangeEnd = true
     this.splayNode(endNode)
     if (endNode.left !== startNode) this.rotateNodeRight(startNode)
-
-    if (options && options.metadata) endNode.metadata = options.metadata
 
     startNode.right = null
     startNode.inputExtent = startNode.inputLeftExtent
@@ -102,37 +99,6 @@ export default class Patch {
       }
       this.deleteNode(startNode)
     }
-  }
-
-  isChangedAtInputPosition (inputPosition) {
-    this.iterator.seekToInputPosition(inputPosition)
-    return this.iterator.inChange()
-  }
-
-  isChangedAtOutputPosition (outputPosition) {
-    this.iterator.seekToOutputPosition(outputPosition)
-    return this.iterator.inChange()
-  }
-
-  translateInputPosition (inputPosition, skipEmpty) {
-    this.iterator.seekToInputPosition(inputPosition)
-    if (skipEmpty) {
-      while (isZeroPoint(this.iterator.getInputExtent())) {
-        this.iterator.moveToSuccessor()
-      }
-    }
-    let overshoot = traversalDistance(inputPosition, this.iterator.getInputStart())
-    let outputPosition = minPoint(traverse(this.iterator.getOutputStart(), overshoot), this.iterator.getOutputEnd())
-    this.splayNode(this.iterator.getCurrentNode())
-    return outputPosition
-  }
-
-  translateOutputPosition (outputPosition) {
-    this.iterator.seekToOutputPosition(outputPosition)
-    let overshoot = traversalDistance(outputPosition, this.iterator.getOutputStart())
-    let inputPosition = minPoint(traverse(this.iterator.getInputStart(), overshoot), this.iterator.getInputEnd())
-    this.splayNode(this.iterator.getCurrentNode())
-    return inputPosition
   }
 
   getChanges () {

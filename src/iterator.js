@@ -58,10 +58,6 @@ export default class Iterator {
     return changes
   }
 
-  getCurrentNode () {
-    return this.currentNode
-  }
-
   inChange () {
     return this.currentNode && this.currentNode.isChangeEnd
   }
@@ -92,77 +88,6 @@ export default class Iterator {
 
   getNewText () {
     return this.currentNode.newText
-  }
-
-  getMetadata () {
-    return this.currentNode ? this.currentNode.metadata : null
-  }
-
-  seekToInputPosition (inputPosition) {
-    this.reset()
-
-    if (!this.currentNode) return
-
-    while (true) {
-      if (comparePoints(inputPosition, this.inputEnd) <= 0) {
-        if (comparePoints(inputPosition, this.inputStart) > 0 || !this.currentNode.left) {
-          break
-        } else {
-          this.descendLeft()
-        }
-      } else {
-        this.descendRight()
-      }
-    }
-
-    let isEmptyRegion = comparePoints(this.inputStart, this.inputEnd) === 0
-    let atEndOfNonEmptyRegion = !isEmptyRegion && comparePoints(inputPosition, this.inputEnd) === 0
-    let isEmptyNonChangeRegion = isEmptyRegion && this.currentNode && !this.currentNode.isChangeEnd
-    if (atEndOfNonEmptyRegion || isEmptyNonChangeRegion) {
-      this.moveToSuccessor()
-    }
-  }
-
-  seekToOutputPosition (outputPosition) {
-    this.reset()
-
-    if (!this.currentNode) return
-
-    while (true) {
-      if (comparePoints(outputPosition, this.outputEnd) < 0) {
-        if (comparePoints(outputPosition, this.outputStart) >= 0) {
-          return
-        } else {
-          if (!this.currentNode.left) throw new Error('Unexpected iterator state')
-          this.descendLeft()
-        }
-      } else {
-        if (this.currentNode) {
-          this.descendRight()
-        } else {
-          if (comparePoints(outputPosition, INFINITY_POINT) !== 0) throw new Error('Unexpected iterator state')
-          return
-        }
-      }
-    }
-  }
-
-  translateInputPosition (inputPosition) {
-    if (comparePoints(inputPosition, this.inputStart) < 0 || comparePoints(inputPosition, this.inputEnd) > 0) {
-      throw new Error('Point out of range')
-    }
-
-    let overshoot = traversalDistance(inputPosition, this.inputStart)
-    return minPoint(traverse(this.outputStart, overshoot), this.outputEnd)
-  }
-
-  translateOutputPosition (outputPosition) {
-    if (comparePoints(outputPosition, this.outputStart) < 0 || comparePoints(outputPosition, this.outputEnd) > 0) {
-      throw new Error('Point out of range')
-    }
-
-    let overshoot = traversalDistance(outputPosition, this.outputStart)
-    return minPoint(traverse(this.inputStart, overshoot), this.inputEnd)
   }
 
   insertSpliceBoundary (boundaryOutputPosition, spliceStartNode) {
