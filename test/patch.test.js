@@ -6,7 +6,7 @@ import './helpers/add-to-html-methods'
 
 describe('Patch', function () {
   it('correctly records basic non-overlapping splices', function () {
-    let patch = new Patch({seed: 123})
+    let patch = new Patch()
     patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello')
     patch.spliceWithText({row: 0, column: 10}, {row: 0, column: 5}, 'world')
     assert.deepEqual(patch.getChanges(), [
@@ -16,7 +16,7 @@ describe('Patch', function () {
   })
 
   it('correctly records basic overlapping splices', function () {
-    let patch = new Patch({seed: 123})
+    let patch = new Patch()
     patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello world')
     patch.spliceWithText({row: 0, column: 9}, {row: 0, column: 7}, 'sun')
     assert.deepEqual(patch.getChanges(), [
@@ -26,7 +26,7 @@ describe('Patch', function () {
 
   it('clips to the left of regions with empty input extents when translating input positions', () => {
     for (let i = 0; i < 100; i++) {
-      let patch = new Patch({seed: Date.now(), combineChanges: false})
+      let patch = new Patch()
 
       patch.spliceWithText({row: 0, column: 1}, {row: 0, column: 1}, 'X')
       patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 0}, 'hello')
@@ -38,7 +38,7 @@ describe('Patch', function () {
   })
 
   it('allows metadata to be associated with splices', () => {
-    let patch = new Patch({seed: 123})
+    let patch = new Patch()
     patch.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, {metadata: {a: 1}})
     patch.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5}, {metadata: {b: 2}})
 
@@ -67,8 +67,7 @@ describe('Patch', function () {
       let random = new Random(seed)
       let input = new TestDocument(seed)
       let output = input.clone()
-      let combineChanges = true
-      let patch = new Patch({seed, combineChanges})
+      let patch = new Patch()
 
       for (let j = 0; j < 10; j++) {
         let {start, oldExtent, newExtent, newText} = output.performRandomSplice()

@@ -4,7 +4,6 @@ import Iterator from './iterator'
 
 export default class Patch {
   constructor (params = {}) {
-    this.combineChanges = (params.combineChanges != null) ? Boolean(params.combineChanges) : true
     this.root = null
     this.nodesCount = 0
     this.iterator = this.buildIterator()
@@ -84,7 +83,7 @@ export default class Patch {
     endNode.outputLeftExtent = outputNewEnd
     endNode.newText = options && options.text
 
-    if (endNode.isChangeStart && this.combineChanges) {
+    if (endNode.isChangeStart) {
       endNode.priority = Infinity
       let rightAncestor = this.bubbleNodeDown(endNode)
       if (endNode.newText != null) {
@@ -97,7 +96,7 @@ export default class Patch {
       this.deleteNode(endNode)
     }
 
-    if (startNode.isChangeStart && startNode.isChangeEnd && this.combineChanges) {
+    if (startNode.isChangeStart && startNode.isChangeEnd) {
       startNode.priority = Infinity
       let rightAncestor = this.bubbleNodeDown(startNode) || this.root
       if (startNode.newText != null) {
