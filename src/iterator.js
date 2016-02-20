@@ -58,10 +58,6 @@ export default class Iterator {
     return changes
   }
 
-  getCurrentNode () {
-    return this.currentNode
-  }
-
   inChange () {
     return this.currentNode && this.currentNode.isChangeEnd
   }
@@ -92,77 +88,6 @@ export default class Iterator {
 
   getNewText () {
     return this.currentNode.newText
-  }
-
-  getMetadata () {
-    return this.currentNode ? this.currentNode.metadata : null
-  }
-
-  seekToInputPosition (inputPosition) {
-    this.reset()
-
-    if (!this.currentNode) return
-
-    while (true) {
-      if (comparePoints(inputPosition, this.inputEnd) <= 0) {
-        if (comparePoints(inputPosition, this.inputStart) > 0 || !this.currentNode.left) {
-          break
-        } else {
-          this.descendLeft()
-        }
-      } else {
-        this.descendRight()
-      }
-    }
-
-    let isEmptyRegion = comparePoints(this.inputStart, this.inputEnd) === 0
-    let atEndOfNonEmptyRegion = !isEmptyRegion && comparePoints(inputPosition, this.inputEnd) === 0
-    let isEmptyNonChangeRegion = isEmptyRegion && this.currentNode && !this.currentNode.isChangeEnd
-    if (atEndOfNonEmptyRegion || isEmptyNonChangeRegion) {
-      this.moveToSuccessor()
-    }
-  }
-
-  seekToOutputPosition (outputPosition) {
-    this.reset()
-
-    if (!this.currentNode) return
-
-    while (true) {
-      if (comparePoints(outputPosition, this.outputEnd) < 0) {
-        if (comparePoints(outputPosition, this.outputStart) >= 0) {
-          return
-        } else {
-          if (!this.currentNode.left) throw new Error('Unexpected iterator state')
-          this.descendLeft()
-        }
-      } else {
-        if (this.currentNode) {
-          this.descendRight()
-        } else {
-          if (comparePoints(outputPosition, INFINITY_POINT) !== 0) throw new Error('Unexpected iterator state')
-          return
-        }
-      }
-    }
-  }
-
-  translateInputPosition (inputPosition) {
-    if (comparePoints(inputPosition, this.inputStart) < 0 || comparePoints(inputPosition, this.inputEnd) > 0) {
-      throw new Error('Point out of range')
-    }
-
-    let overshoot = traversalDistance(inputPosition, this.inputStart)
-    return minPoint(traverse(this.outputStart, overshoot), this.outputEnd)
-  }
-
-  translateOutputPosition (outputPosition) {
-    if (comparePoints(outputPosition, this.outputStart) < 0 || comparePoints(outputPosition, this.outputEnd) > 0) {
-      throw new Error('Point out of range')
-    }
-
-    let overshoot = traversalDistance(outputPosition, this.outputStart)
-    return minPoint(traverse(this.inputStart, overshoot), this.inputEnd)
   }
 
   insertSpliceBoundary (boundaryOutputPosition, spliceStartNode) {
@@ -222,88 +147,6 @@ export default class Iterator {
     }
 
     return this.currentNode
-  }
-
-  insertSpliceInputBoundary (boundaryInputPosition, insertingStart, startNode) {
-    this.reset()
-
-    if (!this.currentNode) {
-      this.patch.root = new Node(null, boundaryInputPosition, boundaryInputPosition)
-      this.patch.nodesCount++
-      return this.patch.root
-    }
-
-    while (true) {
-      this.inputEnd = traverse(this.leftAncestorInputPosition, this.currentNode.inputLeftExtent)
-      this.outputEnd = traverse(this.leftAncestorOutputPosition, this.currentNode.outputLeftExtent)
-
-      let comparison = comparePoints(boundaryInputPosition, this.inputEnd)
-      if (comparison < 0 || comparison === 0 && insertingStart) {
-        if (this.currentNode.left) {
-          this.descendLeft()
-        } else {
-          let existingNode = this.reuseExistingNodeForSpliceInput(boundaryInputPosition, insertingStart, startNode)
-          if (existingNode) return existingNode
-
-          let inputLeftExtent = traversalDistance(boundaryInputPosition, this.leftAncestorInputPosition)
-          let outputLeftExtent = minPoint(inputLeftExtent, this.currentNode.outputLeftExtent)
-          let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
-          this.currentNode.left = newNode
-          this.descendLeft()
-          this.patch.nodesCount++
-          break
-        }
-      } else {
-        if (this.currentNode.right) {
-          this.descendRight()
-        } else {
-          let existingNode = this.reuseExistingNodeForSpliceInput(boundaryInputPosition, insertingStart, startNode)
-          if (existingNode) return existingNode
-
-          let inputLeftExtent = traversalDistance(boundaryInputPosition, this.inputEnd)
-          let outputLeftExtent = minPoint(inputLeftExtent, traversalDistance(this.rightAncestorOutputPosition, this.outputEnd))
-          let newNode = new Node(this.currentNode, inputLeftExtent, outputLeftExtent)
-          this.currentNode.right = newNode
-          this.descendRight()
-          this.patch.nodesCount++
-          break
-        }
-      }
-    }
-
-    if (this.rightAncestor && this.rightAncestor.isChangeEnd) {
-      this.currentNode.isChangeStart = !insertingStart
-      this.currentNode.isChangeEnd = insertingStart
-      let {newText} = this.rightAncestor
-      if (newText != null) {
-        let boundaryIndex = characterIndexForPoint(newText, traversalDistance(this.outputEnd, this.leftAncestorOutputPosition))
-        if (insertingStart) this.currentNode.newText = newText.substring(0, boundaryIndex)
-        this.rightAncestor.newText = newText.substring(boundaryIndex)
-      }
-    }
-
-    return this.currentNode
-  }
-
-  reuseExistingNodeForSpliceInput (boundaryInputPosition, insertingStart, startNode) {
-    if (insertingStart) {
-      if (this.leftAncestor && comparePoints(boundaryInputPosition, this.leftAncestorInputPosition) === 0) {
-        return this.leftAncestor
-      } else if (comparePoints(boundaryInputPosition, this.inputEnd) === 0) {
-        return this.currentNode
-      } else if (this.rightAncestor && comparePoints(boundaryInputPosition, this.rightAncestorInputPosition) === 0) {
-        return this.rightAncestor
-      }
-    } else {
-      if (this.rightAncestor && this.rightAncestor !== startNode && comparePoints(boundaryInputPosition, this.rightAncestorInputPosition) === 0) {
-        return this.rightAncestor
-      } else if (this.currentNode !== startNode && comparePoints(boundaryInputPosition, this.inputEnd) === 0) {
-        return this.currentNode
-      } else if (this.leftAncestor && this.leftAncestor !== startNode && comparePoints(boundaryInputPosition, this.leftAncestorInputPosition) === 0) {
-        return this.leftAncestor
-      }
-    }
-    return null
   }
 
   setCurrentNode (node) {
