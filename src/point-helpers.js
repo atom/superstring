@@ -21,6 +21,21 @@ export function min (a, b) {
   }
 }
 
+export function translate (start, distance) {
+  return {
+    row: start.row + distance.row,
+    column: start.column + distance.column
+  }
+}
+
+export function translationDistance (end, start) {
+  if (end.row === start.row) {
+    return {row: 0, column: end.column - start.column}
+  } else {
+    return {row: end.row - start.row, column: 0}
+  }
+}
+
 export function traverse (start, distance) {
   if (distance.row === 0) {
     return {
