@@ -1,4 +1,4 @@
-import {ZERO_POINT, traverse, foo, traversalDistance, translate, translationDistance, min as minPoint, isZero as isZeroPoint, compare as comparePoints} from './point-helpers'
+import {ZERO_POINT, traverse, traversalDistance, min as minPoint, isZero as isZeroPoint, compare as comparePoints} from './point-helpers'
 import {getExtent} from './text-helpers'
 import Iterator from './iterator'
 
