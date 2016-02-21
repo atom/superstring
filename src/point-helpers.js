@@ -28,6 +28,14 @@ export function translate (start, distance) {
   }
 }
 
+export function foo (start, distance) {
+  if (start.row === distance.row) {
+    return {row: start.row, column: start.column + distance.column}
+  } else {
+    return {row: start.row + distance.row, column: 0}
+  }
+}
+
 export function translationDistance (end, start) {
   if (end.row === start.row) {
     return {row: 0, column: end.column - start.column}

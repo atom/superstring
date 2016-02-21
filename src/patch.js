@@ -1,4 +1,4 @@
-import {ZERO_POINT, traverse, traversalDistance, translate, translationDistance, min as minPoint, isZero as isZeroPoint, compare as comparePoints} from './point-helpers'
+import {ZERO_POINT, traverse, foo, traversalDistance, translate, translationDistance, min as minPoint, isZero as isZeroPoint, compare as comparePoints} from './point-helpers'
 import {getExtent} from './text-helpers'
 import Iterator from './iterator'
 
@@ -106,12 +106,7 @@ export default class Patch {
   }
 
   getChangesInReverse () {
-    let accumulatingDelta = {row: 0, column: 0}
-    return this.iterator.getChanges().map(function ({start, oldExtent, newExtent}) {
-      let change = {start: translate(start, accumulatingDelta), oldExtent, newExtent}
-      accumulatingDelta = traverse(accumulatingDelta, translationDistance(oldExtent, newExtent))
-      return change
-    }).reverse()
+    return this.iterator.getChangesInReverse()
   }
 
   deleteNode (node) {

@@ -36,6 +36,14 @@ export default class Iterator {
     }
   }
 
+  forward () {
+    this.reset()
+
+    while (this.currentNode && this.currentNode.right) {
+      this.descendRight()
+    }
+  }
+
   getChanges () {
     this.rewind()
 
@@ -53,6 +61,32 @@ export default class Iterator {
         }
         changes.push(change)
       }
+    }
+
+    return changes
+  }
+
+  getChangesInReverse () {
+    this.forward()
+
+    let changes = []
+    if (this.inChange()) {
+      changes.push({
+        start: this.inputStart,
+        oldExtent: traversalDistance(this.inputEnd, this.inputStart),
+        newExtent: traversalDistance(this.outputEnd, this.outputStart),
+        newText: this.currentNode.newText
+      })
+    }
+    while (this.moveToPredecessor()) {
+      if (!this.inChange()) continue
+
+      changes.push({
+        start: this.inputStart,
+        oldExtent: traversalDistance(this.inputEnd, this.inputStart),
+        newExtent: traversalDistance(this.outputEnd, this.outputStart),
+        newText: this.currentNode.newText
+      })
     }
 
     return changes
@@ -187,6 +221,34 @@ export default class Iterator {
         this.outputStart = previousOutputEnd
         this.inputEnd = INFINITY_POINT
         this.outputEnd = INFINITY_POINT
+      }
+      return true
+    }
+  }
+
+  moveToPredecessor () {
+    if (!this.currentNode) return false
+
+    if (this.currentNode.left) {
+      this.descendLeft()
+      while (this.currentNode.right) {
+        this.descendRight()
+      }
+      return true
+    } else {
+      let previousInputStart = this.inputStart
+      let previousOutputStart = this.outputStart
+
+      while (this.currentNode.parent && this.currentNode.parent.left === this.currentNode) {
+        this.ascend()
+      }
+      this.ascend()
+
+      if (!this.currentNode) { // advanced off left edge of tree
+        this.inputStart = ZERO_POINT
+        this.outputStart = ZERO_POINT
+        this.inputEnd = previousInputStart
+        this.outputEnd = previousOutputStart
       }
       return true
     }

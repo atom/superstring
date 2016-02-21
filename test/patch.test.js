@@ -8,7 +8,9 @@ describe('Patch', function () {
   describe('.prototype.getChangesInReverse()', function () {
     it('returns changes that can be spliced into a patch in reverse', function () {
       let patch = new Patch()
+      patch.splice({row: 0, column: 1}, {row: 0, column: 3}, {row: 0, column: 0})
       patch.splice({row: 0, column: 3}, {row: 0, column: 2}, {row: 3, column: 4})
+      patch.splice({row: 5, column: 4}, {row: 0, column: 3}, {row: 0, column: 4})
       patch.splice({row: 5, column: 10}, {row: 0, column: 0}, {row: 1, column: 1})
       patch.splice({row: 8, column: 20}, {row: 0, column: 0}, {row: 0, column: 3})
       patch.splice({row: 8, column: 28}, {row: 0, column: 0}, {row: 0, column: 1})
