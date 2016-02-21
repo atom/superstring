@@ -111,7 +111,7 @@ export default class Patch {
       let change = {start: translate(start, accumulatingDelta), oldExtent, newExtent}
       accumulatingDelta = traverse(accumulatingDelta, translationDistance(oldExtent, newExtent))
       return change
-    })
+    }).reverse()
   }
 
   deleteNode (node) {

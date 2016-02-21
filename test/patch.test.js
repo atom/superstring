@@ -14,7 +14,7 @@ describe('Patch', function () {
       patch.splice({row: 8, column: 28}, {row: 0, column: 0}, {row: 0, column: 1})
 
       let reversePatch = new Patch()
-      patch.getChangesInReverse().reverse().forEach(change => reversePatch.splice(change.start, change.oldExtent, change.newExtent))
+      patch.getChangesInReverse().forEach(change => reversePatch.splice(change.start, change.oldExtent, change.newExtent))
 
       assert.deepEqual(patch.getChanges(), reversePatch.getChanges())
     })
