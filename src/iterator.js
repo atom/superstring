@@ -70,15 +70,7 @@ export default class Iterator {
     this.moveToEnd()
 
     let changes = []
-    if (this.inChange()) {
-      changes.push({
-        start: this.inputStart,
-        oldExtent: traversalDistance(this.inputEnd, this.inputStart),
-        newExtent: traversalDistance(this.outputEnd, this.outputStart),
-        newText: this.currentNode.newText
-      })
-    }
-    while (this.moveToPredecessor()) {
+    do {
       if (!this.inChange()) continue
 
       changes.push({
@@ -87,7 +79,7 @@ export default class Iterator {
         newExtent: traversalDistance(this.outputEnd, this.outputStart),
         newText: this.currentNode.newText
       })
-    }
+    } while (this.moveToPredecessor())
 
     return changes
   }
