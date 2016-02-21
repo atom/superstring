@@ -1,6 +1,6 @@
 import Random from 'random-seed'
 import Patch from '../src/patch'
-import {traverse, traversalDistance, format as formatPoint, isZero as isZeroPoint} from '../src/point-helpers'
+import {INFINITY_POINT, traverse, traversalDistance, format as formatPoint, isZero as isZeroPoint} from '../src/point-helpers'
 import TestDocument from './helpers/test-document'
 import './helpers/add-to-html-methods'
 
@@ -62,11 +62,12 @@ describe('Patch', function () {
         let shouldRebalance = Boolean(random(2))
         if (shouldRebalance) patch.rebalance()
 
-        verifySynthesizedOutput(patch, input, output, seedMessage)
+        verifyOutputChanges(patch, input, output, seedMessage)
+        verifyInputChanges(patch, input, output, seedMessage)
       }
     }
 
-    function verifySynthesizedOutput (patch, input, output, seedMessage) {
+    function verifyOutputChanges (patch, input, output, seedMessage) {
       let synthesizedOutput = ''
       patch.iterator.moveToBeginning()
       do {
@@ -82,6 +83,27 @@ describe('Patch', function () {
 
       input = input.clone()
       for (let {start, oldExtent, newText} of patch.getChanges()) {
+        input.splice(start, oldExtent, newText)
+      }
+      assert.equal(input.getText(), output.getText(), seedMessage)
+    }
+
+    function verifyInputChanges (patch, input, output, seedMessage) {
+      patch.iterator.moveToEnd()
+      let synthesizedOutput = input.getTextInRange(patch.iterator.getInputEnd(), INFINITY_POINT)
+      do {
+        if (patch.iterator.inChange()) {
+          assert(!(isZeroPoint(patch.iterator.getInputExtent()) && isZeroPoint(patch.iterator.getOutputExtent())), "Empty region found. " + seedMessage);
+          synthesizedOutput = patch.iterator.getNewText() + synthesizedOutput
+        } else {
+          synthesizedOutput = input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd()) + synthesizedOutput
+        }
+      } while (patch.iterator.moveToPredecessor())
+
+      assert.equal(synthesizedOutput, output.getText(), seedMessage)
+
+      input = input.clone()
+      for (let {start, oldExtent, newText} of patch.getInputChanges()) {
         input.splice(start, oldExtent, newText)
       }
       assert.equal(input.getText(), output.getText(), seedMessage)
