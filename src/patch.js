@@ -105,8 +105,8 @@ export default class Patch {
     return this.iterator.getChanges()
   }
 
-  getChangesInReverse () {
-    return this.iterator.getChangesInReverse()
+  getInputChanges () {
+    return this.iterator.getInputChanges()
   }
 
   deleteNode (node) {

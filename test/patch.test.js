@@ -5,7 +5,7 @@ import TestDocument from './helpers/test-document'
 import './helpers/add-to-html-methods'
 
 describe('Patch', function () {
-  describe('.prototype.getChangesInReverse()', function () {
+  describe('.prototype.getInputChanges()', function () {
     it('returns changes that can be spliced into a patch in reverse', function () {
       let patch = new Patch()
       patch.splice({row: 0, column: 1}, {row: 0, column: 3}, {row: 0, column: 0})
@@ -16,7 +16,7 @@ describe('Patch', function () {
       patch.splice({row: 8, column: 28}, {row: 0, column: 0}, {row: 0, column: 1})
 
       let reversePatch = new Patch()
-      patch.getChangesInReverse().forEach(change => reversePatch.splice(change.start, change.oldExtent, change.newExtent))
+      patch.getInputChanges().forEach(change => reversePatch.splice(change.start, change.oldExtent, change.newExtent))
 
       assert.deepEqual(patch.getChanges(), reversePatch.getChanges())
     })
@@ -68,7 +68,7 @@ describe('Patch', function () {
 
     function verifySynthesizedOutput (patch, input, output, seedMessage) {
       let synthesizedOutput = ''
-      patch.iterator.rewind()
+      patch.iterator.moveToBeginning()
       do {
         if (patch.iterator.inChange()) {
           assert(!(isZeroPoint(patch.iterator.getInputExtent()) && isZeroPoint(patch.iterator.getOutputExtent())), "Empty region found. " + seedMessage);

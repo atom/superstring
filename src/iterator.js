@@ -28,7 +28,7 @@ export default class Iterator {
     this.setCurrentNode(this.patch.root)
   }
 
-  rewind () {
+  moveToBeginning () {
     this.reset()
 
     while (this.currentNode && this.currentNode.left) {
@@ -36,7 +36,7 @@ export default class Iterator {
     }
   }
 
-  forward () {
+  moveToEnd () {
     this.reset()
 
     while (this.currentNode && this.currentNode.right) {
@@ -45,7 +45,7 @@ export default class Iterator {
   }
 
   getChanges () {
-    this.rewind()
+    this.moveToBeginning()
 
     let changes = []
     while (this.moveToSuccessor()) {
@@ -66,8 +66,8 @@ export default class Iterator {
     return changes
   }
 
-  getChangesInReverse () {
-    this.forward()
+  getInputChanges () {
+    this.moveToEnd()
 
     let changes = []
     if (this.inChange()) {
@@ -236,21 +236,16 @@ export default class Iterator {
       }
       return true
     } else {
-      let previousInputStart = this.inputStart
-      let previousOutputStart = this.outputStart
-
       while (this.currentNode.parent && this.currentNode.parent.left === this.currentNode) {
         this.ascend()
       }
       this.ascend()
 
-      if (!this.currentNode) { // advanced off left edge of tree
-        this.inputStart = ZERO_POINT
-        this.outputStart = ZERO_POINT
-        this.inputEnd = previousInputStart
-        this.outputEnd = previousOutputStart
+      if (this.currentNode) {
+        return true
+      } else {
+        return false
       }
-      return true
     }
   }
 
