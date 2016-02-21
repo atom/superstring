@@ -229,11 +229,7 @@ export default class Iterator {
       }
       this.ascend()
 
-      if (this.currentNode) {
-        return true
-      } else {
-        return false
-      }
+      return this.currentNode != null
     }
   }
 
