@@ -105,10 +105,6 @@ export default class Patch {
     return this.iterator.getChanges()
   }
 
-  getInputChanges () {
-    return this.iterator.getInputChanges()
-  }
-
   deleteNode (node) {
     this.bubbleNodeDown(node)
     if (node.parent) {

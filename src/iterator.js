@@ -52,30 +52,13 @@ export default class Iterator {
       if (!this.inChange()) continue
 
       changes.push({
-        start: this.outputStart,
+        inputStart: this.inputStart,
+        outputStart: this.outputStart,
         oldExtent: traversalDistance(this.inputEnd, this.inputStart),
         newExtent: traversalDistance(this.outputEnd, this.outputStart),
         newText: this.currentNode.newText
       })
     }
-
-    return changes
-  }
-
-  getInputChanges () {
-    this.moveToEnd()
-
-    let changes = []
-    do {
-      if (!this.inChange()) continue
-
-      changes.push({
-        start: this.inputStart,
-        oldExtent: traversalDistance(this.inputEnd, this.inputStart),
-        newExtent: traversalDistance(this.outputEnd, this.outputStart),
-        newText: this.currentNode.newText
-      })
-    } while (this.moveToPredecessor())
 
     return changes
   }
