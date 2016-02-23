@@ -3,6 +3,28 @@ import {getExtent} from './text-helpers'
 import Iterator from './iterator'
 
 export default class Patch {
+  static composeChanges (patchesChanges) {
+    let index = 0
+    let composedPatch = new Patch()
+    for (let changes of patchesChanges) {
+      if ((index & 1) === 0) { // flip
+        for (var i = 0; i < changes.length; i++) {
+          let {newStart, oldExtent, newExtent, newText} = changes[i]
+          composedPatch.splice(newStart, oldExtent, newExtent, {text: newText})
+        }
+      } else { // flop
+        for (var i = changes.length - 1; i >= 0; i--) {
+          let {oldStart, oldExtent, newExtent, newText} = changes[i]
+          composedPatch.splice(oldStart, oldExtent, newExtent, {text: newText})
+        }
+      }
+
+      index++
+    }
+
+    return composedPatch.getChanges()
+  }
+
   constructor (params = {}) {
     this.root = null
     this.nodesCount = 0

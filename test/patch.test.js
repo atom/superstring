@@ -5,6 +5,22 @@ import TestDocument from './helpers/test-document'
 import './helpers/add-to-html-methods'
 
 describe('Patch', function () {
+  it('correctly composes changes from multiple patches', function () {
+    let patches = [new Patch(), new Patch(), new Patch()]
+    patches[0].spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello')
+    patches[0].spliceWithText({row: 1, column: 1}, {row: 0, column: 0}, 'hey')
+    patches[1].splice({row: 0, column: 15}, {row: 0, column: 10}, {row: 0, column: 0})
+    patches[1].splice({row: 0, column: 0}, {row: 0, column: 0}, {row: 3, column: 0})
+    patches[2].spliceWithText({row: 4, column: 2}, {row: 0, column: 2}, 'ho')
+
+    assert.deepEqual(Patch.composeChanges(patches.map(p => p.getChanges())), [
+      {oldStart: {row: 0, column: 0}, newStart: {row: 0, column: 0}, oldExtent: {row: 0, column: 0}, newExtent: {row: 3, column: 0}},
+      {oldStart: {row: 0, column: 3}, newStart: {row: 3, column: 3}, oldExtent: {row: 0, column: 4}, newExtent: {row: 0, column: 5}, newText: 'hello'},
+      {oldStart: {row: 0, column: 14}, newStart: {row: 3, column: 15}, oldExtent: {row: 0, column: 10}, newExtent: {row: 0, column: 0}},
+      {oldStart: {row: 1, column: 1}, newStart: {row: 4, column: 1}, oldExtent: {row: 0, column: 0}, newExtent: {row: 0, column: 3}, newText: 'hho'}
+    ])
+  })
+
   it('correctly records basic non-overlapping splices', function () {
     let patch = new Patch()
     patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello')
