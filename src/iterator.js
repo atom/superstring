@@ -52,8 +52,8 @@ export default class Iterator {
       if (!this.inChange()) continue
 
       changes.push({
-        inputStart: this.inputStart,
-        outputStart: this.outputStart,
+        oldStart: this.inputStart,
+        newStart: this.outputStart,
         oldExtent: traversalDistance(this.inputEnd, this.inputStart),
         newExtent: traversalDistance(this.outputEnd, this.outputStart),
         newText: this.currentNode.newText

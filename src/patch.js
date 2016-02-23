@@ -53,21 +53,21 @@ export default class Patch {
     }
   }
 
-  spliceWithText (start, oldExtent, newText, options) {
-    this.splice(start, oldExtent, getExtent(newText), {text: newText})
+  spliceWithText (newStart, oldExtent, newText, options) {
+    this.splice(newStart, oldExtent, getExtent(newText), {text: newText})
   }
 
-  splice (outputStart, oldExtent, newExtent, options) {
+  splice (newStart, oldExtent, newExtent, options) {
     if (isZeroPoint(oldExtent) && isZeroPoint(newExtent)) return
 
-    let outputOldEnd = traverse(outputStart, oldExtent)
-    let outputNewEnd = traverse(outputStart, newExtent)
+    let oldEnd = traverse(newStart, oldExtent)
+    let newEnd = traverse(newStart, newExtent)
 
-    let startNode = this.iterator.insertSpliceBoundary(outputStart)
+    let startNode = this.iterator.insertSpliceBoundary(newStart)
     startNode.isChangeStart = true
     this.splayNode(startNode)
 
-    let endNode = this.iterator.insertSpliceBoundary(outputOldEnd, startNode)
+    let endNode = this.iterator.insertSpliceBoundary(oldEnd, startNode)
     endNode.isChangeEnd = true
     this.splayNode(endNode)
     if (endNode.left !== startNode) this.rotateNodeRight(startNode)
@@ -76,8 +76,8 @@ export default class Patch {
     startNode.inputExtent = startNode.inputLeftExtent
     startNode.outputExtent = startNode.outputLeftExtent
 
-    endNode.outputExtent = traverse(outputNewEnd, traversalDistance(endNode.outputExtent, endNode.outputLeftExtent))
-    endNode.outputLeftExtent = outputNewEnd
+    endNode.outputExtent = traverse(newEnd, traversalDistance(endNode.outputExtent, endNode.outputLeftExtent))
+    endNode.outputLeftExtent = newEnd
     endNode.newText = options && options.text
 
     if (endNode.isChangeStart) {

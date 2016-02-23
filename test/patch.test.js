@@ -10,8 +10,8 @@ describe('Patch', function () {
     patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello')
     patch.spliceWithText({row: 0, column: 10}, {row: 0, column: 5}, 'world')
     assert.deepEqual(patch.getChanges(), [
-      {inputStart: {row: 0, column: 3}, outputStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 4}, newExtent: {row: 0, column: 5}, newText: 'hello'},
-      {inputStart: {row: 0, column: 9}, outputStart: {row: 0, column: 10}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 5}, newText: 'world'}
+      {oldStart: {row: 0, column: 3}, newStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 4}, newExtent: {row: 0, column: 5}, newText: 'hello'},
+      {oldStart: {row: 0, column: 9}, newStart: {row: 0, column: 10}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 5}, newText: 'world'}
     ])
   })
 
@@ -20,7 +20,7 @@ describe('Patch', function () {
     patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello world')
     patch.spliceWithText({row: 0, column: 9}, {row: 0, column: 7}, 'sun')
     assert.deepEqual(patch.getChanges(), [
-      {inputStart: {row: 0, column: 3}, outputStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 6}, newExtent: {row: 0, column: 9}, newText: 'hello sun'},
+      {oldStart: {row: 0, column: 3}, newStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 6}, newExtent: {row: 0, column: 9}, newText: 'hello sun'},
     ])
   })
 
@@ -65,8 +65,8 @@ describe('Patch', function () {
       assert.equal(synthesizedOutput, output.getText(), seedMessage)
 
       input = input.clone()
-      for (let {outputStart, oldExtent, newText} of patch.getChanges()) {
-        input.splice(outputStart, oldExtent, newText)
+      for (let {newStart, oldExtent, newText} of patch.getChanges()) {
+        input.splice(newStart, oldExtent, newText)
       }
       assert.equal(input.getText(), output.getText(), seedMessage)
     }
@@ -86,8 +86,8 @@ describe('Patch', function () {
       assert.equal(synthesizedOutput, output.getText(), seedMessage)
 
       input = input.clone()
-      for (let {inputStart, oldExtent, newText} of patch.getChanges().reverse()) {
-        input.splice(inputStart, oldExtent, newText)
+      for (let {oldStart, oldExtent, newText} of patch.getChanges().reverse()) {
+        input.splice(oldStart, oldExtent, newText)
       }
       assert.equal(input.getText(), output.getText(), seedMessage)
     }
