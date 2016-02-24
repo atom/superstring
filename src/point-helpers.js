@@ -13,6 +13,10 @@ export function isZero (point) {
   return (point.row === 0 && point.column === 0)
 }
 
+export function isInfinity (point) {
+  return (point.row === INFINITY_POINT || point.column === Infinity)
+}
+
 export function min (a, b) {
   if (compare(a, b) <= 0) {
     return a

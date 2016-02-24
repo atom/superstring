@@ -28,7 +28,7 @@ export default class Iterator {
     this.setCurrentNode(this.patch.root)
   }
 
-  rewind () {
+  moveToBeginning () {
     this.reset()
 
     while (this.currentNode && this.currentNode.left) {
@@ -36,23 +36,32 @@ export default class Iterator {
     }
   }
 
+  moveToEnd () {
+    this.reset()
+
+    while (this.currentNode && this.currentNode.right) {
+      this.descendRight()
+    }
+  }
+
   getChanges () {
-    this.rewind()
+    this.moveToBeginning()
 
     let changes = []
     while (this.moveToSuccessor()) {
-      let inChange = this.inChange()
-      if (inChange) {
-        let change = {
-          start: this.outputStart,
-          oldExtent: traversalDistance(this.inputEnd, this.inputStart),
-          newExtent: traversalDistance(this.outputEnd, this.outputStart),
-        }
-        if (this.currentNode.newText != null) {
-          change.newText = this.currentNode.newText
-        }
-        changes.push(change)
+      if (!this.inChange()) continue
+
+      let change = {
+        oldStart: this.inputStart,
+        newStart: this.outputStart,
+        oldExtent: traversalDistance(this.inputEnd, this.inputStart),
+        newExtent: traversalDistance(this.outputEnd, this.outputStart),
       }
+      if (this.currentNode.newText != null) {
+        change.newText = this.currentNode.newText
+      }
+
+      changes.push(change)
     }
 
     return changes
@@ -189,6 +198,25 @@ export default class Iterator {
         this.outputEnd = INFINITY_POINT
       }
       return true
+    }
+  }
+
+  moveToPredecessor () {
+    if (!this.currentNode) return false
+
+    if (this.currentNode.left) {
+      this.descendLeft()
+      while (this.currentNode.right) {
+        this.descendRight()
+      }
+      return true
+    } else {
+      while (this.currentNode.parent && this.currentNode.parent.left === this.currentNode) {
+        this.ascend()
+      }
+      this.ascend()
+
+      return this.currentNode != null
     }
   }
 

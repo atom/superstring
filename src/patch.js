@@ -3,10 +3,31 @@ import {getExtent} from './text-helpers'
 import Iterator from './iterator'
 
 export default class Patch {
+  static compose (patches) {
+    let composedPatch = new Patch()
+    for (let index = 0; index < patches.length; index++) {
+      let changes = patches[index].getChanges()
+      if ((index & 1) === 0) { // flip
+        for (let i = 0; i < changes.length; i++) {
+          let {newStart, oldExtent, newExtent, newText} = changes[i]
+          composedPatch.splice(newStart, oldExtent, newExtent, {text: newText})
+        }
+      } else { // flop
+        for (let i = changes.length - 1; i >= 0; i--) {
+          let {oldStart, oldExtent, newExtent, newText} = changes[i]
+          composedPatch.splice(oldStart, oldExtent, newExtent, {text: newText})
+        }
+      }
+    }
+
+    return composedPatch.getChanges()
+  }
+
   constructor (params = {}) {
     this.root = null
     this.nodesCount = 0
     this.iterator = this.buildIterator()
+    this.cachedChanges = null
   }
 
   buildIterator () {
@@ -53,21 +74,21 @@ export default class Patch {
     }
   }
 
-  spliceWithText (start, oldExtent, newText, options) {
-    this.splice(start, oldExtent, getExtent(newText), {text: newText})
+  spliceWithText (newStart, oldExtent, newText, options) {
+    this.splice(newStart, oldExtent, getExtent(newText), {text: newText})
   }
 
-  splice (outputStart, oldExtent, newExtent, options) {
+  splice (newStart, oldExtent, newExtent, options) {
     if (isZeroPoint(oldExtent) && isZeroPoint(newExtent)) return
 
-    let outputOldEnd = traverse(outputStart, oldExtent)
-    let outputNewEnd = traverse(outputStart, newExtent)
+    let oldEnd = traverse(newStart, oldExtent)
+    let newEnd = traverse(newStart, newExtent)
 
-    let startNode = this.iterator.insertSpliceBoundary(outputStart)
+    let startNode = this.iterator.insertSpliceBoundary(newStart)
     startNode.isChangeStart = true
     this.splayNode(startNode)
 
-    let endNode = this.iterator.insertSpliceBoundary(outputOldEnd, startNode)
+    let endNode = this.iterator.insertSpliceBoundary(oldEnd, startNode)
     endNode.isChangeEnd = true
     this.splayNode(endNode)
     if (endNode.left !== startNode) this.rotateNodeRight(startNode)
@@ -76,8 +97,8 @@ export default class Patch {
     startNode.inputExtent = startNode.inputLeftExtent
     startNode.outputExtent = startNode.outputLeftExtent
 
-    endNode.outputExtent = traverse(outputNewEnd, traversalDistance(endNode.outputExtent, endNode.outputLeftExtent))
-    endNode.outputLeftExtent = outputNewEnd
+    endNode.outputExtent = traverse(newEnd, traversalDistance(endNode.outputExtent, endNode.outputLeftExtent))
+    endNode.outputLeftExtent = newEnd
     endNode.newText = options && options.text
 
     if (endNode.isChangeStart) {
@@ -99,10 +120,16 @@ export default class Patch {
       }
       this.deleteNode(startNode)
     }
+
+    this.cachedChanges = null
   }
 
   getChanges () {
-    return this.iterator.getChanges()
+    if (this.cachedChanges == null) {
+      this.cachedChanges = this.iterator.getChanges()
+    }
+
+    return this.cachedChanges
   }
 
   deleteNode (node) {
