@@ -3,10 +3,10 @@ import {getExtent} from './text-helpers'
 import Iterator from './iterator'
 
 export default class Patch {
-  static composeChanges (patchesChanges) {
+  static compose (patches) {
     let composedPatch = new Patch()
-    for (let index = 0; index < patchesChanges.length; index++) {
-      let changes = patchesChanges[index]
+    for (let index = 0; index < patches.length; index++) {
+      let changes = patches[index].getChanges()
       if ((index & 1) === 0) { // flip
         for (let i = 0; i < changes.length; i++) {
           let {newStart, oldExtent, newExtent, newText} = changes[i]
@@ -27,6 +27,7 @@ export default class Patch {
     this.root = null
     this.nodesCount = 0
     this.iterator = this.buildIterator()
+    this.cachedChanges = null
   }
 
   buildIterator () {
@@ -119,10 +120,16 @@ export default class Patch {
       }
       this.deleteNode(startNode)
     }
+
+    this.cachedChanges = null
   }
 
   getChanges () {
-    return this.iterator.getChanges()
+    if (this.cachedChanges == null) {
+      this.cachedChanges = this.iterator.getChanges()
+    }
+
+    return this.cachedChanges
   }
 
   deleteNode (node) {

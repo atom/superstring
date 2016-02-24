@@ -13,7 +13,7 @@ describe('Patch', function () {
     patches[1].splice({row: 0, column: 0}, {row: 0, column: 0}, {row: 3, column: 0})
     patches[2].spliceWithText({row: 4, column: 2}, {row: 0, column: 2}, 'ho')
 
-    assert.deepEqual(Patch.composeChanges(patches.map(p => p.getChanges())), [
+    assert.deepEqual(Patch.compose(patches), [
       {oldStart: {row: 0, column: 0}, newStart: {row: 0, column: 0}, oldExtent: {row: 0, column: 0}, newExtent: {row: 3, column: 0}},
       {oldStart: {row: 0, column: 3}, newStart: {row: 3, column: 3}, oldExtent: {row: 0, column: 4}, newExtent: {row: 0, column: 5}, newText: 'hello'},
       {oldStart: {row: 0, column: 14}, newStart: {row: 3, column: 15}, oldExtent: {row: 0, column: 10}, newExtent: {row: 0, column: 0}},
@@ -102,7 +102,7 @@ describe('Patch', function () {
       assert.equal(synthesizedOutput, output.getText(), seedMessage)
 
       input = input.clone()
-      for (let {oldStart, oldExtent, newText} of patch.getChanges().reverse()) {
+      for (let {oldStart, oldExtent, newText} of patch.getChanges().slice().reverse()) {
         input.splice(oldStart, oldExtent, newText)
       }
       assert.equal(input.getText(), output.getText(), seedMessage)
