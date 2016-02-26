@@ -10,12 +10,12 @@ export default class Patch {
       if ((index & 1) === 0) { // flip
         for (let i = 0; i < changes.length; i++) {
           let {newStart, oldExtent, newExtent, newText} = changes[i]
-          composedPatch.splice(newStart, oldExtent, newExtent, {text: newText})
+          composedPatch.splice(newStart, oldExtent, newExtent, {newText})
         }
       } else { // flop
         for (let i = changes.length - 1; i >= 0; i--) {
           let {oldStart, oldExtent, newExtent, newText} = changes[i]
-          composedPatch.splice(oldStart, oldExtent, newExtent, {text: newText})
+          composedPatch.splice(oldStart, oldExtent, newExtent, {newText})
         }
       }
     }
@@ -74,8 +74,8 @@ export default class Patch {
     }
   }
 
-  spliceWithText (newStart, oldExtent, newText, options) {
-    this.splice(newStart, oldExtent, getExtent(newText), {text: newText})
+  spliceWithText (newStart, oldExtent, newText) {
+    this.splice(newStart, oldExtent, getExtent(newText), {newText})
   }
 
   splice (newStart, oldExtent, newExtent, options) {
@@ -99,7 +99,7 @@ export default class Patch {
 
     endNode.outputExtent = traverse(newEnd, traversalDistance(endNode.outputExtent, endNode.outputLeftExtent))
     endNode.outputLeftExtent = newEnd
-    endNode.newText = options && options.text
+    endNode.newText = options && options.newText
 
     if (endNode.isChangeStart) {
       let rightAncestor = this.bubbleNodeDown(endNode)
