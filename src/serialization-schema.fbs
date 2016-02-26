@@ -1,0 +1,20 @@
+namespace Serialization;
+
+struct Point {
+  row:int;
+  column:int;
+}
+
+table Change {
+  oldStart:Point;
+  newStart:Point;
+  oldExtent:Point;
+  newExtent:Point;
+  newText:string;
+}
+
+table Patch {
+  changes:[Change];
+}
+
+root_type Patch;

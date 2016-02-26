@@ -1,6 +1,8 @@
 import {ZERO_POINT, traverse, traversalDistance, min as minPoint, isZero as isZeroPoint, compare as comparePoints} from './point-helpers'
 import {getExtent} from './text-helpers'
 import Iterator from './iterator'
+import {Builder as FlatBufferBuilder} from '../vendor/flatbuffers'
+import {Patch as SerializedPatch, Change as SerializedChange, Point as SerializedPoint} from './serialization-schema_generated'
 
 export default class Patch {
   static compose (patches) {
@@ -23,11 +25,59 @@ export default class Patch {
     return composedPatch.getChanges()
   }
 
+  static deserialize (serializedPatch) {
+    let patch = SerializedPatch.getRootAsPatch(serializedPatch)
+    let changes = []
+    for (var i = 0; i < patch.changesLength(); i++) {
+      let serializedChange = patch.changes(i)
+      let oldStart = serializedChange.oldStart()
+      let newStart = serializedChange.newStart()
+      let oldExtent = serializedChange.oldExtent()
+      let newExtent = serializedChange.newExtent()
+      let change = {
+        oldStart: {row: oldStart.row(), column: oldStart.column()},
+        newStart: {row: newStart.row(), column: newStart.column()},
+        oldExtent: {row: oldExtent.row(), column: oldExtent.column()},
+        newExtent: {row: newExtent.row(), column: newExtent.column()}
+      }
+      let newText = serializedChange.newText()
+      if (newText != null) change.newText = newText
+
+      changes.push(change)
+    }
+
+    return new Patch({cachedChanges: changes})
+  }
+
   constructor (params = {}) {
     this.root = null
     this.nodesCount = 0
     this.iterator = this.buildIterator()
     this.cachedChanges = null
+    if (params.cachedChanges) {
+      this.cachedChanges = params.cachedChanges
+    }
+  }
+
+  serialize () {
+    let builder = new FlatBufferBuilder()
+    let changes = this.getChanges().map(({oldStart, newStart, oldExtent, newExtent, newText}) => {
+      let serializedNewText
+      if (newText != null) serializedNewText = builder.createString(newText)
+      SerializedChange.startChange(builder)
+      SerializedChange.addOldStart(builder, SerializedPoint.createPoint(builder, oldStart.row, oldStart.column))
+      SerializedChange.addNewStart(builder, SerializedPoint.createPoint(builder, newStart.row, newStart.column))
+      SerializedChange.addOldExtent(builder, SerializedPoint.createPoint(builder, oldExtent.row, oldExtent.column))
+      SerializedChange.addNewExtent(builder, SerializedPoint.createPoint(builder, newExtent.row, newExtent.column))
+      if (serializedNewText) SerializedChange.addNewText(builder, serializedNewText)
+      return SerializedChange.endChange(builder)
+    })
+
+    let changesVector = SerializedPatch.createChangesVector(builder, changes)
+    SerializedPatch.startPatch(builder)
+    SerializedPatch.addChanges(builder, changesVector)
+    builder.finish(SerializedPatch.endPatch(builder))
+    return builder.dataBuffer()
   }
 
   buildIterator () {

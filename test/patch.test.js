@@ -5,6 +5,17 @@ import TestDocument from './helpers/test-document'
 import './helpers/add-to-html-methods'
 
 describe('Patch', function () {
+  it('correctly serializes and deserializes changes', function () {
+    let patch = new Patch
+    patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello')
+    patch.spliceWithText({row: 1, column: 1}, {row: 0, column: 0}, 'hey')
+    patch.splice({row: 0, column: 15}, {row: 0, column: 10}, {row: 0, column: 0})
+    patch.splice({row: 0, column: 0}, {row: 0, column: 0}, {row: 3, column: 0})
+    patch.spliceWithText({row: 4, column: 2}, {row: 0, column: 2}, 'ho')
+
+    assert.deepEqual(patch.getChanges(), Patch.deserialize(patch.serialize()).getChanges())
+  })
+
   it('correctly composes changes from multiple patches', function () {
     let patches = [new Patch(), new Patch(), new Patch()]
     patches[0].spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello')
