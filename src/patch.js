@@ -1,5 +1,5 @@
-import {ZERO_POINT, traverse, traversalDistance, min as minPoint, isZero as isZeroPoint, compare as comparePoints} from './point-helpers'
-import {getExtent} from './text-helpers'
+import {ZERO_POINT, INFINITY_POINT, traverse, traversalDistance, min as minPoint, isZero as isZeroPoint, compare as comparePoints} from './point-helpers'
+import {getExtent, characterIndexForPoint} from './text-helpers'
 import Iterator from './iterator'
 
 export default class Patch {
@@ -74,8 +74,8 @@ export default class Patch {
     }
   }
 
-  spliceWithText (newStart, oldExtent, newText) {
-    this.splice(newStart, oldExtent, getExtent(newText), {newText})
+  spliceWithText (newStart, oldExtent, newText, oldText) {
+    this.splice(newStart, oldExtent, getExtent(newText), {newText, oldText})
   }
 
   splice (newStart, oldExtent, newExtent, options) {
@@ -84,15 +84,16 @@ export default class Patch {
     let oldEnd = traverse(newStart, oldExtent)
     let newEnd = traverse(newStart, newExtent)
 
-    let startNode = this.iterator.insertSpliceBoundary(newStart)
+    let {node: startNode, oldTextSplitPositionStart} = this.iterator.insertSpliceBoundary(newStart)
     startNode.isChangeStart = true
     this.splayNode(startNode)
 
-    let endNode = this.iterator.insertSpliceBoundary(oldEnd, startNode)
+    let {node: endNode, oldTextSplitPositionEnd} = this.iterator.insertSpliceBoundary(oldEnd, startNode)
     endNode.isChangeEnd = true
     this.splayNode(endNode)
     if (endNode.left !== startNode) this.rotateNodeRight(startNode)
 
+    let intersectingText = this.collectIntersectingText(startNode.right)
     startNode.right = null
     startNode.inputExtent = startNode.inputLeftExtent
     startNode.outputExtent = startNode.outputLeftExtent
@@ -101,11 +102,20 @@ export default class Patch {
     endNode.outputLeftExtent = newEnd
     endNode.newText = options && options.newText
 
+    if (intersectingText) {
+      let start = characterIndexForPoint(options.oldText, intersectingText.start)
+      let end = characterIndexForPoint(options.oldText, intersectingText.end)
+      let previousOldText = endNode.oldText || ""
+      endNode.oldText = options.oldText.substring(0, start) + intersectingText.oldText + options.oldText.substring(end) + previousOldText
+    } else if (endNode.oldText == null) {
+      if (oldTextSplitPositionEnd) endNode.oldText = options.oldText.substring(oldTextSplitPositionEnd)
+      else if (!oldTextSplitPositionStart) endNode.oldText = options.oldText
+    }
+
     if (endNode.isChangeStart) {
       let rightAncestor = this.bubbleNodeDown(endNode)
-      if (endNode.newText != null) {
-        rightAncestor.newText = endNode.newText + rightAncestor.newText
-      }
+      if (endNode.newText != null) rightAncestor.newText = endNode.newText + rightAncestor.newText
+      if (endNode.oldText != null) rightAncestor.oldText = endNode.oldText + rightAncestor.oldText
       this.deleteNode(endNode)
     } else if (comparePoints(endNode.outputLeftExtent, startNode.outputLeftExtent) === 0
         && comparePoints(endNode.inputLeftExtent, startNode.inputLeftExtent) === 0) {
@@ -115,13 +125,41 @@ export default class Patch {
 
     if (startNode.isChangeStart && startNode.isChangeEnd) {
       let rightAncestor = this.bubbleNodeDown(startNode) || this.root
-      if (startNode.newText != null) {
-        rightAncestor.newText = startNode.newText + rightAncestor.newText
-      }
+      if (startNode.newText != null) rightAncestor.newText = startNode.newText + rightAncestor.newText
+      if (startNode.oldText != null) rightAncestor.oldText = startNode.oldText + rightAncestor.oldText
       this.deleteNode(startNode)
     }
 
     this.cachedChanges = null
+  }
+
+  collectIntersectingText (node) {
+    if (node == null) return
+
+    let leftIntersectingText = this.collectIntersectingText(node.left)
+    let rightIntersectingText = this.collectIntersectingText(node.right)
+
+    let oldText = ""
+    let start = ZERO_POINT
+    let end = INFINITY_POINT
+    if (node.isChangeStart) start = node.inputLeftExtent
+    if (node.isChangeEnd) end = node.outputExtent
+
+    if (leftIntersectingText) {
+      oldText += leftIntersectingText.oldText
+      if (leftIntersectingText.start) start = leftIntersectingText.start
+    }
+
+    if (node.oldText) {
+      oldText += node.oldText
+    }
+
+    if (rightIntersectingText) {
+      oldText += rightIntersectingText.oldText
+      if (rightIntersectingText.end) end = rightIntersectingText.end
+    }
+
+    return {oldText, start, end}
   }
 
   getChanges () {

@@ -68,16 +68,20 @@ describe('Patch', function () {
 
     function verifyOutputChanges (patch, input, output, seedMessage) {
       let synthesizedOutput = ''
+      let synthesizedInput = ''
       patch.iterator.moveToBeginning()
       do {
         if (patch.iterator.inChange()) {
           assert(!(isZeroPoint(patch.iterator.getInputExtent()) && isZeroPoint(patch.iterator.getOutputExtent())), "Empty region found. " + seedMessage);
           synthesizedOutput += patch.iterator.getNewText()
+          synthesizedInput += patch.iterator.getOldText()
         } else {
           synthesizedOutput += input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd())
+          synthesizedInput += input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd())
         }
       } while (patch.iterator.moveToSuccessor())
 
+      assert.equal(synthesizedInput, input.getText(), seedMessage)
       assert.equal(synthesizedOutput, output.getText(), seedMessage)
 
       input = input.clone()

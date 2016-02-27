@@ -57,9 +57,8 @@ export default class Iterator {
         oldExtent: traversalDistance(this.inputEnd, this.inputStart),
         newExtent: traversalDistance(this.outputEnd, this.outputStart),
       }
-      if (this.currentNode.newText != null) {
-        change.newText = this.currentNode.newText
-      }
+      if (this.currentNode.newText != null) change.newText = this.currentNode.newText
+      if (this.currentNode.oldText != null) change.oldText = this.currentNode.oldText
 
       changes.push(change)
     }
@@ -99,6 +98,10 @@ export default class Iterator {
     return this.currentNode.newText
   }
 
+  getOldText () {
+    return this.currentNode.oldText
+  }
+
   insertSpliceBoundary (boundaryOutputPosition, spliceStartNode) {
     this.reset()
 
@@ -107,7 +110,7 @@ export default class Iterator {
     if (!this.currentNode) {
       this.patch.root = new Node(null, boundaryOutputPosition, boundaryOutputPosition)
       this.patch.nodesCount++
-      return this.patch.root
+      return {node: this.patch.root}
     }
 
     while (true) {
@@ -128,7 +131,7 @@ export default class Iterator {
           break
         }
       } else if (comparison === 0 && this.currentNode !== spliceStartNode) {
-        return this.currentNode
+        return {node: this.currentNode}
       } else { // comparison > 0
         if (this.currentNode.right) {
           this.descendRight()
@@ -144,18 +147,29 @@ export default class Iterator {
       }
     }
 
+    let oldTextSplitPositionStart, oldTextSplitPositionEnd
     if (this.rightAncestor && this.rightAncestor.isChangeEnd) {
       this.currentNode.isChangeStart = true
       this.currentNode.isChangeEnd = true
-      let {newText} = this.rightAncestor
+      let {newText, oldText} = this.rightAncestor
       if (newText != null) {
         let boundaryIndex = characterIndexForPoint(newText, traversalDistance(boundaryOutputPosition, this.leftAncestorOutputPosition))
         if (insertingStart) this.currentNode.newText = newText.substring(0, boundaryIndex)
         this.rightAncestor.newText = newText.substring(boundaryIndex)
       }
+      if (oldText != null) {
+        let boundaryIndex = characterIndexForPoint(oldText, traversalDistance(boundaryOutputPosition, this.leftAncestorOutputPosition))
+        if (insertingStart) {
+          this.currentNode.oldText = oldText.substring(0, boundaryIndex)
+          this.rightAncestor.oldText = oldText.substring(boundaryIndex)
+          oldTextSplitPositionStart = boundaryIndex
+        } else {
+          oldTextSplitPositionEnd = boundaryIndex
+        }
+      }
     }
 
-    return this.currentNode
+    return {node: this.currentNode, oldTextSplitPositionStart, oldTextSplitPositionEnd}
   }
 
   setCurrentNode (node) {

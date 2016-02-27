@@ -1,3 +1,5 @@
+import {isInfinity as isInfinityPoint} from './point-helpers'
+
 const NEWLINE_REG_EXP = /\n/g
 
 export function getExtent (text) {
@@ -21,6 +23,8 @@ export function getSuffix (text, prefixExtent) {
 }
 
 export function characterIndexForPoint(text, point) {
+  if (isInfinityPoint(point)) return text.length
+
   let {row, column} = point
   NEWLINE_REG_EXP.lastIndex = 0
   while (row-- > 0) NEWLINE_REG_EXP.exec(text)
