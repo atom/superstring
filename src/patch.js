@@ -9,13 +9,13 @@ export default class Patch {
       let changes = patches[index].getChanges()
       if ((index & 1) === 0) { // flip
         for (let i = 0; i < changes.length; i++) {
-          let {newStart, oldExtent, newExtent, newText} = changes[i]
-          composedPatch.splice(newStart, oldExtent, newExtent, {newText})
+          let {newStart, oldExtent, newExtent, oldText, newText} = changes[i]
+          composedPatch.splice(newStart, oldExtent, newExtent, {oldText, newText})
         }
       } else { // flop
         for (let i = changes.length - 1; i >= 0; i--) {
-          let {oldStart, oldExtent, newExtent, newText} = changes[i]
-          composedPatch.splice(oldStart, oldExtent, newExtent, {newText})
+          let {oldStart, oldExtent, newExtent, oldText, newText} = changes[i]
+          composedPatch.splice(oldStart, oldExtent, newExtent, {oldText, newText})
         }
       }
     }
@@ -74,8 +74,8 @@ export default class Patch {
     }
   }
 
-  spliceWithText (newStart, oldExtent, newText, oldText) {
-    this.splice(newStart, oldExtent, getExtent(newText), {newText, oldText})
+  spliceWithText (newStart, oldText, newText) {
+    this.splice(newStart, getExtent(oldText), getExtent(newText), {oldText, newText})
   }
 
   splice (newStart, oldExtent, newExtent, options) {
@@ -93,7 +93,7 @@ export default class Patch {
     this.splayNode(endNode)
     if (endNode.left !== startNode) this.rotateNodeRight(startNode)
 
-    let changes = this.collectChangesInSubtree(startNode.right)
+    let intersectingChanges = this.collectChangesInSubtree(startNode.right)
     startNode.right = null
     startNode.inputExtent = startNode.inputLeftExtent
     startNode.outputExtent = startNode.outputLeftExtent
@@ -102,8 +102,8 @@ export default class Patch {
     endNode.outputLeftExtent = newEnd
     endNode.newText = options && options.newText
     endNode.oldText = this.trimOldText(
-      options.oldText, endNode.oldText,
-      changes, startNodeIntersectsChange, endNodeIntersectsChange
+      options && options.oldText, endNode.oldText,
+      intersectingChanges, startNodeIntersectsChange, endNodeIntersectsChange
     )
 
     if (endNode.isChangeStart) {
@@ -147,11 +147,11 @@ export default class Patch {
   trimOldText (newOldText, previousOldText, intersectingChanges, startNodeIntersectsChange, endNodeIntersectsChange) {
     if (intersectingChanges.length > 0) {
       let text = ""
-      let previousChangeEnd = null
+      let previousChangeEnd = ZERO_POINT
       for (let change of intersectingChanges) {
         if (change.start) {
           text += newOldText.substring(
-            characterIndexForPoint(newOldText, previousChangeEnd || ZERO_POINT),
+            characterIndexForPoint(newOldText, previousChangeEnd),
             characterIndexForPoint(newOldText, change.start)
           )
           previousChangeEnd = null
