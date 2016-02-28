@@ -147,7 +147,7 @@ export default class Iterator {
       }
     }
 
-    let oldTextSplitPositionStart, oldTextSplitPositionEnd
+    let intersectsChange = false
     if (this.rightAncestor && this.rightAncestor.isChangeEnd) {
       this.currentNode.isChangeStart = true
       this.currentNode.isChangeEnd = true
@@ -162,14 +162,12 @@ export default class Iterator {
         if (insertingStart) {
           this.currentNode.oldText = oldText.substring(0, boundaryIndex)
           this.rightAncestor.oldText = oldText.substring(boundaryIndex)
-          oldTextSplitPositionStart = boundaryIndex
-        } else {
-          oldTextSplitPositionEnd = boundaryIndex
         }
+        intersectsChange = true
       }
     }
 
-    return {node: this.currentNode, oldTextSplitPositionStart, oldTextSplitPositionEnd}
+    return {node: this.currentNode, intersectsChange}
   }
 
   setCurrentNode (node) {
