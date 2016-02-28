@@ -101,7 +101,7 @@ export default class Patch {
     endNode.outputExtent = traverse(newEnd, traversalDistance(endNode.outputExtent, endNode.outputLeftExtent))
     endNode.outputLeftExtent = newEnd
     endNode.newText = options && options.newText
-    endNode.oldText = this.computeOldText(
+    endNode.oldText = this.trimOldText(
       options.oldText, endNode.oldText,
       changes, startNodeIntersectsChange, endNodeIntersectsChange
     )
@@ -144,7 +144,7 @@ export default class Patch {
     return changes
   }
 
-  computeOldText (newOldText, previousOldText, intersectingChanges, startNodeIntersectsChange, endNodeIntersectsChange) {
+  trimOldText (newOldText, previousOldText, intersectingChanges, startNodeIntersectsChange, endNodeIntersectsChange) {
     if (intersectingChanges.length > 0) {
       let text = ""
       let previousChangeEnd = null
@@ -161,9 +161,9 @@ export default class Patch {
           previousChangeEnd = change.end
         }
       }
+
       if (previousChangeEnd) text += newOldText.substring(characterIndexForPoint(newOldText, previousChangeEnd))
       if (previousOldText) text += previousOldText
-
       return text
     } else if (previousOldText == null && !startNodeIntersectsChange && !endNodeIntersectsChange) {
       return newOldText
