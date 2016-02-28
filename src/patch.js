@@ -84,11 +84,13 @@ export default class Patch {
     let oldEnd = traverse(newStart, oldExtent)
     let newEnd = traverse(newStart, newExtent)
 
-    let {node: startNode, intersectsChange: startNodeIntersectsChange} = this.iterator.insertSpliceBoundary(newStart)
+    let {node: startNode, intersectsOldText: startNodeIntersectsOldText} =
+      this.iterator.insertSpliceBoundary(newStart)
     startNode.isChangeStart = true
     this.splayNode(startNode)
 
-    let {node: endNode, intersectsChange: endNodeIntersectsChange} = this.iterator.insertSpliceBoundary(oldEnd, startNode)
+    let {node: endNode, intersectsOldText: endNodeIntersectsOldText} =
+      this.iterator.insertSpliceBoundary(oldEnd, startNode)
     endNode.isChangeEnd = true
     this.splayNode(endNode)
     if (endNode.left !== startNode) this.rotateNodeRight(startNode)
@@ -101,9 +103,9 @@ export default class Patch {
     endNode.outputExtent = traverse(newEnd, traversalDistance(endNode.outputExtent, endNode.outputLeftExtent))
     endNode.outputLeftExtent = newEnd
     endNode.newText = options && options.newText
-    endNode.oldText = this.trimOldText(
-      options && options.oldText, endNode.oldText,
-      intersectingChanges, startNodeIntersectsChange, endNodeIntersectsChange
+    endNode.oldText = options && options.oldText && this.trimOldText(
+      options.oldText, endNode.oldText,
+      intersectingChanges, startNodeIntersectsOldText, endNodeIntersectsOldText
     )
 
     if (endNode.isChangeStart) {
@@ -144,7 +146,7 @@ export default class Patch {
     return changes
   }
 
-  trimOldText (newOldText, previousOldText, intersectingChanges, startNodeIntersectsChange, endNodeIntersectsChange) {
+  trimOldText (newOldText, previousOldText, intersectingChanges, startNodeIntersectsOldText, endNodeIntersectsOldText) {
     if (intersectingChanges.length > 0) {
       let text = ""
       let previousChangeEnd = ZERO_POINT
@@ -165,7 +167,7 @@ export default class Patch {
       if (previousChangeEnd) text += newOldText.substring(characterIndexForPoint(newOldText, previousChangeEnd))
       if (previousOldText) text += previousOldText
       return text
-    } else if (previousOldText == null && !startNodeIntersectsChange && !endNodeIntersectsChange) {
+    } else if (previousOldText == null && !startNodeIntersectsOldText && !endNodeIntersectsOldText) {
       return newOldText
     } else {
       return previousOldText
