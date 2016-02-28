@@ -110,7 +110,7 @@ export default class Iterator {
     if (!this.currentNode) {
       this.patch.root = new Node(null, boundaryOutputPosition, boundaryOutputPosition)
       this.patch.nodesCount++
-      return {node: this.patch.root, intersectsOldText: false}
+      return this.patch.root
     }
 
     while (true) {
@@ -131,7 +131,7 @@ export default class Iterator {
           break
         }
       } else if (comparison === 0 && this.currentNode !== spliceStartNode) {
-        return {node: this.currentNode, intersectsOldText: false}
+        return this.currentNode
       } else { // comparison > 0
         if (this.currentNode.right) {
           this.descendRight()
@@ -147,7 +147,6 @@ export default class Iterator {
       }
     }
 
-    let intersectsOldText = false
     if (this.rightAncestor && this.rightAncestor.isChangeEnd) {
       this.currentNode.isChangeStart = true
       this.currentNode.isChangeEnd = true
@@ -159,15 +158,12 @@ export default class Iterator {
       }
       if (oldText != null) {
         let boundaryIndex = characterIndexForPoint(oldText, traversalDistance(boundaryOutputPosition, this.leftAncestorOutputPosition))
-        if (insertingStart) {
-          this.currentNode.oldText = oldText.substring(0, boundaryIndex)
-          this.rightAncestor.oldText = oldText.substring(boundaryIndex)
-        }
-        intersectsOldText = true
+        this.currentNode.oldText = oldText.substring(0, boundaryIndex)
+        this.rightAncestor.oldText = oldText.substring(boundaryIndex)
       }
     }
 
-    return {node: this.currentNode, intersectsOldText}
+    return this.currentNode
   }
 
   setCurrentNode (node) {
