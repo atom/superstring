@@ -78,7 +78,7 @@ export default class Patch {
     this.splice(newStart, getExtent(oldText), getExtent(newText), {oldText, newText})
   }
 
-  splice (newStart, oldExtent, newExtent, options) {
+  splice (newStart, oldExtent, newExtent, options = {}) {
     if (isZeroPoint(oldExtent) && isZeroPoint(newExtent)) return
 
     let oldEnd = traverse(newStart, oldExtent)
@@ -95,10 +95,8 @@ export default class Patch {
 
     endNode.outputExtent = traverse(newEnd, traversalDistance(endNode.outputExtent, endNode.outputLeftExtent))
     endNode.outputLeftExtent = newEnd
-    endNode.newText = options && options.newText
-    if (options && options.oldText != null) {
-      endNode.oldText = this.replaceChangedText(options.oldText, startNode, endNode)
-    }
+    if (options.newText != null) endNode.newText = options.newText
+    if (options.oldText != null) endNode.oldText = this.replaceChangedText(options.oldText, startNode, endNode)
 
     startNode.right = null
     startNode.inputExtent = startNode.inputLeftExtent
