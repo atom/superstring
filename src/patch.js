@@ -96,28 +96,8 @@ export default class Patch {
     endNode.outputExtent = traverse(newEnd, traversalDistance(endNode.outputExtent, endNode.outputLeftExtent))
     endNode.outputLeftExtent = newEnd
     endNode.newText = options && options.newText
-    if (options != null && options.oldText != null) {
-      let oldText = ""
-      let lastChangeEnd = ZERO_POINT
-      for (let change of this.collectChangesInSubtree(startNode.right)) {
-        if (change.start) {
-          oldText += options.oldText.substring(
-            characterIndexForPoint(options.oldText, lastChangeEnd),
-            characterIndexForPoint(options.oldText, change.start)
-          )
-        } else if (change.end) {
-          oldText += change.oldText
-          lastChangeEnd = change.end
-        }
-      }
-
-      if (endNode.oldText == null) {
-        oldText += options.oldText.substring(characterIndexForPoint(options.oldText, lastChangeEnd))
-      } else {
-        oldText += endNode.oldText
-      }
-
-      endNode.oldText = oldText
+    if (options && options.oldText != null) {
+      endNode.oldText = this.replaceChangedText(options.oldText, startNode, endNode)
     }
 
     startNode.right = null
@@ -145,10 +125,34 @@ export default class Patch {
     this.cachedChanges = null
   }
 
-  collectChangesInSubtree (node, outputDistance = ZERO_POINT, changes = []) {
+  replaceChangedText (oldText, startNode, endNode) {
+    let replacedText = ""
+    let lastChangeEnd = ZERO_POINT
+    for (let change of this.changesForSubtree(startNode.right)) {
+      if (change.start) {
+        replacedText += oldText.substring(
+          characterIndexForPoint(oldText, lastChangeEnd),
+          characterIndexForPoint(oldText, change.start)
+        )
+      } else if (change.end) {
+        replacedText += change.oldText
+        lastChangeEnd = change.end
+      }
+    }
+
+    if (endNode.oldText == null) {
+      replacedText += oldText.substring(characterIndexForPoint(oldText, lastChangeEnd))
+    } else {
+      replacedText += endNode.oldText
+    }
+
+    return replacedText
+  }
+
+  changesForSubtree (node, outputDistance = ZERO_POINT, changes = []) {
     if (node == null) return changes
 
-    this.collectChangesInSubtree(node.left, outputDistance, changes)
+    this.changesForSubtree(node.left, outputDistance, changes)
     let change = {}
     let outputLeftExtent = traverse(outputDistance, node.outputLeftExtent)
     if (node.isChangeStart) change.start = outputLeftExtent
@@ -157,7 +161,7 @@ export default class Patch {
       change.oldText = node.oldText
     }
     changes.push(change)
-    this.collectChangesInSubtree(node.right, outputLeftExtent, changes)
+    this.changesForSubtree(node.right, outputLeftExtent, changes)
 
     return changes
   }
