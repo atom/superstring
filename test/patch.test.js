@@ -84,32 +84,44 @@ describe('Patch', function () {
       assert.equal(synthesizedInput, input.getText(), seedMessage)
       assert.equal(synthesizedOutput, output.getText(), seedMessage)
 
-      input = input.clone()
-      for (let {newStart, oldExtent, newText} of patch.getChanges()) {
-        input.splice(newStart, oldExtent, newText)
+      synthesizedInput = output.clone()
+      synthesizedOutput = input.clone()
+      for (let {oldStart, newStart, oldExtent, newExtent, oldText, newText} of patch.getChanges()) {
+        synthesizedInput.splice(oldStart, newExtent, oldText)
+        synthesizedOutput.splice(newStart, oldExtent, newText)
       }
-      assert.equal(input.getText(), output.getText(), seedMessage)
+
+      assert.equal(synthesizedInput.getText(), input.getText(), seedMessage)
+      assert.equal(synthesizedOutput.getText(), output.getText(), seedMessage)
     }
 
     function verifyInputChanges (patch, input, output, seedMessage) {
       patch.iterator.moveToEnd()
+      let synthesizedInput = input.getTextInRange(patch.iterator.getInputEnd(), INFINITY_POINT)
       let synthesizedOutput = input.getTextInRange(patch.iterator.getInputEnd(), INFINITY_POINT)
       do {
         if (patch.iterator.inChange()) {
           assert(!(isZeroPoint(patch.iterator.getInputExtent()) && isZeroPoint(patch.iterator.getOutputExtent())), "Empty region found. " + seedMessage);
           synthesizedOutput = patch.iterator.getNewText() + synthesizedOutput
+          synthesizedInput = patch.iterator.getOldText() + synthesizedInput
         } else {
           synthesizedOutput = input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd()) + synthesizedOutput
+          synthesizedInput = input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd()) + synthesizedInput
         }
       } while (patch.iterator.moveToPredecessor())
 
+      assert.equal(synthesizedInput, input.getText(), seedMessage)
       assert.equal(synthesizedOutput, output.getText(), seedMessage)
 
-      input = input.clone()
-      for (let {oldStart, oldExtent, newText} of patch.getChanges().slice().reverse()) {
-        input.splice(oldStart, oldExtent, newText)
+      synthesizedOutput = input.clone()
+      synthesizedInput = output.clone()
+      for (let {oldStart, newStart, oldExtent, newExtent, oldText, newText} of patch.getChanges().slice().reverse()) {
+        synthesizedOutput.splice(oldStart, oldExtent, newText)
+        synthesizedInput.splice(newStart, newExtent, oldText)
       }
-      assert.equal(input.getText(), output.getText(), seedMessage)
+
+      assert.equal(synthesizedOutput.getText(), output.getText(), seedMessage)
+      assert.equal(synthesizedInput.getText(), input.getText(), seedMessage)
     }
   })
 })
