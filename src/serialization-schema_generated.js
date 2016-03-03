@@ -139,10 +139,19 @@ Serialization.Change.prototype.newText = function(optionalEncoding) {
 };
 
 /**
+ * @param {flatbuffers.Encoding=} optionalEncoding
+ * @returns {string|Uint8Array}
+ */
+Serialization.Change.prototype.oldText = function(optionalEncoding) {
+  var offset = this.bb.__offset(this.bb_pos, 14);
+  return offset ? this.bb.__string(this.bb_pos + offset, optionalEncoding) : null;
+};
+
+/**
  * @param {flatbuffers.Builder} builder
  */
 Serialization.Change.startChange = function(builder) {
-  builder.startObject(5);
+  builder.startObject(6);
 };
 
 /**
@@ -183,6 +192,14 @@ Serialization.Change.addNewExtent = function(builder, newExtentOffset) {
  */
 Serialization.Change.addNewText = function(builder, newTextOffset) {
   builder.addFieldOffset(4, newTextOffset, 0);
+};
+
+/**
+ * @param {flatbuffers.Builder} builder
+ * @param {flatbuffers.Offset} oldTextOffset
+ */
+Serialization.Change.addOldText = function(builder, oldTextOffset) {
+  builder.addFieldOffset(5, oldTextOffset, 0);
 };
 
 /**

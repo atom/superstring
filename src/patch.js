@@ -1,8 +1,8 @@
 import {ZERO_POINT, traverse, traversalDistance, min as minPoint, isZero as isZeroPoint, compare as comparePoints} from './point-helpers'
 import {getExtent, characterIndexForPoint} from './text-helpers'
 import Iterator from './iterator'
-import {Builder as FlatBufferBuilder} from '../vendor/flatbuffers'
-import {Patch as SerializedPatch, Change as SerializedChange, Point as SerializedPoint} from './serialization-schema_generated'
+import FlatBuffers from '../vendor/flatbuffers'
+import Serialization from './serialization-schema_generated'
 
 export default class Patch {
   static compose (patches) {
@@ -26,7 +26,10 @@ export default class Patch {
   }
 
   static deserialize (serializedPatch) {
-    let patch = SerializedPatch.getRootAsPatch(serializedPatch)
+    let {bytes, position} = serializedPatch
+    let buffer = new FlatBuffers.ByteBuffer(bytes)
+    buffer.setPosition(position)
+    let patch = Serialization.Patch.getRootAsPatch(buffer)
     let changes = []
     for (var i = 0; i < patch.changesLength(); i++) {
       let serializedChange = patch.changes(i)
@@ -41,7 +44,9 @@ export default class Patch {
         newExtent: {row: newExtent.row(), column: newExtent.column()}
       }
       let newText = serializedChange.newText()
+      let oldText = serializedChange.oldText()
       if (newText != null) change.newText = newText
+      if (oldText != null) change.oldText = oldText
 
       changes.push(change)
     }
@@ -60,24 +65,27 @@ export default class Patch {
   }
 
   serialize () {
-    let builder = new FlatBufferBuilder()
-    let changes = this.getChanges().map(({oldStart, newStart, oldExtent, newExtent, newText}) => {
-      let serializedNewText
+    let builder = new FlatBuffers.Builder()
+    let changes = this.getChanges().map(({oldStart, newStart, oldExtent, newExtent, oldText, newText}) => {
+      let serializedNewText, serializedOldText
       if (newText != null) serializedNewText = builder.createString(newText)
-      SerializedChange.startChange(builder)
-      SerializedChange.addOldStart(builder, SerializedPoint.createPoint(builder, oldStart.row, oldStart.column))
-      SerializedChange.addNewStart(builder, SerializedPoint.createPoint(builder, newStart.row, newStart.column))
-      SerializedChange.addOldExtent(builder, SerializedPoint.createPoint(builder, oldExtent.row, oldExtent.column))
-      SerializedChange.addNewExtent(builder, SerializedPoint.createPoint(builder, newExtent.row, newExtent.column))
-      if (serializedNewText) SerializedChange.addNewText(builder, serializedNewText)
-      return SerializedChange.endChange(builder)
+      if (oldText != null) serializedOldText = builder.createString(oldText)
+      Serialization.Change.startChange(builder)
+      Serialization.Change.addOldStart(builder, Serialization.Point.createPoint(builder, oldStart.row, oldStart.column))
+      Serialization.Change.addNewStart(builder, Serialization.Point.createPoint(builder, newStart.row, newStart.column))
+      Serialization.Change.addOldExtent(builder, Serialization.Point.createPoint(builder, oldExtent.row, oldExtent.column))
+      Serialization.Change.addNewExtent(builder, Serialization.Point.createPoint(builder, newExtent.row, newExtent.column))
+      if (serializedNewText) Serialization.Change.addNewText(builder, serializedNewText)
+      if (serializedOldText) Serialization.Change.addOldText(builder, serializedOldText)
+      return Serialization.Change.endChange(builder)
     })
 
-    let changesVector = SerializedPatch.createChangesVector(builder, changes)
-    SerializedPatch.startPatch(builder)
-    SerializedPatch.addChanges(builder, changesVector)
-    builder.finish(SerializedPatch.endPatch(builder))
-    return builder.dataBuffer()
+    let changesVector = Serialization.Patch.createChangesVector(builder, changes)
+    Serialization.Patch.startPatch(builder)
+    Serialization.Patch.addChanges(builder, changesVector)
+    builder.finish(Serialization.Patch.endPatch(builder))
+    let buffer = builder.dataBuffer()
+    return {position: buffer.position(), bytes: buffer.bytes()}
   }
 
   buildIterator () {
