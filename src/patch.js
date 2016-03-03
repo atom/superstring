@@ -61,6 +61,7 @@ export default class Patch {
     this.cachedChanges = null
     if (params.cachedChanges) {
       this.cachedChanges = params.cachedChanges
+      this.splice = function () { throw new Error("Cannot splice into a read-only Patch!") }
     }
   }
 
