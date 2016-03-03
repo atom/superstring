@@ -7,43 +7,43 @@ import './helpers/add-to-html-methods'
 describe('Patch', function () {
   it('correctly composes changes from multiple patches', function () {
     let patches = [new Patch(), new Patch(), new Patch()]
-    patches[0].spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello')
-    patches[0].spliceWithText({row: 1, column: 1}, {row: 0, column: 0}, 'hey')
+    patches[0].spliceWithText({row: 0, column: 3}, 'ciao', 'hello')
+    patches[0].spliceWithText({row: 1, column: 1}, '', 'hey')
     patches[1].splice({row: 0, column: 15}, {row: 0, column: 10}, {row: 0, column: 0})
     patches[1].splice({row: 0, column: 0}, {row: 0, column: 0}, {row: 3, column: 0})
-    patches[2].spliceWithText({row: 4, column: 2}, {row: 0, column: 2}, 'ho')
+    patches[2].spliceWithText({row: 4, column: 2}, 'so', 'ho')
 
     assert.deepEqual(Patch.compose(patches), [
       {oldStart: {row: 0, column: 0}, newStart: {row: 0, column: 0}, oldExtent: {row: 0, column: 0}, newExtent: {row: 3, column: 0}},
-      {oldStart: {row: 0, column: 3}, newStart: {row: 3, column: 3}, oldExtent: {row: 0, column: 4}, newExtent: {row: 0, column: 5}, newText: 'hello'},
+      {oldStart: {row: 0, column: 3}, newStart: {row: 3, column: 3}, oldExtent: {row: 0, column: 4}, newExtent: {row: 0, column: 5}, newText: 'hello', oldText: 'ciao'},
       {oldStart: {row: 0, column: 14}, newStart: {row: 3, column: 15}, oldExtent: {row: 0, column: 10}, newExtent: {row: 0, column: 0}},
-      {oldStart: {row: 1, column: 1}, newStart: {row: 4, column: 1}, oldExtent: {row: 0, column: 0}, newExtent: {row: 0, column: 3}, newText: 'hho'}
+      {oldStart: {row: 1, column: 1}, newStart: {row: 4, column: 1}, oldExtent: {row: 0, column: 0}, newExtent: {row: 0, column: 3}, newText: 'hho', oldText: ''}
     ])
   })
 
   it('correctly records basic non-overlapping splices', function () {
     let patch = new Patch()
-    patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello')
-    patch.spliceWithText({row: 0, column: 10}, {row: 0, column: 5}, 'world')
+    patch.spliceWithText({row: 0, column: 3}, 'ciao', 'hello')
+    patch.spliceWithText({row: 0, column: 10}, 'quick', 'world')
     assert.deepEqual(patch.getChanges(), [
-      {oldStart: {row: 0, column: 3}, newStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 4}, newExtent: {row: 0, column: 5}, newText: 'hello'},
-      {oldStart: {row: 0, column: 9}, newStart: {row: 0, column: 10}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 5}, newText: 'world'}
+      {oldStart: {row: 0, column: 3}, newStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 4}, newExtent: {row: 0, column: 5}, newText: 'hello', oldText: 'ciao'},
+      {oldStart: {row: 0, column: 9}, newStart: {row: 0, column: 10}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 5}, newText: 'world', oldText: 'quick'}
     ])
   })
 
   it('correctly records basic overlapping splices', function () {
     let patch = new Patch()
-    patch.spliceWithText({row: 0, column: 3}, {row: 0, column: 4}, 'hello world')
-    patch.spliceWithText({row: 0, column: 9}, {row: 0, column: 7}, 'sun')
+    patch.spliceWithText({row: 0, column: 3}, 'hola', 'hello world')
+    patch.spliceWithText({row: 0, column: 9}, 'zapping', 'sun')
     assert.deepEqual(patch.getChanges(), [
-      {oldStart: {row: 0, column: 3}, newStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 6}, newExtent: {row: 0, column: 9}, newText: 'hello sun'},
+      {oldStart: {row: 0, column: 3}, newStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 6}, newExtent: {row: 0, column: 9}, newText: 'hello sun', oldText: 'holang'}
     ])
   })
 
   it('correctly records random splices', function () {
     this.timeout(Infinity)
 
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 100; i++) {
       let seed = Date.now()
       let seedMessage = `Random seed: ${seed}`
       let random = new Random(seed)
@@ -52,9 +52,9 @@ describe('Patch', function () {
       let patch = new Patch()
 
       for (let j = 0; j < 10; j++) {
-        let {start, oldExtent, newExtent, newText} = output.performRandomSplice()
-        patch.spliceWithText(start, oldExtent, newText)
-        // document.write(`<div>after splice(${formatPoint(start)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)}, ${newText})</div>`)
+        let {start, oldText, oldExtent, newExtent, newText} = output.performRandomSplice()
+        patch.spliceWithText(start, oldText, newText)
+        // document.write(`<div>after splice(${formatPoint(start)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)}, ${JSON.stringify(newText)}, ${JSON.stringify(oldText)})</div>`)
         // document.write(patch.toHTML())
         // document.write('<hr>')
 
@@ -68,44 +68,60 @@ describe('Patch', function () {
 
     function verifyOutputChanges (patch, input, output, seedMessage) {
       let synthesizedOutput = ''
+      let synthesizedInput = ''
       patch.iterator.moveToBeginning()
       do {
         if (patch.iterator.inChange()) {
           assert(!(isZeroPoint(patch.iterator.getInputExtent()) && isZeroPoint(patch.iterator.getOutputExtent())), "Empty region found. " + seedMessage);
           synthesizedOutput += patch.iterator.getNewText()
+          synthesizedInput += patch.iterator.getOldText()
         } else {
           synthesizedOutput += input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd())
+          synthesizedInput += input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd())
         }
       } while (patch.iterator.moveToSuccessor())
 
+      assert.equal(synthesizedInput, input.getText(), seedMessage)
       assert.equal(synthesizedOutput, output.getText(), seedMessage)
 
-      input = input.clone()
-      for (let {newStart, oldExtent, newText} of patch.getChanges()) {
-        input.splice(newStart, oldExtent, newText)
+      synthesizedInput = output.clone()
+      synthesizedOutput = input.clone()
+      for (let {oldStart, newStart, oldExtent, newExtent, oldText, newText} of patch.getChanges()) {
+        synthesizedInput.splice(oldStart, newExtent, oldText)
+        synthesizedOutput.splice(newStart, oldExtent, newText)
       }
-      assert.equal(input.getText(), output.getText(), seedMessage)
+
+      assert.equal(synthesizedInput.getText(), input.getText(), seedMessage)
+      assert.equal(synthesizedOutput.getText(), output.getText(), seedMessage)
     }
 
     function verifyInputChanges (patch, input, output, seedMessage) {
       patch.iterator.moveToEnd()
+      let synthesizedInput = input.getTextInRange(patch.iterator.getInputEnd(), INFINITY_POINT)
       let synthesizedOutput = input.getTextInRange(patch.iterator.getInputEnd(), INFINITY_POINT)
       do {
         if (patch.iterator.inChange()) {
           assert(!(isZeroPoint(patch.iterator.getInputExtent()) && isZeroPoint(patch.iterator.getOutputExtent())), "Empty region found. " + seedMessage);
           synthesizedOutput = patch.iterator.getNewText() + synthesizedOutput
+          synthesizedInput = patch.iterator.getOldText() + synthesizedInput
         } else {
           synthesizedOutput = input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd()) + synthesizedOutput
+          synthesizedInput = input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd()) + synthesizedInput
         }
       } while (patch.iterator.moveToPredecessor())
 
+      assert.equal(synthesizedInput, input.getText(), seedMessage)
       assert.equal(synthesizedOutput, output.getText(), seedMessage)
 
-      input = input.clone()
-      for (let {oldStart, oldExtent, newText} of patch.getChanges().slice().reverse()) {
-        input.splice(oldStart, oldExtent, newText)
+      synthesizedOutput = input.clone()
+      synthesizedInput = output.clone()
+      for (let {oldStart, newStart, oldExtent, newExtent, oldText, newText} of patch.getChanges().slice().reverse()) {
+        synthesizedOutput.splice(oldStart, oldExtent, newText)
+        synthesizedInput.splice(newStart, newExtent, oldText)
       }
-      assert.equal(input.getText(), output.getText(), seedMessage)
+
+      assert.equal(synthesizedOutput.getText(), output.getText(), seedMessage)
+      assert.equal(synthesizedInput.getText(), input.getText(), seedMessage)
     }
   })
 })

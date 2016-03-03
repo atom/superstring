@@ -43,11 +43,12 @@ export default class TestDocument {
   performRandomSplice () {
     let range = this.buildRandomRange()
     let start = range.start
+    let oldText = this.getTextInRange(range.start, range.end)
     let oldExtent = pointHelpers.traversalDistance(range.end, range.start)
     let newText = this.buildRandomLines(2, true).join('\n')
     let newExtent = textHelpers.getExtent(newText)
     this.splice(start, oldExtent, newText)
-    return {start, oldExtent, newExtent, newText}
+    return {start, oldExtent, newExtent, newText, oldText}
   }
 
   splice (start, oldExtent, newText) {

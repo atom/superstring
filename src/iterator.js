@@ -57,9 +57,8 @@ export default class Iterator {
         oldExtent: traversalDistance(this.inputEnd, this.inputStart),
         newExtent: traversalDistance(this.outputEnd, this.outputStart),
       }
-      if (this.currentNode.newText != null) {
-        change.newText = this.currentNode.newText
-      }
+      if (this.currentNode.newText != null) change.newText = this.currentNode.newText
+      if (this.currentNode.oldText != null) change.oldText = this.currentNode.oldText
 
       changes.push(change)
     }
@@ -97,6 +96,10 @@ export default class Iterator {
 
   getNewText () {
     return this.currentNode.newText
+  }
+
+  getOldText () {
+    return this.currentNode.oldText
   }
 
   insertSpliceBoundary (boundaryOutputPosition, spliceStartNode) {
@@ -147,11 +150,16 @@ export default class Iterator {
     if (this.rightAncestor && this.rightAncestor.isChangeEnd) {
       this.currentNode.isChangeStart = true
       this.currentNode.isChangeEnd = true
-      let {newText} = this.rightAncestor
+      let {newText, oldText} = this.rightAncestor
       if (newText != null) {
         let boundaryIndex = characterIndexForPoint(newText, traversalDistance(boundaryOutputPosition, this.leftAncestorOutputPosition))
         if (insertingStart) this.currentNode.newText = newText.substring(0, boundaryIndex)
         this.rightAncestor.newText = newText.substring(boundaryIndex)
+      }
+      if (oldText != null) {
+        let boundaryIndex = characterIndexForPoint(oldText, traversalDistance(boundaryOutputPosition, this.leftAncestorOutputPosition))
+        this.currentNode.oldText = oldText.substring(0, boundaryIndex)
+        this.rightAncestor.oldText = oldText.substring(boundaryIndex)
       }
     }
 
