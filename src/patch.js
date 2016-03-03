@@ -35,7 +35,7 @@ export default class Patch {
     return new Patch({cachedChanges: invertedChanges})
   }
 
-  static withSingleChange (change) {
+  static hunk (change) {
     let changes = [{
       oldStart: change.newStart,
       newStart: change.newStart,

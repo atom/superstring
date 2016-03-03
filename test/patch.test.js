@@ -37,16 +37,16 @@ describe('Patch', function () {
     assert.throws(() => invertedPatch.splice({row: 0, column: 0}, {row: 1, column: 0}, {row: 2, column: 0}))
   })
 
-  it('provides a read-only view of a patch representing a single change', function () {
-    let singleChangePatch = Patch.withSingleChange({
+  it('provides a read-only view of a patch representing a single hunk', function () {
+    let hunk = Patch.hunk({
       newStart: {row: 0, column: 3},
       oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 7},
       newText: 'ciao', oldText: 'hello'
     })
-    assert.deepEqual(singleChangePatch.getChanges(), [
+    assert.deepEqual(hunk.getChanges(), [
       {oldStart: {row: 0, column: 3}, newStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 7}, newText: 'ciao', oldText: 'hello'}
     ])
-    assert.throws(() => singleChangePatch.splice({row: 0, column: 0}, {row: 1, column: 0}, {row: 2, column: 0}))
+    assert.throws(() => hunk.splice({row: 0, column: 0}, {row: 1, column: 0}, {row: 2, column: 0}))
   })
 
   it('correctly records basic non-overlapping splices', function () {
