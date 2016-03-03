@@ -8,6 +8,17 @@ This data structure efficiently represents a transformation from input to output
 # clone this repository
 git clone https://github.com/atom/atom-patch
 
+cd atom-patch
+npm install
+```
+
+Use `npm test` or `npm run tdd` to run the test suite.
+
+### Recompiling Patch's Flatbuffer Schema
+
+`Patch` uses [flat buffers](https://google.github.io/flatbuffers/) to represent its serialized state. If you want to make any change to the underlying schema you have to download and compile `flatc` first:
+
+```bash
 # clone flatbuffers repository and checkout the version tested with this library
 git clone https://github.com/google/flatbuffers
 git checkout 959866b
@@ -16,26 +27,16 @@ git checkout 959866b
 pushd flatbuffers/build/XCode/
 xcodebuild
 popd
-
-cd atom-patch
-npm install
 ```
 
-Please, note that we have included a patched version of the flatbuffers
-javascript library under `vendor/flatbuffers.js`, because the original one
-doesn't play well with Node.js `require`.
-
-### Recompiling Patch's Flatbuffer Schema
-
-You can recompile `src/serialization-schema.fbs` by running:
+This will create a `flatc` executable in flatbuffers top level directory. You can recompile `src/serialization-schema.fbs` by running:
 
 ```bash
-pushd src
-../../flatbuffers/flatc --js serialization-schema.fbs
-popd
+cd atom-patch
+../flatbuffers/flatc -o src --js serialization-schema.fbs
 ```
 
-Then, you will have to change that file's last line to:
+After you do that, please make sure to to change the generated file's last line to:
 
 ```diff
 // Exports for Node.js and RequireJS
@@ -43,6 +44,4 @@ Then, you will have to change that file's last line to:
 + module.exports = Serialization;
 ```
 
-### Testing
-
-You can use `npm test` or `npm run tdd` to run the test suite.
+Please, note that we have included a patched version of the flatbuffers javascript library under vendor/flatbuffers.js because the original one has the same problem.
