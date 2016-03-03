@@ -24,18 +24,13 @@ export default class Patch {
   }
 
   static invert (patch) {
-    let changes = patch.getChanges()
-    let invertedChanges = []
-    for (let change of changes) {
-      invertedChanges.push({
-        oldStart: change.newStart,
-        newStart: change.oldStart,
-        oldExtent: change.newExtent,
-        newExtent: change.oldExtent,
-        oldText: change.newText,
-        newText: change.oldText
-      })
-    }
+    let invertedChanges = patch.getChanges().map((change) => {
+      return {
+        oldStart: change.newStart, newStart: change.oldStart,
+        oldExtent: change.newExtent, newExtent: change.oldExtent,
+        oldText: change.newText, newText: change.oldText
+      }
+    })
 
     return new Patch({cachedChanges: invertedChanges})
   }

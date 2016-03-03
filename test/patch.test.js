@@ -40,10 +40,8 @@ describe('Patch', function () {
   it('provides a read-only view of a patch representing a single change', function () {
     let singleChangePatch = Patch.withSingleChange({
       newStart: {row: 0, column: 3},
-      oldExtent: {row: 0, column: 5},
-      newExtent: {row: 0, column: 7},
-      newText: 'ciao',
-      oldText: 'hello'
+      oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 7},
+      newText: 'ciao', oldText: 'hello'
     })
     assert.deepEqual(singleChangePatch.getChanges(), [
       {oldStart: {row: 0, column: 3}, newStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 7}, newText: 'ciao', oldText: 'hello'}
