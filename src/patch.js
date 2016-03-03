@@ -1,5 +1,5 @@
 import {ZERO_POINT, traverse, traversalDistance, min as minPoint, isZero as isZeroPoint, compare as comparePoints} from './point-helpers'
-import {getExtent} from './text-helpers'
+import {getExtent, characterIndexForPoint} from './text-helpers'
 import Iterator from './iterator'
 import {Builder as FlatBufferBuilder} from '../vendor/flatbuffers'
 import {Patch as SerializedPatch, Change as SerializedChange, Point as SerializedPoint} from './serialization-schema_generated'
@@ -11,13 +11,13 @@ export default class Patch {
       let changes = patches[index].getChanges()
       if ((index & 1) === 0) { // flip
         for (let i = 0; i < changes.length; i++) {
-          let {newStart, oldExtent, newExtent, newText} = changes[i]
-          composedPatch.splice(newStart, oldExtent, newExtent, {text: newText})
+          let {newStart, oldExtent, newExtent, oldText, newText} = changes[i]
+          composedPatch.splice(newStart, oldExtent, newExtent, {oldText, newText})
         }
       } else { // flop
         for (let i = changes.length - 1; i >= 0; i--) {
-          let {oldStart, oldExtent, newExtent, newText} = changes[i]
-          composedPatch.splice(oldStart, oldExtent, newExtent, {text: newText})
+          let {oldStart, oldExtent, newExtent, oldText, newText} = changes[i]
+          composedPatch.splice(oldStart, oldExtent, newExtent, {oldText, newText})
         }
       }
     }
@@ -124,11 +124,11 @@ export default class Patch {
     }
   }
 
-  spliceWithText (newStart, oldExtent, newText, options) {
-    this.splice(newStart, oldExtent, getExtent(newText), {text: newText})
+  spliceWithText (newStart, oldText, newText) {
+    this.splice(newStart, getExtent(oldText), getExtent(newText), {oldText, newText})
   }
 
-  splice (newStart, oldExtent, newExtent, options) {
+  splice (newStart, oldExtent, newExtent, options = {}) {
     if (isZeroPoint(oldExtent) && isZeroPoint(newExtent)) return
 
     let oldEnd = traverse(newStart, oldExtent)
@@ -143,19 +143,19 @@ export default class Patch {
     this.splayNode(endNode)
     if (endNode.left !== startNode) this.rotateNodeRight(startNode)
 
+    endNode.outputExtent = traverse(newEnd, traversalDistance(endNode.outputExtent, endNode.outputLeftExtent))
+    endNode.outputLeftExtent = newEnd
+    if (options.newText != null) endNode.newText = options.newText
+    if (options.oldText != null) endNode.oldText = this.replaceChangedText(options.oldText, startNode, endNode)
+
     startNode.right = null
     startNode.inputExtent = startNode.inputLeftExtent
     startNode.outputExtent = startNode.outputLeftExtent
 
-    endNode.outputExtent = traverse(newEnd, traversalDistance(endNode.outputExtent, endNode.outputLeftExtent))
-    endNode.outputLeftExtent = newEnd
-    endNode.newText = options && options.text
-
     if (endNode.isChangeStart) {
       let rightAncestor = this.bubbleNodeDown(endNode)
-      if (endNode.newText != null) {
-        rightAncestor.newText = endNode.newText + rightAncestor.newText
-      }
+      if (endNode.newText != null) rightAncestor.newText = endNode.newText + rightAncestor.newText
+      if (endNode.oldText != null) rightAncestor.oldText = endNode.oldText + rightAncestor.oldText
       this.deleteNode(endNode)
     } else if (comparePoints(endNode.outputLeftExtent, startNode.outputLeftExtent) === 0
         && comparePoints(endNode.inputLeftExtent, startNode.inputLeftExtent) === 0) {
@@ -165,13 +165,53 @@ export default class Patch {
 
     if (startNode.isChangeStart && startNode.isChangeEnd) {
       let rightAncestor = this.bubbleNodeDown(startNode) || this.root
-      if (startNode.newText != null) {
-        rightAncestor.newText = startNode.newText + rightAncestor.newText
-      }
+      if (startNode.newText != null) rightAncestor.newText = startNode.newText + rightAncestor.newText
+      if (startNode.oldText != null) rightAncestor.oldText = startNode.oldText + rightAncestor.oldText
       this.deleteNode(startNode)
     }
 
     this.cachedChanges = null
+  }
+
+  replaceChangedText (oldText, startNode, endNode) {
+    let replacedText = ""
+    let lastChangeEnd = ZERO_POINT
+    for (let change of this.changesForSubtree(startNode.right)) {
+      if (change.start) {
+        replacedText += oldText.substring(
+          characterIndexForPoint(oldText, lastChangeEnd),
+          characterIndexForPoint(oldText, change.start)
+        )
+      } else if (change.end) {
+        replacedText += change.oldText
+        lastChangeEnd = change.end
+      }
+    }
+
+    if (endNode.oldText == null) {
+      replacedText += oldText.substring(characterIndexForPoint(oldText, lastChangeEnd))
+    } else {
+      replacedText += endNode.oldText
+    }
+
+    return replacedText
+  }
+
+  changesForSubtree (node, outputDistance = ZERO_POINT, changes = []) {
+    if (node == null) return changes
+
+    this.changesForSubtree(node.left, outputDistance, changes)
+    let change = {}
+    let outputLeftExtent = traverse(outputDistance, node.outputLeftExtent)
+    if (node.isChangeStart) change.start = outputLeftExtent
+    if (node.isChangeEnd) {
+      change.end = outputLeftExtent
+      change.oldText = node.oldText
+    }
+    changes.push(change)
+    this.changesForSubtree(node.right, outputLeftExtent, changes)
+
+    return changes
   }
 
   getChanges () {
