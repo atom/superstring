@@ -5,7 +5,7 @@ import TestDocument from './helpers/test-document'
 import './helpers/add-to-html-methods'
 
 describe('Patch', function () {
-  it('correctly composes changes from multiple patches', function () {
+  it('provides a read-only view on the composition of multiple patches', function () {
     let patches = [new Patch(), new Patch(), new Patch()]
     patches[0].spliceWithText({row: 0, column: 3}, 'ciao', 'hello')
     patches[0].spliceWithText({row: 1, column: 1}, '', 'hey')
@@ -13,12 +13,40 @@ describe('Patch', function () {
     patches[1].splice({row: 0, column: 0}, {row: 0, column: 0}, {row: 3, column: 0})
     patches[2].spliceWithText({row: 4, column: 2}, 'so', 'ho')
 
-    assert.deepEqual(Patch.compose(patches), [
+    let composedPatch = Patch.compose(patches)
+    assert.deepEqual(composedPatch.getChanges(), [
       {oldStart: {row: 0, column: 0}, newStart: {row: 0, column: 0}, oldExtent: {row: 0, column: 0}, newExtent: {row: 3, column: 0}},
       {oldStart: {row: 0, column: 3}, newStart: {row: 3, column: 3}, oldExtent: {row: 0, column: 4}, newExtent: {row: 0, column: 5}, newText: 'hello', oldText: 'ciao'},
       {oldStart: {row: 0, column: 14}, newStart: {row: 3, column: 15}, oldExtent: {row: 0, column: 10}, newExtent: {row: 0, column: 0}},
       {oldStart: {row: 1, column: 1}, newStart: {row: 4, column: 1}, oldExtent: {row: 0, column: 0}, newExtent: {row: 0, column: 3}, newText: 'hho', oldText: ''}
     ])
+
+    assert.throws(() => composedPatch.splice({row: 0, column: 0}, {row: 1, column: 0}, {row: 2, column: 0}))
+  })
+
+  it('provides a read-only view on the inverse of a patch', function () {
+    let patch = new Patch()
+    patch.spliceWithText({row: 0, column: 3}, 'ciao', 'hello')
+    patch.spliceWithText({row: 0, column: 10}, 'quick', 'world')
+
+    let invertedPatch = Patch.invert(patch)
+    assert.deepEqual(invertedPatch.getChanges(), [
+      {oldStart: {row: 0, column: 3}, newStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 4}, newText: 'ciao', oldText: 'hello'},
+      {oldStart: {row: 0, column: 10}, newStart: {row: 0, column: 9}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 5}, newText: 'quick', oldText: 'world'}
+    ])
+    assert.throws(() => invertedPatch.splice({row: 0, column: 0}, {row: 1, column: 0}, {row: 2, column: 0}))
+  })
+
+  it('provides a read-only view of a patch representing a single hunk', function () {
+    let hunk = Patch.hunk({
+      newStart: {row: 0, column: 3},
+      oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 7},
+      newText: 'ciao', oldText: 'hello'
+    })
+    assert.deepEqual(hunk.getChanges(), [
+      {oldStart: {row: 0, column: 3}, newStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 7}, newText: 'ciao', oldText: 'hello'}
+    ])
+    assert.throws(() => hunk.splice({row: 0, column: 0}, {row: 1, column: 0}, {row: 2, column: 0}))
   })
 
   it('correctly records basic non-overlapping splices', function () {
