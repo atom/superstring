@@ -22,7 +22,32 @@ export default class Patch {
       }
     }
 
-    return composedPatch.getChanges()
+    return new Patch({cachedChanges: composedPatch.getChanges()})
+  }
+
+  static invert (patch) {
+    let invertedChanges = patch.getChanges().map((change) => {
+      return {
+        oldStart: change.newStart, newStart: change.oldStart,
+        oldExtent: change.newExtent, newExtent: change.oldExtent,
+        oldText: change.newText, newText: change.oldText
+      }
+    })
+
+    return new Patch({cachedChanges: invertedChanges})
+  }
+
+  static hunk (change) {
+    let changes = [{
+      oldStart: change.newStart,
+      newStart: change.newStart,
+      oldExtent: change.oldExtent,
+      newExtent: change.newExtent,
+      oldText: change.oldText,
+      newText: change.newText
+    }]
+
+    return new Patch({cachedChanges: changes})
   }
 
   static deserialize (serializedPatch) {
