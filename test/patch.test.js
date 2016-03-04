@@ -13,7 +13,7 @@ describe('Patch', function () {
     patch.splice({row: 0, column: 0}, {row: 0, column: 0}, {row: 3, column: 0})
     patch.spliceWithText({row: 4, column: 2}, 'hi', 'ho')
 
-    let deserializedPatch = Patch.deserialize(patch.serialize())
+    let deserializedPatch = Patch.deserialize(JSON.parse(JSON.stringify(patch.serialize())))
     assert.deepEqual(patch.getChanges(), deserializedPatch.getChanges())
     assert.throws(() => deserializedPatch.splice({row: 0, column: 0}, {row: 1, column: 0}, {row: 0, column: 3}))
   })
