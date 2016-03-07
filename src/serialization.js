@@ -1,7 +1,7 @@
 import FlatBuffers from '../vendor/flatbuffers'
 import Schema from './serialization-schema_generated'
 
-function deserializeChanges (serializedChanges) {
+export function deserializeChanges (serializedChanges) {
   let buffer = new FlatBuffers.ByteBuffer(serializedChanges.bytes)
   buffer.setPosition(serializedChanges.position)
   let patch = Schema.Patch.getRootAsPatch(buffer)
@@ -29,7 +29,7 @@ function deserializeChanges (serializedChanges) {
   return changes
 }
 
-function serializeChanges (changesToSerialize) {
+export function serializeChanges (changesToSerialize) {
   let builder = new FlatBuffers.Builder(1)
   let changes = changesToSerialize.map(({oldStart, newStart, oldExtent, newExtent, oldText, newText}) => {
     let serializedNewText, serializedOldText
@@ -52,5 +52,3 @@ function serializeChanges (changesToSerialize) {
   let buffer = builder.dataBuffer()
   return {position: buffer.position(), bytes: buffer.bytes()}
 }
-
-export default {serializeChanges, deserializeChanges}

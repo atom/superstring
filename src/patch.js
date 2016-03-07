@@ -1,7 +1,7 @@
 import {ZERO_POINT, traverse, traversalDistance, min as minPoint, isZero as isZeroPoint, compare as comparePoints} from './point-helpers'
 import {getExtent, characterIndexForPoint} from './text-helpers'
 import Iterator from './iterator'
-import Serialization from './serialization'
+import {serializeChanges, deserializeChanges} from './serialization'
 
 export default class Patch {
   static compose (patches) {
@@ -66,7 +66,7 @@ export default class Patch {
 
   serialize () {
     if (this.serializedChanges == null) {
-      this.serializedChanges = Serialization.serializeChanges(this.getChanges())
+      this.serializedChanges = serializeChanges(this.getChanges())
       this.freeze()
     }
 
@@ -216,7 +216,7 @@ export default class Patch {
       if (this.serializedChanges == null) {
         this.cachedChanges = this.iterator.getChanges()
       } else {
-        this.cachedChanges = Serialization.deserializeChanges(this.serializedChanges)
+        this.cachedChanges = deserializeChanges(this.serializedChanges)
       }
     }
 
