@@ -5,6 +5,19 @@ import TestDocument from './helpers/test-document'
 import './helpers/add-to-html-methods'
 
 describe('Patch', function () {
+  it('correctly serializes and deserializes changes', function () {
+    let patch = new Patch
+    patch.spliceWithText({row: 0, column: 3}, 'abcd', 'hello')
+    patch.spliceWithText({row: 1, column: 1}, '', 'hey')
+    patch.splice({row: 0, column: 15}, {row: 0, column: 10}, {row: 0, column: 0})
+    patch.splice({row: 0, column: 0}, {row: 0, column: 0}, {row: 3, column: 0})
+    patch.spliceWithText({row: 4, column: 2}, 'hi', 'ho')
+
+    let deserializedPatch = Patch.deserialize(JSON.parse(JSON.stringify(patch.serialize())))
+    assert.deepEqual(patch.getChanges(), deserializedPatch.getChanges())
+    assert.throws(() => deserializedPatch.splice({row: 0, column: 0}, {row: 1, column: 0}, {row: 0, column: 3}))
+  })
+
   it('provides a read-only view on the composition of multiple patches', function () {
     let patches = [new Patch(), new Patch(), new Patch()]
     patches[0].spliceWithText({row: 0, column: 3}, 'ciao', 'hello')

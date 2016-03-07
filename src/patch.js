@@ -1,6 +1,7 @@
 import {ZERO_POINT, traverse, traversalDistance, min as minPoint, isZero as isZeroPoint, compare as comparePoints} from './point-helpers'
 import {getExtent, characterIndexForPoint} from './text-helpers'
 import Iterator from './iterator'
+import {serializeChanges, deserializeChanges} from './serialization'
 
 export default class Patch {
   static compose (patches) {
@@ -48,15 +49,32 @@ export default class Patch {
     return new Patch({cachedChanges: changes})
   }
 
+  static deserialize (serializedChanges) {
+    return new Patch({serializedChanges})
+  }
+
   constructor (params = {}) {
     this.root = null
     this.nodesCount = 0
     this.iterator = this.buildIterator()
-    this.cachedChanges = null
-    if (params.cachedChanges) {
-      this.cachedChanges = params.cachedChanges
-      this.splice = function () { throw new Error("Cannot splice into a read-only Patch!") }
+    this.cachedChanges = params.cachedChanges
+    this.serializedChanges = params.serializedChanges
+    if (params.cachedChanges || params.serializedChanges) {
+      this.freeze()
     }
+  }
+
+  serialize () {
+    if (this.serializedChanges == null) {
+      this.serializedChanges = serializeChanges(this.getChanges())
+      this.freeze()
+    }
+
+    return this.serializedChanges
+  }
+
+  freeze () {
+    this.splice = function () { throw new Error("Cannot splice into a read-only Patch!") }
   }
 
   buildIterator () {
@@ -195,7 +213,11 @@ export default class Patch {
 
   getChanges () {
     if (this.cachedChanges == null) {
-      this.cachedChanges = this.iterator.getChanges()
+      if (this.serializedChanges == null) {
+        this.cachedChanges = this.iterator.getChanges()
+      } else {
+        this.cachedChanges = deserializeChanges(this.serializedChanges)
+      }
     }
 
     return this.cachedChanges
