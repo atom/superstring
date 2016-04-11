@@ -447,4 +447,20 @@ void MarkerIndex::PopulateSpliceInvalidationSets(SpliceResult *invalidated, cons
     invalidated->inside.insert(id);
     invalidated->overlap.insert(id);
   }
+
+  if (!is_insertion) {
+    for (MarkerId id : start_node->start_marker_ids) {
+      if (exclusive_marker_ids.count(id)) {
+        invalidated->overlap.insert(id);
+        if (ending_inside_splice.count(id) || end_node->end_marker_ids.count(id)) invalidated->surround.insert(id);
+      }
+    }
+
+    for (MarkerId id : end_node->end_marker_ids) {
+      if (exclusive_marker_ids.count(id)) {
+        invalidated->overlap.insert(id);
+        if (starting_inside_splice.count(id) || start_node->start_marker_ids.count(id)) invalidated->surround.insert(id);
+      }
+    }
+  }
 }
