@@ -340,6 +340,7 @@ for (let [name, MarkerIndex] of [['js', JSMarkerIndex], ['native', NativeMarkerI
         let spliceOldEnd = traverse(spliceStart, oldExtent)
         let spliceNewEnd = traverse(spliceStart, newExtent)
         let spliceDelta = traversal(newExtent, oldExtent)
+        let isInsertion = isZero(oldExtent)
 
         let invalidated = {
           touch: new Set,
@@ -350,12 +351,19 @@ for (let [name, MarkerIndex] of [['js', JSMarkerIndex], ['native', NativeMarkerI
 
         for (let marker of markers) {
           if (compare(spliceStart, marker.end) <= 0 && compare(marker.start, spliceOldEnd) <= 0) {
+            let markerIsInsideSplice =
+              compare(spliceStart, marker.end) !== 0 && compare(spliceOldEnd, marker.start) !== 0
+            let markerStartsWithinSplice =
+              (compare(spliceStart, marker.start) < 0 && compare(marker.start, spliceOldEnd) < 0) ||
+              (!isInsertion && marker.exclusive && compare(spliceStart, marker.start) === 0)
+            let markerEndsWithinSplice =
+              (compare(spliceStart, marker.end) < 0 && compare(marker.end, spliceOldEnd) < 0) ||
+              (!isInsertion && marker.exclusive && compare(spliceOldEnd, marker.end) === 0)
+
             invalidated.touch.add(marker.id)
-            if (compare(spliceStart, marker.end) !== 0 && compare(spliceOldEnd, marker.start) !== 0) {
+            if (markerIsInsideSplice) {
               invalidated.inside.add(marker.id)
             }
-            let markerStartsWithinSplice = compare(spliceStart, marker.start) < 0 && compare(marker.start, spliceOldEnd) < 0
-            let markerEndsWithinSplice = compare(spliceStart, marker.end) < 0 && compare(marker.end, spliceOldEnd) < 0
             if (markerStartsWithinSplice || markerEndsWithinSplice) {
               invalidated.overlap.add(marker.id)
             }

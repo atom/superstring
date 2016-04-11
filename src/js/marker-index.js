@@ -149,10 +149,9 @@ export default class MarkerIndex {
       })
     }
 
-    let startingInsideSplice, endingInsideSplice
+    let startingInsideSplice = new Set
+    let endingInsideSplice = new Set
     if (startNode.right) {
-      startingInsideSplice = new Set
-      endingInsideSplice = new Set
       this.getStartingAndEndingMarkersWithinSubtree(startNode.right, startingInsideSplice, endingInsideSplice)
     }
 
@@ -410,17 +409,31 @@ export default class MarkerIndex {
       invalidated.touch.add(markerId)
       invalidated.inside.add(markerId)
     })
-    if (startingInsideSplice && endingInsideSplice) {
-      startingInsideSplice.forEach(function (markerId) {
-        invalidated.touch.add(markerId)
-        invalidated.inside.add(markerId)
+    startingInsideSplice.forEach(function (markerId) {
+      invalidated.touch.add(markerId)
+      invalidated.inside.add(markerId)
+      invalidated.overlap.add(markerId)
+      if (endingInsideSplice.has(markerId)) invalidated.surround.add(markerId)
+    })
+    endingInsideSplice.forEach(function (markerId) {
+      invalidated.touch.add(markerId)
+      invalidated.inside.add(markerId)
+      invalidated.overlap.add(markerId)
+    })
+
+    if (!isInsertion) {
+      startNode.startMarkerIds.forEach(markerId => {
+        if (!this.isExclusive(markerId)) return
+
         invalidated.overlap.add(markerId)
-        if (endingInsideSplice.has(markerId)) invalidated.surround.add(markerId)
+        if (endingInsideSplice.has(markerId) || endNode.endMarkerIds.has(markerId)) invalidated.surround.add(markerId)
       })
-      endingInsideSplice.forEach(function (markerId) {
-        invalidated.touch.add(markerId)
-        invalidated.inside.add(markerId)
+
+      endNode.endMarkerIds.forEach(markerId => {
+        if (!this.isExclusive(markerId)) return
+
         invalidated.overlap.add(markerId)
+        if (startingInsideSplice.has(markerId) || startNode.startMarkerIds.has(markerId)) invalidated.surround.add(markerId)
       })
     }
   }
