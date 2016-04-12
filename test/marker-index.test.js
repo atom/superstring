@@ -355,9 +355,13 @@ for (let [name, MarkerIndex] of [['js', JSMarkerIndex], ['native', NativeMarkerI
           if (compare(spliceStart, marker.end) <= 0 && compare(marker.start, spliceOldEnd) <= 0) {
             let spliceIntersectsMarker, markerStartsWithinSplice, markerEndsWithinSplice
             if (marker.exclusive) {
-              spliceIntersectsMarker = (isEmpty && !isInsertion) || (compare(spliceStart, marker.end) < 0 && compare(spliceOldEnd, marker.start) > 0)
-              markerStartsWithinSplice = (isEmpty && !isInsertion) || (compare(spliceStart, marker.start) <= 0 && compare(marker.start, spliceOldEnd) < 0)
-              markerEndsWithinSplice = (isEmpty && !isInsertion) || (compare(spliceStart, marker.end) < 0 && compare(marker.end, spliceOldEnd) <= 0)
+              spliceIntersectsMarker = compare(spliceStart, marker.end) < 0 && compare(spliceOldEnd, marker.start) > 0
+              markerStartsWithinSplice =
+                compare(spliceOldEnd, marker.start) > 0 &&
+                (compare(spliceStart, marker.start) < 0 || (!isEmpty && compare(spliceStart, marker.start) === 0))
+              markerEndsWithinSplice =
+                compare(spliceStart, marker.end) < 0 &&
+                (compare(spliceOldEnd, marker.end) > 0 || (!isEmpty && compare(spliceOldEnd, marker.end) === 0))
             } else {
               spliceIntersectsMarker = true
               markerStartsWithinSplice = compare(spliceStart, marker.start) < 0 && compare(marker.start, spliceOldEnd) <= 0
@@ -378,12 +382,12 @@ for (let [name, MarkerIndex] of [['js', JSMarkerIndex], ['native', NativeMarkerI
 
           let moveMarkerStart =
             (compare(spliceStart, marker.start) < 0) ||
-            (marker.exclusive && (compare(spliceStart, marker.start) === 0 || compare(spliceOldEnd, marker.start) === 0))
+              (marker.exclusive && (!isEmpty || isInsertion) && compare(spliceStart, marker.start) === 0)
 
           let moveMarkerEnd =
-            compare(spliceStart, marker.end) < 0 ||
-            (moveMarkerStart && isEmpty) ||
-            (!marker.exclusive && (compare(spliceStart, marker.end) === 0 || compare(spliceOldEnd, marker.end) === 0))
+            moveMarkerStart ||
+              (compare(spliceStart, marker.end) < 0) ||
+                (!marker.exclusive && compare(spliceStart, marker.end) === 0)
 
           if (moveMarkerStart) {
             if (compare(spliceOldEnd, marker.start) <= 0) { // splice precedes marker start

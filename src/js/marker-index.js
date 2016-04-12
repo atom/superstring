@@ -387,25 +387,25 @@ export default class MarkerIndex {
 
   getMarkersBetweenNodes (startNode, endNode, startingInside, endingInside) {
     startNode.startMarkerIds.forEach(markerId => {
-      if (this.isExclusive(markerId)) {
+      if (this.isExclusive(markerId) && !startNode.endMarkerIds.has(markerId)) {
         startingInside.add(markerId)
       }
     })
 
     endNode.startMarkerIds.forEach(markerId => {
-      if (!this.isExclusive(markerId) || endNode.endMarkerIds.has(markerId)) {
+      if (!this.isExclusive(markerId)) {
         startingInside.add(markerId)
       }
     })
 
     startNode.endMarkerIds.forEach(markerId => {
-      if (!this.isExclusive(markerId) || startNode.startMarkerIds.has(markerId)) {
+      if (!this.isExclusive(markerId)) {
         endingInside.add(markerId)
       }
     })
 
     endNode.endMarkerIds.forEach(markerId => {
-      if (this.isExclusive(markerId)) {
+      if (this.isExclusive(markerId) && !endNode.startMarkerIds.has(markerId)) {
         endingInside.add(markerId)
       }
     })
