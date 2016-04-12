@@ -151,11 +151,8 @@ export default class MarkerIndex {
 
     let startingInsideSplice = new Set
     let endingInsideSplice = new Set
-    if (startNode.right) {
-      this.getStartingAndEndingMarkersWithinSubtree(startNode.right, startingInsideSplice, endingInsideSplice)
-      startNode.right = null
-    }
 
+    this.getStartingAndEndingMarkersWithinSubtree(startNode.right, startingInsideSplice, endingInsideSplice)
     if (!isInsertion) {
       startNode.startMarkerIds.forEach(markerId => {
         if (this.isExclusive(markerId)) {
@@ -200,6 +197,7 @@ export default class MarkerIndex {
 
     this.populateSpliceInvalidationSets(invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice, isInsertion)
 
+    startNode.right = null
     endNode.leftExtent = traverse(start, newExtent)
 
     if (compare(startNode.leftExtent, endNode.leftExtent) === 0) {
@@ -412,14 +410,12 @@ export default class MarkerIndex {
   }
 
   getStartingAndEndingMarkersWithinSubtree (node, startMarkerIds, endMarkerIds) {
+    if (node == null) return
+
     addToSet(startMarkerIds, node.startMarkerIds)
     addToSet(endMarkerIds, node.endMarkerIds)
-    if (node.left) {
-      this.getStartingAndEndingMarkersWithinSubtree(node.left, startMarkerIds, endMarkerIds)
-    }
-    if (node.right) {
-      this.getStartingAndEndingMarkersWithinSubtree(node.right, startMarkerIds, endMarkerIds)
-    }
+    this.getStartingAndEndingMarkersWithinSubtree(node.left, startMarkerIds, endMarkerIds)
+    this.getStartingAndEndingMarkersWithinSubtree(node.right, startMarkerIds, endMarkerIds)
   }
 
   populateSpliceInvalidationSets (invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice, isInsertion) {
