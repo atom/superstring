@@ -128,17 +128,21 @@ export default class MarkerIndex {
     endNode.priority = -2
     this.bubbleNodeUp(endNode)
 
+    let startingInsideSplice = new Set
+    let endingInsideSplice = new Set
+
     if (isInsertion) {
       startNode.startMarkerIds.forEach(markerId => {
-        if (this.exclusiveMarkers.has(markerId)) {
+        if (this.isExclusive(markerId)) {
           startNode.startMarkerIds.delete(markerId)
           startNode.rightMarkerIds.delete(markerId)
           endNode.startMarkerIds.add(markerId)
           this.startNodesById[markerId] = endNode
         }
       })
+
       startNode.endMarkerIds.forEach(markerId => {
-        if (!this.exclusiveMarkers.has(markerId) || endNode.startMarkerIds.has(markerId)) {
+        if (!this.isExclusive(markerId) || endNode.startMarkerIds.has(markerId)) {
           startNode.endMarkerIds.delete(markerId)
           if (!endNode.startMarkerIds.has(markerId)) {
             startNode.rightMarkerIds.add(markerId)
@@ -147,55 +151,27 @@ export default class MarkerIndex {
           this.endNodesById[markerId] = endNode
         }
       })
-    }
+    } else {
+      this.getMarkersBetweenNodes(startNode, endNode, startingInsideSplice, endingInsideSplice)
 
-    let startingInsideSplice = new Set
-    let endingInsideSplice = new Set
-
-    this.getStartingAndEndingMarkersWithinSubtree(startNode.right, startingInsideSplice, endingInsideSplice)
-    if (!isInsertion) {
-      startNode.startMarkerIds.forEach(markerId => {
-        if (this.isExclusive(markerId)) {
-          startingInsideSplice.add(markerId)
-        }
+      startingInsideSplice.forEach(markerId => {
+        startNode.startMarkerIds.delete(markerId)
+        startNode.rightMarkerIds.delete(markerId)
+        endNode.startMarkerIds.add(markerId)
+        this.startNodesById[markerId] = endNode
       })
 
-      startNode.endMarkerIds.forEach(markerId => {
-        if (!this.isExclusive(markerId) || startNode.startMarkerIds.has(markerId)) {
-          endingInsideSplice.add(markerId)
+      endingInsideSplice.forEach(markerId => {
+        startNode.endMarkerIds.delete(markerId)
+        endNode.endMarkerIds.add(markerId)
+        if (!startingInsideSplice.has(markerId)) {
+          startNode.rightMarkerIds.add(markerId)
         }
-      })
-
-      endNode.startMarkerIds.forEach(markerId => {
-        if (!this.isExclusive(markerId) || endNode.endMarkerIds.has(markerId)) {
-          startingInsideSplice.add(markerId)
-        }
-      })
-
-      endNode.endMarkerIds.forEach(markerId => {
-        if (this.isExclusive(markerId)) {
-          endingInsideSplice.add(markerId)
-        }
+        this.endNodesById[markerId] = endNode
       })
     }
 
-    startingInsideSplice.forEach(markerId => {
-      startNode.startMarkerIds.delete(markerId)
-      startNode.rightMarkerIds.delete(markerId)
-      endNode.startMarkerIds.add(markerId)
-      this.startNodesById[markerId] = endNode
-    })
-
-    endingInsideSplice.forEach(markerId => {
-      startNode.endMarkerIds.delete(markerId)
-      endNode.endMarkerIds.add(markerId)
-      if (!startingInsideSplice.has(markerId)) {
-        startNode.rightMarkerIds.add(markerId)
-      }
-      this.endNodesById[markerId] = endNode
-    })
-
-    this.populateSpliceInvalidationSets(invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice, isInsertion)
+    this.populateSpliceInvalidationSets(invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice)
 
     startNode.right = null
     endNode.leftExtent = traverse(start, newExtent)
@@ -409,16 +385,44 @@ export default class MarkerIndex {
     })
   }
 
+  getMarkersBetweenNodes (startNode, endNode, startingInside, endingInside) {
+    startNode.startMarkerIds.forEach(markerId => {
+      if (this.isExclusive(markerId)) {
+        startingInside.add(markerId)
+      }
+    })
+
+    endNode.startMarkerIds.forEach(markerId => {
+      if (!this.isExclusive(markerId) || endNode.endMarkerIds.has(markerId)) {
+        startingInside.add(markerId)
+      }
+    })
+
+    startNode.endMarkerIds.forEach(markerId => {
+      if (!this.isExclusive(markerId) || startNode.startMarkerIds.has(markerId)) {
+        endingInside.add(markerId)
+      }
+    })
+
+    endNode.endMarkerIds.forEach(markerId => {
+      if (this.isExclusive(markerId)) {
+        endingInside.add(markerId)
+      }
+    })
+
+    this.getStartingAndEndingMarkersWithinSubtree(startNode.right, startingInside, endingInside)
+  }
+
   getStartingAndEndingMarkersWithinSubtree (node, startMarkerIds, endMarkerIds) {
     if (node == null) return
 
+    this.getStartingAndEndingMarkersWithinSubtree(node.left, startMarkerIds, endMarkerIds)
     addToSet(startMarkerIds, node.startMarkerIds)
     addToSet(endMarkerIds, node.endMarkerIds)
-    this.getStartingAndEndingMarkersWithinSubtree(node.left, startMarkerIds, endMarkerIds)
     this.getStartingAndEndingMarkersWithinSubtree(node.right, startMarkerIds, endMarkerIds)
   }
 
-  populateSpliceInvalidationSets (invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice, isInsertion) {
+  populateSpliceInvalidationSets (invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice) {
     addToSet(invalidated.touch, startNode.endMarkerIds)
     addToSet(invalidated.touch, endNode.startMarkerIds)
     startNode.rightMarkerIds.forEach((markerId) => {
