@@ -385,32 +385,32 @@ export default class MarkerIndex {
     })
   }
 
-  getMarkersBetweenNodes (startNode, endNode, startingInside, endingInside) {
+  getMarkersBetweenNodes (startNode, endNode, startingInsideSplice, endingInsideSplice) {
     startNode.startMarkerIds.forEach(markerId => {
       if (this.isExclusive(markerId) && !startNode.endMarkerIds.has(markerId)) {
-        startingInside.add(markerId)
+        startingInsideSplice.add(markerId)
       }
     })
 
     endNode.startMarkerIds.forEach(markerId => {
       if (!this.isExclusive(markerId)) {
-        startingInside.add(markerId)
+        startingInsideSplice.add(markerId)
       }
     })
 
     startNode.endMarkerIds.forEach(markerId => {
       if (!this.isExclusive(markerId)) {
-        endingInside.add(markerId)
+        endingInsideSplice.add(markerId)
       }
     })
 
     endNode.endMarkerIds.forEach(markerId => {
       if (this.isExclusive(markerId) && !endNode.startMarkerIds.has(markerId)) {
-        endingInside.add(markerId)
+        endingInsideSplice.add(markerId)
       }
     })
 
-    this.getStartingAndEndingMarkersWithinSubtree(startNode.right, startingInside, endingInside)
+    this.getStartingAndEndingMarkersWithinSubtree(startNode.right, startingInsideSplice, endingInsideSplice)
   }
 
   getStartingAndEndingMarkersWithinSubtree (node, startMarkerIds, endMarkerIds) {
