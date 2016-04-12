@@ -427,9 +427,7 @@ export default class MarkerIndex {
     addToSet(invalidated.touch, endNode.startMarkerIds)
     startNode.rightMarkerIds.forEach((markerId) => {
       invalidated.touch.add(markerId)
-      if (!this.isExclusive(markerId) || !startNode.startMarkerIds.has(markerId) || !endNode.endMarkerIds.has(markerId)) {
-        invalidated.inside.add(markerId)
-      }
+      invalidated.inside.add(markerId)
     })
     endNode.leftMarkerIds.forEach(function (markerId) {
       invalidated.touch.add(markerId)
