@@ -153,26 +153,52 @@ export default class MarkerIndex {
     let endingInsideSplice = new Set
     if (startNode.right) {
       this.getStartingAndEndingMarkersWithinSubtree(startNode.right, startingInsideSplice, endingInsideSplice)
-    }
-
-    this.populateSpliceInvalidationSets(invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice, isInsertion)
-
-    if (startNode.right) {
-      startingInsideSplice.forEach(markerId => {
-        endNode.startMarkerIds.add(markerId)
-        this.startNodesById[markerId] = endNode
-      })
-
-      endingInsideSplice.forEach(markerId => {
-        endNode.endMarkerIds.add(markerId)
-        if (!startingInsideSplice.has(markerId)) {
-          startNode.rightMarkerIds.add(markerId)
-        }
-        this.endNodesById[markerId] = endNode
-      })
-
       startNode.right = null
     }
+
+    if (!isInsertion) {
+      startNode.startMarkerIds.forEach(markerId => {
+        if (this.isExclusive(markerId)) {
+          startingInsideSplice.add(markerId)
+        }
+      })
+
+      startNode.endMarkerIds.forEach(markerId => {
+        if (!this.isExclusive(markerId) || startNode.startMarkerIds.has(markerId)) {
+          endingInsideSplice.add(markerId)
+        }
+      })
+
+      endNode.startMarkerIds.forEach(markerId => {
+        if (!this.isExclusive(markerId) || endNode.endMarkerIds.has(markerId)) {
+          startingInsideSplice.add(markerId)
+        }
+      })
+
+      endNode.endMarkerIds.forEach(markerId => {
+        if (this.isExclusive(markerId)) {
+          endingInsideSplice.add(markerId)
+        }
+      })
+    }
+
+    startingInsideSplice.forEach(markerId => {
+      startNode.startMarkerIds.delete(markerId)
+      startNode.rightMarkerIds.delete(markerId)
+      endNode.startMarkerIds.add(markerId)
+      this.startNodesById[markerId] = endNode
+    })
+
+    endingInsideSplice.forEach(markerId => {
+      startNode.endMarkerIds.delete(markerId)
+      endNode.endMarkerIds.add(markerId)
+      if (!startingInsideSplice.has(markerId)) {
+        startNode.rightMarkerIds.add(markerId)
+      }
+      this.endNodesById[markerId] = endNode
+    })
+
+    this.populateSpliceInvalidationSets(invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice, isInsertion)
 
     endNode.leftExtent = traverse(start, newExtent)
 
@@ -399,9 +425,9 @@ export default class MarkerIndex {
   populateSpliceInvalidationSets (invalidated, startNode, endNode, startingInsideSplice, endingInsideSplice, isInsertion) {
     addToSet(invalidated.touch, startNode.endMarkerIds)
     addToSet(invalidated.touch, endNode.startMarkerIds)
-    startNode.rightMarkerIds.forEach(function (markerId) {
+    startNode.rightMarkerIds.forEach((markerId) => {
       invalidated.touch.add(markerId)
-      if (!(isInsertion && (startNode.startMarkerIds.has(markerId) || endNode.endMarkerIds.has(markerId)))) {
+      if (!this.isExclusive(markerId) || !startNode.startMarkerIds.has(markerId) || !endNode.endMarkerIds.has(markerId)) {
         invalidated.inside.add(markerId)
       }
     })
@@ -420,21 +446,5 @@ export default class MarkerIndex {
       invalidated.inside.add(markerId)
       invalidated.overlap.add(markerId)
     })
-
-    if (!isInsertion) {
-      startNode.startMarkerIds.forEach(markerId => {
-        if (!this.isExclusive(markerId)) return
-
-        invalidated.overlap.add(markerId)
-        if (endingInsideSplice.has(markerId) || endNode.endMarkerIds.has(markerId)) invalidated.surround.add(markerId)
-      })
-
-      endNode.endMarkerIds.forEach(markerId => {
-        if (!this.isExclusive(markerId)) return
-
-        invalidated.overlap.add(markerId)
-        if (startingInsideSplice.has(markerId) || startNode.startMarkerIds.has(markerId)) invalidated.surround.add(markerId)
-      })
-    }
   }
 }
