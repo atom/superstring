@@ -353,19 +353,19 @@ for (let [name, MarkerIndex] of [['js', JSMarkerIndex], ['native', NativeMarkerI
           let isEmpty = compare(marker.start, marker.end) === 0
 
           if (compare(spliceStart, marker.end) <= 0 && compare(marker.start, spliceOldEnd) <= 0) {
-            let spliceIntersectsMarker, markerStartsWithinSplice, markerEndsWithinSplice
+            let markerStartsWithinSplice, markerEndsWithinSplice
+            let spliceIntersectsMarker = compare(spliceStart, marker.end) < 0 && compare(spliceOldEnd, marker.start) > 0
+
             if (marker.exclusive) {
-              spliceIntersectsMarker = compare(spliceStart, marker.end) < 0 && compare(spliceOldEnd, marker.start) > 0
               markerStartsWithinSplice =
-                compare(spliceOldEnd, marker.start) > 0 &&
-                (compare(spliceStart, marker.start) < 0 || (!isEmpty && compare(spliceStart, marker.start) === 0))
+                (compare(spliceStart, marker.start) < 0 || (!isEmpty && compare(spliceStart, marker.start) === 0)) &&
+                  compare(spliceOldEnd, marker.start) > 0
               markerEndsWithinSplice =
                 compare(spliceStart, marker.end) < 0 &&
-                (compare(spliceOldEnd, marker.end) > 0 || (!isEmpty && compare(spliceOldEnd, marker.end) === 0))
+                  (compare(spliceOldEnd, marker.end) > 0 || (!isEmpty && compare(spliceOldEnd, marker.end) === 0))
             } else {
-              spliceIntersectsMarker = true
-              markerStartsWithinSplice = compare(spliceStart, marker.start) < 0 && compare(marker.start, spliceOldEnd) <= 0
-              markerEndsWithinSplice = compare(spliceStart, marker.end) <= 0 && compare(marker.end, spliceOldEnd) < 0
+              markerStartsWithinSplice = compare(spliceStart, marker.start) < 0 && compare(marker.start, spliceOldEnd) < 0
+              markerEndsWithinSplice = compare(spliceStart, marker.end) < 0 && compare(marker.end, spliceOldEnd) < 0
             }
 
             invalidated.touch.add(marker.id)
@@ -387,7 +387,7 @@ for (let [name, MarkerIndex] of [['js', JSMarkerIndex], ['native', NativeMarkerI
           let moveMarkerEnd =
             moveMarkerStart ||
               (compare(spliceStart, marker.end) < 0) ||
-                (!marker.exclusive && compare(spliceStart, marker.end) === 0)
+                (!marker.exclusive && compare(spliceOldEnd, marker.end) === 0)
 
           if (moveMarkerStart) {
             if (compare(spliceOldEnd, marker.start) <= 0) { // splice precedes marker start

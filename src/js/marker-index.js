@@ -180,22 +180,6 @@ export default class MarkerIndex {
         }
       })
 
-      endNode.startMarkerIds.forEach(markerId => {
-        if (!this.isExclusive(markerId)) {
-          startingInsideSplice.add(markerId)
-        }
-      })
-
-      startNode.endMarkerIds.forEach(markerId => {
-        if (!this.isExclusive(markerId)) {
-          startNode.endMarkerIds.delete(markerId)
-          endNode.endMarkerIds.add(markerId)
-          startNode.rightMarkerIds.add(markerId)
-          this.endNodesById[markerId] = endNode
-          endingInsideSplice.add(markerId)
-        }
-      })
-
       endNode.endMarkerIds.forEach(markerId => {
         if (this.isExclusive(markerId) && !endNode.startMarkerIds.has(markerId)) {
           endingInsideSplice.add(markerId)
