@@ -128,22 +128,38 @@ SpliceResult MarkerIndex::Splice(Point start, Point old_extent, Point new_extent
       }
     }
   } else {
-    GetMarkersBetweenNodes(start_node, end_node, &starting_inside_splice, &ending_inside_splice);
+    GetStartingAndEndingMarkersWithinSubtree(start_node->right, &starting_inside_splice, &ending_inside_splice);
+
+    for (MarkerId id : ending_inside_splice) {
+      end_node->end_marker_ids.insert(id);
+      if (!starting_inside_splice.count(id)) {
+        start_node->right_marker_ids.insert(id);
+      }
+      end_nodes_by_id[id] = end_node;
+    }
+
+    for (MarkerId id : end_node->end_marker_ids) {
+      if (exclusive_marker_ids.count(id) && !end_node->start_marker_ids.count(id)) {
+        ending_inside_splice.insert(id);
+      }
+    }
 
     for (MarkerId id : starting_inside_splice) {
-      start_node->start_marker_ids.erase(id);
-      start_node->right_marker_ids.erase(id);
       end_node->start_marker_ids.insert(id);
       start_nodes_by_id[id] = end_node;
     }
 
-    for (MarkerId id : ending_inside_splice) {
-      start_node->end_marker_ids.erase(id);
-      end_node->end_marker_ids.insert(id);
-      if (starting_inside_splice.count(id) == 0) {
-        start_node->right_marker_ids.insert(id);
+    for (auto iter = start_node->start_marker_ids.begin(); iter != start_node->start_marker_ids.end();) {
+      MarkerId id = *iter;
+      if (exclusive_marker_ids.count(id) && !start_node->end_marker_ids.count(id)) {
+        start_node->start_marker_ids.erase(iter++);
+        start_node->right_marker_ids.erase(id);
+        end_node->start_marker_ids.insert(id);
+        start_nodes_by_id[id] = end_node;
+        starting_inside_splice.insert(id);
+      } else {
+        ++iter;
       }
-      end_nodes_by_id[id] = end_node;
     }
   }
 
@@ -407,34 +423,6 @@ void MarkerIndex::RotateNodeRight(Node *rotation_pivot) {
       rotation_pivot->right_marker_ids.erase(it++);
     }
   }
-}
-
-void MarkerIndex::GetMarkersBetweenNodes(const Node *start_node, const Node *end_node, unordered_set<MarkerId> *starting_inside_splice, unordered_set<MarkerId> *ending_inside_splice) {
-  for (MarkerId id : start_node->start_marker_ids) {
-    if (exclusive_marker_ids.count(id) && !start_node->end_marker_ids.count(id)) {
-      starting_inside_splice->insert(id);
-    }
-  }
-
-  for (MarkerId id : end_node->start_marker_ids) {
-    if (!exclusive_marker_ids.count(id)) {
-      starting_inside_splice->insert(id);
-    }
-  }
-
-  for (MarkerId id : start_node->end_marker_ids) {
-    if (!exclusive_marker_ids.count(id)) {
-      ending_inside_splice->insert(id);
-    }
-  }
-
-  for (MarkerId id : end_node->end_marker_ids) {
-    if (exclusive_marker_ids.count(id) && !end_node->start_marker_ids.count(id)) {
-      ending_inside_splice->insert(id);
-    }
-  }
-
-  GetStartingAndEndingMarkersWithinSubtree(start_node->right, starting_inside_splice, ending_inside_splice);
 }
 
 void MarkerIndex::GetStartingAndEndingMarkersWithinSubtree(const Node *node, unordered_set<MarkerId> *starting, unordered_set<MarkerId> *ending) {
