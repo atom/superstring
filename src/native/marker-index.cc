@@ -99,6 +99,9 @@ SpliceResult MarkerIndex::Splice(Point start, Point old_extent, Point new_extent
   end_node->priority = -2;
   BubbleNodeUp(end_node);
 
+  unordered_set<MarkerId> starting_inside_splice;
+  unordered_set<MarkerId> ending_inside_splice;
+
   if (is_insertion) {
     for (auto iter = start_node->start_marker_ids.begin(); iter != start_node->start_marker_ids.end();) {
       MarkerId id = *iter;
@@ -124,31 +127,45 @@ SpliceResult MarkerIndex::Splice(Point start, Point old_extent, Point new_extent
         ++iter;
       }
     }
-  }
-
-  unordered_set<MarkerId> starting_inside_splice;
-  unordered_set<MarkerId> ending_inside_splice;
-
-  if (start_node->right) {
+  } else {
     GetStartingAndEndingMarkersWithinSubtree(start_node->right, &starting_inside_splice, &ending_inside_splice);
-  }
-
-  PopulateSpliceInvalidationSets(&invalidated, start_node, end_node, starting_inside_splice, ending_inside_splice, is_insertion);
-
-  if (start_node->right) {
-    for (MarkerId id : starting_inside_splice) {
-      end_node->start_marker_ids.insert(id);
-      start_nodes_by_id[id] = end_node;
-    }
 
     for (MarkerId id : ending_inside_splice) {
       end_node->end_marker_ids.insert(id);
-      if (starting_inside_splice.count(id) == 0) {
+      if (!starting_inside_splice.count(id)) {
         start_node->right_marker_ids.insert(id);
       }
       end_nodes_by_id[id] = end_node;
     }
 
+    for (MarkerId id : end_node->end_marker_ids) {
+      if (exclusive_marker_ids.count(id) && !end_node->start_marker_ids.count(id)) {
+        ending_inside_splice.insert(id);
+      }
+    }
+
+    for (MarkerId id : starting_inside_splice) {
+      end_node->start_marker_ids.insert(id);
+      start_nodes_by_id[id] = end_node;
+    }
+
+    for (auto iter = start_node->start_marker_ids.begin(); iter != start_node->start_marker_ids.end();) {
+      MarkerId id = *iter;
+      if (exclusive_marker_ids.count(id) && !start_node->end_marker_ids.count(id)) {
+        start_node->start_marker_ids.erase(iter++);
+        start_node->right_marker_ids.erase(id);
+        end_node->start_marker_ids.insert(id);
+        start_nodes_by_id[id] = end_node;
+        starting_inside_splice.insert(id);
+      } else {
+        ++iter;
+      }
+    }
+  }
+
+  PopulateSpliceInvalidationSets(&invalidated, start_node, end_node, starting_inside_splice, ending_inside_splice);
+
+  if (start_node->right) {
     DeleteSubtree(start_node->right);
     start_node->right = nullptr;
   }
@@ -409,25 +426,23 @@ void MarkerIndex::RotateNodeRight(Node *rotation_pivot) {
 }
 
 void MarkerIndex::GetStartingAndEndingMarkersWithinSubtree(const Node *node, unordered_set<MarkerId> *starting, unordered_set<MarkerId> *ending) {
+  if (node == nullptr) {
+    return;
+  }
+
+  GetStartingAndEndingMarkersWithinSubtree(node->left, starting, ending);
   starting->insert(node->start_marker_ids.begin(), node->start_marker_ids.end());
   ending->insert(node->end_marker_ids.begin(), node->end_marker_ids.end());
-  if (node->left) {
-    GetStartingAndEndingMarkersWithinSubtree(node->left, starting, ending);
-  }
-  if (node->right) {
-    GetStartingAndEndingMarkersWithinSubtree(node->right, starting, ending);
-  }
+  GetStartingAndEndingMarkersWithinSubtree(node->right, starting, ending);
 }
 
-void MarkerIndex::PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const unordered_set<MarkerId> &starting_inside_splice, const unordered_set<MarkerId> &ending_inside_splice, bool is_insertion) {
+void MarkerIndex::PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const unordered_set<MarkerId> &starting_inside_splice, const unordered_set<MarkerId> &ending_inside_splice) {
   invalidated->touch.insert(start_node->end_marker_ids.begin(), start_node->end_marker_ids.end());
   invalidated->touch.insert(end_node->start_marker_ids.begin(), end_node->start_marker_ids.end());
 
   for (MarkerId id : start_node->right_marker_ids) {
     invalidated->touch.insert(id);
-    if (!(is_insertion && (start_node->start_marker_ids.count(id) > 0 || end_node->end_marker_ids.count(id) > 0))) {
-      invalidated->inside.insert(id);
-    }
+    invalidated->inside.insert(id);
   }
 
   for (MarkerId id : end_node->left_marker_ids) {

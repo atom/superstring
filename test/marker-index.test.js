@@ -340,6 +340,7 @@ for (let [name, MarkerIndex] of [['js', JSMarkerIndex], ['native', NativeMarkerI
         let spliceOldEnd = traverse(spliceStart, oldExtent)
         let spliceNewEnd = traverse(spliceStart, newExtent)
         let spliceDelta = traversal(newExtent, oldExtent)
+        let isInsertion = isZero(oldExtent)
 
         let invalidated = {
           touch: new Set,
@@ -349,13 +350,29 @@ for (let [name, MarkerIndex] of [['js', JSMarkerIndex], ['native', NativeMarkerI
         }
 
         for (let marker of markers) {
+          let isEmpty = compare(marker.start, marker.end) === 0
+
           if (compare(spliceStart, marker.end) <= 0 && compare(marker.start, spliceOldEnd) <= 0) {
+            let invalidateInside = compare(spliceStart, marker.end) < 0 && compare(spliceOldEnd, marker.start) > 0
+            let markerStartsWithinSplice, markerEndsWithinSplice
+
+            if (marker.exclusive) {
+              markerStartsWithinSplice =
+                (compare(spliceStart, marker.start) < 0 || (!isEmpty && compare(spliceStart, marker.start) === 0)) &&
+                  compare(spliceOldEnd, marker.start) > 0
+              markerEndsWithinSplice =
+                compare(spliceStart, marker.end) < 0 &&
+                  (compare(spliceOldEnd, marker.end) > 0 || (!isEmpty && compare(spliceOldEnd, marker.end) === 0))
+            } else {
+              invalidateInside = invalidateInside || ((!isEmpty || isInsertion) && (compare(spliceStart, marker.start) === 0 || compare(spliceOldEnd, marker.end) === 0))
+              markerStartsWithinSplice = compare(spliceStart, marker.start) < 0 && compare(marker.start, spliceOldEnd) < 0
+              markerEndsWithinSplice = compare(spliceStart, marker.end) < 0 && compare(marker.end, spliceOldEnd) < 0
+            }
+
             invalidated.touch.add(marker.id)
-            if (compare(spliceStart, marker.end) !== 0 && compare(spliceOldEnd, marker.start) !== 0) {
+            if (invalidateInside) {
               invalidated.inside.add(marker.id)
             }
-            let markerStartsWithinSplice = compare(spliceStart, marker.start) < 0 && compare(marker.start, spliceOldEnd) < 0
-            let markerEndsWithinSplice = compare(spliceStart, marker.end) < 0 && compare(marker.end, spliceOldEnd) < 0
             if (markerStartsWithinSplice || markerEndsWithinSplice) {
               invalidated.overlap.add(marker.id)
             }
@@ -364,9 +381,16 @@ for (let [name, MarkerIndex] of [['js', JSMarkerIndex], ['native', NativeMarkerI
             }
           }
 
-          let isEmpty = compare(marker.start, marker.end) === 0
+          let moveMarkerStart =
+            (compare(spliceStart, marker.start) < 0) ||
+              (marker.exclusive && (!isEmpty || isInsertion) && compare(spliceStart, marker.start) === 0)
 
-          if (compare(spliceStart, marker.start) < 0 || marker.exclusive && compare(spliceOldEnd, marker.start) === 0) {
+          let moveMarkerEnd =
+            moveMarkerStart ||
+              (compare(spliceStart, marker.end) < 0) ||
+                (!marker.exclusive && compare(spliceOldEnd, marker.end) === 0)
+
+          if (moveMarkerStart) {
             if (compare(spliceOldEnd, marker.start) <= 0) { // splice precedes marker start
               marker.start = traverse(spliceNewEnd, traversal(marker.start, spliceOldEnd))
             } else { // splice surrounds marker start
@@ -374,7 +398,7 @@ for (let [name, MarkerIndex] of [['js', JSMarkerIndex], ['native', NativeMarkerI
             }
           }
 
-          if (compare(spliceStart, marker.end) < 0 || (!marker.exclusive || isEmpty) && compare(spliceOldEnd, marker.end) === 0) {
+          if (moveMarkerEnd) {
             if (compare(spliceOldEnd, marker.end) <= 0) { // splice precedes marker end
               marker.end = traverse(spliceNewEnd, traversal(marker.end, spliceOldEnd))
             } else { // splice surrounds marker end
@@ -391,7 +415,7 @@ for (let [name, MarkerIndex] of [['js', JSMarkerIndex], ['native', NativeMarkerI
           let expectedSet = expectedSets[strategy]
           let actualSet = actualSets[strategy]
 
-          assert.equal(actualSet.size, expectedSet.size)
+          assert.equal(actualSet.size, expectedSet.size, `Strategy: ${strategy}. Expected: [${Array.from(expectedSet)}], Actual: [${Array.from(actualSet)}]. Seed ${seed}.`)
           for (let markerId of expectedSet) {
             assert(actualSet.has(markerId), `Expected marker ${markerId} to be invalidated via ${strategy} strategy. Seed ${seed}.`)
           }
