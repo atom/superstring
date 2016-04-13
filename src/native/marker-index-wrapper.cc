@@ -136,14 +136,17 @@ private:
     return result;
   }
 
-  static Local<Object> MarkerIdsToJS(const unordered_set<MarkerId> &marker_ids) {
-    Local<Object> js_set = Nan::To<Object>(Nan::New(set_constructor)->CallAsConstructor(0, nullptr)).ToLocalChecked();
-    Local<Object> set_add_method_local = Nan::New(set_add_method);
+  static Local<Set> MarkerIdsToJS(const unordered_set<MarkerId> &marker_ids) {
+    Isolate *isolate = v8::Isolate::GetCurrent();
+    Local<Context> context = isolate->GetCurrentContext();
+    Local<v8::Set> js_set = v8::Set::New(isolate);
 
     for (MarkerId id : marker_ids) {
-      Local<Value> argv[] {Nan::New<Integer>(id)};
-      set_add_method_local->CallAsFunction(js_set, 1, argv);
+      // Not sure why Set::Add warns if we don't use its return value, but
+      // just doing it to avoid the warning.
+      js_set = js_set->Add(context, Nan::New<Integer>(id)).ToLocalChecked();
     }
+
     return js_set;
   }
 
