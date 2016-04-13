@@ -154,20 +154,23 @@ export default class MarkerIndex {
     } else {
       this.getStartingAndEndingMarkersWithinSubtree(startNode.right, startingInsideSplice, endingInsideSplice)
 
-      startingInsideSplice.forEach(markerId => {
-        endNode.startMarkerIds.add(markerId)
-        this.startNodesById[markerId] = endNode
-        if (this.isExclusive(markerId) && endNode.endMarkerIds.has(markerId)) {
-          endingInsideSplice.add(markerId)
-        }
-      })
-
       endingInsideSplice.forEach(markerId => {
         endNode.endMarkerIds.add(markerId)
         if (!startingInsideSplice.has(markerId)) {
           startNode.rightMarkerIds.add(markerId)
         }
         this.endNodesById[markerId] = endNode
+      })
+
+      endNode.endMarkerIds.forEach(markerId => {
+        if (this.isExclusive(markerId) && !endNode.startMarkerIds.has(markerId)) {
+          endingInsideSplice.add(markerId)
+        }
+      })
+
+      startingInsideSplice.forEach(markerId => {
+        endNode.startMarkerIds.add(markerId)
+        this.startNodesById[markerId] = endNode
       })
 
       startNode.startMarkerIds.forEach(markerId => {
@@ -177,12 +180,6 @@ export default class MarkerIndex {
           endNode.startMarkerIds.add(markerId)
           this.startNodesById[markerId] = endNode
           startingInsideSplice.add(markerId)
-        }
-      })
-
-      endNode.endMarkerIds.forEach(markerId => {
-        if (this.isExclusive(markerId) && !endNode.startMarkerIds.has(markerId)) {
-          endingInsideSplice.add(markerId)
         }
       })
     }
