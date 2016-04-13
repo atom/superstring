@@ -353,8 +353,8 @@ for (let [name, MarkerIndex] of [['js', JSMarkerIndex], ['native', NativeMarkerI
           let isEmpty = compare(marker.start, marker.end) === 0
 
           if (compare(spliceStart, marker.end) <= 0 && compare(marker.start, spliceOldEnd) <= 0) {
+            let invalidateInside = compare(spliceStart, marker.end) < 0 && compare(spliceOldEnd, marker.start) > 0
             let markerStartsWithinSplice, markerEndsWithinSplice
-            let spliceIntersectsMarker = compare(spliceStart, marker.end) < 0 && compare(spliceOldEnd, marker.start) > 0
 
             if (marker.exclusive) {
               markerStartsWithinSplice =
@@ -364,12 +364,13 @@ for (let [name, MarkerIndex] of [['js', JSMarkerIndex], ['native', NativeMarkerI
                 compare(spliceStart, marker.end) < 0 &&
                   (compare(spliceOldEnd, marker.end) > 0 || (!isEmpty && compare(spliceOldEnd, marker.end) === 0))
             } else {
+              invalidateInside = invalidateInside || ((!isEmpty || isInsertion) && (compare(spliceStart, marker.start) === 0 || compare(spliceOldEnd, marker.end) === 0))
               markerStartsWithinSplice = compare(spliceStart, marker.start) < 0 && compare(marker.start, spliceOldEnd) < 0
               markerEndsWithinSplice = compare(spliceStart, marker.end) < 0 && compare(marker.end, spliceOldEnd) < 0
             }
 
             invalidated.touch.add(marker.id)
-            if (spliceIntersectsMarker) {
+            if (invalidateInside) {
               invalidated.inside.add(marker.id)
             }
             if (markerStartsWithinSplice || markerEndsWithinSplice) {
