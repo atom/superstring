@@ -34,12 +34,14 @@ This method returns an object that describes what markers were *invalidated* by 
 
 * `touch` Contains markers that the change touched in any way.
 * `inside` Contains markers that the change touched, but not markers with endpoints immediately adjacent to the change.
-* `overlap` Contains markers that had one or both of their endpoints surrounded by the change.s
+* `overlap` Contains markers that had one or both of their endpoints surrounded by the change.
 * `surround` Contains markers that had both endpoints surrounded by the change.
 
 ### `setExclusive (markerId, boolean)`
 
-*Exclusive* markers have a different behavior with respect to *insertions*, which are splice operations with an `oldExtent` of `{row: 0, column: 0}`. Normally, insertions are assumed to occur inside markers. Exclusive markers will prefer to interpret changes as being outside their boundaries. That is, an insertion at a markers start point will push it over, but an insertion at a marker's endpoint will not change its location.
+By default, we consider markers to be *inclusive*: that is, splices that start exactly where a marker begins **will never** move its start, and splices that end exactly where a marker ends **will always** move its end. With `setExclusive(markerId, true)`, this behavior can be changed by making the specified marker exclusive.
+
+*Exclusive* markers exhibit a different behavior with respect to splices that overlap one or both the marker's endpoints. In facts, splices that start exactly where a marker begins **will** move its start **only if the marker is not empty or the splice operation is an insertion**. On the other hand, splices that end exactly where a marker ends **will never** move its end.
 
 ### `isExclusive (markerId)`
 
