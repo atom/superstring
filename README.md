@@ -41,7 +41,7 @@ This method returns an object that describes what markers were *invalidated* by 
 
 By default, we consider markers to be *inclusive*: that is, splices that start exactly where a marker begins **will not** move its start, and splices that end exactly where a marker ends **will** move its end. With the `setExclusive(markerId, true)` API, these rules can be changed by making the specified marker exclusive.
 
-*Exclusive* markers exhibit a different behavior with respect to splices that overlap one or both the marker's endpoints. In facts, splices that start exactly where a marker begins **will** move its start **only if the marker is not empty or the splice operation is an insertion**. On the other hand, splices that end exactly where a marker ends **will not** move its end.
+*Exclusive* markers exhibit a different behavior with respect to splices that overlap one or both the marker's endpoints. In fact, splices that start exactly where a marker begins **will** move its start **only if the marker is not empty or the splice operation is an insertion**. On the other hand, splices that end exactly where a marker ends **will not** move its end.
 
 A general rule applies to both cases, however: when a marker's start gets moved as a result of a splice, its end **will always** be moved as well.
 
