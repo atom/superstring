@@ -39,11 +39,13 @@ This method returns an object that describes what markers were *invalidated* by 
 
 ### `setExclusive (markerId, boolean)`
 
-By default, we consider markers to be *inclusive*: that is, splices that start exactly where a marker begins **will not** move its start, and splices that end exactly where a marker ends **will** move its end. With the `setExclusive(markerId, true)` API, these rules can be changed by making the specified marker exclusive.
+This method allows to control the behavior of a marker when splices start and/or end at the marker's endpoints.
 
-*Exclusive* markers exhibit a different behavior with respect to splices that overlap one or both the marker's endpoints. In fact, splices that start exactly where a marker begins **will** move its start **only if the marker is not empty or the splice operation is an insertion**. On the other hand, splices that end exactly where a marker ends **will not** move its end.
+By default, we consider markers to be *inclusive*: that is, splices exactly at the beginning of the marked range will be considered to begin inside the marker (meaning that the marker's start position **will not** move), and splices exactly at the end of the marked range will be considered to end inside the marker (meaning that the marker's end position **will** move). 
 
-A general rule applies to both cases, however: when a marker's start gets moved as a result of a splice, its end **will always** be moved as well.
+*Exclusive* markers, on the other hand, exhibit a slightly different behavior: in fact, splices exactly at the beginning of the marked range will be considered to begin outside the marker (meaning that the marker's start position **will** move), and splices exactly at the end of the marked range will be considered to end outside the marker (meaning that the marker's end position **will not** move).
+
+Please note that, independently of whether a marker is inclusive or exclusive, its end **will always** be moved when its start gets moved as a result of a splice.
 
 ### `isExclusive (markerId)`
 
