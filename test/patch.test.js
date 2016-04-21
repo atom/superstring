@@ -84,7 +84,7 @@ describe('Patch', function () {
   it('correctly records random splices', function () {
     this.timeout(Infinity)
 
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 5000; i++) {
       let seed = Date.now()
       let seedMessage = `Random seed: ${seed}`
       let random = new Random(seed)
@@ -92,7 +92,7 @@ describe('Patch', function () {
       let output = input.clone()
       let patch = new Patch()
 
-      for (let j = 0; j < 10; j++) {
+      for (let j = 0; j < 25; j++) {
         let {start, oldText, oldExtent, newExtent, newText} = output.performRandomSplice()
         patch.spliceWithText(start, oldText, newText)
         // document.write(`<div>after splice(${formatPoint(start)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)}, ${JSON.stringify(newText)}, ${JSON.stringify(oldText)})</div>`)

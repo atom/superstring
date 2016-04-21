@@ -6,7 +6,7 @@ import * as textHelpers from '../../src/text-helpers'
 export default class TestDocument {
   constructor (randomSeed, text) {
     this.random = new Random(randomSeed)
-    this.lines = this.buildRandomLines(10)
+    this.lines = this.buildRandomLines(1, 50)
   }
 
   clone () {
@@ -45,7 +45,7 @@ export default class TestDocument {
     let start = range.start
     let oldText = this.getTextInRange(range.start, range.end)
     let oldExtent = pointHelpers.traversalDistance(range.end, range.start)
-    let newText = this.buildRandomLines(2, true).join('\n')
+    let newText = this.buildRandomLines(0, 10, true).join('\n')
     let newExtent = textHelpers.getExtent(newText)
     this.splice(start, oldExtent, newText)
     return {start, oldExtent, newExtent, newText, oldText}
@@ -67,8 +67,8 @@ export default class TestDocument {
     return this.lines[row][column]
   }
 
-  buildRandomLines (max, upperCase) {
-    let lineCount = this.random.intBetween(1, max - 1)
+  buildRandomLines (min, max, upperCase) {
+    let lineCount = this.random.intBetween(min, max - 1)
     let lines = []
     for (let i = 0; i < lineCount; i++) {
       lines.push(this.buildRandomLine(upperCase))
@@ -77,7 +77,7 @@ export default class TestDocument {
   }
 
   buildRandomLine (upperCase) {
-    let wordCount = this.random(5)
+    let wordCount = this.random(20)
     let words = []
     for (let i = 0; i < wordCount; i++) {
       words.push(this.buildRandomWord(upperCase))
@@ -93,15 +93,7 @@ export default class TestDocument {
 
   buildRandomRange () {
     let a = this.buildRandomPoint()
-    let b = a
-    while (this.random(10) < 5) {
-      b = this.clipPosition(
-        pointHelpers.traverse(b, {
-          row: this.random.intBetween(-10, 10),
-          column: this.random.intBetween(0, 10)
-        })
-      )
-    }
+    let b = this.buildRandomPoint()
 
     if (pointHelpers.compare(a, b) <= 0) {
       return {start: a, end: b}
