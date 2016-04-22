@@ -152,12 +152,12 @@ export default class Iterator {
       this.currentNode.isChangeEnd = true
       let {newText, oldText} = this.rightAncestor
       if (newText != null) {
-        let boundaryIndex = characterIndexForPoint(newText, traversalDistance(boundaryOutputPosition, this.leftAncestorOutputPosition))
+        let boundaryIndex = characterIndexForPoint(newText, this.currentNode.outputLeftExtent)
         if (insertingStart) this.currentNode.newText = newText.substring(0, boundaryIndex)
         this.rightAncestor.newText = newText.substring(boundaryIndex)
       }
       if (oldText != null) {
-        let boundaryIndex = characterIndexForPoint(oldText, traversalDistance(boundaryOutputPosition, this.leftAncestorOutputPosition))
+        let boundaryIndex = characterIndexForPoint(oldText, this.currentNode.inputLeftExtent)
         this.currentNode.oldText = oldText.substring(0, boundaryIndex)
         this.rightAncestor.oldText = oldText.substring(boundaryIndex)
       }

@@ -23,6 +23,11 @@ export function getSuffix (text, prefixExtent) {
 export function characterIndexForPoint(text, point) {
   let {row, column} = point
   NEWLINE_REG_EXP.lastIndex = 0
-  while (row-- > 0) NEWLINE_REG_EXP.exec(text)
+  while (row-- > 0) {
+    let matches = NEWLINE_REG_EXP.exec(text)
+    if (matches == null) {
+      return text.length
+    }
+  }
   return NEWLINE_REG_EXP.lastIndex + column
 }
