@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdio.h>
 #include <vector>
 #include "patch.h"
 
@@ -218,7 +219,7 @@ void Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
     Point old_deletion_end;
     if (upper_bound->left) {
       Point rightmost_child_old_end, rightmost_child_new_end;
-      lower_bound->GetSubtreeEnd(&rightmost_child_old_end, &rightmost_child_new_end);
+      upper_bound->left->GetSubtreeEnd(&rightmost_child_old_end, &rightmost_child_new_end);
       old_deletion_end = rightmost_child_old_end.Traverse(new_deletion_end.Traversal(rightmost_child_new_end));
     } else {
       old_deletion_end = new_deletion_end;
@@ -229,7 +230,7 @@ void Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       upper_bound->old_distance_from_left_ancestor = new_splice_start;
       upper_bound->new_distance_from_left_ancestor = new_splice_start;
       upper_bound->old_extent = upper_bound_old_start.Traversal(new_splice_start).Traverse(upper_bound->old_extent);
-      upper_bound->old_extent = new_insertion_extent.Traverse(upper_bound_new_end.Traversal(new_deletion_end));
+      upper_bound->new_extent = new_insertion_extent.Traverse(upper_bound_new_end.Traversal(new_deletion_end));
     } else {
       root = new Node{
         nullptr,
@@ -248,7 +249,7 @@ void Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
 
   } else {
     Point rightmost_child_old_end, rightmost_child_new_end;
-    lower_bound->GetSubtreeEnd(&rightmost_child_old_end, &rightmost_child_new_end);
+    root->GetSubtreeEnd(&rightmost_child_old_end, &rightmost_child_new_end);
     Point old_deletion_end = rightmost_child_old_end.Traverse(new_deletion_end.Traversal(rightmost_child_new_end));
     delete root;
     root = new Node{
@@ -405,13 +406,21 @@ void Patch::RotateNodeRight(Node *pivot) {
 }
 
 void Patch::DeleteRoot() {
+  Node *node = root;
   while (true) {
-    if (root->left) {
-      RotateNodeRight(root->left);
-    } else if (root->right) {
-      RotateNodeLeft(root->right);
+    if (node->left) {
+      RotateNodeRight(node->left);
+    } else if (node->right) {
+      RotateNodeLeft(node->right);
     } else {
-      delete root;
+      if (node->IsLeftChild()) {
+        node->parent->DeleteLeft();
+      } else if (node->IsRightChild()) {
+        node->parent->DeleteRight();
+      } else {
+        delete node;
+        root = nullptr;
+      }
       break;
     }
   }
@@ -466,6 +475,10 @@ void Patch::PrintDotGraph() const {
 
 vector<Hunk> Patch::GetHunks() const {
   vector<Hunk> result;
+  if (!root) {
+    return result;
+  }
+
   left_ancestor_stack.clear();
   left_ancestor_stack.push_back({Point::Zero(), Point::Zero()});
 
