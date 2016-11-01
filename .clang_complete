@@ -3,3 +3,4 @@
 -I/Users/max/.node-gyp/iojs-1.3.6/src
 -I/Users/max/.node-gyp/iojs-1.3.6/deps/uv/include
 -I/Users/max/.node-gyp/iojs-1.3.6/deps/v8/include
+-Ivendor

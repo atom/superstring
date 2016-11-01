@@ -4,7 +4,9 @@
   "description": "A data structure to efficiently represent the results of applying patches.",
   "main": "dist/patch.js",
   "scripts": {
-    "test": "mocha ./test/helpers/setup test/*",
+    "test-native": "node-gyp configure --debug --tests && node-gyp build && ./build/Debug/tests",
+    "test-js": "mocha ./test/helpers/setup test/*",
+    "test": "npm run test-native && npm run test-js",
     "tdd": "electron-mocha --renderer --interactive --recursive ./test/helpers/setup  test/",
     "prepublish": "npm run standard && npm run clean && npm run build",
     "standard": "standard --recursive src test",

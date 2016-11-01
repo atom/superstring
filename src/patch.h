@@ -6,9 +6,10 @@ struct Node;
 
 class Patch {
  public:
+  Patch();
+  ~Patch();
   void Splice(Point start, Point deletion_extent, Point insertion_extent);
   std::vector<Hunk> GetHunks() const;
-  ~Patch();
 
  private:
   Node *FindLowerBound(Point target) const;

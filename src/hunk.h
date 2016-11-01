@@ -6,8 +6,8 @@
 class Hunk {
 public:
   Point old_start;
-  Point new_start;
   Point old_end;
+  Point new_start;
   Point new_end;
 };
 

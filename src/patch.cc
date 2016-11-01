@@ -54,6 +54,8 @@ struct Node {
   }
 };
 
+Patch::Patch() : root{nullptr} {}
+
 Patch::~Patch() {
   if (root) {
     delete root;
@@ -431,10 +433,11 @@ vector<Hunk> Patch::GetHunks() const {
     Point new_start = left_ancestor_position.new_end.Traverse(node->new_distance_from_left_ancestor);
     Point old_end = old_start.Traverse(node->old_extent);
     Point new_end = new_start.Traverse(node->new_extent);
-    result.push_back(Hunk{old_start, new_start, old_end, new_end});
+    result.push_back(Hunk{old_start, old_end, new_start, new_end});
 
     if (node->right) {
       left_ancestor_stack.push_back(PositionStackEntry{old_end, new_end});
+      node = node->right;
 
       while (node->left) {
         node = node->left;
@@ -446,7 +449,6 @@ vector<Hunk> Patch::GetHunks() const {
       }
 
       node = node->parent;
-      left_ancestor_stack.pop_back();
     }
   }
 
