@@ -5,7 +5,7 @@
   "main": "dist/patch.js",
   "scripts": {
     "test-native": "node-gyp configure --debug --tests && node-gyp build && ./build/Debug/tests",
-    "test-js": "mocha ./test/helpers/setup test/*",
+    "test-js": "mocha ./test/helpers/setup test/*.js",
     "test": "npm run test-native && npm run test-js",
     "tdd": "electron-mocha --renderer --interactive --recursive ./test/helpers/setup  test/",
     "prepublish": "npm run standard && npm run clean && npm run build",
