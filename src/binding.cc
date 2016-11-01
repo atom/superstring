@@ -97,10 +97,10 @@ public:
     constructor_template->SetClassName(Nan::New<String>("Hunk").ToLocalChecked());
     constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
     const auto &instance_template = constructor_template->InstanceTemplate();
-    Nan::SetAccessor(instance_template, Nan::New("old_start").ToLocalChecked(), GetOldStart);
-    Nan::SetAccessor(instance_template, Nan::New("new_start").ToLocalChecked(), GetNewStart);
-    Nan::SetAccessor(instance_template, Nan::New("old_end").ToLocalChecked(), GetOldEnd);
-    Nan::SetAccessor(instance_template, Nan::New("new_end").ToLocalChecked(), GetNewEnd);
+    Nan::SetAccessor(instance_template, Nan::New("oldStart").ToLocalChecked(), GetOldStart);
+    Nan::SetAccessor(instance_template, Nan::New("newStart").ToLocalChecked(), GetNewStart);
+    Nan::SetAccessor(instance_template, Nan::New("oldEnd").ToLocalChecked(), GetOldEnd);
+    Nan::SetAccessor(instance_template, Nan::New("newEnd").ToLocalChecked(), GetNewEnd);
     constructor.Reset(constructor_template->GetFunction());
   }
 
