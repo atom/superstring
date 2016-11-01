@@ -154,6 +154,7 @@ public:
     const auto &prototype_template = constructor_template->PrototypeTemplate();
     prototype_template->Set(Nan::New<String>("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(Splice));
     prototype_template->Set(Nan::New<String>("getHunks").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunks));
+    prototype_template->Set(Nan::New<String>("printDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(PrintDotGraph));
     module->Set(Nan::New("exports").ToLocalChecked(), constructor_template->GetFunction());
   }
 
@@ -186,6 +187,11 @@ private:
     }
 
     info.GetReturnValue().Set(js_result);
+  }
+
+  static void PrintDotGraph(const Nan::FunctionCallbackInfo<Value> &info) {
+    Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
+    patch.PrintDotGraph();
   }
 
   Patch patch;

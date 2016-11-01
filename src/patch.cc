@@ -417,6 +417,53 @@ void Patch::DeleteRoot() {
   }
 }
 
+static void PrintDotGraphForNode(Node *node, Point left_ancestor_old_end, Point left_ancestor_new_end) {
+  Point node_old_start = left_ancestor_old_end.Traverse(node->old_distance_from_left_ancestor);
+  Point node_new_start = left_ancestor_new_end.Traverse(node->new_distance_from_left_ancestor);
+  Point node_old_end = node_old_start.Traverse(node->old_extent);
+  Point node_new_end = node_new_start.Traverse(node->new_extent);
+
+  fprintf(
+    stderr,
+    "node_%p [label=\"new: (%u, %u) - (%u, %u)\nold: (%u, %u) - (%u, %u)\"]\n",
+    node,
+    node_new_start.row,
+    node_new_start.column,
+    node_new_end.row,
+    node_new_end.column,
+    node_old_start.row,
+    node_old_start.column,
+    node_old_end.row,
+    node_old_end.column
+  );
+
+  fprintf(stderr, "node_%p -> ", node);
+  if (node->left) {
+    fprintf(stderr, "node_%p\n", node->left);
+    PrintDotGraphForNode(node->left, left_ancestor_old_end, left_ancestor_new_end);
+  } else {
+    fprintf(stderr, "node_%p_left_null\n", node);
+    fprintf(stderr, "node_%p_left_null [label=\"\" shape=point]\n", node);
+  }
+
+  fprintf(stderr, "node_%p -> ", node);
+  if (node->right) {
+    fprintf(stderr, "node_%p\n", node->right);
+    PrintDotGraphForNode(node->right, node_old_end, node_new_end);
+  } else {
+    fprintf(stderr, "node_%p_right_null\n", node);
+    fprintf(stderr, "node_%p_right_null [label=\"\" shape=point]\n", node);
+  }
+}
+
+void Patch::PrintDotGraph() const {
+  fprintf(stderr, "digraph patch {\n");
+  if (root) {
+    PrintDotGraphForNode(root, Point::Zero(), Point::Zero());
+  }
+  fprintf(stderr, "}\n");
+}
+
 vector<Hunk> Patch::GetHunks() const {
   vector<Hunk> result;
   left_ancestor_stack.clear();

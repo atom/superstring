@@ -10,6 +10,7 @@ class Patch {
   ~Patch();
   void Splice(Point start, Point deletion_extent, Point insertion_extent);
   std::vector<Hunk> GetHunks() const;
+  void PrintDotGraph() const;
 
  private:
   Node *FindLowerBound(Point target) const;
