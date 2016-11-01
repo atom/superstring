@@ -1,6 +1,8 @@
 #ifndef POINT_H_
 #define POINT_H_
 
+#include <ostream>
+
 struct Point {
   unsigned row;
   unsigned column;
@@ -22,5 +24,9 @@ struct Point {
   bool operator>(const Point &other) const;
   bool operator>=(const Point &other) const;
 };
+
+inline std::ostream &operator<<(std::ostream &stream, const Point &point) {
+  return stream << "(" << point.row << ", " << point.column << ")";
+}
 
 #endif // POINT_H_

@@ -10,11 +10,12 @@ class Patch {
   ~Patch();
   void Splice(Point start, Point deletion_extent, Point insertion_extent);
   std::vector<Hunk> GetHunks() const;
+  std::vector<Hunk> GetHunksInNewRange(Point start, Point end);
   void PrintDotGraph() const;
 
  private:
-  Node *FindLowerBound(Point target) const;
-  Node *FindUpperBound(Point target) const;
+  Node *SplayLowerBound(Point target);
+  Node *SplayUpperBound(Point target);
   void SplayNode(Node *);
   void RotateNodeRight(Node *);
   void RotateNodeLeft(Node *);

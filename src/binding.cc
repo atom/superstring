@@ -1,4 +1,6 @@
 #include <math.h>
+#include <sstream>
+#include <string>
 #include "nan.h"
 #include "point.h"
 #include "hunk.h"
@@ -101,6 +103,9 @@ public:
     Nan::SetAccessor(instance_template, Nan::New("newStart").ToLocalChecked(), GetNewStart);
     Nan::SetAccessor(instance_template, Nan::New("oldEnd").ToLocalChecked(), GetOldEnd);
     Nan::SetAccessor(instance_template, Nan::New("newEnd").ToLocalChecked(), GetNewEnd);
+
+    const auto &prototype_template = constructor_template->PrototypeTemplate();
+    prototype_template->Set(Nan::New<String>("toString").ToLocalChecked(), Nan::New<FunctionTemplate>(ToString));
     constructor.Reset(constructor_template->GetFunction());
   }
 
@@ -139,6 +144,13 @@ private:
     info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.new_end));
   }
 
+  static void ToString(const Nan::FunctionCallbackInfo<Value> &info) {
+    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    std::stringstream result;
+    result << hunk;
+    info.GetReturnValue().Set(Nan::New<String>(result.str()).ToLocalChecked());
+  }
+
   static Nan::Persistent<v8::Function> constructor;
   Hunk hunk;
 };
@@ -154,6 +166,7 @@ public:
     const auto &prototype_template = constructor_template->PrototypeTemplate();
     prototype_template->Set(Nan::New<String>("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(Splice));
     prototype_template->Set(Nan::New<String>("getHunks").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunks));
+    prototype_template->Set(Nan::New<String>("getHunksInNewRange").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunksInNewRange));
     prototype_template->Set(Nan::New<String>("printDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(PrintDotGraph));
     module->Set(Nan::New("exports").ToLocalChecked(), constructor_template->GetFunction());
   }
@@ -187,6 +200,24 @@ private:
     }
 
     info.GetReturnValue().Set(js_result);
+  }
+
+  static void GetHunksInNewRange(const Nan::FunctionCallbackInfo<Value> &info) {
+    Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
+
+    Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
+    Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[1]));
+
+    if (start.IsJust() && end.IsJust()) {
+      Local<Array> js_result = Nan::New<Array>();
+
+      size_t i = 0;
+      for (Hunk hunk : patch.GetHunksInNewRange(start.FromJust(), end.FromJust())) {
+        js_result->Set(i++, HunkWrapper::FromHunk(hunk));
+      }
+
+      info.GetReturnValue().Set(js_result);
+    }
   }
 
   static void PrintDotGraph(const Nan::FunctionCallbackInfo<Value> &info) {

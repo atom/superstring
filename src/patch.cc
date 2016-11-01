@@ -84,18 +84,12 @@ void Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
   Point new_deletion_end = new_splice_start.Traverse(new_deletion_extent);
   Point new_insertion_end = new_splice_start.Traverse(new_insertion_extent);
 
-  Node *lower_bound = FindLowerBound(new_splice_start);
-  if (lower_bound) {
-    SplayNode(lower_bound);
-  }
+  Node *lower_bound = SplayLowerBound(new_splice_start);
 
-  Node *upper_bound = FindUpperBound(new_deletion_end);
-  if (upper_bound) {
-    SplayNode(upper_bound);
-    if (lower_bound && lower_bound != upper_bound) {
-      if (lower_bound != upper_bound->left) {
-        RotateNodeRight(lower_bound);
-      }
+  Node *upper_bound = SplayUpperBound(new_deletion_end);
+  if (upper_bound && lower_bound && lower_bound != upper_bound) {
+    if (lower_bound != upper_bound->left) {
+      RotateNodeRight(lower_bound);
     }
   }
 
@@ -264,7 +258,7 @@ void Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
   }
 }
 
-Node *Patch::FindLowerBound(Point target) const {
+Node *Patch::SplayLowerBound(Point target) {
   Node *lower_bound = nullptr;
   Point left_ancestor_new_end = Point::Zero();
   Node *node = root;
@@ -288,10 +282,14 @@ Node *Patch::FindLowerBound(Point target) const {
     }
   }
 
+  if (lower_bound) {
+    SplayNode(lower_bound);
+  }
+
   return lower_bound;
 }
 
-Node *Patch::FindUpperBound(Point target) const {
+Node *Patch::SplayUpperBound(Point target) {
   Node *upper_bound = nullptr;
   Point left_ancestor_new_end = Point::Zero();
   Node *node = root;
@@ -315,6 +313,10 @@ Node *Patch::FindUpperBound(Point target) const {
         break;
       }
     }
+  }
+
+  if (upper_bound) {
+    SplayNode(upper_bound);
   }
 
   return upper_bound;
@@ -479,10 +481,10 @@ vector<Hunk> Patch::GetHunks() const {
     return result;
   }
 
+  Node *node = root;
   left_ancestor_stack.clear();
   left_ancestor_stack.push_back({Point::Zero(), Point::Zero()});
 
-  Node *node = root;
   while (node->left) {
     node = node->left;
   }
@@ -494,6 +496,60 @@ vector<Hunk> Patch::GetHunks() const {
     Point old_end = old_start.Traverse(node->old_extent);
     Point new_end = new_start.Traverse(node->new_extent);
     result.push_back(Hunk{old_start, old_end, new_start, new_end});
+
+    if (node->right) {
+      left_ancestor_stack.push_back(PositionStackEntry{old_end, new_end});
+      node = node->right;
+
+      while (node->left) {
+        node = node->left;
+      }
+    } else {
+      while (node->IsRightChild()) {
+        node = node->parent;
+        left_ancestor_stack.pop_back();
+      }
+
+      node = node->parent;
+    }
+  }
+
+  return result;
+}
+
+vector<Hunk> Patch::GetHunksInNewRange(Point start, Point end) {
+  vector<Hunk> result;
+  if (!root) {
+    return result;
+  }
+
+  left_ancestor_stack.clear();
+  left_ancestor_stack.push_back({Point::Zero(), Point::Zero()});
+
+  Node *node;
+  if (SplayLowerBound(start)) {
+    node = root;
+  } else {
+    node = root;
+    while (node->left) {
+      node = node->left;
+    }
+  }
+
+  while (node) {
+    PositionStackEntry &left_ancestor_position = left_ancestor_stack.back();
+    Point old_start = left_ancestor_position.old_end.Traverse(node->old_distance_from_left_ancestor);
+    Point new_start = left_ancestor_position.new_end.Traverse(node->new_distance_from_left_ancestor);
+    Point old_end = old_start.Traverse(node->old_extent);
+    Point new_end = new_start.Traverse(node->new_extent);
+
+    if (new_start >= end) {
+      break;
+    }
+
+    if (new_end > start) {
+      result.push_back(Hunk{old_start, old_end, new_start, new_end});
+    }
 
     if (node->right) {
       left_ancestor_stack.push_back(PositionStackEntry{old_end, new_end});
