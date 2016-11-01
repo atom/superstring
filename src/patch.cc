@@ -54,6 +54,12 @@ struct Node {
   }
 };
 
+Patch::~Patch() {
+  if (root) {
+    delete root;
+  }
+}
+
 void Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_insertion_extent) {
   if (new_deletion_extent.IsZero() && new_insertion_extent.IsZero()) {
     return;
