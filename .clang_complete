@@ -1,0 +1,4 @@
+-I$NVM_PATH/../../include/node
+-Inode_modules/nan
+-Ivendor
+-Isrc

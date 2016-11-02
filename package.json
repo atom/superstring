@@ -1,0 +1,19 @@
+{
+  "name": "buffer-offset-index",
+  "version": "0.0.1",
+  "description": "An index that maps character indices in the buffer to 2d coordinates.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "install": "node-gyp rebuild"
+  },
+  "author": "",
+  "license": "MIT",
+  "gypfile": true,
+  "devDependencies": {
+    "mocha": "^3.1.2"
+  },
+  "dependencies": {
+    "nan": "^2.4.0"
+  }
+}
