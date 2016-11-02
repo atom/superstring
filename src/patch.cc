@@ -55,12 +55,153 @@ struct Node {
   }
 };
 
+struct Patch::PositionStackEntry {
+  Point old_end;
+  Point new_end;
+};
+
+struct OldCoordinates {
+  static Point distance_from_left_ancestor(const Node *node) { return node->old_distance_from_left_ancestor; }
+  static Point extent(const Node *node) { return node->old_extent; }
+  static Point start(const Hunk &hunk) { return hunk.old_start; }
+  static Point end(const Hunk &hunk) { return hunk.old_end; }
+};
+
+struct NewCoordinates {
+  static Point distance_from_left_ancestor(const Node *node) { return node->new_distance_from_left_ancestor; }
+  static Point extent(const Node *node) { return node->new_extent; }
+  static Point start(const Hunk &hunk) { return hunk.new_start; }
+  static Point end(const Hunk &hunk) { return hunk.new_end; }
+};
+
 Patch::Patch() : root{nullptr} {}
 
 Patch::~Patch() {
   if (root) {
     delete root;
   }
+}
+
+template<typename CoordinateSpace>
+Node *SplayLowerBound(Patch &patch, Point target) {
+  Node *lower_bound = nullptr;
+  Point left_ancestor_end = Point::Zero();
+  Node *node = patch.root;
+
+  while (node) {
+    Point node_start = left_ancestor_end.Traverse(CoordinateSpace::distance_from_left_ancestor(node));
+    if (node_start <= target) {
+      lower_bound = node;
+      if (node->right) {
+        left_ancestor_end = node_start.Traverse(CoordinateSpace::extent(node));
+        node = node->right;
+      } else {
+        break;
+      }
+    } else {
+      if (node->left) {
+        node = node->left;
+      } else {
+        break;
+      }
+    }
+  }
+
+  if (lower_bound) {
+    patch.SplayNode(lower_bound);
+  }
+
+  return lower_bound;
+}
+
+template<typename CoordinateSpace>
+Node *SplayUpperBound(Patch &patch, Point target) {
+  Node *upper_bound = nullptr;
+  Point left_ancestor_end = Point::Zero();
+  Node *node = patch.root;
+
+  while (node) {
+    Point node_end = left_ancestor_end
+      .Traverse(CoordinateSpace::distance_from_left_ancestor(node))
+      .Traverse(CoordinateSpace::extent(node));
+    if (node_end >= target) {
+      upper_bound = node;
+      if (node->left) {
+        node = node->left;
+      } else {
+        break;
+      }
+    } else {
+      if (node->right) {
+        left_ancestor_end = node_end;
+        node = node->right;
+      } else {
+        break;
+      }
+    }
+  }
+
+  if (upper_bound) {
+    patch.SplayNode(upper_bound);
+  }
+
+  return upper_bound;
+}
+
+template<typename CoordinateSpace>
+vector<Hunk> GetHunksInRange(Patch &patch, Point start, Point end) {
+  vector<Hunk> result;
+  if (!patch.root) {
+    return result;
+  }
+
+  patch.left_ancestor_stack.clear();
+  patch.left_ancestor_stack.push_back({Point::Zero(), Point::Zero()});
+
+  Node *node;
+  if (SplayLowerBound<CoordinateSpace>(patch, start)) {
+    node = patch.root;
+  } else {
+    node = patch.root;
+    while (node->left) {
+      node = node->left;
+    }
+  }
+
+  while (node) {
+    Patch::PositionStackEntry &left_ancestor_position = patch.left_ancestor_stack.back();
+    Point old_start = left_ancestor_position.old_end.Traverse(node->old_distance_from_left_ancestor);
+    Point new_start = left_ancestor_position.new_end.Traverse(node->new_distance_from_left_ancestor);
+    Point old_end = old_start.Traverse(node->old_extent);
+    Point new_end = new_start.Traverse(node->new_extent);
+    Hunk hunk = {old_start, old_end, new_start, new_end};
+
+    if (CoordinateSpace::start(hunk) >= end) {
+      break;
+    }
+
+    if (CoordinateSpace::end(hunk) > start) {
+      result.push_back(hunk);
+    }
+
+    if (node->right) {
+      patch.left_ancestor_stack.push_back(Patch::PositionStackEntry{old_end, new_end});
+      node = node->right;
+
+      while (node->left) {
+        node = node->left;
+      }
+    } else {
+      while (node->IsRightChild()) {
+        node = node->parent;
+        patch.left_ancestor_stack.pop_back();
+      }
+
+      node = node->parent;
+    }
+  }
+
+  return result;
 }
 
 void Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_insertion_extent) {
@@ -84,9 +225,8 @@ void Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
   Point new_deletion_end = new_splice_start.Traverse(new_deletion_extent);
   Point new_insertion_end = new_splice_start.Traverse(new_insertion_extent);
 
-  Node *lower_bound = SplayLowerBound(new_splice_start);
-
-  Node *upper_bound = SplayUpperBound(new_deletion_end);
+  Node *lower_bound = SplayLowerBound<NewCoordinates>(*this, new_splice_start);
+  Node *upper_bound = SplayUpperBound<NewCoordinates>(*this, new_deletion_end);
   if (upper_bound && lower_bound && lower_bound != upper_bound) {
     if (lower_bound != upper_bound->left) {
       RotateNodeRight(lower_bound);
@@ -256,70 +396,6 @@ void Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       new_insertion_extent
     };
   }
-}
-
-Node *Patch::SplayLowerBound(Point target) {
-  Node *lower_bound = nullptr;
-  Point left_ancestor_new_end = Point::Zero();
-  Node *node = root;
-
-  while (node) {
-    Point node_new_start = left_ancestor_new_end.Traverse(node->new_distance_from_left_ancestor);
-    if (node_new_start <= target) {
-      lower_bound = node;
-      if (node->right) {
-        left_ancestor_new_end = node_new_start.Traverse(node->new_extent);
-        node = node->right;
-      } else {
-        break;
-      }
-    } else {
-      if (node->left) {
-        node = node->left;
-      } else {
-        break;
-      }
-    }
-  }
-
-  if (lower_bound) {
-    SplayNode(lower_bound);
-  }
-
-  return lower_bound;
-}
-
-Node *Patch::SplayUpperBound(Point target) {
-  Node *upper_bound = nullptr;
-  Point left_ancestor_new_end = Point::Zero();
-  Node *node = root;
-
-  while (node) {
-    Point node_new_end = left_ancestor_new_end
-      .Traverse(node->new_distance_from_left_ancestor)
-      .Traverse(node->new_extent);
-    if (node_new_end >= target) {
-      upper_bound = node;
-      if (node->left) {
-        node = node->left;
-      } else {
-        break;
-      }
-    } else {
-      if (node->right) {
-        left_ancestor_new_end = node_new_end;
-        node = node->right;
-      } else {
-        break;
-      }
-    }
-  }
-
-  if (upper_bound) {
-    SplayNode(upper_bound);
-  }
-
-  return upper_bound;
 }
 
 void Patch::SplayNode(Node *node) {
@@ -517,56 +593,10 @@ vector<Hunk> Patch::GetHunks() const {
   return result;
 }
 
+vector<Hunk> Patch::GetHunksInOldRange(Point start, Point end) {
+  return GetHunksInRange<OldCoordinates>(*this, start, end);
+}
+
 vector<Hunk> Patch::GetHunksInNewRange(Point start, Point end) {
-  vector<Hunk> result;
-  if (!root) {
-    return result;
-  }
-
-  left_ancestor_stack.clear();
-  left_ancestor_stack.push_back({Point::Zero(), Point::Zero()});
-
-  Node *node;
-  if (SplayLowerBound(start)) {
-    node = root;
-  } else {
-    node = root;
-    while (node->left) {
-      node = node->left;
-    }
-  }
-
-  while (node) {
-    PositionStackEntry &left_ancestor_position = left_ancestor_stack.back();
-    Point old_start = left_ancestor_position.old_end.Traverse(node->old_distance_from_left_ancestor);
-    Point new_start = left_ancestor_position.new_end.Traverse(node->new_distance_from_left_ancestor);
-    Point old_end = old_start.Traverse(node->old_extent);
-    Point new_end = new_start.Traverse(node->new_extent);
-
-    if (new_start >= end) {
-      break;
-    }
-
-    if (new_end > start) {
-      result.push_back(Hunk{old_start, old_end, new_start, new_end});
-    }
-
-    if (node->right) {
-      left_ancestor_stack.push_back(PositionStackEntry{old_end, new_end});
-      node = node->right;
-
-      while (node->left) {
-        node = node->left;
-      }
-    } else {
-      while (node->IsRightChild()) {
-        node = node->parent;
-        left_ancestor_stack.pop_back();
-      }
-
-      node = node->parent;
-    }
-  }
-
-  return result;
+  return GetHunksInRange<NewCoordinates>(*this, start, end);
 }

@@ -34,15 +34,25 @@ describe('Native Patch', function () {
           originalDocumentCopy.splice(hunk.newStart, oldExtent, newText)
         }
 
-        for (let k = 0; k < 10; k++) {
-          let range = mutatedDocument.buildRandomRange()
+        for (let k = 0; k < 5; k++) {
+          let oldRange = originalDocument.buildRandomRange()
           assert.deepEqual(
-            patch.getHunksInNewRange(range.start, range.end),
+            patch.getHunksInOldRange(oldRange.start, oldRange.end),
             hunks.filter(hunk =>
-              comparePoints(hunk.newEnd, range.start) > 0 &&
-              comparePoints(hunk.newStart, range.end) < 0
+              comparePoints(hunk.oldEnd, oldRange.start) > 0 &&
+              comparePoints(hunk.oldStart, oldRange.end) < 0
             ),
-            `range: ${formatPoint(range.start)} - ${formatPoint(range.end)}, seed: ${seed}`
+            `old range: ${formatPoint(oldRange.start)} - ${formatPoint(oldRange.end)}, seed: ${seed}`
+          )
+
+          let newRange = mutatedDocument.buildRandomRange()
+          assert.deepEqual(
+            patch.getHunksInNewRange(newRange.start, newRange.end),
+            hunks.filter(hunk =>
+              comparePoints(hunk.newEnd, newRange.start) > 0 &&
+              comparePoints(hunk.newStart, newRange.end) < 0
+            ),
+            `new range: ${formatPoint(newRange.start)} - ${formatPoint(newRange.end)}, seed: ${seed}`
           )
         }
 
