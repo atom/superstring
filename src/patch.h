@@ -18,16 +18,16 @@ class Patch {
 
  private:
   template<typename CoordinateSpace>
-  friend std::vector<Hunk> GetHunksInRange(Patch &, Point, Point);
+  std::vector<Hunk> GetHunksInRange(Point, Point);
 
   template<typename CoordinateSpace>
-  friend Node *SplayLowerBound(Patch &, Point);
+  Node *SplayLowerBound(Point);
 
   template<typename CoordinateSpace>
-  friend Node *SplayUpperBound(Patch &, Point);
+  Node *SplayUpperBound(Point);
 
   template<typename InputSpace, typename OutputSpace>
-  friend Point TranslatePosition(Patch &, Point);
+  Point TranslatePosition(Point);
 
   void SplayNode(Node *);
   void RotateNodeRight(Node *);

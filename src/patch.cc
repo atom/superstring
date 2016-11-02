@@ -83,10 +83,10 @@ Patch::~Patch() {
 }
 
 template<typename CoordinateSpace>
-Node *SplayLowerBound(Patch &patch, Point target) {
+Node *Patch::SplayLowerBound(Point target) {
   Node *lower_bound = nullptr;
   Point left_ancestor_end = Point::Zero();
-  Node *node = patch.root;
+  Node *node = root;
 
   while (node) {
     Point node_start = left_ancestor_end.Traverse(CoordinateSpace::distance_from_left_ancestor(node));
@@ -108,17 +108,17 @@ Node *SplayLowerBound(Patch &patch, Point target) {
   }
 
   if (lower_bound) {
-    patch.SplayNode(lower_bound);
+    SplayNode(lower_bound);
   }
 
   return lower_bound;
 }
 
 template<typename CoordinateSpace>
-Node *SplayUpperBound(Patch &patch, Point target) {
+Node *Patch::SplayUpperBound(Point target) {
   Node *upper_bound = nullptr;
   Point left_ancestor_end = Point::Zero();
-  Node *node = patch.root;
+  Node *node = root;
 
   while (node) {
     Point node_end = left_ancestor_end
@@ -142,34 +142,34 @@ Node *SplayUpperBound(Patch &patch, Point target) {
   }
 
   if (upper_bound) {
-    patch.SplayNode(upper_bound);
+    SplayNode(upper_bound);
   }
 
   return upper_bound;
 }
 
 template<typename CoordinateSpace>
-vector<Hunk> GetHunksInRange(Patch &patch, Point start, Point end) {
+vector<Hunk> Patch::GetHunksInRange(Point start, Point end) {
   vector<Hunk> result;
-  if (!patch.root) {
+  if (!root) {
     return result;
   }
 
-  patch.left_ancestor_stack.clear();
-  patch.left_ancestor_stack.push_back({Point::Zero(), Point::Zero()});
+  left_ancestor_stack.clear();
+  left_ancestor_stack.push_back({Point::Zero(), Point::Zero()});
 
   Node *node;
-  if (SplayLowerBound<CoordinateSpace>(patch, start)) {
-    node = patch.root;
+  if (SplayLowerBound<CoordinateSpace>(start)) {
+    node = root;
   } else {
-    node = patch.root;
+    node = root;
     while (node->left) {
       node = node->left;
     }
   }
 
   while (node) {
-    Patch::PositionStackEntry &left_ancestor_position = patch.left_ancestor_stack.back();
+    Patch::PositionStackEntry &left_ancestor_position = left_ancestor_stack.back();
     Point old_start = left_ancestor_position.old_end.Traverse(node->old_distance_from_left_ancestor);
     Point new_start = left_ancestor_position.new_end.Traverse(node->new_distance_from_left_ancestor);
     Point old_end = old_start.Traverse(node->old_extent);
@@ -185,7 +185,7 @@ vector<Hunk> GetHunksInRange(Patch &patch, Point start, Point end) {
     }
 
     if (node->right) {
-      patch.left_ancestor_stack.push_back(Patch::PositionStackEntry{old_end, new_end});
+      left_ancestor_stack.push_back(Patch::PositionStackEntry{old_end, new_end});
       node = node->right;
 
       while (node->left) {
@@ -194,7 +194,7 @@ vector<Hunk> GetHunksInRange(Patch &patch, Point start, Point end) {
     } else {
       while (node->IsRightChild()) {
         node = node->parent;
-        patch.left_ancestor_stack.pop_back();
+        left_ancestor_stack.pop_back();
       }
 
       node = node->parent;
@@ -205,8 +205,8 @@ vector<Hunk> GetHunksInRange(Patch &patch, Point start, Point end) {
 }
 
 template<typename InputSpace, typename OutputSpace>
-Point TranslatePosition(Patch &patch, Point target) {
-  Node *lower_bound = SplayLowerBound<InputSpace>(patch, target);
+Point Patch::TranslatePosition(Point target) {
+  Node *lower_bound = SplayLowerBound<InputSpace>(target);
   if (lower_bound) {
     Point input_start = InputSpace::distance_from_left_ancestor(lower_bound);
     Point output_start = OutputSpace::distance_from_left_ancestor(lower_bound);
@@ -246,8 +246,8 @@ void Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
   Point new_deletion_end = new_splice_start.Traverse(new_deletion_extent);
   Point new_insertion_end = new_splice_start.Traverse(new_insertion_extent);
 
-  Node *lower_bound = SplayLowerBound<NewCoordinates>(*this, new_splice_start);
-  Node *upper_bound = SplayUpperBound<NewCoordinates>(*this, new_deletion_end);
+  Node *lower_bound = SplayLowerBound<NewCoordinates>(new_splice_start);
+  Node *upper_bound = SplayUpperBound<NewCoordinates>(new_deletion_end);
   if (upper_bound && lower_bound && lower_bound != upper_bound) {
     if (lower_bound != upper_bound->left) {
       RotateNodeRight(lower_bound);
@@ -615,17 +615,17 @@ vector<Hunk> Patch::GetHunks() const {
 }
 
 vector<Hunk> Patch::GetHunksInOldRange(Point start, Point end) {
-  return GetHunksInRange<OldCoordinates>(*this, start, end);
+  return GetHunksInRange<OldCoordinates>(start, end);
 }
 
 vector<Hunk> Patch::GetHunksInNewRange(Point start, Point end) {
-  return GetHunksInRange<NewCoordinates>(*this, start, end);
+  return GetHunksInRange<NewCoordinates>(start, end);
 }
 
 Point Patch::TranslateOldPosition(Point target) {
-  return TranslatePosition<OldCoordinates, NewCoordinates>(*this, target);
+  return TranslatePosition<OldCoordinates, NewCoordinates>(target);
 }
 
 Point Patch::TranslateNewPosition(Point target) {
-  return TranslatePosition<NewCoordinates, OldCoordinates>(*this, target);
+  return TranslatePosition<NewCoordinates, OldCoordinates>(target);
 }
