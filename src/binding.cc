@@ -168,6 +168,8 @@ public:
     prototype_template->Set(Nan::New<String>("getHunks").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunks));
     prototype_template->Set(Nan::New<String>("getHunksInOldRange").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunksInOldRange));
     prototype_template->Set(Nan::New<String>("getHunksInNewRange").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunksInNewRange));
+    prototype_template->Set(Nan::New<String>("translateOldPosition").ToLocalChecked(), Nan::New<FunctionTemplate>(TranslateOldPosition));
+    prototype_template->Set(Nan::New<String>("translateNewPosition").ToLocalChecked(), Nan::New<FunctionTemplate>(TranslateNewPosition));
     prototype_template->Set(Nan::New<String>("printDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(PrintDotGraph));
     module->Set(Nan::New("exports").ToLocalChecked(), constructor_template->GetFunction());
   }
@@ -203,6 +205,24 @@ private:
     info.GetReturnValue().Set(js_result);
   }
 
+  static void GetHunksInOldRange(const Nan::FunctionCallbackInfo<Value> &info) {
+    Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
+
+    Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
+    Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[1]));
+
+    if (start.IsJust() && end.IsJust()) {
+      Local<Array> js_result = Nan::New<Array>();
+
+      size_t i = 0;
+      for (Hunk hunk : patch.GetHunksInOldRange(start.FromJust(), end.FromJust())) {
+        js_result->Set(i++, HunkWrapper::FromHunk(hunk));
+      }
+
+      info.GetReturnValue().Set(js_result);
+    }
+  }
+
   static void GetHunksInNewRange(const Nan::FunctionCallbackInfo<Value> &info) {
     Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
@@ -221,21 +241,25 @@ private:
     }
   }
 
-  static void GetHunksInOldRange(const Nan::FunctionCallbackInfo<Value> &info) {
+  static void TranslateOldPosition(const Nan::FunctionCallbackInfo<Value> &info) {
     Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
     Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
-    Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[1]));
 
-    if (start.IsJust() && end.IsJust()) {
-      Local<Array> js_result = Nan::New<Array>();
+    if (start.IsJust()) {
+      Point result = patch.TranslateOldPosition(start.FromJust());
+      info.GetReturnValue().Set(PointWrapper::FromPoint(result));
+    }
+  }
 
-      size_t i = 0;
-      for (Hunk hunk : patch.GetHunksInOldRange(start.FromJust(), end.FromJust())) {
-        js_result->Set(i++, HunkWrapper::FromHunk(hunk));
-      }
+  static void TranslateNewPosition(const Nan::FunctionCallbackInfo<Value> &info) {
+    Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
-      info.GetReturnValue().Set(js_result);
+    Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
+
+    if (start.IsJust()) {
+      Point result = patch.TranslateNewPosition(start.FromJust());
+      info.GetReturnValue().Set(PointWrapper::FromPoint(result));
     }
   }
 

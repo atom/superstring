@@ -9,6 +9,10 @@ Point Point::Zero() {
   return Point(0, 0);
 }
 
+Point Point::Min(const Point &left, const Point &right) {
+  return left <= right ? left : right;
+}
+
 Point::Point() : Point(0, 0) {}
 
 Point::Point(unsigned row, unsigned column) : row {row}, column {column} {}

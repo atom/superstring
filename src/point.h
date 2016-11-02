@@ -9,6 +9,7 @@ struct Point {
 
   static Point Max();
   static Point Zero();
+  static Point Min(const Point &left, const Point &right);
 
   Point();
   Point(unsigned row, unsigned column);

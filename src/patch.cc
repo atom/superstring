@@ -204,6 +204,27 @@ vector<Hunk> GetHunksInRange(Patch &patch, Point start, Point end) {
   return result;
 }
 
+template<typename InputSpace, typename OutputSpace>
+Point TranslatePosition(Patch &patch, Point target) {
+  Node *lower_bound = SplayLowerBound<InputSpace>(patch, target);
+  if (lower_bound) {
+    Point input_start = InputSpace::distance_from_left_ancestor(lower_bound);
+    Point output_start = OutputSpace::distance_from_left_ancestor(lower_bound);
+    Point input_end = input_start.Traverse(InputSpace::extent(lower_bound));
+    Point output_end = output_start.Traverse(OutputSpace::extent(lower_bound));
+    if (target >= input_end) {
+      return output_end.Traverse(target.Traversal(input_end));
+    } else {
+      return Point::Min(
+        output_end,
+        output_start.Traverse(target.Traversal(input_start))
+      );
+    }
+  } else {
+    return target;
+  }
+}
+
 void Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_insertion_extent) {
   if (new_deletion_extent.IsZero() && new_insertion_extent.IsZero()) {
     return;
@@ -599,4 +620,12 @@ vector<Hunk> Patch::GetHunksInOldRange(Point start, Point end) {
 
 vector<Hunk> Patch::GetHunksInNewRange(Point start, Point end) {
   return GetHunksInRange<NewCoordinates>(*this, start, end);
+}
+
+Point Patch::TranslateOldPosition(Point target) {
+  return TranslatePosition<OldCoordinates, NewCoordinates>(*this, target);
+}
+
+Point Patch::TranslateNewPosition(Point target) {
+  return TranslatePosition<NewCoordinates, OldCoordinates>(*this, target);
 }

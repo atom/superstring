@@ -2,8 +2,11 @@ require('segfault-handler').registerHandler()
 
 import Random from 'random-seed'
 import Patch from '../build/Debug/atom_patch'
-import {traverse, traversalDistance, compare as comparePoints, format as formatPoint} from '../src/point-helpers'
 import TestDocument from './helpers/test-document'
+import {
+  ZERO_POINT, traverse, traversalDistance, compare as comparePoints,
+  format as formatPoint, min as minPoint
+} from '../src/point-helpers'
 
 describe('Native Patch', function () {
   it('correctly records random splices', function () {
@@ -54,6 +57,18 @@ describe('Native Patch', function () {
             ),
             `new range: ${formatPoint(newRange.start)} - ${formatPoint(newRange.end)}, seed: ${seed}`
           )
+
+          let oldPoint = originalDocument.buildRandomPoint()
+          assert.deepEqual(
+            patch.translateOldPosition(oldPoint),
+            translateOldPositionSlowly(hunks, oldPoint)
+          )
+
+          let newPoint = mutatedDocument.buildRandomPoint()
+          assert.deepEqual(
+            patch.translateNewPosition(newPoint),
+            translateNewPositionSlowly(hunks, newPoint)
+          )
         }
 
         assert.deepEqual(originalDocumentCopy.getLines(), mutatedDocument.getLines(), seedMessage)
@@ -61,3 +76,45 @@ describe('Native Patch', function () {
     }
   })
 })
+
+function translateOldPositionSlowly (hunks, target) {
+  let lastOldPosition = ZERO_POINT
+  let lastNewPosition = ZERO_POINT
+
+  for (let hunk of hunks) {
+    if (comparePoints(hunk.oldEnd, target) <= 0) {
+      lastOldPosition = hunk.oldEnd
+      lastNewPosition = hunk.newEnd
+    } else if (comparePoints(hunk.oldStart, target) <= 0) {
+      return minPoint(
+        hunk.newEnd,
+        traverse(hunk.newStart, traversalDistance(target, hunk.oldStart))
+      )
+    } else {
+      break
+    }
+  }
+
+  return traverse(lastNewPosition, traversalDistance(target, lastOldPosition))
+}
+
+function translateNewPositionSlowly (hunks, target) {
+  let lastOldPosition = ZERO_POINT
+  let lastNewPosition = ZERO_POINT
+
+  for (let hunk of hunks) {
+    if (comparePoints(hunk.newEnd, target) <= 0) {
+      lastOldPosition = hunk.oldEnd
+      lastNewPosition = hunk.newEnd
+    } else if (comparePoints(hunk.newStart, target) <= 0) {
+      return minPoint(
+        hunk.oldEnd,
+        traverse(hunk.oldStart, traversalDistance(target, hunk.newStart))
+      )
+    } else {
+      break
+    }
+  }
+
+  return traverse(lastOldPosition, traversalDistance(target, lastNewPosition))
+}

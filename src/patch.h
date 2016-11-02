@@ -12,6 +12,8 @@ class Patch {
   std::vector<Hunk> GetHunks() const;
   std::vector<Hunk> GetHunksInNewRange(Point start, Point end);
   std::vector<Hunk> GetHunksInOldRange(Point start, Point end);
+  Point TranslateOldPosition(Point position);
+  Point TranslateNewPosition(Point position);
   void PrintDotGraph() const;
 
  private:
@@ -23,6 +25,9 @@ class Patch {
 
   template<typename CoordinateSpace>
   friend Node *SplayUpperBound(Patch &, Point);
+
+  template<typename InputSpace, typename OutputSpace>
+  friend Point TranslatePosition(Patch &, Point);
 
   void SplayNode(Node *);
   void RotateNodeRight(Node *);
