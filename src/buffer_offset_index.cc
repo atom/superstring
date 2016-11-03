@@ -3,15 +3,15 @@
 #include "buffer_offset_index.h"
 
 struct Extent {
-  unsigned int characters;
-  unsigned int rows;
+  unsigned characters;
+  unsigned rows;
 };
 
 struct LineNode {
   LineNode *left;
   LineNode *right;
-  unsigned int priority;
-  unsigned int length;
+  unsigned priority;
+  unsigned length;
   Extent left_subtree_extent;
   Extent right_subtree_extent;
 
@@ -53,7 +53,7 @@ BufferOffsetIndex::~BufferOffsetIndex() {
   }
 }
 
-void BufferOffsetIndex::Splice(unsigned int start_row, unsigned int deleted_lines_count, std::vector<unsigned int> &new_line_lengths) {
+void BufferOffsetIndex::Splice(unsigned start_row, unsigned deleted_lines_count, std::vector<unsigned> &new_line_lengths) {
   auto start_node = FindAndBubbleNodeUpToRoot(start_row - 1);
   auto end_node = FindAndBubbleNodeUpToRoot(start_row + deleted_lines_count);
 
@@ -104,7 +104,7 @@ void BufferOffsetIndex::Splice(unsigned int start_row, unsigned int deleted_line
   }
 }
 
-unsigned int BufferOffsetIndex::CharacterIndexForPosition(Point position) const {
+unsigned BufferOffsetIndex::CharacterIndexForPosition(Point position) const {
   auto left_ancestor_row = 0u;
   auto left_ancestor_char_index = 0u;
   auto current_node_char_index = 0u;
@@ -130,7 +130,7 @@ unsigned int BufferOffsetIndex::CharacterIndexForPosition(Point position) const 
   }
 }
 
-Point BufferOffsetIndex::PositionForCharacterIndex(unsigned int char_index) const {
+Point BufferOffsetIndex::PositionForCharacterIndex(unsigned char_index) const {
   auto left_ancestor_row = 0u;
   auto left_ancestor_char_index = 0u;
   auto left_ancestor_length = 0u;
@@ -160,7 +160,7 @@ Point BufferOffsetIndex::PositionForCharacterIndex(unsigned int char_index) cons
   }
 }
 
-LineNode *BufferOffsetIndex::FindAndBubbleNodeUpToRoot(unsigned int row) {
+LineNode *BufferOffsetIndex::FindAndBubbleNodeUpToRoot(unsigned row) {
   auto left_ancestor_row = 0u;
   auto current_node = root;
   auto ancestors_stack = std::vector<LineNode*>();
@@ -250,12 +250,12 @@ void BufferOffsetIndex::RotateNodeRight(LineNode * pivot, LineNode * root, LineN
   pivot->compute_subtree_extents();
 }
 
-LineNode *BufferOffsetIndex::BuildLineNodeTreeFromLineLengths(std::vector<unsigned int> &line_lengths, unsigned int start, unsigned int end, unsigned int min_priority) {
+LineNode *BufferOffsetIndex::BuildLineNodeTreeFromLineLengths(std::vector<unsigned> &line_lengths, unsigned start, unsigned end, unsigned min_priority) {
   if (start == end) {
     return nullptr;
   } else {
     auto rng = std::uniform_int_distribution<>(min_priority, UINT32_MAX);
-    unsigned int priority = rng(rng_engine) - 1;
+    unsigned priority = rng(rng_engine) - 1;
     auto middle = (start + end) / 2;
     auto line_node = new LineNode {
       BuildLineNodeTreeFromLineLengths(line_lengths, start, middle, priority + 1),

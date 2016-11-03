@@ -113,7 +113,7 @@ private:
     auto start_row = info[0].As<Uint32>()->Value();
     auto deleted_lines_count = info[1].As<Uint32>()->Value();
     auto js_new_line_lengths = info[2].As<Array>();
-    auto new_line_lengths = std::vector<unsigned int>(js_new_line_lengths->Length());
+    auto new_line_lengths = std::vector<unsigned>(js_new_line_lengths->Length());
     for (size_t i = 0; i < new_line_lengths.size(); i++) {
       new_line_lengths[i] = js_new_line_lengths->Get(i).As<Uint32>()->Value();
     }
@@ -133,7 +133,7 @@ private:
   static void PositionForCharacterIndex(const Nan::FunctionCallbackInfo<Value> &info) {
     BufferOffsetIndex &buffer_offset_index = Nan::ObjectWrap::Unwrap<BufferOffsetIndexWrapper>(info.This())->buffer_offset_index;
 
-    auto character_index = Nan::To<unsigned int>(info[0]);
+    auto character_index = Nan::To<unsigned>(info[0]);
     if (character_index.IsJust()) {
       auto result = buffer_offset_index.PositionForCharacterIndex(character_index.FromJust());
       info.GetReturnValue().Set(PointWrapper::FromPoint(result));
