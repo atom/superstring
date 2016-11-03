@@ -6,6 +6,12 @@ struct Node;
 
 class Patch {
  public:
+  enum ClipMode {
+    kClosest,
+    kForward,
+    kBackward
+  };
+
   Patch();
   Patch(const std::vector<uint8_t>&);
   ~Patch();
@@ -13,8 +19,8 @@ class Patch {
   std::vector<Hunk> GetHunks() const;
   std::vector<Hunk> GetHunksInNewRange(Point start, Point end);
   std::vector<Hunk> GetHunksInOldRange(Point start, Point end);
-  Point TranslateOldPosition(Point position);
-  Point TranslateNewPosition(Point position);
+  Point TranslateOldPosition(Point position, ClipMode);
+  Point TranslateNewPosition(Point position, ClipMode);
   void Serialize(std::vector<uint8_t> *) const;
   void PrintDotGraph() const;
 
@@ -29,7 +35,7 @@ class Patch {
   Node *SplayUpperBound(Point);
 
   template<typename InputSpace, typename OutputSpace>
-  Point TranslatePosition(Point);
+  Point TranslatePosition(Point, ClipMode);
 
   void SplayNode(Node *);
   void RotateNodeRight(Node *);

@@ -153,11 +153,24 @@ private:
   Hunk hunk;
 };
 
+namespace clip_mode {
+  static Nan::Persistent<v8::Symbol> closest;
+  static Nan::Persistent<v8::Symbol> backward;
+  static Nan::Persistent<v8::Symbol> forward;
+
+  static void Init() {
+    closest.Reset(v8::Symbol::New(Isolate::GetCurrent(), Nan::New("ClipMode.CLOSEST").ToLocalChecked()));
+    backward.Reset(v8::Symbol::New(Isolate::GetCurrent(), Nan::New("ClipMode.BACKWARD").ToLocalChecked()));
+    forward.Reset(v8::Symbol::New(Isolate::GetCurrent(), Nan::New("ClipMode.FORWARD").ToLocalChecked()));
+  }
+}
+
 class PatchWrapper : public Nan::ObjectWrap {
 public:
   static void Init(Local<Object> exports, Local<Object> module) {
     Local<FunctionTemplate> constructor_template = Nan::New<FunctionTemplate>(New);
     constructor_template->SetClassName(Nan::New<String>("Patch").ToLocalChecked());
+    constructor_template->Set(Nan::New("deserialize").ToLocalChecked(), Nan::New<FunctionTemplate>(Deserialize));
     constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
     const auto &prototype_template = constructor_template->PrototypeTemplate();
     prototype_template->Set(Nan::New("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(Splice));
@@ -169,8 +182,14 @@ public:
     prototype_template->Set(Nan::New("serialize").ToLocalChecked(), Nan::New<FunctionTemplate>(Serialize));
     prototype_template->Set(Nan::New("printDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(PrintDotGraph));
     constructor.Reset(constructor_template->GetFunction());
+
     Local<Function> constructor_local = Nan::New(constructor);
-    constructor_local->Set(Nan::New("deserialize").ToLocalChecked(), Nan::New<FunctionTemplate>(Deserialize)->GetFunction());
+    auto js_clip_mode_enum = Nan::New<Object>();
+    js_clip_mode_enum->Set(Nan::New("CLOSEST").ToLocalChecked(), Nan::New(clip_mode::closest));
+    js_clip_mode_enum->Set(Nan::New("BACKWARD").ToLocalChecked(), Nan::New(clip_mode::backward));
+    js_clip_mode_enum->Set(Nan::New("FORWARD").ToLocalChecked(), Nan::New(clip_mode::forward));
+    constructor_local->Set(Nan::New("ClipMode").ToLocalChecked(), js_clip_mode_enum);
+
     module->Set(Nan::New("exports").ToLocalChecked(), constructor_local);
   }
 
@@ -247,13 +266,24 @@ private:
     }
   }
 
+  static Patch::ClipMode ClipModeFromJS(Local<Value> js_clip_mode) {
+    if (js_clip_mode->Equals(Nan::New(clip_mode::closest))) {
+      return Patch::ClipMode::kClosest;
+    } else if (js_clip_mode->Equals(Nan::New(clip_mode::forward))) {
+      return Patch::ClipMode::kForward;
+    } else {
+      return Patch::ClipMode::kBackward;
+    }
+  }
+
   static void TranslateOldPosition(const Nan::FunctionCallbackInfo<Value> &info) {
     Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
     Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
+    Patch::ClipMode clip_mode = ClipModeFromJS(info[1]);
 
     if (start.IsJust()) {
-      Point result = patch.TranslateOldPosition(start.FromJust());
+      Point result = patch.TranslateOldPosition(start.FromJust(), clip_mode);
       info.GetReturnValue().Set(PointWrapper::FromPoint(result));
     }
   }
@@ -262,9 +292,10 @@ private:
     Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
     Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
+    Patch::ClipMode clip_mode = ClipModeFromJS(info[1]);
 
     if (start.IsJust()) {
-      Point result = patch.TranslateNewPosition(start.FromJust());
+      Point result = patch.TranslateNewPosition(start.FromJust(), clip_mode);
       info.GetReturnValue().Set(PointWrapper::FromPoint(result));
     }
   }
@@ -323,6 +354,7 @@ void Init(Local<Object> exports, Local<Object> module) {
   row_string.Reset(Nan::Persistent<String>(Nan::New("row").ToLocalChecked()));
   column_string.Reset(Nan::Persistent<String>(Nan::New("column").ToLocalChecked()));
 
+  clip_mode::Init();
   PointWrapper::Init();
   HunkWrapper::Init();
   PatchWrapper::Init(exports, module);

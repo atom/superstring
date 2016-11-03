@@ -62,14 +62,30 @@ describe('Native Patch', function () {
 
           let oldPoint = originalDocument.buildRandomPoint()
           assert.deepEqual(
-            patch.translateOldPosition(oldPoint),
-            translateOldPositionSlowly(hunks, oldPoint)
+            patch.translateOldPosition(oldPoint, Patch.ClipMode.CLOSEST),
+            translateOldPositionSlowly(hunks, oldPoint, Patch.ClipMode.CLOSEST)
+          )
+          assert.deepEqual(
+            patch.translateOldPosition(oldPoint, Patch.ClipMode.BACKWARD),
+            translateOldPositionSlowly(hunks, oldPoint, Patch.ClipMode.BACKWARD)
+          )
+          assert.deepEqual(
+            patch.translateOldPosition(oldPoint, Patch.ClipMode.FORWARD),
+            translateOldPositionSlowly(hunks, oldPoint, Patch.ClipMode.FORWARD)
           )
 
           let newPoint = mutatedDocument.buildRandomPoint()
           assert.deepEqual(
-            patch.translateNewPosition(newPoint),
-            translateNewPositionSlowly(hunks, newPoint)
+            patch.translateOldPosition(newPoint, Patch.ClipMode.CLOSEST),
+            translateOldPositionSlowly(hunks, newPoint, Patch.ClipMode.CLOSEST)
+          )
+          assert.deepEqual(
+            patch.translateNewPosition(newPoint, Patch.ClipMode.BACKWARD),
+            translateNewPositionSlowly(hunks, newPoint, Patch.ClipMode.BACKWARD)
+          )
+          assert.deepEqual(
+            patch.translateNewPosition(newPoint, Patch.ClipMode.FORWARD),
+            translateNewPositionSlowly(hunks, newPoint, Patch.ClipMode.FORWARD)
           )
         }
 
@@ -81,7 +97,7 @@ describe('Native Patch', function () {
   })
 })
 
-function translateOldPositionSlowly (hunks, target) {
+function translateOldPositionSlowly (hunks, target, clipMode) {
   let lastOldPosition = ZERO_POINT
   let lastNewPosition = ZERO_POINT
 
@@ -90,10 +106,19 @@ function translateOldPositionSlowly (hunks, target) {
       lastOldPosition = hunk.oldEnd
       lastNewPosition = hunk.newEnd
     } else if (comparePoints(hunk.oldStart, target) <= 0) {
-      return minPoint(
-        hunk.newEnd,
-        traverse(hunk.newStart, traversalDistance(target, hunk.oldStart))
-      )
+      if (clipMode === Patch.ClipMode.CLOSEST) {
+        const distanceFromStart = traversalDistance(target, hunk.oldStart)
+        const distanceToEnd = traversalDistance(hunk.oldEnd, target)
+        if (comparePoints(distanceFromStart, distanceToEnd) > 0)  {
+          return hunk.newEnd
+        } else {
+          return hunk.newStart
+        }
+      } else if (clipMode === Patch.ClipMode.FORWARD) {
+        return hunk.newEnd
+      } else { // default to ClipMode.BACKWARD
+        return hunk.newStart
+      }
     } else {
       break
     }
@@ -102,7 +127,7 @@ function translateOldPositionSlowly (hunks, target) {
   return traverse(lastNewPosition, traversalDistance(target, lastOldPosition))
 }
 
-function translateNewPositionSlowly (hunks, target) {
+function translateNewPositionSlowly (hunks, target, clipMode) {
   let lastOldPosition = ZERO_POINT
   let lastNewPosition = ZERO_POINT
 
@@ -111,10 +136,19 @@ function translateNewPositionSlowly (hunks, target) {
       lastOldPosition = hunk.oldEnd
       lastNewPosition = hunk.newEnd
     } else if (comparePoints(hunk.newStart, target) <= 0) {
-      return minPoint(
-        hunk.oldEnd,
-        traverse(hunk.oldStart, traversalDistance(target, hunk.newStart))
-      )
+      if (clipMode === Patch.ClipMode.CLOSEST) {
+        const distanceFromStart = traversalDistance(target, hunk.newStart)
+        const distanceToEnd = traversalDistance(hunk.newEnd, target)
+        if (comparePoints(distanceFromStart, distanceToEnd) > 0)  {
+          return hunk.oldEnd
+        } else {
+          return hunk.oldStart
+        }
+      } else if (clipMode === Patch.ClipMode.FORWARD) {
+        return hunk.oldEnd
+      } else { // default to ClipMode.BACKWARD
+        return hunk.oldStart
+      }
     } else {
       break
     }

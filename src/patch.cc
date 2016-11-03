@@ -209,7 +209,7 @@ vector<Hunk> Patch::GetHunksInRange(Point start, Point end) {
 }
 
 template<typename InputSpace, typename OutputSpace>
-Point Patch::TranslatePosition(Point target) {
+Point Patch::TranslatePosition(Point target, ClipMode clip_mode) {
   Node *lower_bound = SplayLowerBound<InputSpace>(target);
   if (lower_bound) {
     Point input_start = InputSpace::distance_from_left_ancestor(lower_bound);
@@ -219,10 +219,18 @@ Point Patch::TranslatePosition(Point target) {
     if (target >= input_end) {
       return output_end.Traverse(target.Traversal(input_end));
     } else {
-      return Point::Min(
-        output_end,
-        output_start.Traverse(target.Traversal(input_start))
-      );
+      switch (clip_mode) {
+        case ClipMode::kClosest:
+          if (target.Traversal(input_start) > input_end.Traversal(target)) {
+            return output_end;
+          } else {
+            return output_start;
+          }
+        case ClipMode::kBackward:
+          return output_start;
+        case ClipMode::kForward:
+          return output_end;
+      }
     }
   } else {
     return target;
@@ -632,12 +640,12 @@ vector<Hunk> Patch::GetHunksInNewRange(Point start, Point end) {
   return GetHunksInRange<NewCoordinates>(start, end);
 }
 
-Point Patch::TranslateOldPosition(Point target) {
-  return TranslatePosition<OldCoordinates, NewCoordinates>(target);
+Point Patch::TranslateOldPosition(Point target, ClipMode clip_mode) {
+  return TranslatePosition<OldCoordinates, NewCoordinates>(target, clip_mode);
 }
 
-Point Patch::TranslateNewPosition(Point target) {
-  return TranslatePosition<NewCoordinates, OldCoordinates>(target);
+Point Patch::TranslateNewPosition(Point target, ClipMode clip_mode) {
+  return TranslatePosition<NewCoordinates, OldCoordinates>(target, clip_mode);
 }
 
 static const uint32_t SERIALIZATION_VERSION = 1;
