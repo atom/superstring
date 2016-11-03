@@ -20,5 +20,12 @@ branches:
 
 sudo: false
 
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - g++-4.8
+
 env:
-  - CC=clang CXX=clang++ npm_config_clang=1
+  - CC=gcc-4.8 CXX=g++-4.8
