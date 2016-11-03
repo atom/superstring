@@ -267,12 +267,12 @@ private:
   }
 
   static Patch::ClipMode ClipModeFromJS(Local<Value> js_clip_mode) {
-    if (js_clip_mode->Equals(Nan::New(clip_mode::closest))) {
-      return Patch::ClipMode::kClosest;
+    if (js_clip_mode->Equals(Nan::New(clip_mode::backward))) {
+      return Patch::ClipMode::kBackward;
     } else if (js_clip_mode->Equals(Nan::New(clip_mode::forward))) {
       return Patch::ClipMode::kForward;
     } else {
-      return Patch::ClipMode::kBackward;
+      return Patch::ClipMode::kClosest;
     }
   }
 

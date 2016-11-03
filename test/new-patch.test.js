@@ -106,7 +106,11 @@ function translateOldPositionSlowly (hunks, target, clipMode) {
       lastOldPosition = hunk.oldEnd
       lastNewPosition = hunk.newEnd
     } else if (comparePoints(hunk.oldStart, target) <= 0) {
-      if (clipMode === Patch.ClipMode.CLOSEST) {
+      if (clipMode === Patch.ClipMode.BACKWARD) {
+        return hunk.newStart
+      } else if (clipMode === Patch.ClipMode.FORWARD) {
+        return hunk.newEnd
+      } else {
         const distanceFromStart = traversalDistance(target, hunk.oldStart)
         const distanceToEnd = traversalDistance(hunk.oldEnd, target)
         if (comparePoints(distanceFromStart, distanceToEnd) > 0)  {
@@ -114,10 +118,6 @@ function translateOldPositionSlowly (hunks, target, clipMode) {
         } else {
           return hunk.newStart
         }
-      } else if (clipMode === Patch.ClipMode.FORWARD) {
-        return hunk.newEnd
-      } else { // default to ClipMode.BACKWARD
-        return hunk.newStart
       }
     } else {
       break
@@ -136,7 +136,11 @@ function translateNewPositionSlowly (hunks, target, clipMode) {
       lastOldPosition = hunk.oldEnd
       lastNewPosition = hunk.newEnd
     } else if (comparePoints(hunk.newStart, target) <= 0) {
-      if (clipMode === Patch.ClipMode.CLOSEST) {
+      if (clipMode === Patch.ClipMode.BACKWARD) {
+        return hunk.oldStart
+      } else if (clipMode === Patch.ClipMode.FORWARD) {
+        return hunk.oldEnd
+      } else {
         const distanceFromStart = traversalDistance(target, hunk.newStart)
         const distanceToEnd = traversalDistance(hunk.newEnd, target)
         if (comparePoints(distanceFromStart, distanceToEnd) > 0)  {
@@ -144,10 +148,6 @@ function translateNewPositionSlowly (hunks, target, clipMode) {
         } else {
           return hunk.oldStart
         }
-      } else if (clipMode === Patch.ClipMode.FORWARD) {
-        return hunk.oldEnd
-      } else { // default to ClipMode.BACKWARD
-        return hunk.oldStart
       }
     } else {
       break
