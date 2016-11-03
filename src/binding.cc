@@ -66,9 +66,7 @@ public:
   }
 
 private:
-  PointWrapper(Point p) {
-    point = p;
-  }
+  PointWrapper(Point p): point(p) {}
 
   static void New(const Nan::FunctionCallbackInfo<Value> &info) {}
 
