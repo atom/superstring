@@ -7,13 +7,15 @@ struct Node;
 class Patch {
  public:
   Patch();
+  Patch(const std::vector<uint8_t>&);
   ~Patch();
-  void Splice(Point start, Point deletion_extent, Point insertion_extent);
+  bool Splice(Point start, Point deletion_extent, Point insertion_extent);
   std::vector<Hunk> GetHunks() const;
   std::vector<Hunk> GetHunksInNewRange(Point start, Point end);
   std::vector<Hunk> GetHunksInOldRange(Point start, Point end);
   Point TranslateOldPosition(Point position);
   Point TranslateNewPosition(Point position);
+  void Serialize(std::vector<uint8_t> *) const;
   void PrintDotGraph() const;
 
  private:
@@ -37,4 +39,5 @@ class Patch {
   struct PositionStackEntry;
   mutable std::vector<PositionStackEntry> left_ancestor_stack;
   Node *root;
+  bool is_frozen;
 };

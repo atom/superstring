@@ -74,11 +74,15 @@ struct NewCoordinates {
   static Point end(const Hunk &hunk) { return hunk.new_end; }
 };
 
-Patch::Patch() : root{nullptr} {}
+Patch::Patch() : root{nullptr}, is_frozen(false) {}
 
 Patch::~Patch() {
   if (root) {
-    delete root;
+    if (is_frozen) {
+      free(root);
+    } else {
+      delete root;
+    }
   }
 }
 
@@ -225,9 +229,13 @@ Point Patch::TranslatePosition(Point target) {
   }
 }
 
-void Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_insertion_extent) {
+bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_insertion_extent) {
+  if (is_frozen) {
+    return false;
+  }
+
   if (new_deletion_extent.IsZero() && new_insertion_extent.IsZero()) {
-    return;
+    return true;
   }
 
   if (!root) {
@@ -240,7 +248,7 @@ void Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       new_deletion_extent,
       new_insertion_extent
     };
-    return;
+    return true;
   }
 
   Point new_deletion_end = new_splice_start.Traverse(new_deletion_extent);
@@ -417,6 +425,8 @@ void Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       new_insertion_extent
     };
   }
+
+  return true;
 }
 
 void Patch::SplayNode(Node *node) {
@@ -628,4 +638,138 @@ Point Patch::TranslateOldPosition(Point target) {
 
 Point Patch::TranslateNewPosition(Point target) {
   return TranslatePosition<NewCoordinates, OldCoordinates>(target);
+}
+
+static const uint32_t SERIALIZATION_VERSION = 1;
+
+enum Transition: uint32_t {
+  None,
+  Left,
+  Right,
+  Up
+};
+
+template<typename T>
+void AppendToBuffer(vector<uint8_t> *output, const T &value) {
+  const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&value);
+  output->insert(output->end(), bytes, bytes + sizeof(T));
+  output->push_back(UINT8_MAX);
+}
+
+template<typename T>
+T GetFromBuffer(const uint8_t **data, const uint8_t *end) {
+  const T *ptr = reinterpret_cast<const T *>(*data);
+  *data = reinterpret_cast<const uint8_t *>(ptr + 1);
+  *data = *data + 1;
+  if (*data <= end) {
+    return *ptr;
+  } else {
+    return T();
+  }
+}
+
+void GetNodeFromBuffer(const uint8_t **data, const uint8_t *end, Node *node) {
+  node->old_extent = GetFromBuffer<Point>(data, end);
+  node->new_extent = GetFromBuffer<Point>(data, end);
+  node->old_distance_from_left_ancestor = GetFromBuffer<Point>(data, end);
+  node->new_distance_from_left_ancestor = GetFromBuffer<Point>(data, end);
+  node->left = nullptr;
+  node->right = nullptr;
+}
+
+void AppendNodeToBuffer(vector<uint8_t> *output, const Node &node) {
+  AppendToBuffer(output, node.old_extent);
+  AppendToBuffer(output, node.new_extent);
+  AppendToBuffer(output, node.old_distance_from_left_ancestor);
+  AppendToBuffer(output, node.new_distance_from_left_ancestor);
+}
+
+void Patch::Serialize(vector<uint8_t> *output) const {
+  if (!root) return;
+
+  AppendToBuffer(output, SERIALIZATION_VERSION);
+
+  uint32_t node_count = 0;
+  AppendToBuffer<uint32_t>(output, node_count);
+
+  vector<Node *> stack;
+  Node *node = root, *child_node = nullptr;
+  AppendNodeToBuffer(output, *node);
+  node_count++;
+
+  while (node) {
+    if (node->left && (!child_node || (child_node != node->left && child_node != node->right))) {
+      AppendToBuffer(output, Left);
+      AppendNodeToBuffer(output, *node->left);
+      node_count++;
+      stack.push_back(node);
+      node = node->left;
+      child_node = nullptr;
+    } else if (node->right && node->right != child_node) {
+      AppendToBuffer(output, Right);
+      AppendNodeToBuffer(output, *node->right);
+      node_count++;
+      stack.push_back(node);
+      node = node->right;
+      child_node = nullptr;
+    } else if (!stack.empty()) {
+      AppendToBuffer(output, Up);
+      child_node = node;
+      node = stack.back();
+      stack.pop_back();
+    } else {
+      break;
+    }
+  }
+
+  auto node_count_slot = reinterpret_cast<uint32_t *>(output->data() + sizeof(SERIALIZATION_VERSION) + 1);
+  *node_count_slot = node_count;
+}
+
+Patch::Patch(const vector<uint8_t> &input) : root{nullptr}, is_frozen{true} {
+  const uint8_t *begin = input.data();
+  const uint8_t *data = begin;
+  const uint8_t *end = data + input.size();
+
+  uint32_t serialization_version = GetFromBuffer<uint32_t>(&data, end);
+  if (serialization_version != SERIALIZATION_VERSION) {
+    return;
+  }
+
+  uint32_t node_count = GetFromBuffer<uint32_t>(&data, end);
+  if (node_count == 0) {
+    return;
+  }
+
+  vector<Node *> stack;
+  root = static_cast<Node *>(calloc(node_count, sizeof(Node)));
+  Node *node = root, *next_node = root + 1;
+  GetNodeFromBuffer(&data, end, node);
+
+  while (next_node < root + node_count) {
+    switch (GetFromBuffer<Transition>(&data, end)) {
+      case None:
+        delete[] root;
+        return;
+      case Left:
+        GetNodeFromBuffer(&data, end, next_node);
+        node->left = next_node;
+        next_node->parent = node;
+        stack.push_back(node);
+        node = next_node;
+        next_node++;
+        break;
+      case Right:
+        GetNodeFromBuffer(&data, end, next_node);
+        node->right = next_node;
+        next_node->parent = node;
+        stack.push_back(node);
+        node = next_node;
+        next_node++;
+        break;
+      case Up:
+        node = stack.back();
+        stack.pop_back();
+    }
+  }
 }

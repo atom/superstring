@@ -90,8 +90,6 @@ private:
   Point point;
 };
 
-Nan::Persistent<v8::Function> PointWrapper::constructor;
-
 class HunkWrapper : public Nan::ObjectWrap {
 public:
   static void Init() {
@@ -155,8 +153,6 @@ private:
   Hunk hunk;
 };
 
-Nan::Persistent<v8::Function> HunkWrapper::constructor;
-
 class PatchWrapper : public Nan::ObjectWrap {
 public:
   static void Init(Local<Object> exports, Local<Object> module) {
@@ -164,17 +160,25 @@ public:
     constructor_template->SetClassName(Nan::New<String>("Patch").ToLocalChecked());
     constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
     const auto &prototype_template = constructor_template->PrototypeTemplate();
-    prototype_template->Set(Nan::New<String>("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(Splice));
-    prototype_template->Set(Nan::New<String>("getHunks").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunks));
-    prototype_template->Set(Nan::New<String>("getHunksInOldRange").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunksInOldRange));
-    prototype_template->Set(Nan::New<String>("getHunksInNewRange").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunksInNewRange));
-    prototype_template->Set(Nan::New<String>("translateOldPosition").ToLocalChecked(), Nan::New<FunctionTemplate>(TranslateOldPosition));
-    prototype_template->Set(Nan::New<String>("translateNewPosition").ToLocalChecked(), Nan::New<FunctionTemplate>(TranslateNewPosition));
-    prototype_template->Set(Nan::New<String>("printDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(PrintDotGraph));
-    module->Set(Nan::New("exports").ToLocalChecked(), constructor_template->GetFunction());
+    prototype_template->Set(Nan::New("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(Splice));
+    prototype_template->Set(Nan::New("getHunks").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunks));
+    prototype_template->Set(Nan::New("getHunksInOldRange").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunksInOldRange));
+    prototype_template->Set(Nan::New("getHunksInNewRange").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunksInNewRange));
+    prototype_template->Set(Nan::New("translateOldPosition").ToLocalChecked(), Nan::New<FunctionTemplate>(TranslateOldPosition));
+    prototype_template->Set(Nan::New("translateNewPosition").ToLocalChecked(), Nan::New<FunctionTemplate>(TranslateNewPosition));
+    prototype_template->Set(Nan::New("serialize").ToLocalChecked(), Nan::New<FunctionTemplate>(Serialize));
+    prototype_template->Set(Nan::New("printDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(PrintDotGraph));
+    constructor.Reset(constructor_template->GetFunction());
+    Local<Function> constructor_local = Nan::New(constructor);
+    constructor_local->Set(Nan::New("deserialize").ToLocalChecked(), Nan::New<FunctionTemplate>(Deserialize)->GetFunction());
+    module->Set(Nan::New("exports").ToLocalChecked(), constructor_local);
   }
 
 private:
+  PatchWrapper() : patch{} {}
+
+  PatchWrapper(const std::vector<uint8_t> &data) : patch{data} {}
+
   static void New(const Nan::FunctionCallbackInfo<Value> &info) {
     PatchWrapper *patch = new PatchWrapper();
     patch->Wrap(info.This());
@@ -188,7 +192,9 @@ private:
     Nan::Maybe<Point> insertion_extent = PointFromJS(Nan::To<Object>(info[2]));
 
     if (start.IsJust() && deletion_extent.IsJust() && insertion_extent.IsJust()) {
-      patch.Splice(start.FromJust(), deletion_extent.FromJust(), insertion_extent.FromJust());
+      if (!patch.Splice(start.FromJust(), deletion_extent.FromJust(), insertion_extent.FromJust())) {
+        Nan::ThrowError("Can't splice into a frozen patch");
+      }
     }
   }
 
@@ -263,13 +269,55 @@ private:
     }
   }
 
+  static void Serialize(const Nan::FunctionCallbackInfo<Value> &info) {
+    Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
+    auto &serialization_vector = SerializationVector();
+    serialization_vector.clear();
+    patch.Serialize(&serialization_vector);
+    Local<Object> result;
+    auto maybe_result = Nan::CopyBuffer(
+      reinterpret_cast<char *>(serialization_vector.data()),
+      serialization_vector.size()
+    );
+    if (maybe_result.ToLocal(&result)) {
+      info.GetReturnValue().Set(result);
+    }
+  }
+
+  static void Deserialize(const Nan::FunctionCallbackInfo<Value> &info) {
+    Local<Object> result;
+    if (Nan::NewInstance(Nan::New(constructor)).ToLocal(&result)) {
+      Local<Uint8Array> typed_array = Local<Uint8Array>::Cast(info[0]);
+      if (typed_array->IsUint8Array()) {
+        auto buffer = typed_array->Buffer();
+        auto contents = buffer->GetContents();
+        auto &serialization_vector = SerializationVector();
+        auto *data = reinterpret_cast<const uint8_t *>(contents.Data());
+        serialization_vector.assign(data, data + contents.ByteLength());
+        PatchWrapper *wrapper = new PatchWrapper(serialization_vector);
+        wrapper->Wrap(result);
+        info.GetReturnValue().Set(result);
+      }
+    }
+  }
+
+  static inline std::vector<uint8_t> &SerializationVector() {
+    static std::vector<uint8_t> result;
+    return result;
+  }
+
   static void PrintDotGraph(const Nan::FunctionCallbackInfo<Value> &info) {
     Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
     patch.PrintDotGraph();
   }
 
+  static Nan::Persistent<v8::Function> constructor;
   Patch patch;
 };
+
+Nan::Persistent<v8::Function> PointWrapper::constructor;
+Nan::Persistent<v8::Function> HunkWrapper::constructor;
+Nan::Persistent<v8::Function> PatchWrapper::constructor;
 
 void Init(Local<Object> exports, Local<Object> module) {
   row_string.Reset(Nan::Persistent<String>(Nan::New("row").ToLocalChecked()));

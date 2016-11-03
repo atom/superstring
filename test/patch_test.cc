@@ -52,3 +52,55 @@ TEST_CASE("Records simple non-overlapping splices") {
     }
   }));
 }
+
+TEST_CASE("Serializes and deserializes") {
+  Patch patch;
+
+  patch.Splice(Point{0, 5}, Point{0, 3}, Point{0, 4});
+  patch.Splice(Point{0, 10}, Point{0, 3}, Point{0, 4});
+  patch.Splice(Point{0, 2}, Point{0, 2}, Point{0, 1});
+  patch.Splice(Point{0, 0}, Point{0, 0}, Point{0, 10});
+  patch.TranslateOldPosition(Point{0, 5});
+  REQUIRE(patch.GetHunks() == vector<Hunk>({
+    Hunk{
+      Point{0, 0}, Point{0, 0},
+      Point{0, 0}, Point{0, 10}
+    },
+    Hunk{
+      Point{0, 2}, Point{0, 4},
+      Point{0, 12}, Point{0, 13}
+    },
+    Hunk{
+      Point{0, 5}, Point{0, 8},
+      Point{0, 14}, Point{0, 18},
+    },
+    Hunk{
+      Point{0, 9}, Point{0, 12},
+      Point{0, 19}, Point{0, 23},
+    }
+  }));
+
+  vector<uint8_t> serialization_vector;
+  patch.Serialize(&serialization_vector);
+  Patch patch_copy(serialization_vector);
+  REQUIRE(patch_copy.GetHunks() == vector<Hunk>({
+    Hunk{
+      Point{0, 0}, Point{0, 0},
+      Point{0, 0}, Point{0, 10}
+    },
+    Hunk{
+      Point{0, 2}, Point{0, 4},
+      Point{0, 12}, Point{0, 13}
+    },
+    Hunk{
+      Point{0, 5}, Point{0, 8},
+      Point{0, 14}, Point{0, 18},
+    },
+    Hunk{
+      Point{0, 9}, Point{0, 12},
+      Point{0, 19}, Point{0, 23},
+    }
+  }));
+
+  REQUIRE(patch_copy.Splice(Point{0, 1}, Point{0, 1}, Point{0, 2}) == false);
+}

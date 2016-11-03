@@ -37,6 +37,8 @@ describe('Native Patch', function () {
           originalDocumentCopy.splice(hunk.newStart, oldExtent, newText)
         }
 
+        assert.deepEqual(originalDocumentCopy.getLines(), mutatedDocument.getLines(), seedMessage)
+
         for (let k = 0; k < 5; k++) {
           let oldRange = originalDocument.buildRandomRange()
           assert.deepEqual(
@@ -71,7 +73,9 @@ describe('Native Patch', function () {
           )
         }
 
-        assert.deepEqual(originalDocumentCopy.getLines(), mutatedDocument.getLines(), seedMessage)
+        let blob = patch.serialize()
+        const patchCopy = Patch.deserialize(blob)
+        assert.deepEqual(patchCopy.getHunks(), patch.getHunks())
       }
     }
   })
