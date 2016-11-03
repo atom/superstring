@@ -29,13 +29,13 @@ static Nan::Maybe<Point> PointFromJS(Nan::MaybeLocal<Object> maybe_object) {
   }
 
   unsigned row, column;
-  if (isfinite(js_row->NumberValue())) {
+  if (std::isfinite(js_row->NumberValue())) {
     row = static_cast<unsigned>(js_row->Int32Value());
   } else {
     row = UINT_MAX;
   }
 
-  if (isfinite(js_column->NumberValue())) {
+  if (std::isfinite(js_column->NumberValue())) {
     column = static_cast<unsigned>(js_column->Int32Value());
   } else {
     column = UINT_MAX;
