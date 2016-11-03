@@ -4,7 +4,7 @@
   "description": "An index that maps character indices in the buffer to 2d coordinates.",
   "main": "build/Release/buffer_offset_index",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node-gyp rebuild && mocha test/**/*.test.js",
     "install": "node-gyp rebuild"
   },
   "author": "",
@@ -12,6 +12,7 @@
   "gypfile": true,
   "devDependencies": {
     "mocha": "^3.1.2",
+    "random-seed": "^0.3.0",
     "segfault-handler": "^1.0.0"
   },
   "dependencies": {

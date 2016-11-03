@@ -16,15 +16,19 @@ struct LineNode {
   Extent right_subtree_extent;
 
   ~LineNode() {
-    delete left;
-    delete right;
+    if (left) {
+      delete left;
+    }
+    if (right) {
+      delete right;
+    }
   }
 
   void compute_subtree_extents() {
     if (left) {
       left_subtree_extent = Extent {
-        left->left_subtree_extent.rows + 1 + left->right_subtree_extent.rows,
-        left->left_subtree_extent.characters + left->length + left->right_subtree_extent.characters
+        left->left_subtree_extent.characters + left->length + left->right_subtree_extent.characters,
+        left->left_subtree_extent.rows + 1 + left->right_subtree_extent.rows
       };
     } else {
       left_subtree_extent = Extent {0, 0};
@@ -32,8 +36,8 @@ struct LineNode {
 
     if (right) {
       right_subtree_extent = Extent {
-        right->left_subtree_extent.rows + 1 + right->right_subtree_extent.rows,
-        right->left_subtree_extent.characters + right->length + right->right_subtree_extent.characters
+        right->left_subtree_extent.characters + right->length + right->right_subtree_extent.characters,
+        right->left_subtree_extent.rows + 1 + right->right_subtree_extent.rows
       };
     } else {
       right_subtree_extent = Extent {0, 0};
@@ -44,7 +48,9 @@ struct LineNode {
 BufferOffsetIndex::BufferOffsetIndex() : root{nullptr} {}
 
 BufferOffsetIndex::~BufferOffsetIndex() {
-  delete root;
+  if (root) {
+    delete root;
+  }
 }
 
 void BufferOffsetIndex::Splice(unsigned int start_row, unsigned int deleted_lines_count, std::vector<unsigned int> &new_line_lengths) {
@@ -52,25 +58,32 @@ void BufferOffsetIndex::Splice(unsigned int start_row, unsigned int deleted_line
   auto end_node = FindAndBubbleNodeUpToRoot(start_row + deleted_lines_count);
 
   if (start_node) {
-    delete start_node->right;
-    if (new_line_lengths.empty()) {
+    if (start_node->right) {
+      delete start_node->right;
       start_node->right = nullptr;
-    } else {
+    }
+
+    if (!new_line_lengths.empty()) {
       start_node->right = BuildLineNodeTreeFromLineLengths(new_line_lengths, 0, new_line_lengths.size(), 1);
     }
 
     start_node->compute_subtree_extents();
   } else if (end_node) {
-    delete end_node->left;
-    if (new_line_lengths.empty()) {
+    if (end_node->left) {
+      delete end_node->left;
       end_node->left = nullptr;
-    } else {
+    }
+
+    if (!new_line_lengths.empty()) {
       end_node->left = BuildLineNodeTreeFromLineLengths(new_line_lengths, 0, new_line_lengths.size(), 1);
     }
 
     end_node->compute_subtree_extents();
   } else {
-    delete root;
+    if (root) {
+      delete root;
+    }
+
     root = BuildLineNodeTreeFromLineLengths(new_line_lengths, 0, new_line_lengths.size(), 1);
   }
 
@@ -209,7 +222,7 @@ void BufferOffsetIndex::RotateNodeLeft(LineNode * pivot, LineNode * root, LineNo
       root_parent->right = pivot;
     }
   } else {
-    root = pivot;
+    this->root = pivot;
   }
 
   root->right = pivot->left;
@@ -227,7 +240,7 @@ void BufferOffsetIndex::RotateNodeRight(LineNode * pivot, LineNode * root, LineN
       root_parent->right = pivot;
     }
   } else {
-    root = pivot;
+    this->root = pivot;
   }
 
   root->left = pivot->right;
