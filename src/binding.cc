@@ -1,4 +1,4 @@
-#include <math.h>
+#include <cmath>
 #include <sstream>
 #include <string>
 #include "nan.h"
@@ -33,13 +33,13 @@ static Nan::Maybe<Point> PointFromJS(Nan::MaybeLocal<Object> maybe_object) {
   }
 
   unsigned row, column;
-  if (isfinite(js_row->NumberValue())) {
+  if (std::isfinite(js_row->NumberValue())) {
     row = static_cast<unsigned>(js_row->Int32Value());
   } else {
     row = UINT_MAX;
   }
 
-  if (isfinite(js_column->NumberValue())) {
+  if (std::isfinite(js_column->NumberValue())) {
     column = static_cast<unsigned>(js_column->Int32Value());
   } else {
     column = UINT_MAX;
@@ -70,7 +70,7 @@ public:
   }
 
 private:
-  PointWrapper(Point point) : point{point} {}
+  PointWrapper(Point point) : point(point) {}
 
   static void New(const Nan::FunctionCallbackInfo<Value> &info) {}
 
@@ -118,7 +118,7 @@ public:
   }
 
 private:
-  HunkWrapper(Hunk hunk) : hunk{hunk} {}
+  HunkWrapper(Hunk hunk) : hunk(hunk) {}
 
   static void New(const Nan::FunctionCallbackInfo<Value> &info) {}
 
@@ -177,7 +177,7 @@ public:
 private:
   PatchWrapper() : patch{} {}
 
-  PatchWrapper(const std::vector<uint8_t> &data) : patch{data} {}
+  PatchWrapper(const std::vector<uint8_t> &data) : patch(data) {}
 
   static void New(const Nan::FunctionCallbackInfo<Value> &info) {
     PatchWrapper *patch = new PatchWrapper();
