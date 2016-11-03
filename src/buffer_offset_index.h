@@ -1,12 +1,11 @@
+#ifndef BUFFER_OFFSET_INDEX_H_
+#define BUFFER_OFFSET_INDEX_H_
+
 #include <vector>
 #include <random>
+#include "point.h"
 
 struct LineNode;
-
-struct Point {
-  unsigned int row;
-  unsigned int column;
-};
 
 class BufferOffsetIndex {
  public:
@@ -26,3 +25,5 @@ class BufferOffsetIndex {
   LineNode *root;
   std::default_random_engine rng_engine;
 };
+
+#endif // BUFFER_OFFSET_INDEX_H_

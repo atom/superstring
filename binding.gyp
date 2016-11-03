@@ -1,7 +1,7 @@
 {
   "targets": [
     {
-      "target_name": "buffer-offset-index",
+      "target_name": "buffer_offset_index",
       "cflags_cc": ["-std=c++11"],
       "sources": [
         "src/binding.cc",

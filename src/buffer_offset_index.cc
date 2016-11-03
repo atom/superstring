@@ -24,7 +24,7 @@ struct LineNode {
     if (left) {
       left_subtree_extent = Extent {
         left->left_subtree_extent.rows + 1 + left->right_subtree_extent.rows,
-        left->left_subtree_extent.characters + length + left->right_subtree_extent.characters
+        left->left_subtree_extent.characters + left->length + left->right_subtree_extent.characters
       };
     } else {
       left_subtree_extent = Extent {0, 0};
@@ -33,7 +33,7 @@ struct LineNode {
     if (right) {
       right_subtree_extent = Extent {
         right->left_subtree_extent.rows + 1 + right->right_subtree_extent.rows,
-        right->left_subtree_extent.characters + length + right->right_subtree_extent.characters
+        right->left_subtree_extent.characters + right->length + right->right_subtree_extent.characters
       };
     } else {
       right_subtree_extent = Extent {0, 0};
