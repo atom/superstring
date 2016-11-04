@@ -1,4 +1,5 @@
 #include <vector>
+#include <nan.h>
 #include "point.h"
 #include "hunk.h"
 
@@ -6,12 +7,6 @@ struct Node;
 
 class Patch {
  public:
-  enum ClipMode {
-    kClosest,
-    kForward,
-    kBackward
-  };
-
   Patch();
   Patch(const std::vector<uint8_t>&);
   ~Patch();
@@ -19,8 +14,8 @@ class Patch {
   std::vector<Hunk> GetHunks() const;
   std::vector<Hunk> GetHunksInNewRange(Point start, Point end);
   std::vector<Hunk> GetHunksInOldRange(Point start, Point end);
-  Point TranslateOldPosition(Point position, ClipMode);
-  Point TranslateNewPosition(Point position, ClipMode);
+  Nan::Maybe<Hunk> HunkForOldPosition(Point position);
+  Nan::Maybe<Hunk> HunkForNewPosition(Point position);
   void Serialize(std::vector<uint8_t> *) const;
   void PrintDotGraph() const;
 
@@ -34,8 +29,8 @@ class Patch {
   template<typename CoordinateSpace>
   Node *SplayUpperBound(Point);
 
-  template<typename InputSpace, typename OutputSpace>
-  Point TranslatePosition(Point, ClipMode);
+  template<typename CoordinateSpace>
+  Nan::Maybe<Hunk> HunkForPosition(Point position);
 
   void SplayNode(Node *);
   void RotateNodeRight(Node *);

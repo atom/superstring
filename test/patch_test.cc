@@ -60,7 +60,7 @@ TEST_CASE("Serializes and deserializes") {
   patch.Splice(Point{0, 10}, Point{0, 3}, Point{0, 4});
   patch.Splice(Point{0, 2}, Point{0, 2}, Point{0, 1});
   patch.Splice(Point{0, 0}, Point{0, 0}, Point{0, 10});
-  patch.TranslateOldPosition(Point{0, 5}, Patch::ClipMode::kBackward); // splay the middle
+  patch.HunkForOldPosition(Point{0, 5}); // splay the middle
   REQUIRE(patch.GetHunks() == vector<Hunk>({
     Hunk{
       Point{0, 0}, Point{0, 0},

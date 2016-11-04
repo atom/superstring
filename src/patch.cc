@@ -4,6 +4,7 @@
 #include "patch.h"
 
 using std::vector;
+using Nan::Maybe;
 
 struct Node {
   Node *parent;
@@ -208,32 +209,17 @@ vector<Hunk> Patch::GetHunksInRange(Point start, Point end) {
   return result;
 }
 
-template<typename InputSpace, typename OutputSpace>
-Point Patch::TranslatePosition(Point target, ClipMode clip_mode) {
-  Node *lower_bound = SplayLowerBound<InputSpace>(target);
+template<typename CoordinateSpace>
+Nan::Maybe<Hunk> Patch::HunkForPosition(Point target) {
+  Node *lower_bound = SplayLowerBound<CoordinateSpace>(target);
   if (lower_bound) {
-    Point input_start = InputSpace::distance_from_left_ancestor(lower_bound);
-    Point output_start = OutputSpace::distance_from_left_ancestor(lower_bound);
-    Point input_end = input_start.Traverse(InputSpace::extent(lower_bound));
-    Point output_end = output_start.Traverse(OutputSpace::extent(lower_bound));
-    if (target >= input_end) {
-      return output_end.Traverse(target.Traversal(input_end));
-    } else {
-      switch (clip_mode) {
-        case ClipMode::kClosest:
-          if (target.Traversal(input_start) > input_end.Traversal(target)) {
-            return output_end;
-          } else {
-            return output_start;
-          }
-        case ClipMode::kBackward:
-          return output_start;
-        case ClipMode::kForward:
-          return output_end;
-      }
-    }
+    Point old_start = lower_bound->old_distance_from_left_ancestor;
+    Point new_start = lower_bound->new_distance_from_left_ancestor;
+    Point old_end = old_start.Traverse(lower_bound->old_extent);
+    Point new_end = new_start.Traverse(lower_bound->new_extent);
+    return Nan::Just(Hunk{old_start, old_end, new_start, new_end});
   } else {
-    return target;
+    return Nan::Nothing<Hunk>();
   }
 }
 
@@ -640,12 +626,12 @@ vector<Hunk> Patch::GetHunksInNewRange(Point start, Point end) {
   return GetHunksInRange<NewCoordinates>(start, end);
 }
 
-Point Patch::TranslateOldPosition(Point target, ClipMode clip_mode) {
-  return TranslatePosition<OldCoordinates, NewCoordinates>(target, clip_mode);
+Maybe<Hunk> Patch::HunkForOldPosition(Point target) {
+  return HunkForPosition<OldCoordinates>(target);
 }
 
-Point Patch::TranslateNewPosition(Point target, ClipMode clip_mode) {
-  return TranslatePosition<NewCoordinates, OldCoordinates>(target, clip_mode);
+Maybe<Hunk> Patch::HunkForNewPosition(Point target) {
+  return HunkForPosition<NewCoordinates>(target);
 }
 
 static const uint32_t SERIALIZATION_VERSION = 1;

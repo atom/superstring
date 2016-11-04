@@ -45,6 +45,7 @@
           "src",
           "test",
           "vendor",
+          '<!(node -e "require(\'nan\')")'
         ],
         "conditions": [
           ['OS=="mac"', {
