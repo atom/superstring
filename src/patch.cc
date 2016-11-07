@@ -3,6 +3,12 @@
 #include <vector>
 #include "patch.h"
 
+#ifdef _WIN32
+#include <Winsock2.h>
+#else
+#include <arpa/inet.h>
+#endif
+
 using std::vector;
 using Nan::Maybe;
 
@@ -644,6 +650,7 @@ enum Transition: uint32_t {
 };
 
 void AppendToBuffer(vector<uint8_t> *output, uint32_t value) {
+  value = htonl(value);
   const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&value);
   output->insert(output->end(), bytes, bytes + sizeof(uint32_t));
 }
@@ -652,7 +659,7 @@ uint32_t GetFromBuffer(const uint8_t **data, const uint8_t *end) {
   const uint32_t *pointer = reinterpret_cast<const uint32_t *>(*data);
   *data = *data + sizeof(uint32_t);
   if (*data <= end) {
-    return *pointer;
+    return ntohl(*pointer);
   } else {
     return 0;
   }
@@ -726,7 +733,8 @@ void Patch::Serialize(vector<uint8_t> *output) const {
     }
   }
 
-  *(reinterpret_cast<uint32_t *>(output->data() + node_count_index)) = node_count;
+  auto node_count_slot = reinterpret_cast<uint32_t *>(output->data() + node_count_index);
+  *node_count_slot = htonl(node_count);
 }
 
 Patch::Patch(const vector<uint8_t> &input) : root{nullptr}, is_frozen{true} {
