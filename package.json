@@ -12,7 +12,8 @@
     "standard": "standard --recursive src test",
     "build": "babel src --out-dir dist",
     "clean": "rm -rf dist",
-    "ci": "npm run standard && npm run test"
+    "ci": "npm run standard && npm run test",
+    "ci-windows": "npm run standard && npm run test-js"
   },
   "repository": {
     "type": "git",
