@@ -9,6 +9,28 @@ import {
 } from '../src/point-helpers'
 
 describe('Native Patch', function () {
+  it('honors the mergeAdjacentHunks option', function () {
+    const patch = new Patch({mergeAdjacentHunks: false})
+
+    patch.splice({row: 0, column: 10}, {row: 0, column: 0}, {row: 1, column: 5})
+    patch.splice({row: 1, column: 5}, {row: 0, column: 2}, {row: 0, column: 8})
+
+    assert.deepEqual(JSON.parse(JSON.stringify(patch.getHunks())), [
+      {
+        oldStart: {row: 0, column: 10},
+        oldEnd: {row: 0, column: 10},
+        newStart: {row: 0, column: 10},
+        newEnd: {row: 1, column: 5}
+      },
+      {
+        oldStart: {row: 0, column: 10},
+        oldEnd: {row: 0, column: 12},
+        newStart: {row: 1, column: 5},
+        newEnd: {row: 1, column: 13}
+      }
+    ])
+  })
+
   it('correctly records random splices', function () {
     this.timeout(Infinity)
 
@@ -18,7 +40,7 @@ describe('Native Patch', function () {
       const random = new Random(seed)
       const originalDocument = new TestDocument(seed)
       const mutatedDocument = originalDocument.clone()
-      const patch = new Patch()
+      const patch = new Patch({mergeAdjacentHunks: random(2)})
 
       for (let j = 0; j < 10; j++) {
         const {start, oldText, oldExtent, newExtent, newText} = mutatedDocument.performRandomSplice()

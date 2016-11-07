@@ -8,6 +8,7 @@ struct Node;
 class Patch {
  public:
   Patch();
+  Patch(bool merges_adjacent_hunks);
   Patch(const std::vector<uint8_t>&);
   ~Patch();
   bool Splice(Point start, Point deletion_extent, Point insertion_extent);
@@ -41,4 +42,5 @@ class Patch {
   mutable std::vector<PositionStackEntry> left_ancestor_stack;
   Node *root;
   bool is_frozen;
+  bool merges_adjacent_hunks;
 };

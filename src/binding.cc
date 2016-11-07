@@ -175,12 +175,21 @@ public:
   }
 
 private:
-  PatchWrapper() : patch{} {}
+  PatchWrapper(bool merges_adjacent_hunks) : patch{merges_adjacent_hunks} {}
 
-  PatchWrapper(const std::vector<uint8_t> &data) : patch(data) {}
+  PatchWrapper(const std::vector<uint8_t> &data) : patch{data} {}
 
   static void New(const Nan::FunctionCallbackInfo<Value> &info) {
-    PatchWrapper *patch = new PatchWrapper();
+    bool merges_adjacent_hunks = true;
+    Local<Object> options;
+
+    if (info.Length() > 0 && Nan::To<Object>(info[0]).ToLocal(&options)) {
+      Local<Boolean> js_merge_adjacent_hunks;
+      if (Nan::To<Boolean>(options->Get(Nan::New("mergeAdjacentHunks").ToLocalChecked())).ToLocal(&js_merge_adjacent_hunks)) {
+        merges_adjacent_hunks = js_merge_adjacent_hunks->BooleanValue();
+      }
+    }
+    PatchWrapper *patch = new PatchWrapper(merges_adjacent_hunks);
     patch->Wrap(info.This());
   }
 

@@ -81,7 +81,8 @@ struct NewCoordinates {
   static Point end(const Hunk &hunk) { return hunk.new_end; }
 };
 
-Patch::Patch() : root{nullptr}, is_frozen(false) {}
+Patch::Patch() : root{nullptr}, is_frozen{false}, merges_adjacent_hunks{true} {}
+Patch::Patch(bool merges_adjacent_hunks) : root{nullptr}, is_frozen{false}, merges_adjacent_hunks{merges_adjacent_hunks} {}
 
 Patch::~Patch() {
   if (root) {
@@ -271,9 +272,14 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
     Point lower_bound_new_end = lower_bound_new_start.Traverse(lower_bound->new_extent);
     Point upper_bound_old_end = upper_bound_old_start.Traverse(upper_bound->old_extent);
     Point upper_bound_new_end = upper_bound_new_start.Traverse(upper_bound->new_extent);
+    bool overlaps_lower_bound =
+      new_splice_start < lower_bound_new_end ||
+        (merges_adjacent_hunks && new_splice_start == lower_bound_new_end);
+    bool overlaps_upper_bound =
+      new_deletion_end > upper_bound_new_start ||
+        (merges_adjacent_hunks && new_deletion_end == upper_bound_new_start);
 
-    // Splice overlaps both the upper and lower bounds
-    if (new_splice_start <= lower_bound_new_end && new_deletion_end >= upper_bound_new_start) {
+    if (overlaps_lower_bound && overlaps_upper_bound) {
       Point new_extent_prefix = new_splice_start.Traversal(lower_bound_new_start);
       Point new_extent_suffix = upper_bound_new_end.Traversal(new_deletion_end);
 
@@ -295,8 +301,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
         delete lower_bound;
       }
 
-    // Splice overlaps the upper bound
-    } else if (new_deletion_end >= upper_bound_new_start) {
+    } else if (overlaps_upper_bound) {
       Point old_splice_start = lower_bound_old_end.Traverse(new_splice_start.Traversal(lower_bound_new_end));
       Point new_extent_suffix = upper_bound_new_end.Traversal(new_deletion_end);
 
@@ -309,8 +314,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
         upper_bound->DeleteLeft();
       }
 
-    // Splice overlaps the lower bound
-    } else if (new_splice_start <= lower_bound_new_end) {
+    } else if (overlaps_lower_bound) {
       Point rightmost_child_old_end, rightmost_child_new_end;
       lower_bound->GetSubtreeEnd(&rightmost_child_old_end, &rightmost_child_new_end);
       Point old_deletion_end = rightmost_child_old_end.Traverse(new_deletion_end.Traversal(rightmost_child_new_end));
@@ -355,9 +359,12 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
     Point rightmost_child_old_end, rightmost_child_new_end;
     lower_bound->GetSubtreeEnd(&rightmost_child_old_end, &rightmost_child_new_end);
     Point old_deletion_end = rightmost_child_old_end.Traverse(new_deletion_end.Traversal(rightmost_child_new_end));
+    bool overlaps_lower_bound =
+      new_splice_start < lower_bound_new_end ||
+        (merges_adjacent_hunks && new_splice_start == lower_bound_new_end);
 
     lower_bound->DeleteRight();
-    if (new_splice_start <= lower_bound_new_end) {
+    if (overlaps_lower_bound) {
       lower_bound->old_extent = old_deletion_end.Traversal(lower_bound_old_start);
       lower_bound->new_extent = new_insertion_end.Traversal(lower_bound_new_start);
     } else {
@@ -378,6 +385,9 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
     Point upper_bound_new_start = upper_bound->new_distance_from_left_ancestor;
     Point upper_bound_old_start = upper_bound->old_distance_from_left_ancestor;
     Point upper_bound_new_end = upper_bound_new_start.Traverse(upper_bound->new_extent);
+    bool overlaps_upper_bound =
+      new_deletion_end > upper_bound_new_start ||
+        (merges_adjacent_hunks && new_deletion_end == upper_bound_new_start);
 
     Point old_deletion_end;
     if (upper_bound->left) {
@@ -389,7 +399,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
     }
 
     upper_bound->DeleteLeft();
-    if (new_deletion_end >= upper_bound_new_start) {
+    if (overlaps_upper_bound) {
       upper_bound->old_distance_from_left_ancestor = new_splice_start;
       upper_bound->new_distance_from_left_ancestor = new_splice_start;
       upper_bound->old_extent = upper_bound_old_start.Traversal(new_splice_start).Traverse(upper_bound->old_extent);
@@ -737,7 +747,7 @@ void Patch::Serialize(vector<uint8_t> *output) const {
   *node_count_slot = htonl(node_count);
 }
 
-Patch::Patch(const vector<uint8_t> &input) : root{nullptr}, is_frozen{true} {
+Patch::Patch(const vector<uint8_t> &input) : root{nullptr}, is_frozen{true}, merges_adjacent_hunks{true} {
   const uint8_t *begin = input.data();
   const uint8_t *data = begin;
   const uint8_t *end = data + input.size();
