@@ -1,7 +1,7 @@
 require('segfault-handler').registerHandler()
 
 import Random from 'random-seed'
-import Patch from '../build/Debug/atom_patch'
+import Patch from '..'
 import TestDocument from './helpers/test-document'
 import {
   ZERO_POINT, traverse, traversalDistance, compare as comparePoints,
