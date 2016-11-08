@@ -34,9 +34,11 @@ describe('Native Patch', function () {
   it('correctly records random splices', function () {
     this.timeout(Infinity)
 
-    for (let i = 0; i < 1000; i++) {
-      const seed = Date.now()
+    for (let i = 0; i < 1; i++) {
+      // const seed = Date.now()
+      const seed = 1478640707328
       const seedMessage = `Random seed: ${seed}`
+      console.log(seedMessage);
       const random = new Random(seed)
       const originalDocument = new TestDocument(seed)
       const mutatedDocument = originalDocument.clone()
@@ -44,12 +46,14 @@ describe('Native Patch', function () {
 
       for (let j = 0; j < 10; j++) {
         const {start, oldText, oldExtent, newExtent, newText} = mutatedDocument.performRandomSplice()
+
+        process.stderr.write(`graph message {
+          label="splice(${formatPoint(start)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)})"
+        }\n`)
+
         patch.splice(start, oldExtent, newExtent, newText)
 
-        // process.stderr.write(`graph message {
-        //   label="splice(${formatPoint(start)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)})"
-        // }\n`)
-        // patch.printDotGraph()
+        patch.printDotGraph()
 
         const originalDocumentCopy = originalDocument.clone()
         const hunks = patch.getHunks()
@@ -60,6 +64,8 @@ describe('Native Patch', function () {
         }
 
         assert.deepEqual(originalDocumentCopy.getLines(), mutatedDocument.getLines(), seedMessage)
+
+        continue
 
         for (let k = 0; k < 5; k++) {
           let oldRange = originalDocument.buildRandomRange()

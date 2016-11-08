@@ -293,6 +293,10 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
     bool overlaps_upper_bound =
       new_deletion_end > upper_bound_new_start ||
         (merges_adjacent_hunks && new_deletion_end == upper_bound_new_start);
+    if (upper_bound == lower_bound) {
+      if (overlaps_lower_bound) overlaps_upper_bound = true;
+      if (overlaps_upper_bound) overlaps_lower_bound = true;
+    }
 
     if (overlaps_lower_bound && overlaps_upper_bound) {
       Point new_extent_prefix = new_splice_start.Traversal(lower_bound_new_start);
