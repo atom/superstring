@@ -724,25 +724,53 @@ enum Transition: uint32_t {
   Up
 };
 
-void AppendToBuffer(vector<uint8_t> *output, uint32_t value) {
-  value = htonl(value);
-  const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&value);
-  output->insert(output->end(), bytes, bytes + sizeof(uint32_t));
+template<typename T>
+T network_to_host(T input);
+
+template<typename T>
+T host_to_network(T input);
+
+template<>
+uint16_t network_to_host(uint16_t input) {
+  return ntohs(input);
 }
 
-uint32_t GetFromBuffer(const uint8_t **data, const uint8_t *end) {
-  const uint32_t *pointer = reinterpret_cast<const uint32_t *>(*data);
-  *data = *data + sizeof(uint32_t);
+template<>
+uint16_t host_to_network(uint16_t input) {
+  return htons(input);
+}
+
+template<>
+uint32_t network_to_host(uint32_t input) {
+  return ntohl(input);
+}
+
+template<>
+uint32_t host_to_network(uint32_t input) {
+  return htonl(input);
+}
+
+template<typename T>
+void AppendToBuffer(vector<uint8_t> *output, T value) {
+  value = host_to_network(value);
+  const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&value);
+  output->insert(output->end(), bytes, bytes + sizeof(T));
+}
+
+template<typename T>
+T GetFromBuffer(const uint8_t **data, const uint8_t *end) {
+  const T *pointer = reinterpret_cast<const T *>(*data);
+  *data = *data + sizeof(T);
   if (*data <= end) {
-    return ntohl(*pointer);
+    return network_to_host<T>(*pointer);
   } else {
     return 0;
   }
 }
 
 void GetPointFromBuffer(const uint8_t **data, const uint8_t *end, Point *point) {
-  point->row = GetFromBuffer(data, end);
-  point->column = GetFromBuffer(data, end);
+  point->row = GetFromBuffer<uint32_t>(data, end);
+  point->column = GetFromBuffer<uint32_t>(data, end);
 }
 
 void AppendPointToBuffer(vector<uint8_t> *output, const Point &point) {
@@ -750,11 +778,35 @@ void AppendPointToBuffer(vector<uint8_t> *output, const Point &point) {
   AppendToBuffer(output, point.column);
 }
 
+void AppendTextToBuffer(vector<uint8_t> *output, const Text *text) {
+  if (text) {
+    AppendToBuffer<uint32_t>(output, 1);
+    AppendToBuffer(output, text->length);
+    for (uint32_t i = 0; i < text->length; i++) {
+      AppendToBuffer(output, text->content[i]);
+    }
+  }
+}
+
+Text *GetTextFromBuffer(const uint8_t **data, const uint8_t *end) {
+  if (GetFromBuffer<uint32_t>(data, end)) {
+    uint32_t length = GetFromBuffer<uint32_t>(data, end);
+    Text *result = new Text(length);
+    for (uint32_t i = 0; i < length; i++) {
+      result->content[i] = GetFromBuffer<uint16_t>(data, end);
+    }
+    return result;
+  } else {
+    return nullptr;
+  }
+}
+
 void GetNodeFromBuffer(const uint8_t **data, const uint8_t *end, Node *node) {
   GetPointFromBuffer(data, end, &node->old_extent);
   GetPointFromBuffer(data, end, &node->new_extent);
   GetPointFromBuffer(data, end, &node->old_distance_from_left_ancestor);
   GetPointFromBuffer(data, end, &node->new_distance_from_left_ancestor);
+  node->new_text = GetTextFromBuffer(data, end);
   node->left = nullptr;
   node->right = nullptr;
 }
@@ -764,6 +816,7 @@ void AppendNodeToBuffer(vector<uint8_t> *output, const Node &node) {
   AppendPointToBuffer(output, node.new_extent);
   AppendPointToBuffer(output, node.old_distance_from_left_ancestor);
   AppendPointToBuffer(output, node.new_distance_from_left_ancestor);
+  AppendTextToBuffer(output, node.new_text);
 }
 
 void Patch::Serialize(vector<uint8_t> *output) const {
@@ -784,21 +837,21 @@ void Patch::Serialize(vector<uint8_t> *output) const {
 
   while (node) {
     if (node->left && previous_node_child_index < 0) {
-      AppendToBuffer(output, Left);
+      AppendToBuffer<uint32_t>(output, Left);
       AppendNodeToBuffer(output, *node->left);
       node_count++;
       stack.push_back(node);
       node = node->left;
       previous_node_child_index = -1;
     } else if (node->right && previous_node_child_index < 1) {
-      AppendToBuffer(output, Right);
+      AppendToBuffer<uint32_t>(output, Right);
       AppendNodeToBuffer(output, *node->right);
       node_count++;
       stack.push_back(node);
       node = node->right;
       previous_node_child_index = -1;
     } else if (!stack.empty()) {
-      AppendToBuffer(output, Up);
+      AppendToBuffer<uint32_t>(output, Up);
       Node *parent = stack.back();
       stack.pop_back();
       previous_node_child_index = (node == parent->left) ? 0 : 1;
@@ -817,12 +870,12 @@ Patch::Patch(const vector<uint8_t> &input) : root{nullptr}, is_frozen{true}, mer
   const uint8_t *data = begin;
   const uint8_t *end = data + input.size();
 
-  uint32_t serialization_version = GetFromBuffer(&data, end);
+  uint32_t serialization_version = GetFromBuffer<uint32_t>(&data, end);
   if (serialization_version != SERIALIZATION_VERSION) {
     return;
   }
 
-  uint32_t node_count = GetFromBuffer(&data, end);
+  uint32_t node_count = GetFromBuffer<uint32_t>(&data, end);
   if (node_count == 0) {
     return;
   }
@@ -833,7 +886,7 @@ Patch::Patch(const vector<uint8_t> &input) : root{nullptr}, is_frozen{true}, mer
   GetNodeFromBuffer(&data, end, node);
 
   while (next_node < root + node_count) {
-    switch (GetFromBuffer(&data, end)) {
+    switch (GetFromBuffer<uint32_t>(&data, end)) {
       case Left:
         GetNodeFromBuffer(&data, end, next_node);
         node->left = next_node;
