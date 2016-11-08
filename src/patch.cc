@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <vector>
 #include "patch.h"
+#include "text.h"
 
 #ifdef _WIN32
 #include <Winsock2.h>
@@ -22,6 +23,8 @@ struct Node {
   Point old_extent;
   Point new_extent;
 
+  Text *new_text;
+
   ~Node() {
     if (left) {
       delete left;
@@ -29,6 +32,10 @@ struct Node {
 
     if (right) {
       delete right;
+    }
+
+    if (new_text) {
+      delete new_text;
     }
   }
 
@@ -59,6 +66,11 @@ struct Node {
       *new_end = new_end->Traverse(node->new_distance_from_left_ancestor).Traverse(node->new_extent);
       node = node->right;
     }
+  }
+
+  void SetNewText(Text *text) {
+    if (new_text) delete new_text;
+    new_text = text;
   }
 };
 
@@ -186,7 +198,8 @@ vector<Hunk> Patch::GetHunksInRange(Point start, Point end) {
     Point new_start = left_ancestor_position.new_end.Traverse(node->new_distance_from_left_ancestor);
     Point old_end = old_start.Traverse(node->old_extent);
     Point new_end = new_start.Traverse(node->new_extent);
-    Hunk hunk = {old_start, old_end, new_start, new_end};
+    Text *new_text = node->new_text;
+    Hunk hunk = {old_start, old_end, new_start, new_end, new_text};
 
     if (CoordinateSpace::start(hunk) >= end) {
       break;
@@ -224,13 +237,14 @@ Nan::Maybe<Hunk> Patch::HunkForPosition(Point target) {
     Point new_start = lower_bound->new_distance_from_left_ancestor;
     Point old_end = old_start.Traverse(lower_bound->old_extent);
     Point new_end = new_start.Traverse(lower_bound->new_extent);
-    return Nan::Just(Hunk{old_start, old_end, new_start, new_end});
+    Text *new_text = lower_bound->new_text;
+    return Nan::Just(Hunk{old_start, old_end, new_start, new_end, new_text});
   } else {
     return Nan::Nothing<Hunk>();
   }
 }
 
-bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_insertion_extent) {
+bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_insertion_extent, Text *inserted_text) {
   if (is_frozen) {
     return false;
   }
@@ -247,7 +261,8 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       new_splice_start,
       new_splice_start,
       new_deletion_extent,
-      new_insertion_extent
+      new_insertion_extent,
+      inserted_text
     };
     return true;
   }
@@ -288,6 +303,15 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       upper_bound->old_distance_from_left_ancestor = lower_bound_old_start;
       upper_bound->new_distance_from_left_ancestor = lower_bound_new_start;
 
+      if (inserted_text && lower_bound->new_text && upper_bound->new_text) {
+        TextSlice new_text_prefix = lower_bound->new_text->Prefix(new_extent_prefix);
+        TextSlice new_text_suffix = upper_bound->new_text->Suffix(new_deletion_end.Traversal(upper_bound_new_start));
+        upper_bound->SetNewText(Text::Concat(new_text_prefix, inserted_text->AsSlice(), new_text_suffix));
+      } else {
+        upper_bound->SetNewText(nullptr);
+      }
+      if (inserted_text) delete inserted_text;
+
       if (lower_bound == upper_bound) {
         if (root->old_extent.IsZero() && root->new_extent.IsZero()) {
           DeleteRoot();
@@ -309,6 +333,15 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       upper_bound->new_distance_from_left_ancestor = new_splice_start;
       upper_bound->old_extent = upper_bound_old_end.Traversal(old_splice_start);
       upper_bound->new_extent = new_insertion_extent.Traverse(new_extent_suffix);
+
+      if (inserted_text && upper_bound->new_text) {
+        TextSlice new_text_suffix = upper_bound->new_text->Suffix(new_deletion_end.Traversal(upper_bound_new_start));
+        upper_bound->SetNewText(Text::Concat(inserted_text->AsSlice(), new_text_suffix));
+      } else {
+        upper_bound->SetNewText(nullptr);
+      }
+      if (inserted_text) delete inserted_text;
+
       lower_bound->DeleteRight();
       if (upper_bound->left != lower_bound) {
         upper_bound->DeleteLeft();
@@ -323,6 +356,14 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       upper_bound->new_distance_from_left_ancestor = new_insertion_end.Traverse(upper_bound_new_start.Traversal(new_deletion_end));
       lower_bound->old_extent = old_deletion_end.Traversal(lower_bound_old_start);
       lower_bound->new_extent = new_extent_prefix.Traverse(new_insertion_extent);
+      if (inserted_text && lower_bound->new_text) {
+        TextSlice new_text_prefix = lower_bound->new_text->Prefix(new_extent_prefix);
+        lower_bound->SetNewText(Text::Concat(new_text_prefix, inserted_text->AsSlice()));
+      } else {
+        lower_bound->SetNewText(nullptr);
+      }
+      if (inserted_text) delete inserted_text;
+
       lower_bound->DeleteRight();
       RotateNodeRight(lower_bound);
 
@@ -340,7 +381,8 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
         old_splice_start,
         new_splice_start,
         old_deletion_end.Traversal(old_splice_start),
-        new_insertion_extent
+        new_insertion_extent,
+        inserted_text
       };
 
       lower_bound->DeleteRight();
@@ -367,6 +409,13 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
     if (overlaps_lower_bound) {
       lower_bound->old_extent = old_deletion_end.Traversal(lower_bound_old_start);
       lower_bound->new_extent = new_insertion_end.Traversal(lower_bound_new_start);
+      if (inserted_text && lower_bound->new_text) {
+        TextSlice new_text_prefix = lower_bound->new_text->Prefix(new_splice_start.Traversal(lower_bound_new_start));
+        lower_bound->SetNewText(Text::Concat(new_text_prefix, inserted_text->AsSlice()));
+      } else {
+        lower_bound->SetNewText(nullptr);
+      }
+      if (inserted_text) delete inserted_text;
     } else {
       Point old_splice_start = lower_bound_old_end.Traverse(new_splice_start.Traversal(lower_bound_new_end));
       root = new Node{
@@ -376,7 +425,8 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
         old_splice_start,
         new_splice_start,
         old_deletion_end.Traversal(old_splice_start),
-        new_insertion_extent
+        new_insertion_extent,
+        inserted_text
       };
       lower_bound->parent = root;
     }
@@ -404,6 +454,14 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       upper_bound->new_distance_from_left_ancestor = new_splice_start;
       upper_bound->old_extent = upper_bound_old_start.Traversal(new_splice_start).Traverse(upper_bound->old_extent);
       upper_bound->new_extent = new_insertion_extent.Traverse(upper_bound_new_end.Traversal(new_deletion_end));
+
+      if (inserted_text && upper_bound->new_text) {
+        TextSlice new_text_suffix = upper_bound->new_text->Suffix(new_deletion_end.Traversal(upper_bound_new_start));
+        upper_bound->SetNewText(Text::Concat(inserted_text->AsSlice(), new_text_suffix));
+      } else {
+        upper_bound->SetNewText(nullptr);
+      }
+      if (inserted_text) delete inserted_text;
     } else {
       root = new Node{
         nullptr,
@@ -412,7 +470,8 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
         new_splice_start,
         new_splice_start,
         old_deletion_end.Traversal(new_splice_start),
-        new_insertion_extent
+        new_insertion_extent,
+        inserted_text
       };
       upper_bound->parent = root;
       Point distance_from_end_of_root_to_start_of_upper_bound = upper_bound_new_start.Traversal(new_deletion_end);
@@ -432,7 +491,8 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       new_splice_start,
       new_splice_start,
       old_deletion_end.Traversal(new_splice_start),
-      new_insertion_extent
+      new_insertion_extent,
+      inserted_text
     };
   }
 
@@ -612,7 +672,8 @@ vector<Hunk> Patch::GetHunks() const {
     Point new_start = left_ancestor_position.new_end.Traverse(node->new_distance_from_left_ancestor);
     Point old_end = old_start.Traverse(node->old_extent);
     Point new_end = new_start.Traverse(node->new_extent);
-    result.push_back(Hunk{old_start, old_end, new_start, new_end});
+    Text *new_text = node->new_text;
+    result.push_back(Hunk{old_start, old_end, new_start, new_end, new_text});
 
     if (node->right) {
       left_ancestor_stack.push_back(PositionStackEntry{old_end, new_end});

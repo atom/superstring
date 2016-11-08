@@ -42,6 +42,7 @@
     "sources": [
       "src/patch.cc",
       "src/point.cc",
+      "src/text.cc",
     ],
     "include_dirs": [
       "src",

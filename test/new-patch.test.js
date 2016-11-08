@@ -44,7 +44,7 @@ describe('Native Patch', function () {
 
       for (let j = 0; j < 10; j++) {
         const {start, oldText, oldExtent, newExtent, newText} = mutatedDocument.performRandomSplice()
-        patch.splice(start, oldExtent, newExtent, oldText, newText)
+        patch.splice(start, oldExtent, newExtent, newText)
 
         // process.stderr.write(`graph message {
         //   label="splice(${formatPoint(start)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)})"
@@ -55,8 +55,8 @@ describe('Native Patch', function () {
         const hunks = patch.getHunks()
         for (let hunk of patch.getHunks()) {
           const oldExtent = traversalDistance(hunk.oldEnd, hunk.oldStart)
-          const newText = mutatedDocument.getTextInRange(hunk.newStart, hunk.newEnd)
-          originalDocumentCopy.splice(hunk.newStart, oldExtent, newText)
+          assert.equal(hunk.newText, mutatedDocument.getTextInRange(hunk.newStart, hunk.newEnd), seedMessage)
+          originalDocumentCopy.splice(hunk.newStart, oldExtent, hunk.newText)
         }
 
         assert.deepEqual(originalDocumentCopy.getLines(), mutatedDocument.getLines(), seedMessage)

@@ -5,12 +5,14 @@
 #include "point.h"
 #include "hunk.h"
 #include "patch.h"
+#include "text.h"
 
 using namespace v8;
 using std::vector;
 
 static Nan::Persistent<String> row_string;
 static Nan::Persistent<String> column_string;
+static Nan::Persistent<String> new_text_string;
 
 static Nan::Maybe<Point> PointFromJS(Nan::MaybeLocal<Object> maybe_object) {
   Local<Object> object;
@@ -47,6 +49,22 @@ static Nan::Maybe<Point> PointFromJS(Nan::MaybeLocal<Object> maybe_object) {
   }
 
   return Nan::Just(Point(row, column));
+}
+
+static Text *TextFromJS(Nan::MaybeLocal<String> maybe_string) {
+  Local<String> string;
+  if (!maybe_string.ToLocal(&string)) {
+    Nan::ThrowTypeError("Expected a string.");
+    return nullptr;
+  }
+
+  Text *result = new Text(string->Length());
+  string->Write(result->content, 0, -1, 2);
+  return result;
+}
+
+static Local<String> TextToJS(Text *text) {
+  return Nan::New<String>(text->content, text->length).ToLocalChecked();
 }
 
 class PointWrapper : public Nan::ObjectWrap {
@@ -112,6 +130,9 @@ public:
     Local<Object> result;
     if (Nan::NewInstance(Nan::New(constructor)).ToLocal(&result)) {
       (new HunkWrapper(hunk))->Wrap(result);
+      if (hunk.new_text) {
+        result->Set(Nan::New(new_text_string), TextToJS(hunk.new_text));
+      }
       return result;
     } else {
       return Nan::Null();
@@ -201,7 +222,14 @@ private:
     Nan::Maybe<Point> insertion_extent = PointFromJS(Nan::To<Object>(info[2]));
 
     if (start.IsJust() && deletion_extent.IsJust() && insertion_extent.IsJust()) {
-      if (!patch.Splice(start.FromJust(), deletion_extent.FromJust(), insertion_extent.FromJust())) {
+      Text *new_text = nullptr;
+
+      if (info.Length() >= 4) {
+        new_text = TextFromJS(Nan::To<String>(info[3]));
+        if (!new_text) return;
+      }
+
+      if (!patch.Splice(start.FromJust(), deletion_extent.FromJust(), insertion_extent.FromJust(), new_text)) {
         Nan::ThrowError("Can't splice into a frozen patch");
       }
     }
@@ -335,6 +363,7 @@ Nan::Persistent<v8::Function> PatchWrapper::constructor;
 void Init(Local<Object> exports, Local<Object> module) {
   row_string.Reset(Nan::Persistent<String>(Nan::New("row").ToLocalChecked()));
   column_string.Reset(Nan::Persistent<String>(Nan::New("column").ToLocalChecked()));
+  new_text_string.Reset(Nan::Persistent<String>(Nan::New("newText").ToLocalChecked()));
 
   PointWrapper::Init();
   HunkWrapper::Init();

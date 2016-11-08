@@ -3,6 +3,7 @@
 
 #include <ostream>
 #include "point.h"
+#include "text.h"
 
 class Hunk {
 public:
@@ -10,6 +11,7 @@ public:
   Point old_end;
   Point new_start;
   Point new_end;
+  Text *new_text;
 };
 
 inline std::ostream &operator<<(std::ostream &stream, const Hunk &hunk) {
