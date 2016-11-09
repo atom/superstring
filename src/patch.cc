@@ -139,7 +139,7 @@ Node *Patch::SplayLowerBound(Point target) {
 }
 
 template<typename CoordinateSpace>
-Node *Patch::SplayUpperBound(Point target) {
+Node *Patch::SplayUpperBound(Point splice_start, Point splice_end) {
   Node *upper_bound = nullptr;
   Point left_ancestor_end = Point::Zero();
   Node *node = root;
@@ -148,7 +148,7 @@ Node *Patch::SplayUpperBound(Point target) {
     Point node_end = left_ancestor_end
       .Traverse(CoordinateSpace::distance_from_left_ancestor(node))
       .Traverse(CoordinateSpace::extent(node));
-    if (node_end >= target) {
+    if (node_end >= splice_end && node_end > splice_start) {
       upper_bound = node;
       if (node->left) {
         node = node->left;
@@ -271,7 +271,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
   Point new_insertion_end = new_splice_start.Traverse(new_insertion_extent);
 
   Node *lower_bound = SplayLowerBound<NewCoordinates>(new_splice_start);
-  Node *upper_bound = SplayUpperBound<NewCoordinates>(new_deletion_end);
+  Node *upper_bound = SplayUpperBound<NewCoordinates>(new_splice_start, new_deletion_end);
   if (upper_bound && lower_bound && lower_bound != upper_bound) {
     if (lower_bound != upper_bound->left) {
       RotateNodeRight(lower_bound);
@@ -287,15 +287,14 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
     Point lower_bound_new_end = lower_bound_new_start.Traverse(lower_bound->new_extent);
     Point upper_bound_old_end = upper_bound_old_start.Traverse(upper_bound->old_extent);
     Point upper_bound_new_end = upper_bound_new_start.Traverse(upper_bound->new_extent);
-    bool overlaps_lower_bound =
-      new_splice_start < lower_bound_new_end ||
-        (merges_adjacent_hunks && new_splice_start == lower_bound_new_end);
-    bool overlaps_upper_bound =
-      new_deletion_end > upper_bound_new_start ||
-        (merges_adjacent_hunks && new_deletion_end == upper_bound_new_start);
-    if (upper_bound == lower_bound) {
-      if (overlaps_lower_bound) overlaps_upper_bound = true;
-      if (overlaps_upper_bound) overlaps_lower_bound = true;
+
+    bool overlaps_lower_bound, overlaps_upper_bound;
+    if (merges_adjacent_hunks) {
+      overlaps_lower_bound = new_splice_start <= lower_bound_new_end;
+      overlaps_upper_bound = new_deletion_end >= upper_bound_new_start ;
+    } else {
+      overlaps_lower_bound = new_splice_start < lower_bound_new_end && new_deletion_end > lower_bound_new_start;
+      overlaps_upper_bound = new_splice_start < upper_bound_new_end && new_deletion_end > upper_bound_new_start;
     }
 
     if (overlaps_lower_bound && overlaps_upper_bound) {
@@ -373,28 +372,55 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
 
     // Splice doesn't overlap either bound
     } else {
-      Point rightmost_child_old_end, rightmost_child_new_end;
-      lower_bound->GetSubtreeEnd(&rightmost_child_old_end, &rightmost_child_new_end);
-      Point old_splice_start = lower_bound_old_end.Traverse(new_splice_start.Traversal(lower_bound_new_end));
-      Point old_deletion_end = rightmost_child_old_end.Traverse(new_deletion_end.Traversal(rightmost_child_new_end));
+      // If bounds are the same node, this is an insertion at the beginning of
+      // that node with merges_adjacent_hunks set to false.
+      if (lower_bound == upper_bound) {
+        assert(!merges_adjacent_hunks);
+        assert(new_deletion_extent.IsZero());
+        assert(new_splice_start == upper_bound_new_start);
 
-      root = new Node{
-        nullptr,
-        lower_bound,
-        upper_bound,
-        old_splice_start,
-        new_splice_start,
-        old_deletion_end.Traversal(old_splice_start),
-        new_insertion_extent,
-        inserted_text
-      };
+        root = new Node{
+          nullptr,
+          upper_bound->left,
+          upper_bound,
+          upper_bound_old_start,
+          upper_bound_new_start,
+          Point::Zero(),
+          new_insertion_extent,
+          inserted_text
+        };
 
-      lower_bound->DeleteRight();
-      lower_bound->parent = root;
-      upper_bound->left = nullptr;
-      upper_bound->parent = root;
-      upper_bound->old_distance_from_left_ancestor = upper_bound_old_start.Traversal(old_deletion_end);
-      upper_bound->new_distance_from_left_ancestor = upper_bound_new_start.Traversal(new_deletion_end);
+        if (upper_bound->left) {
+          upper_bound->left->parent = root;
+          upper_bound->left = nullptr;
+        }
+        upper_bound->parent = root;
+        upper_bound->old_distance_from_left_ancestor = Point::Zero();
+        upper_bound->new_distance_from_left_ancestor = Point::Zero();
+      } else {
+        Point rightmost_child_old_end, rightmost_child_new_end;
+        lower_bound->GetSubtreeEnd(&rightmost_child_old_end, &rightmost_child_new_end);
+        Point old_splice_start = lower_bound_old_end.Traverse(new_splice_start.Traversal(lower_bound_new_end));
+        Point old_deletion_end = rightmost_child_old_end.Traverse(new_deletion_end.Traversal(rightmost_child_new_end));
+
+        root = new Node{
+          nullptr,
+          lower_bound,
+          upper_bound,
+          old_splice_start,
+          new_splice_start,
+          old_deletion_end.Traversal(old_splice_start),
+          new_insertion_extent,
+          inserted_text
+        };
+
+        lower_bound->DeleteRight();
+        lower_bound->parent = root;
+        upper_bound->left = nullptr;
+        upper_bound->parent = root;
+        upper_bound->old_distance_from_left_ancestor = upper_bound_old_start.Traversal(old_deletion_end);
+        upper_bound->new_distance_from_left_ancestor = upper_bound_new_start.Traversal(new_deletion_end);
+      }
     }
 
   } else if (lower_bound) {

@@ -2,7 +2,7 @@
   "name": "atom-patch",
   "version": "0.3.0",
   "description": "A data structure to efficiently represent the results of applying patches.",
-  "main": "./build/Release/atom_patch",
+  "main": "./build/Debug/atom_patch",
   "scripts": {
     "test-native": "node-gyp configure --debug --tests && node-gyp build && ./build/Debug/tests",
     "test-js": "mocha ./test/helpers/setup test/*.js",

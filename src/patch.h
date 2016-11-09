@@ -29,7 +29,7 @@ class Patch {
   Node *SplayLowerBound(Point);
 
   template<typename CoordinateSpace>
-  Node *SplayUpperBound(Point);
+  Node *SplayUpperBound(Point, Point);
 
   template<typename CoordinateSpace>
   Nan::Maybe<Hunk> HunkForPosition(Point position);

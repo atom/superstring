@@ -1,4 +1,4 @@
-require('segfault-handler').registerHandler()
+ require('segfault-handler').registerHandler()
 
 import Random from 'random-seed'
 import Patch from '..'
@@ -34,15 +34,15 @@ describe('Native Patch', function () {
   it('correctly records random splices', function () {
     this.timeout(Infinity)
 
-    for (let i = 0; i < 1; i++) {
-      // const seed = Date.now()
-      const seed = 1478640707328
+    for (let i = 0; i < 10000; i++) {
+      let seed = Date.now()
+      // seed = 1478655382589
       const seedMessage = `Random seed: ${seed}`
       console.log(seedMessage);
       const random = new Random(seed)
       const originalDocument = new TestDocument(seed)
       const mutatedDocument = originalDocument.clone()
-      const patch = new Patch({mergeAdjacentHunks: random(2)})
+      const patch = new Patch({mergeAdjacentHunks: false})
 
       for (let j = 0; j < 10; j++) {
         const {start, oldText, oldExtent, newExtent, newText} = mutatedDocument.performRandomSplice()
@@ -64,8 +64,6 @@ describe('Native Patch', function () {
         }
 
         assert.deepEqual(originalDocumentCopy.getLines(), mutatedDocument.getLines(), seedMessage)
-
-        continue
 
         for (let k = 0; k < 5; k++) {
           let oldRange = originalDocument.buildRandomRange()

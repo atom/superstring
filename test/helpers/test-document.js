@@ -92,14 +92,17 @@ export default class TestDocument {
   }
 
   buildRandomRange () {
-    let a = this.buildRandomPoint()
-    let b = this.buildRandomPoint()
+    const start = this.buildRandomPoint()
+    let end = start
 
-    if (pointHelpers.compare(a, b) <= 0) {
-      return {start: a, end: b}
-    } else {
-      return {start: b, end: a}
+    while (this.random(10) < 5) {
+      end = pointHelpers.traverse(end, {
+        row: this.random(3),
+        column: this.random(5)
+      })
     }
+
+    return {start, end: this.clipPosition(end)}
   }
 
   buildRandomPoint () {
@@ -109,8 +112,12 @@ export default class TestDocument {
   }
 
   clipPosition ({row, column}) {
-    row = Math.min(Math.max(row, 0), this.lines.length - 1)
-    column = Math.min(Math.max(column, 0), this.lines[row].length)
+    if (row >= this.lines.length) {
+      row = this.lines.length - 1
+      column = this.lines[row].length
+    } else if (column > this.lines[row].length) {
+      column = this.lines[row].length
+    }
     return {row, column}
   }
 }
