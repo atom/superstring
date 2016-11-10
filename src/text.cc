@@ -1,4 +1,5 @@
 #include "text.h"
+#include <cstring>
 
 Text *Text::Concat(TextSlice a, TextSlice b) {
   Text *result = new Text{a.length + b.length};
