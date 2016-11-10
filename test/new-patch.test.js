@@ -45,15 +45,15 @@ describe('Native Patch', function () {
       const patch = new Patch({mergeAdjacentHunks: false})
 
       for (let j = 0; j < 10; j++) {
-        const {start, oldText, oldExtent, newExtent, newText} = mutatedDocument.performRandomSplice()
+        const {start, deletedExtent, insertedExtent, insertedText} = mutatedDocument.performRandomSplice()
 
-        process.stderr.write(`graph message {
-          label="splice(${formatPoint(start)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)})"
-        }\n`)
+        // process.stderr.write(`graph message {
+        //   label="splice(${formatPoint(start)}, ${formatPoint(deletedExtent)}, ${formatPoint(insertedExtent)})"
+        // }\n`)
 
-        patch.splice(start, oldExtent, newExtent, newText)
+        patch.splice(start, deletedExtent, insertedExtent, insertedText)
 
-        patch.printDotGraph()
+        // patch.printDotGraph()
 
         const originalDocumentCopy = originalDocument.clone()
         const hunks = patch.getHunks()
