@@ -107,7 +107,7 @@ Patch::~Patch() {
 }
 
 template<typename CoordinateSpace>
-Node *Patch::SplayLowerBound(Point target) {
+Node *Patch::SplayNodeStartingBefore(Point target) {
   Node *lower_bound = nullptr;
   Point left_ancestor_end = Point::Zero();
   Node *node = root;
@@ -139,7 +139,7 @@ Node *Patch::SplayLowerBound(Point target) {
 }
 
 template<typename CoordinateSpace>
-Node *Patch::SplayUpperBound(Point splice_start, Point splice_end) {
+Node *Patch::SplayNodeEndingAfter(Point splice_start, Point splice_end) {
   Node *upper_bound = nullptr;
   Point left_ancestor_end = Point::Zero();
   Node *node = root;
@@ -183,7 +183,7 @@ vector<Hunk> Patch::GetHunksInRange(Point start, Point end) {
   left_ancestor_stack.push_back({Point::Zero(), Point::Zero()});
 
   Node *node;
-  if (SplayLowerBound<CoordinateSpace>(start)) {
+  if (SplayNodeStartingBefore<CoordinateSpace>(start)) {
     node = root;
   } else {
     node = root;
@@ -231,7 +231,7 @@ vector<Hunk> Patch::GetHunksInRange(Point start, Point end) {
 
 template<typename CoordinateSpace>
 Nan::Maybe<Hunk> Patch::HunkForPosition(Point target) {
-  Node *lower_bound = SplayLowerBound<CoordinateSpace>(target);
+  Node *lower_bound = SplayNodeStartingBefore<CoordinateSpace>(target);
   if (lower_bound) {
     Point old_start = lower_bound->old_distance_from_left_ancestor;
     Point new_start = lower_bound->new_distance_from_left_ancestor;
@@ -270,8 +270,8 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
   Point new_deletion_end = new_splice_start.Traverse(new_deletion_extent);
   Point new_insertion_end = new_splice_start.Traverse(new_insertion_extent);
 
-  Node *lower_bound = SplayLowerBound<NewCoordinates>(new_splice_start);
-  Node *upper_bound = SplayUpperBound<NewCoordinates>(new_splice_start, new_deletion_end);
+  Node *lower_bound = SplayNodeStartingBefore<NewCoordinates>(new_splice_start);
+  Node *upper_bound = SplayNodeEndingAfter<NewCoordinates>(new_splice_start, new_deletion_end);
   if (upper_bound && lower_bound && lower_bound != upper_bound) {
     if (lower_bound != upper_bound->left) {
       RotateNodeRight(lower_bound);
@@ -545,8 +545,8 @@ bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent, Point o
   Point old_deletion_end = old_splice_start.Traverse(old_deletion_extent);
   Point old_insertion_end = old_splice_start.Traverse(old_insertion_extent);
 
-  Node *lower_bound = SplayLowerBound<OldCoordinates>(old_splice_start);
-  Node *upper_bound = SplayUpperBound<OldCoordinates>(old_splice_start, old_deletion_end);
+  Node *lower_bound = SplayNodeStartingBefore<OldCoordinates>(old_splice_start);
+  Node *upper_bound = SplayNodeEndingAfter<OldCoordinates>(old_splice_start, old_deletion_end);
 
   if (!lower_bound && !upper_bound) {
     if (root) {
