@@ -529,6 +529,142 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
   return true;
 }
 
+bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent, Point old_insertion_extent) {
+  if (is_frozen) {
+    return false;
+  }
+
+  if (old_deletion_extent.IsZero() && old_insertion_extent.IsZero()) {
+    return true;
+  }
+
+  if (!root) {
+    return true;
+  }
+
+  Point old_deletion_end = old_splice_start.Traverse(old_deletion_extent);
+  Point old_insertion_end = old_splice_start.Traverse(old_insertion_extent);
+
+  Node *lower_bound = SplayLowerBound<OldCoordinates>(old_splice_start);
+  Node *upper_bound = SplayUpperBound<OldCoordinates>(old_splice_start, old_deletion_end);
+
+  if (!lower_bound && !upper_bound) {
+    if (root) {
+      delete root;
+      root = nullptr;
+    }
+    return true;
+  }
+
+  if (upper_bound && lower_bound && lower_bound != upper_bound) {
+    if (lower_bound != upper_bound->left) {
+      RotateNodeRight(lower_bound);
+    }
+  }
+
+  Point new_splice_start;
+
+  if (lower_bound) {
+    Point lower_bound_old_start = lower_bound->old_distance_from_left_ancestor;
+    Point lower_bound_old_end = lower_bound_old_start.Traverse(lower_bound->old_extent);
+    Point lower_bound_new_start = lower_bound->new_distance_from_left_ancestor;
+    Point lower_bound_new_end = lower_bound_new_start.Traverse(lower_bound->new_extent);
+    new_splice_start = Point::Min(
+      lower_bound_new_end,
+      lower_bound_new_start.Traverse(old_splice_start.Traversal(lower_bound_old_start))
+    );
+
+    Point lower_bound_subtree_old_end, lower_bound_subtree_new_end;
+    lower_bound->GetSubtreeEnd(&lower_bound_subtree_old_end, &lower_bound_subtree_new_end);
+
+    if (lower_bound == upper_bound) {
+      Text *upper_bound_text = nullptr;
+      if (lower_bound->new_text) {
+        upper_bound_text = new Text(
+          lower_bound->new_text->Suffix(new_splice_start.Traversal(lower_bound_new_start))
+        );
+      }
+
+      upper_bound = new Node{
+        nullptr,
+        lower_bound,
+        lower_bound->right,
+        old_splice_start,
+        new_splice_start,
+        lower_bound_old_end.Traversal(old_splice_start),
+        lower_bound_new_end.Traversal(new_splice_start),
+        upper_bound_text,
+      };
+
+      lower_bound->right = nullptr;
+      lower_bound->parent = upper_bound;
+      if (upper_bound->right) {
+        upper_bound->right->parent = upper_bound;
+      }
+      root = upper_bound;
+    }
+
+    bool overlaps_lower_bound;
+    if (merges_adjacent_hunks) {
+      overlaps_lower_bound = old_splice_start <= lower_bound_old_end;
+    } else {
+      overlaps_lower_bound = old_splice_start < lower_bound_old_end && old_deletion_end > lower_bound_old_start;
+    }
+
+    if (overlaps_lower_bound) {
+      lower_bound->old_extent = old_splice_start.Traversal(lower_bound_old_start);
+      if (lower_bound->new_extent > lower_bound->old_extent) {
+        lower_bound->new_extent = lower_bound->old_extent;
+      }
+
+      if (lower_bound->new_text) {
+        lower_bound->new_text->TrimRight(lower_bound->new_extent);
+      }
+    }
+
+    lower_bound->DeleteRight();
+  } else {
+    new_splice_start = old_splice_start;
+  }
+
+  if (upper_bound) {
+    Point upper_bound_old_start = upper_bound->old_distance_from_left_ancestor;
+    Point upper_bound_old_end = upper_bound_old_start.Traverse(upper_bound->old_extent);
+    Point new_insertion_end = new_splice_start.Traverse(old_insertion_extent);
+
+    bool overlaps_upper_bound;
+    if (merges_adjacent_hunks) {
+      overlaps_upper_bound = old_deletion_end >= upper_bound_old_start ;
+    } else {
+      overlaps_upper_bound = old_splice_start < upper_bound_old_end && old_deletion_end > upper_bound_old_start;
+    }
+
+    if (overlaps_upper_bound) {
+      Point overlap_extent = old_deletion_end.Traversal(upper_bound_old_start);
+      upper_bound->old_extent = upper_bound->old_extent.Traversal(overlap_extent);
+
+      if (upper_bound->new_extent > overlap_extent) {
+        upper_bound->new_extent = upper_bound->new_extent.Traversal(overlap_extent);
+      } else {
+        upper_bound->new_extent = Point();
+      }
+
+      if (upper_bound->new_text) {
+        upper_bound->new_text->TrimLeft(overlap_extent);
+      }
+
+      upper_bound->old_distance_from_left_ancestor = old_insertion_end;
+      upper_bound->new_distance_from_left_ancestor = new_insertion_end;
+    } else {
+      Point distance_from_deletion_end_to_upper_bound = upper_bound->old_distance_from_left_ancestor.Traversal(old_deletion_end);
+      upper_bound->old_distance_from_left_ancestor = old_insertion_end.Traverse(distance_from_deletion_end_to_upper_bound);
+      upper_bound->new_distance_from_left_ancestor = new_insertion_end.Traverse(distance_from_deletion_end_to_upper_bound);
+    }
+  }
+
+  return true;
+}
+
 void Patch::SplayNode(Node *node) {
   while (node->parent) {
     Node *parent = node->parent;

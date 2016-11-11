@@ -16,13 +16,16 @@ struct Text {
   static Text *Concat(TextSlice a, TextSlice b, TextSlice c);
 
   Text(uint32_t length);
+  Text(TextSlice slice);
   ~Text();
   TextSlice Prefix(Point prefix_end) const;
   TextSlice Suffix(Point suffix_start) const;
   TextSlice AsSlice() const;
+  void TrimLeft(Point position);
+  void TrimRight(Point position);
 
 private:
-  uint32_t CharacterIndexForPosition (Point target) const;
+  uint32_t CharacterIndexForPosition(Point) const;
 };
 
 #endif // TEXT_H_

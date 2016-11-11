@@ -1,4 +1,4 @@
- require('segfault-handler').registerHandler()
+ // require('segfault-handler').registerHandler()
 
 import Random from 'random-seed'
 import Patch from '..'
@@ -36,7 +36,7 @@ describe('Native Patch', function () {
 
     for (let i = 0; i < 10000; i++) {
       let seed = Date.now()
-      // seed = 1478655382589
+      seed = 1478825425386
       const seedMessage = `Random seed: ${seed}`
       console.log(seedMessage);
       const random = new Random(seed)
@@ -44,16 +44,30 @@ describe('Native Patch', function () {
       const mutatedDocument = originalDocument.clone()
       const patch = new Patch({mergeAdjacentHunks: false})
 
-      for (let j = 0; j < 10; j++) {
-        const {start, deletedExtent, insertedExtent, insertedText} = mutatedDocument.performRandomSplice()
+      for (let j = 0; j < 2; j++) {
+        if (random(10) < 3) {
+          const {start, deletedExtent, insertedExtent, insertedText, deletedText} = originalDocument.performRandomSplice()
 
-        // process.stderr.write(`graph message {
-        //   label="splice(${formatPoint(start)}, ${formatPoint(deletedExtent)}, ${formatPoint(insertedExtent)})"
-        // }\n`)
+          const newStart = translateOldPosition(patch, start)
+          const newDeletionEnd = translateOldPosition(patch, traverse(start, deletedExtent))
+          mutatedDocument.splice(newStart, traversalDistance(newDeletionEnd, newStart), insertedText)
 
-        patch.splice(start, deletedExtent, insertedExtent, insertedText)
+          process.stderr.write(`graph message {
+            label="spliceOld(${formatPoint(start)}, ${formatPoint(deletedExtent)}, ${formatPoint(insertedExtent)})"
+          }\n`)
 
-        // patch.printDotGraph()
+          patch.spliceOld(start, deletedExtent, insertedExtent)
+        } else {
+          const {start, deletedExtent, insertedExtent, insertedText} = mutatedDocument.performRandomSplice()
+
+          process.stderr.write(`graph message {
+            label="splice(${formatPoint(start)}, ${formatPoint(deletedExtent)}, ${formatPoint(insertedExtent)})"
+          }\n`)
+
+          patch.splice(start, deletedExtent, insertedExtent, insertedText)
+        }
+
+        patch.printDotGraph()
 
         const originalDocumentCopy = originalDocument.clone()
         const hunks = patch.getHunks()
@@ -109,4 +123,20 @@ describe('Native Patch', function () {
 
 function last (array) {
   return array[array.length - 1]
+}
+
+function translateOldPosition (patch, oldPosition) {
+  const hunk = patch.hunkForOldPosition(oldPosition)
+  if (hunk) {
+    if (comparePoints(oldPosition, hunk.oldEnd) >= 0) {
+      return traverse(hunk.newEnd, traversalDistance(oldPosition, hunk.oldEnd))
+    } else {
+      return minPoint(
+        hunk.newEnd,
+        traverse(hunk.newStart, traversalDistance(oldPosition, hunk.oldStart))
+      )
+    }
+  } else {
+    return oldPosition
+  }
 }

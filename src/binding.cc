@@ -184,6 +184,7 @@ public:
     constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
     const auto &prototype_template = constructor_template->PrototypeTemplate();
     prototype_template->Set(Nan::New("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(Splice));
+    prototype_template->Set(Nan::New("spliceOld").ToLocalChecked(), Nan::New<FunctionTemplate>(SpliceOld));
     prototype_template->Set(Nan::New("getHunks").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunks));
     prototype_template->Set(Nan::New("getHunksInOldRange").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunksInOldRange));
     prototype_template->Set(Nan::New("getHunksInNewRange").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunksInNewRange));
@@ -231,6 +232,20 @@ private:
 
       if (!patch.Splice(start.FromJust(), deletion_extent.FromJust(), insertion_extent.FromJust(), new_text)) {
         Nan::ThrowError("Can't splice into a frozen patch");
+      }
+    }
+  }
+
+  static void SpliceOld(const Nan::FunctionCallbackInfo<Value> &info) {
+    Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
+
+    Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
+    Nan::Maybe<Point> deletion_extent = PointFromJS(Nan::To<Object>(info[1]));
+    Nan::Maybe<Point> insertion_extent = PointFromJS(Nan::To<Object>(info[2]));
+
+    if (start.IsJust() && deletion_extent.IsJust() && insertion_extent.IsJust()) {
+      if (!patch.SpliceOld(start.FromJust(), deletion_extent.FromJust(), insertion_extent.FromJust())) {
+        Nan::ThrowError("Can't spliceOld into a frozen patch");
       }
     }
   }

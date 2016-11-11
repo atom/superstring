@@ -1,16 +1,16 @@
 #include <climits>
 #include "point.h"
 
-Point Point::Max() {
-  return Point(UINT_MAX, UINT_MAX);
-}
-
 Point Point::Zero() {
   return Point(0, 0);
 }
 
 Point Point::Min(const Point &left, const Point &right) {
   return left <= right ? left : right;
+}
+
+Point Point::Max(const Point &left, const Point &right) {
+  return left >= right ? left : right;
 }
 
 Point::Point() : Point(0, 0) {}

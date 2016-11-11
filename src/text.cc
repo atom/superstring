@@ -20,6 +20,11 @@ Text::Text(uint32_t length) : length{length} {
   content = new uint16_t[length];
 }
 
+Text::Text(TextSlice slice) : length{slice.length} {
+  content = new uint16_t[length];
+  memcpy(content, slice.content, length * sizeof(uint16_t));
+}
+
 Text::~Text() {
   delete[] content;
 }
@@ -38,7 +43,17 @@ TextSlice Text::AsSlice() const {
   return TextSlice{content, length};
 }
 
-uint32_t Text::CharacterIndexForPosition (Point target) const {
+void Text::TrimLeft(Point position) {
+  uint32_t new_start_index = CharacterIndexForPosition(position);
+  memmove(content, content + new_start_index, (length - new_start_index) * sizeof(uint16_t));
+  length -= new_start_index;
+}
+
+void Text::TrimRight(Point position) {
+  length = CharacterIndexForPosition(position);
+}
+
+uint32_t Text::CharacterIndexForPosition(Point target) const {
   uint32_t index = 0;
   Point position;
 

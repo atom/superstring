@@ -52,6 +52,7 @@ export default class TestDocument {
   }
 
   splice (start, deletedExtent, insertedText) {
+    let deletedText = this.getTextInRange(start, pointHelpers.traverse(start, deletedExtent))
     let end = pointHelpers.traverse(start, deletedExtent)
     let replacementLines = insertedText.split('\n')
 
@@ -61,6 +62,7 @@ export default class TestDocument {
       replacementLines[replacementLines.length - 1] + this.lines[end.row].substring(end.column)
 
     this.lines.splice(start.row, deletedExtent.row + 1, ...replacementLines)
+    return deletedText
   }
 
   characterAtPosition ({row, column}) {
