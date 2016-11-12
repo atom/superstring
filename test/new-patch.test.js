@@ -1,11 +1,11 @@
- // require('segfault-handler').registerHandler()
+ require('segfault-handler').registerHandler()
 
 import Random from 'random-seed'
 import Patch from '..'
 import TestDocument from './helpers/test-document'
 import {
   ZERO_POINT, traverse, traversalDistance, compare as comparePoints,
-  format as formatPoint, min as minPoint
+  format as formatPoint, min as minPoint, isZero
 } from '../src/point-helpers'
 
 describe('Native Patch', function () {
@@ -34,40 +34,43 @@ describe('Native Patch', function () {
   it('correctly records random splices', function () {
     this.timeout(Infinity)
 
-    for (let i = 0; i < 10000; i++) {
+    for (let i = 0; i < 1000; i++) {
       let seed = Date.now()
-      seed = 1478825425386
       const seedMessage = `Random seed: ${seed}`
-      console.log(seedMessage);
+      // console.log(seedMessage);
+
       const random = new Random(seed)
       const originalDocument = new TestDocument(seed)
       const mutatedDocument = originalDocument.clone()
       const patch = new Patch({mergeAdjacentHunks: false})
 
-      for (let j = 0; j < 2; j++) {
+      for (let j = 0; j < 10; j++) {
         if (random(10) < 3) {
-          const {start, deletedExtent, insertedExtent, insertedText, deletedText} = originalDocument.performRandomSplice()
+          const originalSplice = originalDocument.performRandomSplice()
+          const mutatedSplice = translateSpliceFromOriginalDocument(originalDocument, patch, originalSplice)
 
-          const newStart = translateOldPosition(patch, start)
-          const newDeletionEnd = translateOldPosition(patch, traverse(start, deletedExtent))
-          mutatedDocument.splice(newStart, traversalDistance(newDeletionEnd, newStart), insertedText)
+          mutatedDocument.splice(
+            mutatedSplice.start,
+            mutatedSplice.deletionExtent,
+            mutatedSplice.insertedText
+          )
 
-          process.stderr.write(`graph message {
-            label="spliceOld(${formatPoint(start)}, ${formatPoint(deletedExtent)}, ${formatPoint(insertedExtent)})"
-          }\n`)
+          // process.stderr.write(`graph message {
+          //   label="spliceOld(${formatPoint(originalSplice.start)}, ${formatPoint(originalSplice.deletedExtent)}, ${formatPoint(originalSplice.insertedExtent)})"
+          // }\n`)
 
-          patch.spliceOld(start, deletedExtent, insertedExtent)
+          patch.spliceOld(originalSplice.start, originalSplice.deletedExtent, originalSplice.insertedExtent)
         } else {
           const {start, deletedExtent, insertedExtent, insertedText} = mutatedDocument.performRandomSplice()
 
-          process.stderr.write(`graph message {
-            label="splice(${formatPoint(start)}, ${formatPoint(deletedExtent)}, ${formatPoint(insertedExtent)})"
-          }\n`)
+          // process.stderr.write(`graph message {
+          //   label="splice(${formatPoint(start)}, ${formatPoint(deletedExtent)}, ${formatPoint(insertedExtent)})"
+          // }\n`)
 
           patch.splice(start, deletedExtent, insertedExtent, insertedText)
         }
 
-        patch.printDotGraph()
+        // patch.printDotGraph()
 
         const originalDocumentCopy = originalDocument.clone()
         const hunks = patch.getHunks()
@@ -138,5 +141,49 @@ function translateOldPosition (patch, oldPosition) {
     }
   } else {
     return oldPosition
+  }
+}
+
+function translateSpliceFromOriginalDocument(originalDocument, patch, originalSplice) {
+  const originalDeletionEnd = traverse(originalSplice.start, originalSplice.deletedExtent)
+  const originalInsertionEnd = traverse(originalSplice.start, originalSplice.insertedExtent)
+
+  let oldStart, newStart
+  const startHunk = patch.hunkForOldPosition(originalSplice.start)
+  if (startHunk) {
+    if ((isZero(originalSplice.deletedExtent) && comparePoints(originalSplice.start, startHunk.oldStart) === 0) || comparePoints(originalSplice.start, startHunk.oldEnd) < 0) {
+      oldStart = startHunk.oldStart
+      newStart = startHunk.newStart
+    } else {
+      oldStart = originalSplice.start
+      newStart = traverse(startHunk.newEnd, traversalDistance(originalSplice.start, startHunk.oldEnd))
+    }
+  } else {
+    oldStart = originalSplice.start
+    newStart = originalSplice.start
+  }
+
+  let oldInsertionEnd, newDeletionEnd
+  const endHunk = patch.hunkForOldPosition(originalDeletionEnd)
+  if (endHunk) {
+    if (comparePoints(originalDeletionEnd, endHunk.oldStart) === 0) {
+      oldInsertionEnd = originalInsertionEnd
+      newDeletionEnd = endHunk.newStart
+    } else if (comparePoints(originalDeletionEnd, endHunk.oldEnd) < 0) {
+      oldInsertionEnd = traverse(originalInsertionEnd, traversalDistance(endHunk.oldEnd, originalDeletionEnd))
+      newDeletionEnd = endHunk.newEnd
+    } else {
+      oldInsertionEnd = originalInsertionEnd
+      newDeletionEnd = traverse(endHunk.newEnd, traversalDistance(originalDeletionEnd, endHunk.oldEnd))
+    }
+  } else {
+    oldInsertionEnd = originalInsertionEnd
+    newDeletionEnd = originalDeletionEnd
+  }
+
+  return {
+    start: newStart,
+    deletionExtent: traversalDistance(newDeletionEnd, newStart),
+    insertedText: originalDocument.getTextInRange(oldStart, oldInsertionEnd)
   }
 }

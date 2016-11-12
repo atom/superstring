@@ -27,10 +27,16 @@ class Patch {
   std::vector<Hunk> GetHunksInRange(Point, Point);
 
   template<typename CoordinateSpace>
+  Node *SplayNodeEndingBefore(Point);
+
+  template<typename CoordinateSpace>
   Node *SplayNodeStartingBefore(Point);
 
   template<typename CoordinateSpace>
   Node *SplayNodeEndingAfter(Point, Point);
+
+  template<typename CoordinateSpace>
+  Node *SplayNodeStartingAfter(Point);
 
   template<typename CoordinateSpace>
   Nan::Maybe<Hunk> HunkForPosition(Point position);
