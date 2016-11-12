@@ -42,7 +42,8 @@ describe('Native Patch', function () {
       const random = new Random(seed)
       const originalDocument = new TestDocument(seed)
       const mutatedDocument = originalDocument.clone()
-      const patch = new Patch({mergeAdjacentHunks: false})
+      const mergeAdjacentHunks = random(2)
+      const patch = new Patch({mergeAdjacentHunks: mergeAdjacentHunks})
 
       for (let j = 0; j < 10; j++) {
         if (random(10) < 3) {
