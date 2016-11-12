@@ -9,7 +9,7 @@ import {
 } from '../src/point-helpers'
 
 describe('Native Patch', function () {
-  it('honors the mergeAdjacentHunks option', function () {
+  it('honors the mergeAdjacentHunks option set to false', function () {
     const patch = new Patch({mergeAdjacentHunks: false})
 
     patch.splice({row: 0, column: 10}, {row: 0, column: 0}, {row: 1, column: 5})
@@ -27,6 +27,31 @@ describe('Native Patch', function () {
         oldEnd: {row: 0, column: 12},
         newStart: {row: 1, column: 5},
         newEnd: {row: 1, column: 13}
+      }
+    ])
+  })
+
+  it('honors the mergeAdjacentHunks option set to true', function () {
+    const patch = new Patch({mergeAdjacentHunks: true})
+
+    patch.splice({row: 0, column: 5}, {row: 0, column: 1}, {row: 0, column: 2})
+    patch.splice({row: 0, column: 10}, {row: 0, column: 3}, {row: 0, column: 4})
+    assert.deepEqual(JSON.parse(JSON.stringify(patch.getHunks())), [
+      {
+        oldStart: {row: 0, column: 5}, oldEnd: {row: 0, column: 6},
+        newStart: {row: 0, column: 5}, newEnd: {row: 0, column: 7}
+      },
+      {
+        oldStart: {row: 0, column: 9}, oldEnd: {row: 0, column: 12},
+        newStart: {row: 0, column: 10}, newEnd: {row: 0, column: 14}
+      }
+    ])
+
+    patch.spliceOld({row: 0, column: 6}, {row: 0, column: 3}, {row: 0, column: 0})
+    assert.deepEqual(JSON.parse(JSON.stringify(patch.getHunks())), [
+      {
+        oldStart: {row: 0, column: 5}, oldEnd: {row: 0, column: 9},
+        newStart: {row: 0, column: 5}, newEnd: {row: 0, column: 11}
       }
     ])
   })
@@ -75,10 +100,16 @@ describe('Native Patch', function () {
 
         const originalDocumentCopy = originalDocument.clone()
         const hunks = patch.getHunks()
+        let previousHunk
         for (let hunk of patch.getHunks()) {
           const oldExtent = traversalDistance(hunk.oldEnd, hunk.oldStart)
           assert.equal(hunk.newText, mutatedDocument.getTextInRange(hunk.newStart, hunk.newEnd), seedMessage)
           originalDocumentCopy.splice(hunk.newStart, oldExtent, hunk.newText)
+          if (previousHunk && mergeAdjacentHunks) {
+            assert.notDeepEqual(previousHunk.oldEnd, hunk.oldStart)
+            assert.notDeepEqual(previousHunk.newEnd, hunk.newStart)
+          }
+          previousHunk = hunk
         }
 
         assert.deepEqual(originalDocumentCopy.getLines(), mutatedDocument.getLines(), seedMessage)

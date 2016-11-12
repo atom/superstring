@@ -653,7 +653,16 @@ bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent, Point o
     upper_bound->old_distance_from_left_ancestor = old_insertion_end.Traverse(distance_between_splice_and_upper_bound);
     upper_bound->new_distance_from_left_ancestor = new_insertion_end.Traverse(distance_between_splice_and_upper_bound);
 
-    if (!lower_bound && upper_bound->left) {
+    if (lower_bound) {
+      if (lower_bound->old_distance_from_left_ancestor.Traverse(lower_bound->old_extent) == upper_bound->old_distance_from_left_ancestor) {
+        upper_bound->old_distance_from_left_ancestor = lower_bound->old_distance_from_left_ancestor;
+        upper_bound->new_distance_from_left_ancestor = lower_bound->new_distance_from_left_ancestor;
+        upper_bound->old_extent = lower_bound->old_extent.Traverse(upper_bound->old_extent);
+        upper_bound->new_extent = lower_bound->new_extent.Traverse(upper_bound->new_extent);
+        upper_bound->left = lower_bound->left;
+        delete lower_bound;
+      }
+    } else if (upper_bound->left) {
       upper_bound->DeleteLeft();
     }
   }
