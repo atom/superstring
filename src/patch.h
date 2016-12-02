@@ -42,12 +42,13 @@ class Patch {
   Nan::Maybe<Hunk> HunkForPosition(Point position);
 
   void SplayNode(Node *);
-  void RotateNodeRight(Node *);
-  void RotateNodeLeft(Node *);
+  void RotateNodeRight(Node *, Node *, Node *);
+  void RotateNodeLeft(Node *, Node *, Node *);
   void DeleteRoot();
 
   struct PositionStackEntry;
   mutable std::vector<PositionStackEntry> left_ancestor_stack;
+  mutable std::vector<Node *> node_stack;
   Node *root;
   bool is_frozen;
   bool merges_adjacent_hunks;
