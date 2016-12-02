@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <cmath>
 #include <vector>
 #include "patch.h"
 #include "text.h"
@@ -847,6 +848,45 @@ void Patch::PrintDotGraph() const {
 
 size_t Patch::GetHunkCount() const {
   return hunk_count;
+}
+
+void Patch::Rebalance() {
+  if (!root) return;
+
+  // Transform tree to vine
+  Node *pseudo_root = root, *pseudo_root_parent = nullptr;
+  while (pseudo_root) {
+    Node *left = pseudo_root->left;
+    Node *right = pseudo_root->right;
+    if (left) {
+      RotateNodeRight(left, pseudo_root, pseudo_root_parent);
+      pseudo_root = left;
+    } else {
+      pseudo_root_parent = pseudo_root;
+      pseudo_root = right;
+    }
+  }
+
+  // Transform vine to balanced tree
+  uint32_t n = hunk_count;
+  uint32_t m = std::pow(2, std::floor(std::log2(n + 1))) - 1;
+  PerformRebalancingRotations(n - m);
+  while (m > 1) {
+    m = m / 2;
+    PerformRebalancingRotations(m);
+  }
+}
+
+void Patch::PerformRebalancingRotations(uint32_t count) {
+  Node *pseudo_root = root, *pseudo_root_parent = nullptr;
+  for (uint32_t i = 0; i < count; i++) {
+    if (!pseudo_root) return;
+    Node *right_child = pseudo_root->right;
+    if (!right_child) return;
+    RotateNodeLeft(right_child, pseudo_root, pseudo_root_parent);
+    pseudo_root = right_child->right;
+    pseudo_root_parent = right_child;
+  }
 }
 
 vector<Hunk> Patch::GetHunks() const {

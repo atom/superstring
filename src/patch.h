@@ -21,6 +21,7 @@ class Patch {
   Nan::Maybe<Hunk> HunkForNewPosition(Point position);
   void Serialize(std::vector<uint8_t> *) const;
   void PrintDotGraph() const;
+  void Rebalance();
   size_t GetHunkCount() const;
 
  private:
@@ -46,6 +47,7 @@ class Patch {
   void RotateNodeRight(Node *, Node *, Node *);
   void RotateNodeLeft(Node *, Node *, Node *);
   void DeleteRoot();
+  void PerformRebalancingRotations(uint32_t);
   Node *BuildNode(Node *, Node *, Point, Point, Point, Point, Text *);
   void DeleteNode(Node **);
 
