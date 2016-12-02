@@ -784,7 +784,7 @@ static void PrintDotGraphForNode(Node *node, Point left_ancestor_old_end, Point 
 
   fprintf(
     stderr,
-    "node_%p [label=\"new: (%u, %u) - (%u, %u)\nold: (%u, %u) - (%u, %u)\"]\n",
+    "node_%p [label=\"new: (%u, %u) - (%u, %u)\nold: (%u, %u) - (%u, %u)\n\", tooltip=\"%p\"]\n",
     node,
     node_new_start.row,
     node_new_start.column,
@@ -793,7 +793,8 @@ static void PrintDotGraphForNode(Node *node, Point left_ancestor_old_end, Point 
     node_old_start.row,
     node_old_start.column,
     node_old_end.row,
-    node_old_end.column
+    node_old_end.column,
+    node
   );
 
   fprintf(stderr, "node_%p -> ", node);
