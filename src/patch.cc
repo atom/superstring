@@ -26,16 +26,26 @@ struct Node {
   Text *new_text;
 
   ~Node() {
-    if (left) {
-      delete left;
-    }
-
-    if (right) {
-      delete right;
-    }
-
     if (new_text) {
       delete new_text;
+    }
+
+    vector<Node *> node_stack;
+    if (left) node_stack.push_back(left);
+    if (right) node_stack.push_back(right);
+
+    while (!node_stack.empty()) {
+      Node *node = node_stack.back();
+      node_stack.pop_back();
+      if (node->left) {
+        node_stack.push_back(node->left);
+        node->left = nullptr;
+      }
+      if (node->right) {
+        node_stack.push_back(node->right);
+        node->right = nullptr;
+      }
+      delete node;
     }
   }
 
