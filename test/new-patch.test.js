@@ -183,7 +183,7 @@ function translateSpliceFromOriginalDocument(originalDocument, patch, originalSp
   let oldStart, newStart
   const startHunk = patch.hunkForOldPosition(originalSplice.start)
   if (startHunk) {
-    if ((isZero(originalSplice.deletedExtent) && comparePoints(originalSplice.start, startHunk.oldStart) === 0) || comparePoints(originalSplice.start, startHunk.oldEnd) < 0) {
+    if (comparePoints(originalSplice.start, startHunk.oldEnd) < 0) {
       oldStart = startHunk.oldStart
       newStart = startHunk.newStart
     } else {
@@ -198,7 +198,8 @@ function translateSpliceFromOriginalDocument(originalDocument, patch, originalSp
   let oldInsertionEnd, newDeletionEnd
   const endHunk = patch.hunkForOldPosition(originalDeletionEnd)
   if (endHunk) {
-    if (comparePoints(originalDeletionEnd, endHunk.oldStart) === 0) {
+    if (comparePoints(originalDeletionEnd, endHunk.oldStart) === 0 &&
+        comparePoints(originalSplice.start, endHunk.oldStart) < 0) {
       oldInsertionEnd = originalInsertionEnd
       newDeletionEnd = endHunk.newStart
     } else if (comparePoints(originalDeletionEnd, endHunk.oldEnd) < 0) {

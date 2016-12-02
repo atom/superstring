@@ -206,7 +206,7 @@ Node *Patch::SplayNodeEndingAfter(Point splice_start, Point splice_end) {
 }
 
 template<typename CoordinateSpace>
-Node *Patch::SplayNodeStartingAfter(Point splice_end) {
+Node *Patch::SplayNodeStartingAfter(Point splice_start, Point splice_end) {
   Node *splayed_node = nullptr;
   Point left_ancestor_end = Point::Zero();
   Node *node = root;
@@ -214,7 +214,7 @@ Node *Patch::SplayNodeStartingAfter(Point splice_end) {
   while (node) {
     Point node_start = left_ancestor_end.Traverse(CoordinateSpace::distance_from_left_ancestor(node));
     Point node_end = node_start.Traverse(CoordinateSpace::extent(node));
-    if (node_start >= splice_end) {
+    if (node_start >= splice_end && node_start > splice_start) {
       splayed_node = node;
       if (node->left) {
         node = node->left;
@@ -608,7 +608,10 @@ bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent, Point o
   Point old_insertion_end = old_splice_start.Traverse(old_insertion_extent);
 
   Node *lower_bound = SplayNodeEndingBefore<OldCoordinates>(old_splice_start);
-  Node *upper_bound = SplayNodeStartingAfter<OldCoordinates>(old_deletion_end);
+  Node *upper_bound = SplayNodeStartingAfter<OldCoordinates>(old_splice_start, old_deletion_end);
+
+  // fprintf(stderr, "graph message { label=\"splayed upper and lower bounds\" }\n");
+  // PrintDotGraph();
 
   if (!lower_bound && !upper_bound) {
     if (root) {

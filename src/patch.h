@@ -36,7 +36,7 @@ class Patch {
   Node *SplayNodeEndingAfter(Point, Point);
 
   template<typename CoordinateSpace>
-  Node *SplayNodeStartingAfter(Point);
+  Node *SplayNodeStartingAfter(Point, Point);
 
   template<typename CoordinateSpace>
   Nan::Maybe<Hunk> HunkForPosition(Point position);
