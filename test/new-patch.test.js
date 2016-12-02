@@ -100,6 +100,8 @@ describe('Native Patch', function () {
 
         const originalDocumentCopy = originalDocument.clone()
         const hunks = patch.getHunks()
+        assert.equal(patch.getHunkCount(), hunks.length)
+
         let previousHunk
         for (let hunk of patch.getHunks()) {
           const oldExtent = traversalDistance(hunk.oldEnd, hunk.oldStart)

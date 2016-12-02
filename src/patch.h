@@ -21,6 +21,7 @@ class Patch {
   Nan::Maybe<Hunk> HunkForNewPosition(Point position);
   void Serialize(std::vector<uint8_t> *) const;
   void PrintDotGraph() const;
+  size_t GetHunkCount() const;
 
  private:
   template<typename CoordinateSpace>
@@ -45,6 +46,8 @@ class Patch {
   void RotateNodeRight(Node *, Node *, Node *);
   void RotateNodeLeft(Node *, Node *, Node *);
   void DeleteRoot();
+  Node *BuildNode(Node *, Node *, Point, Point, Point, Point, Text *);
+  void DeleteNode(Node **);
 
   struct PositionStackEntry;
   mutable std::vector<PositionStackEntry> left_ancestor_stack;
@@ -52,4 +55,5 @@ class Patch {
   Node *root;
   bool is_frozen;
   bool merges_adjacent_hunks;
+  uint32_t hunk_count;
 };

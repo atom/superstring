@@ -28,34 +28,6 @@ struct Node {
     if (new_text) {
       delete new_text;
     }
-
-    vector<Node *> node_stack;
-    if (left) node_stack.push_back(left);
-    if (right) node_stack.push_back(right);
-
-    while (!node_stack.empty()) {
-      Node *node = node_stack.back();
-      node_stack.pop_back();
-      if (node->left) {
-        node_stack.push_back(node->left);
-        node->left = nullptr;
-      }
-      if (node->right) {
-        node_stack.push_back(node->right);
-        node->right = nullptr;
-      }
-      delete node;
-    }
-  }
-
-  void DeleteLeft() {
-    delete left;
-    left = nullptr;
-  }
-
-  void DeleteRight() {
-    delete right;
-    right = nullptr;
   }
 
   void GetSubtreeEnd(Point *old_end, Point *new_end) {
@@ -94,16 +66,51 @@ struct NewCoordinates {
   static Point end(const Hunk &hunk) { return hunk.new_end; }
 };
 
-Patch::Patch() : root{nullptr}, is_frozen{false}, merges_adjacent_hunks{true} {}
-Patch::Patch(bool merges_adjacent_hunks) : root{nullptr}, is_frozen{false}, merges_adjacent_hunks{merges_adjacent_hunks} {}
+Patch::Patch() : root{nullptr}, is_frozen{false}, merges_adjacent_hunks{true}, hunk_count{0} {}
+Patch::Patch(bool merges_adjacent_hunks) :
+  root{nullptr}, is_frozen{false},
+  merges_adjacent_hunks{merges_adjacent_hunks}, hunk_count{0} {}
 
 Patch::~Patch() {
   if (root) {
     if (is_frozen) {
       free(root);
     } else {
-      delete root;
+      DeleteNode(&root);
     }
+  }
+}
+
+Node *Patch::BuildNode(Node *left, Node *right, Point old_distance_from_left_ancestor,
+                       Point new_distance_from_left_ancestor, Point old_extent,
+                       Point new_extent, Text *new_text) {
+  hunk_count++;
+  return new Node{
+    left,
+    right,
+    old_distance_from_left_ancestor,
+    new_distance_from_left_ancestor,
+    old_extent,
+    new_extent,
+    new_text
+  };
+}
+
+void Patch::DeleteNode(Node **node_to_delete) {
+  if (*node_to_delete) {
+    node_stack.clear();
+    node_stack.push_back(*node_to_delete);
+
+    while (!node_stack.empty()) {
+      Node *node = node_stack.back();
+      node_stack.pop_back();
+      if (node->left) node_stack.push_back(node->left);
+      if (node->right) node_stack.push_back(node->right);
+      delete node;
+      hunk_count--;
+    }
+
+    *node_to_delete = nullptr;
   }
 }
 
@@ -352,7 +359,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
   }
 
   if (!root) {
-    root = new Node{
+    root = BuildNode(
       nullptr,
       nullptr,
       new_splice_start,
@@ -360,7 +367,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       new_deletion_extent,
       new_insertion_extent,
       inserted_text
-    };
+    );
     return true;
   }
 
@@ -419,7 +426,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       } else {
         upper_bound->left = lower_bound->left;
         lower_bound->left = nullptr;
-        delete lower_bound;
+        DeleteNode(&lower_bound);
       }
 
     } else if (overlaps_upper_bound) {
@@ -439,9 +446,9 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       }
       if (inserted_text) delete inserted_text;
 
-      lower_bound->DeleteRight();
+      DeleteNode(&lower_bound->right);
       if (upper_bound->left != lower_bound) {
-        upper_bound->DeleteLeft();
+        DeleteNode(&upper_bound->left);
       }
 
     } else if (overlaps_lower_bound) {
@@ -461,7 +468,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       }
       if (inserted_text) delete inserted_text;
 
-      lower_bound->DeleteRight();
+      DeleteNode(&lower_bound->right);
       RotateNodeRight(lower_bound, upper_bound, nullptr);
 
     // Splice doesn't overlap either bound
@@ -473,7 +480,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
         assert(new_deletion_extent.IsZero());
         assert(new_splice_start == upper_bound_new_start);
 
-        root = new Node{
+        root = BuildNode(
           upper_bound->left,
           upper_bound,
           upper_bound_old_start,
@@ -481,7 +488,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
           Point::Zero(),
           new_insertion_extent,
           inserted_text
-        };
+        );
 
         upper_bound->left = nullptr;
         upper_bound->old_distance_from_left_ancestor = Point::Zero();
@@ -492,7 +499,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
         Point old_splice_start = lower_bound_old_end.Traverse(new_splice_start.Traversal(lower_bound_new_end));
         Point old_deletion_end = rightmost_child_old_end.Traverse(new_deletion_end.Traversal(rightmost_child_new_end));
 
-        root = new Node{
+        root = BuildNode(
           lower_bound,
           upper_bound,
           old_splice_start,
@@ -500,9 +507,9 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
           old_deletion_end.Traversal(old_splice_start),
           new_insertion_extent,
           inserted_text
-        };
+        );
 
-        lower_bound->DeleteRight();
+        DeleteNode(&lower_bound->right);
         upper_bound->left = nullptr;
         upper_bound->old_distance_from_left_ancestor = upper_bound_old_start.Traversal(old_deletion_end);
         upper_bound->new_distance_from_left_ancestor = upper_bound_new_start.Traversal(new_deletion_end);
@@ -521,7 +528,8 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       new_splice_start < lower_bound_new_end ||
         (merges_adjacent_hunks && new_splice_start == lower_bound_new_end);
 
-    lower_bound->DeleteRight();
+    DeleteNode(&lower_bound->right);
+
     if (overlaps_lower_bound) {
       lower_bound->old_extent = old_deletion_end.Traversal(lower_bound_old_start);
       lower_bound->new_extent = new_insertion_end.Traversal(lower_bound_new_start);
@@ -534,7 +542,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       if (inserted_text) delete inserted_text;
     } else {
       Point old_splice_start = lower_bound_old_end.Traverse(new_splice_start.Traversal(lower_bound_new_end));
-      root = new Node{
+      root = BuildNode(
         lower_bound,
         nullptr,
         old_splice_start,
@@ -542,7 +550,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
         old_deletion_end.Traversal(old_splice_start),
         new_insertion_extent,
         inserted_text
-      };
+      );
     }
 
   } else if (upper_bound) {
@@ -562,7 +570,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       old_deletion_end = new_deletion_end;
     }
 
-    upper_bound->DeleteLeft();
+    DeleteNode(&upper_bound->left);
     if (overlaps_upper_bound) {
       upper_bound->old_distance_from_left_ancestor = new_splice_start;
       upper_bound->new_distance_from_left_ancestor = new_splice_start;
@@ -577,7 +585,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       }
       if (inserted_text) delete inserted_text;
     } else {
-      root = new Node{
+      root = BuildNode(
         nullptr,
         upper_bound,
         new_splice_start,
@@ -585,7 +593,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
         old_deletion_end.Traversal(new_splice_start),
         new_insertion_extent,
         inserted_text
-      };
+      );
       Point distance_from_end_of_root_to_start_of_upper_bound = upper_bound_new_start.Traversal(new_deletion_end);
       upper_bound->old_distance_from_left_ancestor = distance_from_end_of_root_to_start_of_upper_bound;
       upper_bound->new_distance_from_left_ancestor = distance_from_end_of_root_to_start_of_upper_bound;
@@ -595,8 +603,8 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
     Point rightmost_child_old_end, rightmost_child_new_end;
     root->GetSubtreeEnd(&rightmost_child_old_end, &rightmost_child_new_end);
     Point old_deletion_end = rightmost_child_old_end.Traverse(new_deletion_end.Traversal(rightmost_child_new_end));
-    delete root;
-    root = new Node{
+    DeleteNode(&root);
+    root = BuildNode(
       nullptr,
       nullptr,
       new_splice_start,
@@ -604,7 +612,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent, Point new_
       old_deletion_end.Traversal(new_splice_start),
       new_insertion_extent,
       inserted_text
-    };
+    );
   }
 
   return true;
@@ -629,10 +637,7 @@ bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent, Point o
   // PrintDotGraph();
 
   if (!lower_bound && !upper_bound) {
-    if (root) {
-      delete root;
-      root = nullptr;
-    }
+    DeleteNode(&root);
     return true;
   }
 
@@ -660,7 +665,7 @@ bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent, Point o
     new_deletion_end = lower_bound_new_end.Traverse(old_deletion_end.Traversal(lower_bound_old_end));
     new_insertion_end = lower_bound_new_end.Traverse(old_insertion_end.Traversal(lower_bound_old_end));
 
-    lower_bound->DeleteRight();
+    DeleteNode(&lower_bound->right);
   } else {
     new_deletion_end = old_deletion_end;
     new_insertion_end = old_insertion_end;
@@ -678,10 +683,10 @@ bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent, Point o
         upper_bound->old_extent = lower_bound->old_extent.Traverse(upper_bound->old_extent);
         upper_bound->new_extent = lower_bound->new_extent.Traverse(upper_bound->new_extent);
         upper_bound->left = lower_bound->left;
-        delete lower_bound;
+        DeleteNode(&lower_bound);
       }
-    } else if (upper_bound->left) {
-      upper_bound->DeleteLeft();
+    } else {
+      DeleteNode(&upper_bound->left);
     }
   }
 
@@ -781,13 +786,12 @@ void Patch::DeleteRoot() {
       RotateNodeLeft(node->right, node, parent);
     } else if (parent) {
       if (parent->left == node) {
-        parent->DeleteLeft();
+        DeleteNode(&parent->left);
       } else if (parent->right == node) {
-        parent->DeleteRight();
+        DeleteNode(&parent->right);
       }
     } else {
-      delete node;
-      root = nullptr;
+      DeleteNode(&root);
       break;
     }
   }
@@ -839,6 +843,10 @@ void Patch::PrintDotGraph() const {
     PrintDotGraphForNode(root, Point::Zero(), Point::Zero());
   }
   fprintf(stderr, "}\n");
+}
+
+size_t Patch::GetHunkCount() const {
+  return hunk_count;
 }
 
 vector<Hunk> Patch::GetHunks() const {
@@ -1019,12 +1027,9 @@ void Patch::Serialize(vector<uint8_t> *output) const {
 
   AppendToBuffer(output, SERIALIZATION_VERSION);
 
-  uint32_t node_count = 0;
-  uint32_t node_count_index = output->size();
-  AppendToBuffer(output, node_count);
+  AppendToBuffer(output, hunk_count);
 
   AppendNodeToBuffer(output, *root);
-  node_count++;
 
   Node *node = root;
   node_stack.clear();
@@ -1034,14 +1039,12 @@ void Patch::Serialize(vector<uint8_t> *output) const {
     if (node->left && previous_node_child_index < 0) {
       AppendToBuffer<uint32_t>(output, Left);
       AppendNodeToBuffer(output, *node->left);
-      node_count++;
       node_stack.push_back(node);
       node = node->left;
       previous_node_child_index = -1;
     } else if (node->right && previous_node_child_index < 1) {
       AppendToBuffer<uint32_t>(output, Right);
       AppendNodeToBuffer(output, *node->right);
-      node_count++;
       node_stack.push_back(node);
       node = node->right;
       previous_node_child_index = -1;
@@ -1055,9 +1058,6 @@ void Patch::Serialize(vector<uint8_t> *output) const {
       break;
     }
   }
-
-  auto node_count_slot = reinterpret_cast<uint32_t *>(output->data() + node_count_index);
-  *node_count_slot = htonl(node_count);
 }
 
 Patch::Patch(const vector<uint8_t> &input) : root{nullptr}, is_frozen{true}, merges_adjacent_hunks{true} {
@@ -1070,17 +1070,17 @@ Patch::Patch(const vector<uint8_t> &input) : root{nullptr}, is_frozen{true}, mer
     return;
   }
 
-  uint32_t node_count = GetFromBuffer<uint32_t>(&data, end);
-  if (node_count == 0) {
+  hunk_count = GetFromBuffer<uint32_t>(&data, end);
+  if (hunk_count == 0) {
     return;
   }
 
-  node_stack.reserve(node_count);
-  root = static_cast<Node *>(calloc(node_count, sizeof(Node)));
+  node_stack.reserve(hunk_count);
+  root = static_cast<Node *>(calloc(hunk_count, sizeof(Node)));
   Node *node = root, *next_node = root + 1;
   GetNodeFromBuffer(&data, end, node);
 
-  while (next_node < root + node_count) {
+  while (next_node < root + hunk_count) {
     switch (GetFromBuffer<uint32_t>(&data, end)) {
       case Left:
         GetNodeFromBuffer(&data, end, next_node);

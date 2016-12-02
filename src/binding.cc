@@ -192,6 +192,7 @@ public:
     prototype_template->Set(Nan::New("hunkForNewPosition").ToLocalChecked(), Nan::New<FunctionTemplate>(HunkForNewPosition));
     prototype_template->Set(Nan::New("serialize").ToLocalChecked(), Nan::New<FunctionTemplate>(Serialize));
     prototype_template->Set(Nan::New("printDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(PrintDotGraph));
+    prototype_template->Set(Nan::New("getHunkCount").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunkCount));
     constructor.Reset(constructor_template->GetFunction());
     module->Set(Nan::New("exports").ToLocalChecked(), Nan::New(constructor));
   }
@@ -365,6 +366,12 @@ private:
   static void PrintDotGraph(const Nan::FunctionCallbackInfo<Value> &info) {
     Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
     patch.PrintDotGraph();
+  }
+
+  static void GetHunkCount(const Nan::FunctionCallbackInfo<Value> &info) {
+    Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
+    uint32_t hunk_count = patch.GetHunkCount();
+    info.GetReturnValue().Set(Nan::New<Number>(hunk_count));
   }
 
   static Nan::Persistent<v8::Function> constructor;
