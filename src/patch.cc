@@ -1028,6 +1028,8 @@ void AppendTextToBuffer(vector<uint8_t> *output, const Text *text) {
     for (uint32_t i = 0; i < text->length; i++) {
       AppendToBuffer(output, text->content[i]);
     }
+  } else {
+    AppendToBuffer<uint32_t>(output, 0);
   }
 }
 
