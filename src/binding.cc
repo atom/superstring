@@ -225,14 +225,20 @@ private:
     Nan::Maybe<Point> insertion_extent = PointFromJS(Nan::To<Object>(info[2]));
 
     if (start.IsJust() && deletion_extent.IsJust() && insertion_extent.IsJust()) {
-      Text *new_text = nullptr;
+      Text *deleted_text = nullptr;
+      Text *inserted_text = nullptr;
 
       if (info.Length() >= 4) {
-        new_text = TextFromJS(Nan::To<String>(info[3]));
-        if (!new_text) return;
+        deleted_text = TextFromJS(Nan::To<String>(info[3]));
+        if (!deleted_text) return;
       }
 
-      if (!patch.Splice(start.FromJust(), deletion_extent.FromJust(), insertion_extent.FromJust(), new_text)) {
+      if (info.Length() >= 5) {
+        inserted_text = TextFromJS(Nan::To<String>(info[4]));
+        if (!inserted_text) return;
+      }
+
+      if (!patch.Splice(start.FromJust(), deletion_extent.FromJust(), insertion_extent.FromJust(), deleted_text, inserted_text)) {
         Nan::ThrowError("Can't splice into a frozen patch");
       }
     }

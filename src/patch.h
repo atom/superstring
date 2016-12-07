@@ -12,7 +12,7 @@ class Patch {
   Patch(bool merges_adjacent_hunks);
   Patch(const std::vector<uint8_t>&);
   ~Patch();
-  bool Splice(Point start, Point deletion_extent, Point insertion_extent, Text *new_text);
+  bool Splice(Point start, Point deletion_extent, Point insertion_extent, Text *old_text, Text *new_text);
   bool SpliceOld(Point start, Point deletion_extent, Point insertion_extent);
   std::vector<Hunk> GetHunks() const;
   std::vector<Hunk> GetHunksInNewRange(Point start, Point end);
@@ -48,7 +48,7 @@ class Patch {
   void RotateNodeLeft(Node *, Node *, Node *);
   void DeleteRoot();
   void PerformRebalancingRotations(uint32_t);
-  Node *BuildNode(Node *, Node *, Point, Point, Point, Point, Text *);
+  Node *BuildNode(Node *, Node *, Point, Point, Point, Point, Text *, Text *);
   void DeleteNode(Node **);
 
   struct PositionStackEntry;
