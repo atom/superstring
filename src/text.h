@@ -1,6 +1,7 @@
 #ifndef TEXT_H_
 #define TEXT_H_
 
+#include <memory>
 #include "point.h"
 
 struct TextSlice {
@@ -12,8 +13,8 @@ struct Text {
   uint16_t *content;
   uint32_t length;
 
-  static Text *Concat(TextSlice a, TextSlice b);
-  static Text *Concat(TextSlice a, TextSlice b, TextSlice c);
+  static std::unique_ptr<Text> Concat(TextSlice a, TextSlice b);
+  static std::unique_ptr<Text> Concat(TextSlice a, TextSlice b, TextSlice c);
 
   Text(uint32_t length);
   Text(TextSlice slice);

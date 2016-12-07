@@ -1,6 +1,8 @@
 #include <cmath>
 #include <sstream>
 #include <string>
+#include <vector>
+#include <memory>
 #include "nan.h"
 #include "point.h"
 #include "hunk.h"
@@ -9,6 +11,7 @@
 
 using namespace v8;
 using std::vector;
+using std::unique_ptr;
 
 static Nan::Persistent<String> row_string;
 static Nan::Persistent<String> column_string;
@@ -51,14 +54,14 @@ static Nan::Maybe<Point> PointFromJS(Nan::MaybeLocal<Object> maybe_object) {
   return Nan::Just(Point(row, column));
 }
 
-static Text *TextFromJS(Nan::MaybeLocal<String> maybe_string) {
+static unique_ptr<Text> TextFromJS(Nan::MaybeLocal<String> maybe_string) {
   Local<String> string;
   if (!maybe_string.ToLocal(&string)) {
     Nan::ThrowTypeError("Expected a string.");
     return nullptr;
   }
 
-  Text *result = new Text(string->Length());
+  auto result = unique_ptr<Text>(new Text(string->Length()));
   string->Write(result->content, 0, -1, 2);
   return result;
 }
@@ -225,8 +228,8 @@ private:
     Nan::Maybe<Point> insertion_extent = PointFromJS(Nan::To<Object>(info[2]));
 
     if (start.IsJust() && deletion_extent.IsJust() && insertion_extent.IsJust()) {
-      Text *deleted_text = nullptr;
-      Text *inserted_text = nullptr;
+      unique_ptr<Text> deleted_text;
+      unique_ptr<Text> inserted_text;
 
       if (info.Length() >= 4) {
         deleted_text = TextFromJS(Nan::To<String>(info[3]));
@@ -238,7 +241,7 @@ private:
         if (!inserted_text) return;
       }
 
-      if (!patch.Splice(start.FromJust(), deletion_extent.FromJust(), insertion_extent.FromJust(), deleted_text, inserted_text)) {
+      if (!patch.Splice(start.FromJust(), deletion_extent.FromJust(), insertion_extent.FromJust(), move(deleted_text), move(inserted_text))) {
         Nan::ThrowError("Can't splice into a frozen patch");
       }
     }

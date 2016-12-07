@@ -69,8 +69,8 @@ TEST_CASE("Records overlapping splices with text") {
     Point{0, 5},
     Point{0, 3},
     Point{0, 4},
-    GetText("abc").release(),
-    GetText("1234").release()
+    GetText("abc"),
+    GetText("1234")
   );
   REQUIRE(patch.GetHunks() == vector<Hunk>({
     Hunk{
@@ -86,8 +86,8 @@ TEST_CASE("Records overlapping splices with text") {
     Point{0, 7},
     Point{0, 3},
     Point{0, 4},
-    GetText("34d").release(),
-    GetText("5678").release()
+    GetText("34d"),
+    GetText("5678")
   );
   REQUIRE(patch.GetHunks() == vector<Hunk>({
     Hunk{
@@ -103,8 +103,8 @@ TEST_CASE("Records overlapping splices with text") {
     Point{0, 3},
     Point{0, 3},
     Point{0, 4},
-    GetText("efa").release(),
-    GetText("1234").release()
+    GetText("efa"),
+    GetText("1234")
   );
   REQUIRE(patch.GetHunks() == vector<Hunk>({
     Hunk{

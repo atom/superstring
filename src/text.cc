@@ -1,15 +1,18 @@
 #include "text.h"
 #include <cstring>
+#include <memory>
 
-Text *Text::Concat(TextSlice a, TextSlice b) {
-  Text *result = new Text{a.length + b.length};
+using std::unique_ptr;
+
+unique_ptr<Text> Text::Concat(TextSlice a, TextSlice b) {
+  auto result = unique_ptr<Text>(new Text{a.length + b.length});
   memcpy(result->content, a.content, a.length * sizeof(uint16_t));
   memcpy(result->content + a.length, b.content, b.length * sizeof(uint16_t));
   return result;
 }
 
-Text *Text::Concat(TextSlice a, TextSlice b, TextSlice c) {
-  Text *result = new Text{a.length + b.length + c.length};
+unique_ptr<Text> Text::Concat(TextSlice a, TextSlice b, TextSlice c) {
+  auto result = unique_ptr<Text>(new Text{a.length + b.length + c.length});
   memcpy(result->content, a.content, a.length * sizeof(uint16_t));
   memcpy(result->content + a.length, b.content, b.length * sizeof(uint16_t));
   memcpy(result->content + a.length + b.length, c.content, c.length * sizeof(uint16_t));
