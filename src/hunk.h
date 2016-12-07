@@ -18,11 +18,11 @@ public:
 inline std::ostream &operator<<(std::ostream &stream, const Text *text) {
   if (text) {
     stream << "'";
-    for (uint32_t i = 0; i < text->length; i++) {
-      if (text->content[i] < CHAR_MAX) {
-        stream << (char)text->content[i];
+    for (uint16_t character : text->content) {
+      if (character < CHAR_MAX) {
+        stream << (char)character;
       } else {
-        stream << "\\u" << text->content[i];
+        stream << "\\u" << character;
       }
     }
     stream << "'";

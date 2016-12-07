@@ -61,13 +61,13 @@ static unique_ptr<Text> TextFromJS(Nan::MaybeLocal<String> maybe_string) {
     return nullptr;
   }
 
-  auto result = unique_ptr<Text>(new Text(string->Length()));
-  string->Write(result->content, 0, -1, 2);
-  return result;
+  vector<uint16_t> content(string->Length());
+  string->Write(content.data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
+  return Text::Build(content);
 }
 
 static Local<String> TextToJS(Text *text) {
-  return Nan::New<String>(text->content, text->length).ToLocalChecked();
+  return Nan::New<String>(text->content.data(), text->content.size()).ToLocalChecked();
 }
 
 class PointWrapper : public Nan::ObjectWrap {

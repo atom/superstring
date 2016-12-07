@@ -7,11 +7,7 @@
 using std::vector;
 
 bool operator==(const Text &left, const Text &right) {
-  if (left.length != right.length) return false;
-  for (uint32_t i = 0; i < left.length; i++) {
-    if (left.content[i] != right.content[i]) return false;
-  }
-  return true;
+  return left.content == right.content;
 }
 
 bool text_eq(const Text *left, const Text *right) {
@@ -32,10 +28,11 @@ bool operator==(const Hunk &left, const Hunk &right) {
 }
 
 std::unique_ptr<Text> GetText(const char *string) {
-  uint32_t length = strlen(string);
-  Text *result = new Text(length);
-  for (uint32_t i = 0; i < length; i++) {
-    result->content[i] = static_cast<uint32_t>(string[i]);
+  size_t length = strlen(string);
+  vector<uint16_t> content;
+  content.reserve(length);
+  for (size_t i = 0; i < length; i++) {
+    content.push_back(static_cast<uint16_t>(string[i]));
   }
-  return std::unique_ptr<Text>(result);
+  return std::unique_ptr<Text>(new Text(move(content)));
 }

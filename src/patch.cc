@@ -1039,9 +1039,9 @@ void AppendPointToBuffer(vector<uint8_t> *output, const Point &point) {
 void AppendTextToBuffer(vector<uint8_t> *output, const Text *text) {
   if (text) {
     AppendToBuffer<uint32_t>(output, 1);
-    AppendToBuffer(output, text->length);
-    for (uint32_t i = 0; i < text->length; i++) {
-      AppendToBuffer(output, text->content[i]);
+    AppendToBuffer(output, static_cast<uint32_t>(text->content.size()));
+    for (uint16_t character : text->content) {
+      AppendToBuffer(output, character);
     }
   } else {
     AppendToBuffer<uint32_t>(output, 0);
@@ -1051,11 +1051,12 @@ void AppendTextToBuffer(vector<uint8_t> *output, const Text *text) {
 unique_ptr<Text> GetTextFromBuffer(const uint8_t **data, const uint8_t *end) {
   if (GetFromBuffer<uint32_t>(data, end)) {
     uint32_t length = GetFromBuffer<uint32_t>(data, end);
-    auto result = unique_ptr<Text>(new Text(length));
+    vector<uint16_t> content;
+    content.reserve(length);
     for (uint32_t i = 0; i < length; i++) {
-      result->content[i] = GetFromBuffer<uint16_t>(data, end);
+      content.push_back(GetFromBuffer<uint16_t>(data, end));
     }
-    return result;
+    return Text::Build(content);
   } else {
     return nullptr;
   }

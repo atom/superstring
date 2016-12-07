@@ -1,66 +1,89 @@
 #include "text.h"
-#include <cstring>
+#include <vector>
 #include <memory>
 
+using std::move;
+using std::vector;
 using std::unique_ptr;
 
+unique_ptr<Text> Text::Build(vector<uint16_t> &content) {
+  return unique_ptr<Text>(new Text{move(content)});
+}
+
 unique_ptr<Text> Text::Concat(TextSlice a, TextSlice b) {
-  auto result = unique_ptr<Text>(new Text{a.length + b.length});
-  memcpy(result->content, a.content, a.length * sizeof(uint16_t));
-  memcpy(result->content + a.length, b.content, b.length * sizeof(uint16_t));
+  vector<uint16_t> content;
+  content.reserve(
+    a.end_index - a.start_index +
+    b.end_index - b.start_index
+  );
+  auto result = Build(content);
+  result->Append(a);
+  result->Append(b);
   return result;
 }
 
 unique_ptr<Text> Text::Concat(TextSlice a, TextSlice b, TextSlice c) {
-  auto result = unique_ptr<Text>(new Text{a.length + b.length + c.length});
-  memcpy(result->content, a.content, a.length * sizeof(uint16_t));
-  memcpy(result->content + a.length, b.content, b.length * sizeof(uint16_t));
-  memcpy(result->content + a.length + b.length, c.content, c.length * sizeof(uint16_t));
+  vector<uint16_t> content;
+  content.reserve(
+    a.end_index - a.start_index +
+    b.end_index - b.start_index +
+    c.end_index - c.start_index
+  );
+  auto result = Build(content);
+  result->Append(a);
+  result->Append(b);
+  result->Append(c);
   return result;
 }
 
-Text::Text(uint32_t length) : length{length} {
-  content = new uint16_t[length];
-}
+Text::Text(vector<uint16_t> &&content) : content{content} {}
 
-Text::Text(TextSlice slice) : length{slice.length} {
-  content = new uint16_t[length];
-  memcpy(content, slice.content, length * sizeof(uint16_t));
-}
+Text::Text(TextSlice slice) : content{
+  slice.text->content.begin() + slice.start_index,
+  slice.text->content.begin() + slice.end_index
+} {}
 
-Text::~Text() {
-  delete[] content;
+std::pair<TextSlice, TextSlice> Text::Split(Point position) const {
+  size_t index{CharacterIndexForPosition(position)};
+  return {
+    TextSlice{this, 0, index},
+    TextSlice{this, index, content.size()}
+  };
 }
 
 TextSlice Text::Prefix(Point prefix_end) const {
-  uint32_t end_index = CharacterIndexForPosition(prefix_end);
-  return TextSlice{content, end_index};
+  return Split(prefix_end).first;
 }
 
 TextSlice Text::Suffix(Point suffix_start) const {
-  uint32_t start_index = CharacterIndexForPosition(suffix_start);
-  return TextSlice{content + start_index, length - start_index};
+  return Split(suffix_start).second;
 }
 
 TextSlice Text::AsSlice() const {
-  return TextSlice{content, length};
+  return TextSlice{this, 0, content.size()};
+}
+
+void Text::Append(TextSlice slice) {
+  content.insert(
+    content.end(),
+    slice.text->content.begin() + slice.start_index,
+    slice.text->content.begin() + slice.end_index
+  );
 }
 
 void Text::TrimLeft(Point position) {
-  uint32_t new_start_index = CharacterIndexForPosition(position);
-  memmove(content, content + new_start_index, (length - new_start_index) * sizeof(uint16_t));
-  length -= new_start_index;
+  content.erase(content.begin(), content.begin() + CharacterIndexForPosition(position));
 }
 
 void Text::TrimRight(Point position) {
-  length = CharacterIndexForPosition(position);
+  content.erase(content.begin() + CharacterIndexForPosition(position), content.end());
 }
 
-uint32_t Text::CharacterIndexForPosition(Point target) const {
-  uint32_t index = 0;
+size_t Text::CharacterIndexForPosition(Point target) const {
+  size_t index{0}, size{content.size()};
   Point position;
 
-  while (index < length && position < target) {
+  while (index < size && position < target) {
     if (content[index] == '\n') {
       position.row++;
       position.column = 0;
