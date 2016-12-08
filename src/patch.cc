@@ -267,7 +267,7 @@ Node *Patch::SplayNodeStartingAfter(Point splice_start, Point splice_end) {
 }
 
 template<typename CoordinateSpace>
-vector<Hunk> Patch::GetHunksInRange(Point start, Point end) {
+vector<Hunk> Patch::GetHunksInRange(Point start, Point end, bool inclusive) {
   vector<Hunk> result;
   if (!root) return result;
 
@@ -295,12 +295,22 @@ vector<Hunk> Patch::GetHunksInRange(Point start, Point end) {
     Text *new_text = node->new_text.get();
     Hunk hunk = {old_start, old_end, new_start, new_end, old_text, new_text};
 
-    if (CoordinateSpace::start(hunk) >= end) {
-      break;
-    }
+    if (inclusive) {
+      if (CoordinateSpace::start(hunk) > end) {
+        break;
+      }
 
-    if (CoordinateSpace::end(hunk) > start) {
-      result.push_back(hunk);
+      if (CoordinateSpace::end(hunk) >= start) {
+        result.push_back(hunk);
+      }
+    } else {
+      if (CoordinateSpace::start(hunk) >= end) {
+        break;
+      }
+
+      if (CoordinateSpace::end(hunk) > start) {
+        result.push_back(hunk);
+      }
     }
 
     if (node->right) {
@@ -958,8 +968,8 @@ vector<Hunk> Patch::GetHunksInOldRange(Point start, Point end) {
   return GetHunksInRange<OldCoordinates>(start, end);
 }
 
-vector<Hunk> Patch::GetHunksInNewRange(Point start, Point end) {
-  return GetHunksInRange<NewCoordinates>(start, end);
+vector<Hunk> Patch::GetHunksInNewRange(Point start, Point end, bool inclusive) {
+  return GetHunksInRange<NewCoordinates>(start, end, inclusive);
 }
 
 Maybe<Hunk> Patch::HunkForOldPosition(Point target) {
@@ -976,19 +986,8 @@ unique_ptr<Text> Patch::ComputeOldText(unique_ptr<Text> deleted_text, Point new_
   vector<uint16_t> content;
   auto result = Text::Build(content);
   Point range_start = new_splice_start, range_end = new_deletion_end;
-  if (merges_adjacent_hunks) {
-    if (range_start.column == 0) {
-      if (range_start.row > 0) {
-        range_start.row--;
-        range_start.column = UINT32_MAX;
-      }
-    } else {
-      range_start.column--;
-    }
-    range_end.column++;
-  }
 
-  auto overlapping_hunks = GetHunksInNewRange(range_start, range_end);
+  auto overlapping_hunks = GetHunksInNewRange(range_start, range_end, merges_adjacent_hunks);
   TextSlice deleted_text_slice = deleted_text->AsSlice();
   Point deleted_text_slice_start = new_splice_start;
 

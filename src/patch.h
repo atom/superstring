@@ -17,7 +17,7 @@ class Patch {
               std::unique_ptr<Text> old_text, std::unique_ptr<Text> new_text);
   bool SpliceOld(Point start, Point deletion_extent, Point insertion_extent);
   std::vector<Hunk> GetHunks() const;
-  std::vector<Hunk> GetHunksInNewRange(Point start, Point end);
+  std::vector<Hunk> GetHunksInNewRange(Point start, Point end, bool inclusive = false);
   std::vector<Hunk> GetHunksInOldRange(Point start, Point end);
   Nan::Maybe<Hunk> HunkForOldPosition(Point position);
   Nan::Maybe<Hunk> HunkForNewPosition(Point position);
@@ -28,7 +28,7 @@ class Patch {
 
  private:
   template<typename CoordinateSpace>
-  std::vector<Hunk> GetHunksInRange(Point, Point);
+  std::vector<Hunk> GetHunksInRange(Point, Point, bool inclusive = false);
 
   template<typename CoordinateSpace>
   Node *SplayNodeEndingBefore(Point);
