@@ -206,9 +206,7 @@ public:
   }
 
 private:
-  PatchWrapper(bool merges_adjacent_hunks) : patch{merges_adjacent_hunks} {}
-
-  PatchWrapper(const std::vector<uint8_t> &data) : patch{data} {}
+  PatchWrapper(Patch &&patch) : patch{std::move(patch)} {}
 
   static void New(const Nan::FunctionCallbackInfo<Value> &info) {
     bool merges_adjacent_hunks = true;
@@ -220,7 +218,7 @@ private:
         merges_adjacent_hunks = js_merge_adjacent_hunks->BooleanValue();
       }
     }
-    PatchWrapper *patch = new PatchWrapper(merges_adjacent_hunks);
+    PatchWrapper *patch = new PatchWrapper(Patch{merges_adjacent_hunks});
     patch->Wrap(info.This());
   }
 
@@ -365,7 +363,7 @@ private:
         auto &serialization_vector = SerializationVector();
         auto *data = reinterpret_cast<const uint8_t *>(contents.Data());
         serialization_vector.assign(data, data + contents.ByteLength());
-        PatchWrapper *wrapper = new PatchWrapper(serialization_vector);
+        PatchWrapper *wrapper = new PatchWrapper(Patch{serialization_vector});
         wrapper->Wrap(result);
         info.GetReturnValue().Set(result);
       }

@@ -65,6 +65,14 @@ Patch::Patch(bool merges_adjacent_hunks) :
   root{nullptr}, is_frozen{false},
   merges_adjacent_hunks{merges_adjacent_hunks}, hunk_count{0} {}
 
+Patch::Patch(Patch &&other) : root{nullptr}, is_frozen{other.is_frozen},
+                              merges_adjacent_hunks{other.merges_adjacent_hunks},
+                              hunk_count{other.hunk_count} {
+  std::swap(root, other.root);
+  std::swap(left_ancestor_stack, other.left_ancestor_stack);
+  std::swap(node_stack, other.node_stack);
+}
+
 Patch::~Patch() {
   if (root) {
     if (is_frozen) {

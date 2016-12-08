@@ -12,6 +12,7 @@ class Patch {
   Patch();
   Patch(bool merges_adjacent_hunks);
   Patch(const std::vector<uint8_t>&);
+  Patch(Patch &&);
   ~Patch();
   bool Splice(Point start, Point deletion_extent, Point insertion_extent,
               std::unique_ptr<Text> old_text, std::unique_ptr<Text> new_text);
