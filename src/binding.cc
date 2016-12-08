@@ -185,11 +185,12 @@ private:
 class PatchWrapper : public Nan::ObjectWrap {
 public:
   static void Init(Local<Object> exports, Local<Object> module) {
-    Local<FunctionTemplate> constructor_template = Nan::New<FunctionTemplate>(New);
-    constructor_template->SetClassName(Nan::New<String>("Patch").ToLocalChecked());
-    constructor_template->Set(Nan::New("deserialize").ToLocalChecked(), Nan::New<FunctionTemplate>(Deserialize));
-    constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
-    const auto &prototype_template = constructor_template->PrototypeTemplate();
+    Local<FunctionTemplate> constructor_template_local = Nan::New<FunctionTemplate>(New);
+    constructor_template_local->SetClassName(Nan::New<String>("Patch").ToLocalChecked());
+    constructor_template_local->Set(Nan::New("deserialize").ToLocalChecked(), Nan::New<FunctionTemplate>(Deserialize));
+    constructor_template_local->Set(Nan::New("compose").ToLocalChecked(), Nan::New<FunctionTemplate>(Compose));
+    constructor_template_local->InstanceTemplate()->SetInternalFieldCount(1);
+    const auto &prototype_template = constructor_template_local->PrototypeTemplate();
     prototype_template->Set(Nan::New("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(Splice));
     prototype_template->Set(Nan::New("spliceOld").ToLocalChecked(), Nan::New<FunctionTemplate>(SpliceOld));
     prototype_template->Set(Nan::New("getHunks").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunks));
@@ -201,7 +202,8 @@ public:
     prototype_template->Set(Nan::New("printDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(PrintDotGraph));
     prototype_template->Set(Nan::New("rebalance").ToLocalChecked(), Nan::New<FunctionTemplate>(Rebalance));
     prototype_template->Set(Nan::New("getHunkCount").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunkCount));
-    constructor.Reset(constructor_template->GetFunction());
+    constructor_template.Reset(constructor_template_local);
+    constructor.Reset(constructor_template_local->GetFunction());
     module->Set(Nan::New("exports").ToLocalChecked(), Nan::New(constructor));
   }
 
@@ -370,6 +372,33 @@ private:
     }
   }
 
+  static void Compose(const Nan::FunctionCallbackInfo<Value> &info) {
+    Local<Object> result;
+    if (Nan::NewInstance(Nan::New(constructor)).ToLocal(&result)) {
+      Local<Array> js_patches = Local<Array>::Cast(info[0]);
+      if (!js_patches->IsArray()) {
+        Nan::ThrowTypeError("Compose requires an array of patches");
+        return;
+      }
+
+      vector<const Patch *> patches;
+      for (uint32_t i = 0, n = js_patches->Length(); i < n; i++) {
+        Local<Object> js_patch = Local<Object>::Cast(js_patches->Get(i));
+        if (!Nan::New(constructor_template)->HasInstance(js_patch)) {
+          Nan::ThrowTypeError("Patch.compose must be called with an array of patches");
+          return;
+        }
+
+        Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(js_patch)->patch;
+        patches.push_back(&patch);
+      }
+
+      auto wrapper = new PatchWrapper{Patch{patches}};
+      wrapper->Wrap(result);
+      info.GetReturnValue().Set(result);
+    }
+  }
+
   static inline std::vector<uint8_t> &SerializationVector() {
     static std::vector<uint8_t> result;
     return result;
@@ -391,12 +420,14 @@ private:
     patch.Rebalance();
   }
 
+  static Nan::Persistent<v8::FunctionTemplate> constructor_template;
   static Nan::Persistent<v8::Function> constructor;
   Patch patch;
 };
 
 Nan::Persistent<v8::Function> PointWrapper::constructor;
 Nan::Persistent<v8::Function> HunkWrapper::constructor;
+Nan::Persistent<v8::FunctionTemplate> PatchWrapper::constructor_template;
 Nan::Persistent<v8::Function> PatchWrapper::constructor;
 
 void Init(Local<Object> exports, Local<Object> module) {

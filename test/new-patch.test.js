@@ -56,13 +56,45 @@ describe('Native Patch', function () {
     ])
   })
 
+  it('can compose multiple patches together', function () {
+    let patches = [new Patch(), new Patch(), new Patch()]
+    patches[0].splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, 'ciao', 'hello')
+    patches[0].splice({row: 1, column: 1}, {row: 0, column: 0}, {row: 0, column: 3}, '', 'hey')
+    patches[1].splice({row: 0, column: 15}, {row: 0, column: 10}, {row: 0, column: 0}, '0123456789', '')
+    patches[1].splice({row: 0, column: 0}, {row: 0, column: 0}, {row: 3, column: 0}, '', '\n\n\n')
+    patches[2].splice({row: 4, column: 2}, {row: 0, column: 2}, {row: 0, column: 2}, 'so', 'ho')
+
+    let composedPatch = Patch.compose(patches)
+    assert.deepEqual(JSON.parse(JSON.stringify(composedPatch.getHunks())), [
+      {
+        oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
+        newStart: {row: 0, column: 0}, newEnd: {row: 3, column: 0},
+        oldText: '', newText: '\n\n\n'
+      },
+      {
+        oldStart: {row: 0, column: 3}, oldEnd: {row: 0, column: 7},
+        newStart: {row: 3, column: 3}, newEnd: {row: 3, column: 8},
+        oldText: 'ciao', newText: 'hello'
+      },
+      {
+        oldStart: {row: 0, column: 14}, oldEnd: {row: 0, column: 24},
+        newStart: {row: 3, column: 15}, newEnd: {row: 3, column: 15},
+        oldText: '0123456789', newText: ''
+      },
+      {
+        oldStart: {row: 1, column: 1}, oldEnd: {row: 1, column: 1},
+        newStart: {row: 4, column: 1}, newEnd: {row: 4, column: 4},
+        oldText: '', newText: 'hho'
+      }
+    ])
+  })
+
   it('correctly records random splices', function () {
     this.timeout(Infinity)
 
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 100; i++) {
       let seed = Date.now()
       const seedMessage = `Random seed: ${seed}`
-      // console.log(seedMessage);
 
       const random = new Random(seed)
       const originalDocument = new TestDocument(seed)

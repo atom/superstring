@@ -73,6 +73,37 @@ Patch::Patch(Patch &&other) : root{nullptr}, is_frozen{other.is_frozen},
   std::swap(node_stack, other.node_stack);
 }
 
+Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
+  bool left_to_right = true;
+  for (const Patch *patch : patches_to_compose) {
+    auto hunks = patch->GetHunks();
+
+    if (left_to_right) {
+      for (auto iter = hunks.begin(), end = hunks.end(); iter != end; ++iter) {
+        Splice(
+          iter->new_start,
+          iter->old_end.Traversal(iter->old_start),
+          iter->new_end.Traversal(iter->new_start),
+          iter->old_text ? Text::Build(iter->old_text->content) : nullptr,
+          iter->new_text ? Text::Build(iter->new_text->content) : nullptr
+        );
+      }
+    } else {
+      for (auto iter = hunks.rbegin(), end = hunks.rend(); iter != end; ++iter) {
+        Splice(
+          iter->old_start,
+          iter->old_end.Traversal(iter->old_start),
+          iter->new_end.Traversal(iter->new_start),
+          iter->old_text ? Text::Build(iter->old_text->content) : nullptr,
+          iter->new_text ? Text::Build(iter->new_text->content) : nullptr
+        );
+      }
+    }
+
+    left_to_right = !left_to_right;
+  }
+}
+
 Patch::~Patch() {
   if (root) {
     if (is_frozen) {
