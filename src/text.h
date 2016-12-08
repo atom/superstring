@@ -11,6 +11,11 @@ struct TextSlice {
   const Text *text;
   size_t start_index;
   size_t end_index;
+
+  std::pair<TextSlice, TextSlice> Split(Point position) const;
+  TextSlice Suffix(Point position) const;
+  size_t Length() const;
+  size_t CharacterIndexForPosition(Point) const;
 };
 
 struct Text {
@@ -30,8 +35,6 @@ struct Text {
   void TrimLeft(Point position);
   void TrimRight(Point position);
   void Append(TextSlice slice);
-
-private:
   size_t CharacterIndexForPosition(Point) const;
 };
 

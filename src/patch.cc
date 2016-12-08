@@ -376,6 +376,31 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
   Point new_insertion_end = new_splice_start.Traverse(new_insertion_extent);
 
   Node *lower_bound = SplayNodeStartingBefore<NewCoordinates>(new_splice_start);
+
+  unique_ptr<Text> old_text;
+  if (deleted_text.get()) {
+    vector<uint16_t> content;
+    old_text = Text::Build(content);
+    auto overlapping_hunks = GetHunksInNewRange(new_splice_start, new_deletion_end);
+
+    TextSlice deleted_text_slice = deleted_text->AsSlice();
+    Point last_hunk_new_end = new_splice_start;
+
+    for (const Hunk &hunk : overlapping_hunks) {
+      if (hunk.new_start > last_hunk_new_end) {
+        auto split_result = deleted_text_slice.Split(hunk.new_start.Traversal(last_hunk_new_end));
+        old_text->Append(split_result.first);
+        deleted_text_slice = split_result.second;
+      }
+
+      old_text->Append(hunk.old_text->AsSlice());
+      deleted_text_slice = deleted_text_slice.Suffix(hunk.new_end.Traversal(hunk.new_start));
+      last_hunk_new_end = hunk.new_end;
+    }
+
+    old_text->Append(deleted_text_slice);
+  }
+
   Node *upper_bound = SplayNodeEndingAfter<NewCoordinates>(new_splice_start, new_deletion_end);
   if (upper_bound && lower_bound && lower_bound != upper_bound) {
     if (lower_bound != upper_bound->left) {
@@ -485,7 +510,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
           upper_bound_new_start,
           Point::Zero(),
           new_insertion_extent,
-          move(deleted_text),
+          move(old_text),
           move(inserted_text)
         );
 
@@ -505,7 +530,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
           new_splice_start,
           old_deletion_end.Traversal(old_splice_start),
           new_insertion_extent,
-          move(deleted_text),
+          move(old_text),
           move(inserted_text)
         );
 
@@ -555,7 +580,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
         new_splice_start,
         old_deletion_end.Traversal(old_splice_start),
         new_insertion_extent,
-        move(deleted_text),
+        move(old_text),
         move(inserted_text)
       );
     }
@@ -605,7 +630,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
         new_splice_start,
         old_deletion_end.Traversal(new_splice_start),
         new_insertion_extent,
-        move(deleted_text),
+        move(old_text),
         move(inserted_text)
       );
       Point distance_from_end_of_root_to_start_of_upper_bound = upper_bound_new_start.Traversal(new_deletion_end);
@@ -625,7 +650,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
       new_splice_start,
       old_deletion_end.Traversal(new_splice_start),
       new_insertion_extent,
-      move(deleted_text),
+      move(old_text),
       move(inserted_text)
     );
   }

@@ -44,11 +44,23 @@ Text::Text(TextSlice slice) : content{
 } {}
 
 std::pair<TextSlice, TextSlice> Text::Split(Point position) const {
-  size_t index{CharacterIndexForPosition(position)};
+  size_t index = CharacterIndexForPosition(position);
   return {
     TextSlice{this, 0, index},
     TextSlice{this, index, content.size()}
   };
+}
+
+std::pair<TextSlice, TextSlice> TextSlice::Split(Point position) const {
+  size_t index = CharacterIndexForPosition(position);
+  return {
+    TextSlice{text, start_index, start_index + index},
+    TextSlice{text, start_index + index, end_index}
+  };
+}
+
+TextSlice TextSlice::Suffix(Point suffix_start) const {
+  return Split(suffix_start).second;
 }
 
 TextSlice Text::Prefix(Point prefix_end) const {
@@ -79,19 +91,28 @@ void Text::TrimRight(Point position) {
   content.erase(content.begin() + CharacterIndexForPosition(position), content.end());
 }
 
-size_t Text::CharacterIndexForPosition(Point target) const {
-  size_t index{0}, size{content.size()};
+size_t TextSlice::CharacterIndexForPosition(Point target) const {
   Point position;
-
-  while (index < size && position < target) {
-    if (content[index] == '\n') {
+  auto begin = text->content.begin() + start_index;
+  auto end = text->content.begin() + end_index;
+  auto iter = begin;
+  while (iter != end && position < target) {
+    if (*iter == '\n') {
       position.row++;
       position.column = 0;
     } else {
       position.column++;
     }
-    index++;
+    ++iter;
   }
 
-  return index;
+  return iter - begin;
+}
+
+size_t Text::CharacterIndexForPosition(Point target) const {
+  return AsSlice().CharacterIndexForPosition(target);
+}
+
+size_t TextSlice::Length() const {
+  return end_index - start_index;
 }

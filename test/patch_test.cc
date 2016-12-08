@@ -114,6 +114,46 @@ TEST_CASE("Records overlapping splices with text") {
       GetText("123425678").get()
     },
   }));
+
+  // doesn't overlap lower bound, has no upper bound
+  patch.Splice(
+    Point{0, 15},
+    Point{0, 3},
+    Point{0, 4},
+    GetText("ghi"),
+    GetText("5678")
+  );
+  REQUIRE(patch.GetHunks() == vector<Hunk>({
+    Hunk{
+      Point{0, 3}, Point{0, 9},
+      Point{0, 3}, Point{0, 12},
+      GetText("efabcd").get(),
+      GetText("123425678").get()
+    },
+    Hunk{
+      Point{0, 12}, Point{0, 15},
+      Point{0, 15}, Point{0, 19},
+      GetText("ghi").get(),
+      GetText("5678").get()
+    },
+  }));
+
+  // surrounds two hunks, has no lower or upper bound
+  patch.Splice(
+    Point{0, 1},
+    Point{0, 21},
+    Point{0, 5},
+    GetText("xx123425678yyy5678zzz"),
+    GetText("99999")
+  );
+  REQUIRE(patch.GetHunks() == vector<Hunk>({
+    Hunk{
+      Point{0, 1}, Point{0, 18},
+      Point{0, 1}, Point{0, 6},
+      GetText("xxefabcdyyyghizzz").get(),
+      GetText("99999").get()
+    }
+  }));
 }
 
 TEST_CASE("Serializes and deserializes") {
