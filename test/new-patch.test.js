@@ -75,7 +75,11 @@ describe('Native Patch', function () {
           patch.rebalance()
         } else if (random(10) < 4) {
           const originalSplice = originalDocument.performRandomSplice()
-          const mutatedSplice = translateSpliceFromOriginalDocument(originalDocument, patch, originalSplice)
+          const mutatedSplice = translateSpliceFromOriginalDocument(
+            originalDocument,
+            patch,
+            originalSplice
+          )
 
           mutatedDocument.splice(
             mutatedSplice.start,
@@ -87,15 +91,25 @@ describe('Native Patch', function () {
           //   label="spliceOld(${formatPoint(originalSplice.start)}, ${formatPoint(originalSplice.deletedExtent)}, ${formatPoint(originalSplice.insertedExtent)})"
           // }\n`)
 
-          patch.spliceOld(originalSplice.start, originalSplice.deletedExtent, originalSplice.insertedExtent)
+          patch.spliceOld(
+            originalSplice.start,
+            originalSplice.deletedExtent,
+            originalSplice.insertedExtent
+          )
         } else {
-          const {start, deletedExtent, insertedExtent, insertedText} = mutatedDocument.performRandomSplice()
+          const splice = mutatedDocument.performRandomSplice()
 
           // process.stderr.write(`graph message {
-          //   label="splice(${formatPoint(start)}, ${formatPoint(deletedExtent)}, ${formatPoint(insertedExtent)})"
+          //   label="splice(${formatPoint(splice.start)}, ${formatPoint(splice.deletedExtent)}, ${formatPoint(splice.insertedExtent)})"
           // }\n`)
 
-          patch.splice(start, deletedExtent, insertedExtent, insertedText)
+          patch.splice(
+            splice.start,
+            splice.deletedExtent,
+            splice.insertedExtent,
+            splice.deletedText,
+            splice.insertedText
+          )
         }
 
         // patch.printDotGraph()
@@ -108,6 +122,7 @@ describe('Native Patch', function () {
         for (let hunk of patch.getHunks()) {
           const oldExtent = traversalDistance(hunk.oldEnd, hunk.oldStart)
           assert.equal(hunk.newText, mutatedDocument.getTextInRange(hunk.newStart, hunk.newEnd), seedMessage)
+          assert.equal(hunk.oldText, originalDocument.getTextInRange(hunk.oldStart, hunk.oldEnd), seedMessage)
           originalDocumentCopy.splice(hunk.newStart, oldExtent, hunk.newText)
           if (previousHunk && mergeAdjacentHunks) {
             assert.notDeepEqual(previousHunk.oldEnd, hunk.oldStart)

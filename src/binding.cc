@@ -16,6 +16,7 @@ using std::unique_ptr;
 static Nan::Persistent<String> row_string;
 static Nan::Persistent<String> column_string;
 static Nan::Persistent<String> new_text_string;
+static Nan::Persistent<String> old_text_string;
 
 static Nan::Maybe<Point> PointFromJS(Nan::MaybeLocal<Object> maybe_object) {
   Local<Object> object;
@@ -135,6 +136,9 @@ public:
       (new HunkWrapper(hunk))->Wrap(result);
       if (hunk.new_text) {
         result->Set(Nan::New(new_text_string), TextToJS(hunk.new_text));
+      }
+      if (hunk.old_text) {
+        result->Set(Nan::New(old_text_string), TextToJS(hunk.old_text));
       }
       return result;
     } else {
@@ -401,6 +405,7 @@ void Init(Local<Object> exports, Local<Object> module) {
   row_string.Reset(Nan::Persistent<String>(Nan::New("row").ToLocalChecked()));
   column_string.Reset(Nan::Persistent<String>(Nan::New("column").ToLocalChecked()));
   new_text_string.Reset(Nan::Persistent<String>(Nan::New("newText").ToLocalChecked()));
+  old_text_string.Reset(Nan::Persistent<String>(Nan::New("oldText").ToLocalChecked()));
 
   PointWrapper::Init();
   HunkWrapper::Init();

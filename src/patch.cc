@@ -1092,6 +1092,7 @@ void GetNodeFromBuffer(const uint8_t **data, const uint8_t *end, Node *node) {
   GetPointFromBuffer(data, end, &node->new_extent);
   GetPointFromBuffer(data, end, &node->old_distance_from_left_ancestor);
   GetPointFromBuffer(data, end, &node->new_distance_from_left_ancestor);
+  node->old_text = GetTextFromBuffer(data, end);
   node->new_text = GetTextFromBuffer(data, end);
   node->left = nullptr;
   node->right = nullptr;
@@ -1102,6 +1103,7 @@ void AppendNodeToBuffer(vector<uint8_t> *output, const Node &node) {
   AppendPointToBuffer(output, node.new_extent);
   AppendPointToBuffer(output, node.old_distance_from_left_ancestor);
   AppendPointToBuffer(output, node.new_distance_from_left_ancestor);
+  AppendTextToBuffer(output, node.old_text.get());
   AppendTextToBuffer(output, node.new_text.get());
 }
 
