@@ -45,6 +45,8 @@ class Patch {
   template<typename CoordinateSpace>
   Nan::Maybe<Hunk> HunkForPosition(Point position);
 
+  std::unique_ptr<Text> ComputeOldText(std::unique_ptr<Text>, Point, Point);
+
   void SplayNode(Node *);
   void RotateNodeRight(Node *, Node *, Node *);
   void RotateNodeLeft(Node *, Node *, Node *);

@@ -376,31 +376,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
   Point new_insertion_end = new_splice_start.Traverse(new_insertion_extent);
 
   Node *lower_bound = SplayNodeStartingBefore<NewCoordinates>(new_splice_start);
-
-  unique_ptr<Text> old_text;
-  if (deleted_text.get()) {
-    vector<uint16_t> content;
-    old_text = Text::Build(content);
-    auto overlapping_hunks = GetHunksInNewRange(new_splice_start, new_deletion_end);
-
-    TextSlice deleted_text_slice = deleted_text->AsSlice();
-    Point last_hunk_new_end = new_splice_start;
-
-    for (const Hunk &hunk : overlapping_hunks) {
-      if (hunk.new_start > last_hunk_new_end) {
-        auto split_result = deleted_text_slice.Split(hunk.new_start.Traversal(last_hunk_new_end));
-        old_text->Append(split_result.first);
-        deleted_text_slice = split_result.second;
-      }
-
-      old_text->Append(hunk.old_text->AsSlice());
-      deleted_text_slice = deleted_text_slice.Suffix(hunk.new_end.Traversal(hunk.new_start));
-      last_hunk_new_end = hunk.new_end;
-    }
-
-    old_text->Append(deleted_text_slice);
-  }
-
+  unique_ptr<Text> old_text = ComputeOldText(move(deleted_text), new_splice_start, new_deletion_end);
   Node *upper_bound = SplayNodeEndingAfter<NewCoordinates>(new_splice_start, new_deletion_end);
   if (upper_bound && lower_bound && lower_bound != upper_bound) {
     if (lower_bound != upper_bound->left) {
@@ -444,6 +420,8 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
         upper_bound->new_text = nullptr;
       }
 
+      upper_bound->old_text = move(old_text);
+
       if (lower_bound == upper_bound) {
         if (root->old_extent.IsZero() && root->new_extent.IsZero()) {
           DeleteRoot();
@@ -470,6 +448,8 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
         upper_bound->new_text = nullptr;
       }
 
+      upper_bound->old_text = move(old_text);
+
       DeleteNode(&lower_bound->right);
       if (upper_bound->left != lower_bound) {
         DeleteNode(&upper_bound->left);
@@ -490,6 +470,8 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
       } else {
         lower_bound->new_text = nullptr;
       }
+
+      lower_bound->old_text = move(old_text);
 
       DeleteNode(&lower_bound->right);
       RotateNodeRight(lower_bound, upper_bound, nullptr);
@@ -565,12 +547,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
         lower_bound->new_text = nullptr;
       }
 
-      if (deleted_text && lower_bound->old_text) {
-        TextSlice old_text_suffix = deleted_text->Suffix(lower_bound_new_end.Traversal(new_splice_start));
-        lower_bound->old_text = Text::Concat(lower_bound->old_text->AsSlice(), old_text_suffix);
-      } else {
-        lower_bound->old_text = nullptr;
-      }
+      lower_bound->old_text = move(old_text);
     } else {
       Point old_splice_start = lower_bound_old_end.Traverse(new_splice_start.Traversal(lower_bound_new_end));
       root = BuildNode(
@@ -616,12 +593,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
         upper_bound->new_text = nullptr;
       }
 
-      if (deleted_text && upper_bound->old_text) {
-        TextSlice old_text_prefix = deleted_text->Prefix(upper_bound_new_start.Traversal(new_splice_start));
-        upper_bound->old_text = Text::Concat(old_text_prefix, upper_bound->old_text->AsSlice());
-      } else {
-        upper_bound->old_text = nullptr;
-      }
+      upper_bound->old_text = move(old_text);
     } else {
       root = BuildNode(
         nullptr,
@@ -996,6 +968,47 @@ Maybe<Hunk> Patch::HunkForOldPosition(Point target) {
 
 Maybe<Hunk> Patch::HunkForNewPosition(Point target) {
   return HunkForPosition<NewCoordinates>(target);
+}
+
+unique_ptr<Text> Patch::ComputeOldText(unique_ptr<Text> deleted_text, Point new_splice_start, Point new_deletion_end) {
+  if (!deleted_text.get()) return nullptr;
+
+  vector<uint16_t> content;
+  auto result = Text::Build(content);
+  Point range_start = new_splice_start, range_end = new_deletion_end;
+  if (merges_adjacent_hunks) {
+    if (range_start.column == 0) {
+      if (range_start.row > 0) {
+        range_start.row--;
+        range_start.column = UINT32_MAX;
+      }
+    } else {
+      range_start.column--;
+    }
+    range_end.column++;
+  }
+
+  auto overlapping_hunks = GetHunksInNewRange(range_start, range_end);
+  TextSlice deleted_text_slice = deleted_text->AsSlice();
+  Point deleted_text_slice_start = new_splice_start;
+
+  for (const Hunk &hunk : overlapping_hunks) {
+    if (!hunk.old_text) return nullptr;
+
+    if (hunk.new_start > deleted_text_slice_start) {
+      auto split_result = deleted_text_slice.Split(hunk.new_start.Traversal(deleted_text_slice_start));
+      deleted_text_slice_start = hunk.new_start;
+      deleted_text_slice = split_result.second;
+      result->Append(split_result.first);
+    }
+
+    result->Append(hunk.old_text->AsSlice());
+    deleted_text_slice = deleted_text_slice.Suffix(hunk.new_end.Traversal(deleted_text_slice_start));
+    deleted_text_slice_start = hunk.new_end;
+  }
+
+  result->Append(deleted_text_slice);
+  return result;
 }
 
 static const uint32_t SERIALIZATION_VERSION = 1;
