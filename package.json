@@ -2,15 +2,13 @@
   "name": "atom-patch",
   "version": "0.3.0",
   "description": "A data structure to efficiently represent the results of applying patches.",
-  "main": "./build/Debug/atom_patch",
+  "main": "./build/Release/atom_patch",
   "scripts": {
     "test-native": "node-gyp configure --debug --tests && node-gyp build && ./build/Debug/tests",
     "test-js": "mocha ./test/helpers/setup test/*.js",
     "test": "npm run test-native && npm run test-js",
-    "prepublish": "npm run standard && npm run clean && npm run build",
+    "prepublish": "npm run standard",
     "standard": "standard --recursive src test",
-    "build": "babel src --out-dir dist",
-    "clean": "rm -rf dist",
     "ci": "npm run standard && npm run test",
     "ci-windows": "npm run standard && npm run test-js"
   },
@@ -27,18 +25,17 @@
     "url": "https://github.com/nathansobo/atom-patch/issues"
   },
   "homepage": "https://github.com/nathansobo/atom-patch",
+  "dependencies": {
+    "nan": "^2.4.0"
+  },
   "devDependencies": {
     "babel": "^5.0.0",
     "babel-eslint": "^4.0.5",
     "chai": "^2.0.0",
     "mocha": "^2.3.4",
-    "phonetic": "^0.1.0",
+    "random-seed": "^0.2.0",
     "segfault-handler": "^1.0.0",
     "standard": "^4.5.4"
-  },
-  "dependencies": {
-    "nan": "^2.4.0",
-    "random-seed": "^0.2.0"
   },
   "standard": {
     "parser": "babel-eslint",

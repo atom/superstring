@@ -1,7 +1,7 @@
 import Random from 'random-seed'
 import WORDS from './words'
-import * as pointHelpers from '../../src/point-helpers'
-import * as textHelpers from '../../src/text-helpers'
+import * as pointHelpers from './point-helpers'
+import * as textHelpers from './text-helpers'
 
 export default class TestDocument {
   constructor (randomSeed, text) {

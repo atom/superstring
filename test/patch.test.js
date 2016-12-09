@@ -1,168 +1,312 @@
+ require('segfault-handler').registerHandler()
+
 import Random from 'random-seed'
-import Patch from '../src/patch'
-import {INFINITY_POINT, traverse, traversalDistance, format as formatPoint, isZero as isZeroPoint} from '../src/point-helpers'
+import Patch from '..'
 import TestDocument from './helpers/test-document'
-import './helpers/add-to-html-methods'
+import {
+  traverse, traversalDistance, compare, isZero, format as formatPoint
+} from './helpers/point-helpers'
 
-describe('Patch', function () {
-  it('correctly serializes and deserializes changes', function () {
-    let patch = new Patch
-    patch.spliceWithText({row: 0, column: 3}, 'abcd', 'hello')
-    patch.spliceWithText({row: 1, column: 1}, '', 'hey')
-    patch.splice({row: 0, column: 15}, {row: 0, column: 10}, {row: 0, column: 0})
-    patch.splice({row: 0, column: 0}, {row: 0, column: 0}, {row: 3, column: 0})
-    patch.spliceWithText({row: 4, column: 2}, 'hi', 'ho')
+describe('Native Patch', function () {
+  it('honors the mergeAdjacentHunks option set to false', function () {
+    const patch = new Patch({mergeAdjacentHunks: false})
 
-    let deserializedPatch = Patch.deserialize(JSON.parse(JSON.stringify(patch.serialize())))
-    assert.deepEqual(patch.getChanges(), deserializedPatch.getChanges())
-    assert.throws(() => deserializedPatch.splice({row: 0, column: 0}, {row: 1, column: 0}, {row: 0, column: 3}))
+    patch.splice({row: 0, column: 10}, {row: 0, column: 0}, {row: 1, column: 5})
+    patch.splice({row: 1, column: 5}, {row: 0, column: 2}, {row: 0, column: 8})
+
+    assert.deepEqual(JSON.parse(JSON.stringify(patch.getHunks())), [
+      {
+        oldStart: {row: 0, column: 10},
+        oldEnd: {row: 0, column: 10},
+        newStart: {row: 0, column: 10},
+        newEnd: {row: 1, column: 5}
+      },
+      {
+        oldStart: {row: 0, column: 10},
+        oldEnd: {row: 0, column: 12},
+        newStart: {row: 1, column: 5},
+        newEnd: {row: 1, column: 13}
+      }
+    ])
   })
 
-  it('provides a read-only view on the composition of multiple patches', function () {
-    let patches = [new Patch(), new Patch(), new Patch()]
-    patches[0].spliceWithText({row: 0, column: 3}, 'ciao', 'hello')
-    patches[0].spliceWithText({row: 1, column: 1}, '', 'hey')
-    patches[1].splice({row: 0, column: 15}, {row: 0, column: 10}, {row: 0, column: 0})
-    patches[1].splice({row: 0, column: 0}, {row: 0, column: 0}, {row: 3, column: 0})
-    patches[2].spliceWithText({row: 4, column: 2}, 'so', 'ho')
+  it('honors the mergeAdjacentHunks option set to true', function () {
+    const patch = new Patch({mergeAdjacentHunks: true})
 
-    let composedPatch = Patch.compose(patches)
-    assert.deepEqual(composedPatch.getChanges(), [
-      {oldStart: {row: 0, column: 0}, newStart: {row: 0, column: 0}, oldExtent: {row: 0, column: 0}, newExtent: {row: 3, column: 0}},
-      {oldStart: {row: 0, column: 3}, newStart: {row: 3, column: 3}, oldExtent: {row: 0, column: 4}, newExtent: {row: 0, column: 5}, newText: 'hello', oldText: 'ciao'},
-      {oldStart: {row: 0, column: 14}, newStart: {row: 3, column: 15}, oldExtent: {row: 0, column: 10}, newExtent: {row: 0, column: 0}},
-      {oldStart: {row: 1, column: 1}, newStart: {row: 4, column: 1}, oldExtent: {row: 0, column: 0}, newExtent: {row: 0, column: 3}, newText: 'hho', oldText: ''}
+    patch.splice({row: 0, column: 5}, {row: 0, column: 1}, {row: 0, column: 2})
+    patch.splice({row: 0, column: 10}, {row: 0, column: 3}, {row: 0, column: 4})
+    assert.deepEqual(JSON.parse(JSON.stringify(patch.getHunks())), [
+      {
+        oldStart: {row: 0, column: 5}, oldEnd: {row: 0, column: 6},
+        newStart: {row: 0, column: 5}, newEnd: {row: 0, column: 7}
+      },
+      {
+        oldStart: {row: 0, column: 9}, oldEnd: {row: 0, column: 12},
+        newStart: {row: 0, column: 10}, newEnd: {row: 0, column: 14}
+      }
     ])
 
-    assert.throws(() => composedPatch.splice({row: 0, column: 0}, {row: 1, column: 0}, {row: 2, column: 0}))
-  })
-
-  it('provides a read-only view on the inverse of a patch', function () {
-    let patch = new Patch()
-    patch.spliceWithText({row: 0, column: 3}, 'ciao', 'hello')
-    patch.spliceWithText({row: 0, column: 10}, 'quick', 'world')
-
-    let invertedPatch = patch.invert()
-    assert.deepEqual(invertedPatch.getChanges(), [
-      {oldStart: {row: 0, column: 3}, newStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 4}, newText: 'ciao', oldText: 'hello'},
-      {oldStart: {row: 0, column: 10}, newStart: {row: 0, column: 9}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 5}, newText: 'quick', oldText: 'world'}
+    patch.spliceOld({row: 0, column: 6}, {row: 0, column: 3}, {row: 0, column: 0})
+    assert.deepEqual(JSON.parse(JSON.stringify(patch.getHunks())), [
+      {
+        oldStart: {row: 0, column: 5}, oldEnd: {row: 0, column: 9},
+        newStart: {row: 0, column: 5}, newEnd: {row: 0, column: 11}
+      }
     ])
-    assert.throws(() => invertedPatch.splice({row: 0, column: 0}, {row: 1, column: 0}, {row: 2, column: 0}))
   })
 
-  it('provides a read-only view of a patch representing a single hunk', function () {
-    let hunk = Patch.hunk({
+  it('can compose multiple patches together', function () {
+    const patches = [new Patch(), new Patch(), new Patch()]
+    patches[0].splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, 'ciao', 'hello')
+    patches[0].splice({row: 1, column: 1}, {row: 0, column: 0}, {row: 0, column: 3}, '', 'hey')
+    patches[1].splice({row: 0, column: 15}, {row: 0, column: 10}, {row: 0, column: 0}, '0123456789', '')
+    patches[1].splice({row: 0, column: 0}, {row: 0, column: 0}, {row: 3, column: 0}, '', '\n\n\n')
+    patches[2].splice({row: 4, column: 2}, {row: 0, column: 2}, {row: 0, column: 2}, 'so', 'ho')
+
+    const composedPatch = Patch.compose(patches)
+    assert.deepEqual(JSON.parse(JSON.stringify(composedPatch.getHunks())), [
+      {
+        oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
+        newStart: {row: 0, column: 0}, newEnd: {row: 3, column: 0},
+        oldText: '', newText: '\n\n\n'
+      },
+      {
+        oldStart: {row: 0, column: 3}, oldEnd: {row: 0, column: 7},
+        newStart: {row: 3, column: 3}, newEnd: {row: 3, column: 8},
+        oldText: 'ciao', newText: 'hello'
+      },
+      {
+        oldStart: {row: 0, column: 14}, oldEnd: {row: 0, column: 24},
+        newStart: {row: 3, column: 15}, newEnd: {row: 3, column: 15},
+        oldText: '0123456789', newText: ''
+      },
+      {
+        oldStart: {row: 1, column: 1}, oldEnd: {row: 1, column: 1},
+        newStart: {row: 4, column: 1}, newEnd: {row: 4, column: 4},
+        oldText: '', newText: 'hho'
+      }
+    ])
+
+    assert.throws(() => Patch.compose([{}, {}]))
+    assert.throws(() => Patch.compose([1, 'a']))
+  })
+
+  it('can invert patches', function () {
+    const patch = new Patch()
+    patch.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, 'ciao', 'hello')
+    patch.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5}, 'quick', 'world')
+
+    const invertedPatch = patch.invert()
+    assert.deepEqual(JSON.parse(JSON.stringify(invertedPatch.getHunks())), [
+      {
+        oldStart: {row: 0, column: 3}, oldEnd: {row: 0, column: 8},
+        newStart: {row: 0, column: 3}, newEnd: {row: 0, column: 7},
+        oldText: 'hello',
+        newText: 'ciao'
+      },
+      {
+        oldStart: {row: 0, column: 10}, oldEnd: {row: 0, column: 15},
+        newStart: {row: 0, column: 9}, newEnd: {row: 0, column: 14},
+        oldText: 'world',
+        newText: 'quick'
+      }
+    ])
+  })
+
+  it('can serialize/deserialize patches', () => {
+    const patch1 = new Patch()
+    patch1.splice({row: 0, column: 3}, {row: 0, column: 5}, {row: 0, column: 5}, 'hello', 'world')
+
+    const patch2 = Patch.deserialize(Buffer.from(patch1.serialize().toString('base64'), 'base64'))
+    assert.deepEqual(JSON.parse(JSON.stringify(patch2.getHunks())), [{
+      oldStart: {row: 0, column: 3},
       newStart: {row: 0, column: 3},
-      oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 7},
-      newText: 'ciao', oldText: 'hello'
-    })
-    assert.deepEqual(hunk.getChanges(), [
-      {oldStart: {row: 0, column: 3}, newStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 7}, newText: 'ciao', oldText: 'hello'}
-    ])
-    assert.throws(() => hunk.splice({row: 0, column: 0}, {row: 1, column: 0}, {row: 2, column: 0}))
-  })
-
-  it('correctly records basic non-overlapping splices', function () {
-    let patch = new Patch()
-    patch.spliceWithText({row: 0, column: 3}, 'ciao', 'hello')
-    patch.spliceWithText({row: 0, column: 10}, 'quick', 'world')
-    assert.deepEqual(patch.getChanges(), [
-      {oldStart: {row: 0, column: 3}, newStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 4}, newExtent: {row: 0, column: 5}, newText: 'hello', oldText: 'ciao'},
-      {oldStart: {row: 0, column: 9}, newStart: {row: 0, column: 10}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 5}, newText: 'world', oldText: 'quick'}
-    ])
-  })
-
-  it('correctly records basic overlapping splices', function () {
-    let patch = new Patch()
-    patch.spliceWithText({row: 0, column: 3}, 'hola', 'hello world')
-    patch.spliceWithText({row: 0, column: 9}, 'zapping', 'sun')
-    assert.deepEqual(patch.getChanges(), [
-      {oldStart: {row: 0, column: 3}, newStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 6}, newExtent: {row: 0, column: 9}, newText: 'hello sun', oldText: 'holang'}
-    ])
+      oldEnd: {row: 0, column: 8},
+      newEnd: {row: 0, column: 8},
+      oldText: 'hello',
+      newText: 'world'
+    }])
   })
 
   it('correctly records random splices', function () {
     this.timeout(Infinity)
 
-    for (let i = 0; i < 5000; i++) {
+    for (let i = 0; i < 100; i++) {
       let seed = Date.now()
-      let seedMessage = `Random seed: ${seed}`
-      let random = new Random(seed)
-      let input = new TestDocument(seed)
-      let output = input.clone()
-      let patch = new Patch()
+      const seedMessage = `Random seed: ${seed}`
 
-      for (let j = 0; j < 25; j++) {
-        let {start, oldText, oldExtent, newExtent, newText} = output.performRandomSplice()
-        patch.spliceWithText(start, oldText, newText)
-        // document.write(`<div>after splice(${formatPoint(start)}, ${formatPoint(oldExtent)}, ${formatPoint(newExtent)}, ${JSON.stringify(newText)}, ${JSON.stringify(oldText)})</div>`)
-        // document.write(patch.toHTML())
-        // document.write('<hr>')
+      const random = new Random(seed)
+      const originalDocument = new TestDocument(seed)
+      const mutatedDocument = originalDocument.clone()
+      const mergeAdjacentHunks = random(2)
+      const patch = new Patch({mergeAdjacentHunks: mergeAdjacentHunks})
 
-        let shouldRebalance = Boolean(random(2))
-        if (shouldRebalance) patch.rebalance()
+      for (let j = 0; j < 20; j++) {
+        if (random(10) < 1) {
+          patch.rebalance()
+        } else if (random(10) < 4) {
+          const originalSplice = originalDocument.performRandomSplice()
+          const mutatedSplice = translateSpliceFromOriginalDocument(
+            originalDocument,
+            patch,
+            originalSplice
+          )
 
-        verifyOutputChanges(patch, input, output, seedMessage)
-        verifyInputChanges(patch, input, output, seedMessage)
-      }
-    }
+          mutatedDocument.splice(
+            mutatedSplice.start,
+            mutatedSplice.deletionExtent,
+            mutatedSplice.insertedText
+          )
 
-    function verifyOutputChanges (patch, input, output, seedMessage) {
-      let synthesizedOutput = ''
-      let synthesizedInput = ''
-      patch.iterator.moveToBeginning()
-      do {
-        if (patch.iterator.inChange()) {
-          assert(!(isZeroPoint(patch.iterator.getInputExtent()) && isZeroPoint(patch.iterator.getOutputExtent())), "Empty region found. " + seedMessage);
-          synthesizedOutput += patch.iterator.getNewText()
-          synthesizedInput += patch.iterator.getOldText()
+          // process.stderr.write(`graph message {
+          //   label="spliceOld(${formatPoint(originalSplice.start)}, ${formatPoint(originalSplice.deletedExtent)}, ${formatPoint(originalSplice.insertedExtent)})"
+          // }\n`)
+
+          patch.spliceOld(
+            originalSplice.start,
+            originalSplice.deletedExtent,
+            originalSplice.insertedExtent
+          )
         } else {
-          synthesizedOutput += input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd())
-          synthesizedInput += input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd())
+          const splice = mutatedDocument.performRandomSplice()
+
+          // process.stderr.write(`graph message {
+          //   label="splice(${formatPoint(splice.start)}, ${formatPoint(splice.deletedExtent)}, ${formatPoint(splice.insertedExtent)})"
+          // }\n`)
+
+          patch.splice(
+            splice.start,
+            splice.deletedExtent,
+            splice.insertedExtent,
+            splice.deletedText,
+            splice.insertedText
+          )
         }
-      } while (patch.iterator.moveToSuccessor())
 
-      assert.equal(synthesizedInput, input.getText(), seedMessage)
-      assert.equal(synthesizedOutput, output.getText(), seedMessage)
+        // patch.printDotGraph()
 
-      synthesizedInput = output.clone()
-      synthesizedOutput = input.clone()
-      for (let {oldStart, newStart, oldExtent, newExtent, oldText, newText} of patch.getChanges()) {
-        synthesizedInput.splice(oldStart, newExtent, oldText)
-        synthesizedOutput.splice(newStart, oldExtent, newText)
-      }
+        const originalDocumentCopy = originalDocument.clone()
+        const hunks = patch.getHunks()
+        assert.equal(patch.getHunkCount(), hunks.length)
 
-      assert.equal(synthesizedInput.getText(), input.getText(), seedMessage)
-      assert.equal(synthesizedOutput.getText(), output.getText(), seedMessage)
-    }
-
-    function verifyInputChanges (patch, input, output, seedMessage) {
-      patch.iterator.moveToEnd()
-      let synthesizedInput = input.getTextInRange(patch.iterator.getInputEnd(), INFINITY_POINT)
-      let synthesizedOutput = input.getTextInRange(patch.iterator.getInputEnd(), INFINITY_POINT)
-      do {
-        if (patch.iterator.inChange()) {
-          assert(!(isZeroPoint(patch.iterator.getInputExtent()) && isZeroPoint(patch.iterator.getOutputExtent())), "Empty region found. " + seedMessage);
-          synthesizedOutput = patch.iterator.getNewText() + synthesizedOutput
-          synthesizedInput = patch.iterator.getOldText() + synthesizedInput
-        } else {
-          synthesizedOutput = input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd()) + synthesizedOutput
-          synthesizedInput = input.getTextInRange(patch.iterator.getInputStart(), patch.iterator.getInputEnd()) + synthesizedInput
+        let previousHunk
+        for (let hunk of patch.getHunks()) {
+          const oldExtent = traversalDistance(hunk.oldEnd, hunk.oldStart)
+          assert.equal(hunk.newText, mutatedDocument.getTextInRange(hunk.newStart, hunk.newEnd), seedMessage)
+          assert.equal(hunk.oldText, originalDocument.getTextInRange(hunk.oldStart, hunk.oldEnd), seedMessage)
+          originalDocumentCopy.splice(hunk.newStart, oldExtent, hunk.newText)
+          if (previousHunk && mergeAdjacentHunks) {
+            assert.notDeepEqual(previousHunk.oldEnd, hunk.oldStart)
+            assert.notDeepEqual(previousHunk.newEnd, hunk.newStart)
+          }
+          previousHunk = hunk
         }
-      } while (patch.iterator.moveToPredecessor())
 
-      assert.equal(synthesizedInput, input.getText(), seedMessage)
-      assert.equal(synthesizedOutput, output.getText(), seedMessage)
+        assert.deepEqual(originalDocumentCopy.getLines(), mutatedDocument.getLines(), seedMessage)
 
-      synthesizedOutput = input.clone()
-      synthesizedInput = output.clone()
-      for (let {oldStart, newStart, oldExtent, newExtent, oldText, newText} of patch.getChanges().slice().reverse()) {
-        synthesizedOutput.splice(oldStart, oldExtent, newText)
-        synthesizedInput.splice(newStart, newExtent, oldText)
+        for (let k = 0; k < 5; k++) {
+          let oldRange = originalDocument.buildRandomRange()
+          assert.deepEqual(
+            patch.getHunksInOldRange(oldRange.start, oldRange.end),
+            hunks.filter(hunk =>
+              compare(hunk.oldEnd, oldRange.start) > 0 &&
+              compare(hunk.oldStart, oldRange.end) < 0
+            ),
+            `old range: ${formatPoint(oldRange.start)} - ${formatPoint(oldRange.end)}, seed: ${seed}`
+          )
+
+          let newRange = mutatedDocument.buildRandomRange()
+          assert.deepEqual(
+            patch.getHunksInNewRange(newRange.start, newRange.end),
+            hunks.filter(hunk =>
+              compare(hunk.newEnd, newRange.start) > 0 &&
+              compare(hunk.newStart, newRange.end) < 0
+            ),
+            `new range: ${formatPoint(newRange.start)} - ${formatPoint(newRange.end)}, seed: ${seed}`
+          )
+
+          let oldPoint = originalDocument.buildRandomPoint()
+          assert.deepEqual(
+            patch.hunkForOldPosition(oldPoint),
+            last(hunks.filter(hunk => compare(hunk.oldStart, oldPoint) <= 0))
+          )
+
+          let newPoint = mutatedDocument.buildRandomPoint()
+          assert.deepEqual(
+            patch.hunkForNewPosition(newPoint),
+            last(hunks.filter(hunk => compare(hunk.newStart, newPoint) <= 0))
+          )
+        }
+
+        let blob = Buffer.from(patch.serialize().toString('base64'), 'base64')
+        const patchCopy = Patch.deserialize(blob)
+        assert.deepEqual(patchCopy.getHunks(), patch.getHunks())
       }
-
-      assert.equal(synthesizedOutput.getText(), output.getText(), seedMessage)
-      assert.equal(synthesizedInput.getText(), input.getText(), seedMessage)
     }
   })
 })
+
+function last (array) {
+  return array[array.length - 1]
+}
+
+function translateOldPosition (patch, oldPosition) {
+  const hunk = patch.hunkForOldPosition(oldPosition)
+  if (hunk) {
+    if (compare(oldPosition, hunk.oldEnd) >= 0) {
+      return traverse(hunk.newEnd, traversalDistance(oldPosition, hunk.oldEnd))
+    } else {
+      return min(
+        hunk.newEnd,
+        traverse(hunk.newStart, traversalDistance(oldPosition, hunk.oldStart))
+      )
+    }
+  } else {
+    return oldPosition
+  }
+}
+
+function translateSpliceFromOriginalDocument(originalDocument, patch, originalSplice) {
+  const originalDeletionEnd = traverse(originalSplice.start, originalSplice.deletedExtent)
+  const originalInsertionEnd = traverse(originalSplice.start, originalSplice.insertedExtent)
+
+  let oldStart, newStart
+  const startHunk = patch.hunkForOldPosition(originalSplice.start)
+  if (startHunk) {
+    if (compare(originalSplice.start, startHunk.oldEnd) < 0) {
+      oldStart = startHunk.oldStart
+      newStart = startHunk.newStart
+    } else {
+      oldStart = originalSplice.start
+      newStart = traverse(startHunk.newEnd, traversalDistance(originalSplice.start, startHunk.oldEnd))
+    }
+  } else {
+    oldStart = originalSplice.start
+    newStart = originalSplice.start
+  }
+
+  let oldInsertionEnd, newDeletionEnd
+  const endHunk = patch.hunkForOldPosition(originalDeletionEnd)
+  if (endHunk) {
+    if (compare(originalDeletionEnd, endHunk.oldStart) === 0 &&
+        compare(originalSplice.start, endHunk.oldStart) < 0) {
+      oldInsertionEnd = originalInsertionEnd
+      newDeletionEnd = endHunk.newStart
+    } else if (compare(originalDeletionEnd, endHunk.oldEnd) < 0) {
+      oldInsertionEnd = traverse(originalInsertionEnd, traversalDistance(endHunk.oldEnd, originalDeletionEnd))
+      newDeletionEnd = endHunk.newEnd
+    } else {
+      oldInsertionEnd = originalInsertionEnd
+      newDeletionEnd = traverse(endHunk.newEnd, traversalDistance(originalDeletionEnd, endHunk.oldEnd))
+    }
+  } else {
+    oldInsertionEnd = originalInsertionEnd
+    newDeletionEnd = originalDeletionEnd
+  }
+
+  return {
+    start: newStart,
+    deletionExtent: traversalDistance(newDeletionEnd, newStart),
+    insertedText: originalDocument.getTextInRange(oldStart, oldInsertionEnd)
+  }
+}

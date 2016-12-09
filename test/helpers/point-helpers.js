@@ -1,4 +1,3 @@
-export const ZERO_POINT = Object.freeze({row: 0, column: 0})
 export const INFINITY_POINT = Object.freeze({row: Infinity, column: Infinity})
 
 export function compare (a, b) {
@@ -14,7 +13,7 @@ export function isZero (point) {
 }
 
 export function isInfinity (point) {
-  return (point.row === INFINITY_POINT || point.column === Infinity)
+  return (point.row === Infinity || point.column === Infinity)
 }
 
 export function min (a, b) {
