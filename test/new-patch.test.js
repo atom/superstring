@@ -102,7 +102,7 @@ describe('Native Patch', function () {
       const mergeAdjacentHunks = random(2)
       const patch = new Patch({mergeAdjacentHunks: mergeAdjacentHunks})
 
-      for (let j = 0; j < 100; j++) {
+      for (let j = 0; j < 20; j++) {
         if (random(10) < 1) {
           patch.rebalance()
         } else if (random(10) < 4) {
