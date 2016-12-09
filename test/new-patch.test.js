@@ -87,6 +87,9 @@ describe('Native Patch', function () {
         oldText: '', newText: 'hho'
       }
     ])
+
+    assert.throws(() => Patch.compose([{}, {}]))
+    assert.throws(() => Patch.compose([1, 'a']))
   })
 
   it('can invert patches', function () {
