@@ -39,6 +39,18 @@ struct Node {
       node = node->right;
     }
   }
+
+  Node *Invert() {
+    return new Node {
+      left, right,
+      new_distance_from_left_ancestor,
+      old_distance_from_left_ancestor,
+      new_extent,
+      old_extent,
+      unique_ptr<Text>(new Text(*new_text)),
+      unique_ptr<Text>(new Text(*old_text)),
+    };
+  }
 };
 
 struct Patch::PositionStackEntry {
@@ -61,6 +73,7 @@ struct NewCoordinates {
 };
 
 Patch::Patch() : root{nullptr}, is_frozen{false}, merges_adjacent_hunks{true}, hunk_count{0} {}
+
 Patch::Patch(bool merges_adjacent_hunks) :
   root{nullptr}, is_frozen{false},
   merges_adjacent_hunks{merges_adjacent_hunks}, hunk_count{0} {}
@@ -72,6 +85,10 @@ Patch::Patch(Patch &&other) : root{nullptr}, is_frozen{other.is_frozen},
   std::swap(left_ancestor_stack, other.left_ancestor_stack);
   std::swap(node_stack, other.node_stack);
 }
+
+Patch::Patch(Node *root, uint32_t hunk_count, bool merges_adjacent_hunks) :
+  root{root}, is_frozen{false}, merges_adjacent_hunks{merges_adjacent_hunks},
+  hunk_count{hunk_count} {}
 
 Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
   bool left_to_right = true;
@@ -752,6 +769,30 @@ bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent, Point o
   }
 
   return true;
+}
+
+Patch Patch::Invert() {
+  Node *inverted_root = nullptr;
+  if (root) {
+    inverted_root = root->Invert();
+    node_stack.clear();
+    node_stack.push_back(inverted_root);
+
+    while (!node_stack.empty()) {
+      Node *node = node_stack.back();
+      node_stack.pop_back();
+      if (node->left) {
+        node->left = node->left->Invert();
+        node_stack.push_back(node->left);
+      }
+      if (node->right) {
+        node->right = node->right->Invert();
+        node_stack.push_back(node->right);
+      }
+    }
+  }
+
+  return Patch {inverted_root, hunk_count, merges_adjacent_hunks};
 }
 
 void Patch::SplayNode(Node *node) {

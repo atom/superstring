@@ -13,11 +13,13 @@ class Patch {
   Patch(bool merges_adjacent_hunks);
   Patch(const std::vector<uint8_t> &);
   Patch(const std::vector<const Patch *> &);
+  Patch(Node *root, uint32_t hunk_count, bool merges_adjacent_hunks);
   Patch(Patch &&);
   ~Patch();
   bool Splice(Point start, Point deletion_extent, Point insertion_extent,
               std::unique_ptr<Text> old_text, std::unique_ptr<Text> new_text);
   bool SpliceOld(Point start, Point deletion_extent, Point insertion_extent);
+  Patch Invert();
   std::vector<Hunk> GetHunks() const;
   std::vector<Hunk> GetHunksInNewRange(Point start, Point end, bool inclusive = false);
   std::vector<Hunk> GetHunksInOldRange(Point start, Point end);

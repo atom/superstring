@@ -193,6 +193,7 @@ public:
     const auto &prototype_template = constructor_template_local->PrototypeTemplate();
     prototype_template->Set(Nan::New("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(Splice));
     prototype_template->Set(Nan::New("spliceOld").ToLocalChecked(), Nan::New<FunctionTemplate>(SpliceOld));
+    prototype_template->Set(Nan::New("invert").ToLocalChecked(), Nan::New<FunctionTemplate>(Invert));
     prototype_template->Set(Nan::New("getHunks").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunks));
     prototype_template->Set(Nan::New("getHunksInOldRange").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunksInOldRange));
     prototype_template->Set(Nan::New("getHunksInNewRange").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunksInNewRange));
@@ -262,6 +263,16 @@ private:
       if (!patch.SpliceOld(start.FromJust(), deletion_extent.FromJust(), insertion_extent.FromJust())) {
         Nan::ThrowError("Can't spliceOld into a frozen patch");
       }
+    }
+  }
+
+  static void Invert(const Nan::FunctionCallbackInfo<Value> &info) {
+    Local<Object> result;
+    if (Nan::NewInstance(Nan::New(constructor)).ToLocal(&result)) {
+      Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
+      auto wrapper = new PatchWrapper{patch.Invert()};
+      wrapper->Wrap(result);
+      info.GetReturnValue().Set(result);
     }
   }
 

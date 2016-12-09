@@ -43,6 +43,8 @@ Text::Text(TextSlice slice) : content{
   slice.text->content.begin() + slice.end_index
 } {}
 
+Text::Text(Text &other) : content{other.content} {}
+
 std::pair<TextSlice, TextSlice> Text::Split(Point position) const {
   size_t index = CharacterIndexForPosition(position);
   return {

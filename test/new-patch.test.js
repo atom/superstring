@@ -89,6 +89,28 @@ describe('Native Patch', function () {
     ])
   })
 
+  it('can invert patches', function () {
+    const patch = new Patch()
+    patch.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, 'ciao', 'hello')
+    patch.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5}, 'quick', 'world')
+
+    const invertedPatch = patch.invert()
+    assert.deepEqual(JSON.parse(JSON.stringify(invertedPatch.getHunks())), [
+      {
+        oldStart: {row: 0, column: 3}, oldEnd: {row: 0, column: 8},
+        newStart: {row: 0, column: 3}, newEnd: {row: 0, column: 7},
+        oldText: 'hello',
+        newText: 'ciao'
+      },
+      {
+        oldStart: {row: 0, column: 10}, oldEnd: {row: 0, column: 15},
+        newStart: {row: 0, column: 9}, newEnd: {row: 0, column: 14},
+        oldText: 'world',
+        newText: 'quick'
+      }
+    ])
+  })
+
   it('correctly records random splices', function () {
     this.timeout(Infinity)
 
