@@ -57,14 +57,14 @@ describe('Native Patch', function () {
   })
 
   it('can compose multiple patches together', function () {
-    let patches = [new Patch(), new Patch(), new Patch()]
+    const patches = [new Patch(), new Patch(), new Patch()]
     patches[0].splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, 'ciao', 'hello')
     patches[0].splice({row: 1, column: 1}, {row: 0, column: 0}, {row: 0, column: 3}, '', 'hey')
     patches[1].splice({row: 0, column: 15}, {row: 0, column: 10}, {row: 0, column: 0}, '0123456789', '')
     patches[1].splice({row: 0, column: 0}, {row: 0, column: 0}, {row: 3, column: 0}, '', '\n\n\n')
     patches[2].splice({row: 4, column: 2}, {row: 0, column: 2}, {row: 0, column: 2}, 'so', 'ho')
 
-    let composedPatch = Patch.compose(patches)
+    const composedPatch = Patch.compose(patches)
     assert.deepEqual(JSON.parse(JSON.stringify(composedPatch.getHunks())), [
       {
         oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
