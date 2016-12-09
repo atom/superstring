@@ -125,6 +125,11 @@ public:
     Nan::SetAccessor(instance_template, Nan::New("oldEnd").ToLocalChecked(), GetOldEnd);
     Nan::SetAccessor(instance_template, Nan::New("newEnd").ToLocalChecked(), GetNewEnd);
 
+    // Non-enumerable legacy properties for backward compatibility
+    Nan::SetAccessor(instance_template, Nan::New("start").ToLocalChecked(), GetNewStart, nullptr, Handle<Value>(), AccessControl::DEFAULT, PropertyAttribute::DontEnum);
+    Nan::SetAccessor(instance_template, Nan::New("oldExtent").ToLocalChecked(), GetOldExtent, nullptr, Handle<Value>(), AccessControl::DEFAULT, PropertyAttribute::DontEnum);
+    Nan::SetAccessor(instance_template, Nan::New("newExtent").ToLocalChecked(), GetNewExtent, nullptr, Handle<Value>(), AccessControl::DEFAULT, PropertyAttribute::DontEnum);
+
     const auto &prototype_template = constructor_template->PrototypeTemplate();
     prototype_template->Set(Nan::New<String>("toString").ToLocalChecked(), Nan::New<FunctionTemplate>(ToString));
     constructor.Reset(constructor_template->GetFunction());
@@ -169,6 +174,16 @@ private:
   static void GetNewEnd(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value>& info) {
     Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.new_end));
+  }
+
+  static void GetOldExtent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value>& info) {
+    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.old_end.Traversal(hunk.old_start)));
+  }
+
+  static void GetNewExtent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value>& info) {
+    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.new_end.Traversal(hunk.new_start)));
   }
 
   static void ToString(const Nan::FunctionCallbackInfo<Value> &info) {
