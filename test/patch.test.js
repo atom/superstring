@@ -42,7 +42,7 @@ describe('Patch', function () {
     patch.spliceWithText({row: 0, column: 3}, 'ciao', 'hello')
     patch.spliceWithText({row: 0, column: 10}, 'quick', 'world')
 
-    let invertedPatch = Patch.invert(patch)
+    let invertedPatch = patch.invert()
     assert.deepEqual(invertedPatch.getChanges(), [
       {oldStart: {row: 0, column: 3}, newStart: {row: 0, column: 3}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 4}, newText: 'ciao', oldText: 'hello'},
       {oldStart: {row: 0, column: 10}, newStart: {row: 0, column: 9}, oldExtent: {row: 0, column: 5}, newExtent: {row: 0, column: 5}, newText: 'quick', oldText: 'world'}
