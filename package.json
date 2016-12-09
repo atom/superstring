@@ -4,13 +4,14 @@
   "description": "A data structure to efficiently represent the results of applying patches.",
   "main": "./build/Release/atom_patch",
   "scripts": {
-    "test-native": "node-gyp configure --debug --tests && node-gyp build && ./build/Debug/tests",
+    "test-native": "node-gyp rebuild --tests && ./build/Release/tests",
+    "test-native-debug": "node-gyp rebuild --debug --tests && ./build/Debug/tests",
     "test-js": "mocha ./test/helpers/setup test/*.js",
     "test": "npm run test-native && npm run test-js",
     "prepublish": "npm run standard",
     "standard": "standard --recursive src test",
-    "ci": "npm run standard && npm run test-js",
-    "ci-windows": "npm run standard && npm run test-js"
+    "ci": "npm run standard && npm run test",
+    "ci-windows": "npm run standard && npm run test"
   },
   "repository": {
     "type": "git",
