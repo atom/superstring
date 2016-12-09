@@ -114,6 +114,21 @@ describe('Native Patch', function () {
     ])
   })
 
+  it('can serialize/deserialize patches', () => {
+    const patch1 = new Patch()
+    patch1.splice({row: 0, column: 3}, {row: 0, column: 5}, {row: 0, column: 5}, 'hello', 'world')
+
+    const patch2 = Patch.deserialize(Buffer.from(patch1.serialize().toString('base64'), 'base64'))
+    assert.deepEqual(JSON.parse(JSON.stringify(patch2.getHunks())), [{
+      oldStart: {row: 0, column: 3},
+      newStart: {row: 0, column: 3},
+      oldEnd: {row: 0, column: 8},
+      newEnd: {row: 0, column: 8},
+      oldText: 'hello',
+      newText: 'world'
+    }])
+  })
+
   it('correctly records random splices', function () {
     this.timeout(Infinity)
 
@@ -224,7 +239,7 @@ describe('Native Patch', function () {
           )
         }
 
-        let blob = patch.serialize()
+        let blob = Buffer.from(patch.serialize().toString('base64'), 'base64')
         const patchCopy = Patch.deserialize(blob)
         assert.deepEqual(patchCopy.getHunks(), patch.getHunks())
       }

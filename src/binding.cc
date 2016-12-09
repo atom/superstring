@@ -384,13 +384,10 @@ private:
   static void Deserialize(const Nan::FunctionCallbackInfo<Value> &info) {
     Local<Object> result;
     if (Nan::NewInstance(Nan::New(constructor)).ToLocal(&result)) {
-      Local<Uint8Array> typed_array = Local<Uint8Array>::Cast(info[0]);
-      if (typed_array->IsUint8Array()) {
-        auto buffer = typed_array->Buffer();
-        auto contents = buffer->GetContents();
+      if (info[0]->IsUint8Array()) {
         auto &serialization_vector = SerializationVector();
-        auto *data = reinterpret_cast<const uint8_t *>(contents.Data());
-        serialization_vector.assign(data, data + contents.ByteLength());
+        auto *data = node::Buffer::Data(info[0]);
+        serialization_vector.assign(data, data + node::Buffer::Length(info[0]));
         PatchWrapper *wrapper = new PatchWrapper(Patch{serialization_vector});
         wrapper->Wrap(result);
         info.GetReturnValue().Set(result);
