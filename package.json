@@ -9,7 +9,7 @@
     "test": "npm run test-native && npm run test-js",
     "prepublish": "npm run standard",
     "standard": "standard --recursive src test",
-    "ci": "npm run standard && npm run test",
+    "ci": "npm run standard && npm run test-js",
     "ci-windows": "npm run standard && npm run test-js"
   },
   "repository": {
