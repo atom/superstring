@@ -37,8 +37,12 @@
           # Enable debugger-friendly optimizations on Linux so we don't retain
           # v8 symbols that won't be defined when linking the tests executable.
           ['OS=="linux"', {
-            'cflags_cc!': [ '-O0' ],
-            'cflags_cc': [ '-Og' ],
+            'configurations': {
+              'Debug': {
+                'cflags!': [ '-O0' ],
+                'cflags': [ '-Og' ]
+              }
+            }
           }],
         ]
       }]
