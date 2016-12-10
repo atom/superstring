@@ -1,4 +1,4 @@
- require('segfault-handler').registerHandler()
+require('segfault-handler').registerHandler()
 
 import Random from 'random-seed'
 import Patch from '..'
