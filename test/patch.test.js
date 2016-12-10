@@ -1,11 +1,16 @@
 require('segfault-handler').registerHandler()
 
+import fs from 'fs'
+import path from 'path'
 import Random from 'random-seed'
-import Patch from '..'
 import TestDocument from './helpers/test-document'
 import {
   traverse, traversalDistance, compare, isZero, format as formatPoint
 } from './helpers/point-helpers'
+
+const Patch = fs.existsSync(path.resolve(__dirname, '..', 'build', 'Debug'))
+  ? require('../build/Debug/atom_patch')
+  : require('../build/Release/atom_patch')
 
 describe('Native Patch', function () {
   it('honors the mergeAdjacentHunks option set to false', function () {
