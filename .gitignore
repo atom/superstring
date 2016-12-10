@@ -1,3 +1,6 @@
 node_modules
 dist
 .DS_Store
+build
+debug.html
+.clang_complete

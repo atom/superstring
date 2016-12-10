@@ -1,7 +1,7 @@
 import Random from 'random-seed'
 import WORDS from './words'
-import * as pointHelpers from '../../src/point-helpers'
-import * as textHelpers from '../../src/text-helpers'
+import * as pointHelpers from './point-helpers'
+import * as textHelpers from './text-helpers'
 
 export default class TestDocument {
   constructor (randomSeed, text) {
@@ -41,26 +41,28 @@ export default class TestDocument {
   }
 
   performRandomSplice () {
-    let range = this.buildRandomRange()
-    let start = range.start
-    let oldText = this.getTextInRange(range.start, range.end)
-    let oldExtent = pointHelpers.traversalDistance(range.end, range.start)
-    let newText = this.buildRandomLines(0, 10, true).join('\n')
-    let newExtent = textHelpers.getExtent(newText)
-    this.splice(start, oldExtent, newText)
-    return {start, oldExtent, newExtent, newText, oldText}
+    let deletedRange = this.buildRandomRange()
+    let start = deletedRange.start
+    let deletedText = this.getTextInRange(start, deletedRange.end)
+    let deletedExtent = pointHelpers.traversalDistance(deletedRange.end, deletedRange.start)
+    let insertedText = this.buildRandomLines(0, 10, true).join('\n')
+    let insertedExtent = textHelpers.getExtent(insertedText)
+    this.splice(start, deletedExtent, insertedText)
+    return {start, deletedExtent, insertedExtent, deletedText, insertedText}
   }
 
-  splice (start, oldExtent, newText) {
-    let end = pointHelpers.traverse(start, oldExtent)
-    let replacementLines = newText.split('\n')
+  splice (start, deletedExtent, insertedText) {
+    let deletedText = this.getTextInRange(start, pointHelpers.traverse(start, deletedExtent))
+    let end = pointHelpers.traverse(start, deletedExtent)
+    let replacementLines = insertedText.split('\n')
 
     replacementLines[0] =
       this.lines[start.row].substring(0, start.column) + replacementLines[0]
     replacementLines[replacementLines.length - 1] =
       replacementLines[replacementLines.length - 1] + this.lines[end.row].substring(end.column)
 
-    this.lines.splice(start.row, oldExtent.row + 1, ...replacementLines)
+    this.lines.splice(start.row, deletedExtent.row + 1, ...replacementLines)
+    return deletedText
   }
 
   characterAtPosition ({row, column}) {
@@ -92,14 +94,17 @@ export default class TestDocument {
   }
 
   buildRandomRange () {
-    let a = this.buildRandomPoint()
-    let b = this.buildRandomPoint()
+    const start = this.buildRandomPoint()
+    let end = start
 
-    if (pointHelpers.compare(a, b) <= 0) {
-      return {start: a, end: b}
-    } else {
-      return {start: b, end: a}
+    while (this.random(10) < 5) {
+      end = pointHelpers.traverse(end, {
+        row: this.random(3),
+        column: this.random(5)
+      })
     }
+
+    return {start, end: this.clipPosition(end)}
   }
 
   buildRandomPoint () {
@@ -109,8 +114,12 @@ export default class TestDocument {
   }
 
   clipPosition ({row, column}) {
-    row = Math.min(Math.max(row, 0), this.lines.length - 1)
-    column = Math.min(Math.max(column, 0), this.lines[row].length)
+    if (row >= this.lines.length) {
+      row = this.lines.length - 1
+      column = this.lines[row].length
+    } else if (column > this.lines[row].length) {
+      column = this.lines[row].length
+    }
     return {row, column}
   }
 }
