@@ -58,12 +58,13 @@ class Patch {
   void PerformRebalancingRotations(uint32_t);
   Node *BuildNode(Node *, Node *, Point, Point, Point, Point, std::unique_ptr<Text>, std::unique_ptr<Text>);
   void DeleteNode(Node **);
+  bool IsFrozen() const;
 
   struct PositionStackEntry;
   mutable std::vector<PositionStackEntry> left_ancestor_stack;
   mutable std::vector<Node *> node_stack;
   Node *root;
-  bool is_frozen;
+  Node *frozen_node_array;
   bool merges_adjacent_hunks;
   uint32_t hunk_count;
 };
