@@ -246,6 +246,8 @@ describe('Native Patch', function () {
         let blob = Buffer.from(patch.serialize().toString('base64'), 'base64')
         const patchCopy = Patch.deserialize(blob)
         assert.deepEqual(patchCopy.getHunks(), patch.getHunks())
+        let oldPoint = originalDocument.buildRandomPoint()
+        assert.deepEqual(patchCopy.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint))
       }
     }
   })

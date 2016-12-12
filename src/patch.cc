@@ -72,13 +72,13 @@ struct NewCoordinates {
   static Point end(const Hunk &hunk) { return hunk.new_end; }
 };
 
-Patch::Patch() : root{nullptr}, is_frozen{false}, merges_adjacent_hunks{true}, hunk_count{0} {}
+Patch::Patch() : root{nullptr}, frozen_node_array{nullptr}, merges_adjacent_hunks{true}, hunk_count{0} {}
 
 Patch::Patch(bool merges_adjacent_hunks) :
-  root{nullptr}, is_frozen{false},
+  root{nullptr}, frozen_node_array{nullptr},
   merges_adjacent_hunks{merges_adjacent_hunks}, hunk_count{0} {}
 
-Patch::Patch(Patch &&other) : root{nullptr}, is_frozen{other.is_frozen},
+Patch::Patch(Patch &&other) : root{nullptr}, frozen_node_array{other.frozen_node_array},
                               merges_adjacent_hunks{other.merges_adjacent_hunks},
                               hunk_count{other.hunk_count} {
   std::swap(root, other.root);
@@ -87,7 +87,7 @@ Patch::Patch(Patch &&other) : root{nullptr}, is_frozen{other.is_frozen},
 }
 
 Patch::Patch(Node *root, uint32_t hunk_count, bool merges_adjacent_hunks) :
-  root{root}, is_frozen{false}, merges_adjacent_hunks{merges_adjacent_hunks},
+  root{root}, frozen_node_array{nullptr}, merges_adjacent_hunks{merges_adjacent_hunks},
   hunk_count{hunk_count} {}
 
 Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
@@ -123,8 +123,8 @@ Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
 
 Patch::~Patch() {
   if (root) {
-    if (is_frozen) {
-      free(root);
+    if (frozen_node_array) {
+      free(frozen_node_array);
     } else {
       DeleteNode(&root);
     }
@@ -416,7 +416,7 @@ Nan::Maybe<Hunk> Patch::HunkForPosition(Point target) {
 bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
                    Point new_insertion_extent, unique_ptr<Text> deleted_text,
                    unique_ptr<Text> inserted_text) {
-  if (is_frozen) {
+  if (IsFrozen()) {
     return false;
   }
 
@@ -697,7 +697,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
 }
 
 bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent, Point old_insertion_extent) {
-  if (is_frozen) {
+  if (IsFrozen()) {
     return false;
   }
 
@@ -1237,7 +1237,11 @@ void Patch::Serialize(vector<uint8_t> *output) const {
   }
 }
 
-Patch::Patch(const vector<uint8_t> &input) : root{nullptr}, is_frozen{true}, merges_adjacent_hunks{true} {
+bool Patch::IsFrozen() const {
+  return frozen_node_array != nullptr;
+}
+
+Patch::Patch(const vector<uint8_t> &input) : root{nullptr}, frozen_node_array{nullptr}, merges_adjacent_hunks{true} {
   const uint8_t *begin = input.data();
   const uint8_t *data = begin;
   const uint8_t *end = data + input.size();
@@ -1253,7 +1257,8 @@ Patch::Patch(const vector<uint8_t> &input) : root{nullptr}, is_frozen{true}, mer
   }
 
   node_stack.reserve(hunk_count);
-  root = static_cast<Node *>(calloc(hunk_count, sizeof(Node)));
+  frozen_node_array = static_cast<Node *>(calloc(hunk_count, sizeof(Node)));
+  root = frozen_node_array;
   Node *node = root, *next_node = root + 1;
   GetNodeFromBuffer(&data, end, node);
 
