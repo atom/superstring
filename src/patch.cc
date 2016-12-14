@@ -47,8 +47,8 @@ struct Node {
       new_distance_from_left_ancestor,
       old_extent,
       new_extent,
-      unique_ptr<Text>(new Text(*old_text)),
-      unique_ptr<Text>(new Text(*new_text)),
+      old_text ? old_text->Copy() : nullptr,
+      new_text ? new_text->Copy() : nullptr
     };
   }
 
@@ -59,8 +59,8 @@ struct Node {
       old_distance_from_left_ancestor,
       new_extent,
       old_extent,
-      unique_ptr<Text>(new Text(*new_text)),
-      unique_ptr<Text>(new Text(*old_text)),
+      new_text ? new_text->Copy() : nullptr,
+      old_text ? old_text->Copy() : nullptr
     };
   }
 };
@@ -113,8 +113,8 @@ Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
           iter->new_start,
           iter->old_end.Traversal(iter->old_start),
           iter->new_end.Traversal(iter->new_start),
-          iter->old_text ? Text::Build(iter->old_text->content) : nullptr,
-          iter->new_text ? Text::Build(iter->new_text->content) : nullptr
+          iter->old_text ? iter->old_text->Copy() : nullptr,
+          iter->new_text ? iter->new_text->Copy() : nullptr
         );
       }
     } else {
@@ -123,8 +123,8 @@ Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
           iter->old_start,
           iter->old_end.Traversal(iter->old_start),
           iter->new_end.Traversal(iter->new_start),
-          iter->old_text ? Text::Build(iter->old_text->content) : nullptr,
-          iter->new_text ? Text::Build(iter->new_text->content) : nullptr
+          iter->old_text ? iter->old_text->Copy() : nullptr,
+          iter->new_text ? iter->new_text->Copy() : nullptr
         );
       }
     }
