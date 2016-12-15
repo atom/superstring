@@ -40,6 +40,18 @@ struct Node {
     }
   }
 
+  Node *Copy() {
+    return new Node{
+      left, right,
+      old_distance_from_left_ancestor,
+      new_distance_from_left_ancestor,
+      old_extent,
+      new_extent,
+      old_text ? old_text->Copy() : nullptr,
+      new_text ? new_text->Copy() : nullptr
+    };
+  }
+
   Node *Invert() {
     return new Node {
       left, right,
@@ -47,8 +59,8 @@ struct Node {
       old_distance_from_left_ancestor,
       new_extent,
       old_extent,
-      unique_ptr<Text>(new Text(*new_text)),
-      unique_ptr<Text>(new Text(*old_text)),
+      new_text ? new_text->Copy() : nullptr,
+      old_text ? old_text->Copy() : nullptr
     };
   }
 };
@@ -101,8 +113,8 @@ Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
           iter->new_start,
           iter->old_end.Traversal(iter->old_start),
           iter->new_end.Traversal(iter->new_start),
-          iter->old_text ? Text::Build(iter->old_text->content) : nullptr,
-          iter->new_text ? Text::Build(iter->new_text->content) : nullptr
+          iter->old_text ? iter->old_text->Copy() : nullptr,
+          iter->new_text ? iter->new_text->Copy() : nullptr
         );
       }
     } else {
@@ -111,8 +123,8 @@ Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
           iter->old_start,
           iter->old_end.Traversal(iter->old_start),
           iter->new_end.Traversal(iter->new_start),
-          iter->old_text ? Text::Build(iter->old_text->content) : nullptr,
-          iter->new_text ? Text::Build(iter->new_text->content) : nullptr
+          iter->old_text ? iter->old_text->Copy() : nullptr,
+          iter->new_text ? iter->new_text->Copy() : nullptr
         );
       }
     }
@@ -769,6 +781,30 @@ bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent, Point o
   }
 
   return true;
+}
+
+Patch Patch::Copy() {
+  Node *new_root = nullptr;
+  if (root) {
+    new_root = root->Copy();
+    node_stack.clear();
+    node_stack.push_back(new_root);
+
+    while (!node_stack.empty()) {
+      Node *node = node_stack.back();
+      node_stack.pop_back();
+      if (node->left) {
+        node->left = node->left->Copy();
+        node_stack.push_back(node->left);
+      }
+      if (node->right) {
+        node->right = node->right->Copy();
+        node_stack.push_back(node->right);
+      }
+    }
+  }
+
+  return Patch {new_root, hunk_count, merges_adjacent_hunks};
 }
 
 Patch Patch::Invert() {
