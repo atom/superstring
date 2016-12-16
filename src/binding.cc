@@ -9,6 +9,8 @@
 #include "patch.h"
 #include "text.h"
 
+namespace {
+
 using namespace v8;
 using std::vector;
 using std::unique_ptr;
@@ -476,3 +478,5 @@ void Init(Local<Object> exports, Local<Object> module) {
 }
 
 NODE_MODULE(atom_patch, Init)
+
+};
