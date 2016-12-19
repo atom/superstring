@@ -7,6 +7,7 @@
             ],
             "sources": [
                 "src/bindings/binding.cc"
+                "src/bindings/marker-index-wrapper.cc",
             ],
             "include_dirs": [
               "src/core",
@@ -20,6 +21,9 @@
                 "src/core/patch.cc",
                 "src/core/point.cc",
                 "src/core/text.cc",
+                "src/core/iterator.cc",
+                "src/core/marker-index.cc",
+                "src/core/node.cc",
             ]
         },
     ],
