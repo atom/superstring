@@ -1,14 +1,14 @@
-#include <vector>
-#include <memory>
-#include <nan.h>
-#include "point.h"
 #include "hunk.h"
+#include "optional.h"
+#include "point.h"
 #include "text.h"
+#include <memory>
+#include <vector>
 
 struct Node;
 
 class Patch {
- public:
+public:
   Patch();
   Patch(bool merges_adjacent_hunks);
   Patch(const std::vector<uint8_t> &);
@@ -19,36 +19,33 @@ class Patch {
   bool Splice(Point start, Point deletion_extent, Point insertion_extent,
               std::unique_ptr<Text> old_text, std::unique_ptr<Text> new_text);
   bool SpliceOld(Point start, Point deletion_extent, Point insertion_extent);
-  Patch Copy();
   Patch Invert();
   std::vector<Hunk> GetHunks() const;
-  std::vector<Hunk> GetHunksInNewRange(Point start, Point end, bool inclusive = false);
+  std::vector<Hunk> GetHunksInNewRange(Point start, Point end,
+                                       bool inclusive = false);
   std::vector<Hunk> GetHunksInOldRange(Point start, Point end);
-  Nan::Maybe<Hunk> HunkForOldPosition(Point position);
-  Nan::Maybe<Hunk> HunkForNewPosition(Point position);
+  optional<Hunk> HunkForOldPosition(Point position);
+  optional<Hunk> HunkForNewPosition(Point position);
   void Serialize(std::vector<uint8_t> *) const;
   void PrintDotGraph() const;
   void Rebalance();
   size_t GetHunkCount() const;
 
- private:
-  template<typename CoordinateSpace>
+private:
+  template <typename CoordinateSpace>
   std::vector<Hunk> GetHunksInRange(Point, Point, bool inclusive = false);
 
-  template<typename CoordinateSpace>
-  Node *SplayNodeEndingBefore(Point);
+  template <typename CoordinateSpace> Node *SplayNodeEndingBefore(Point);
 
-  template<typename CoordinateSpace>
-  Node *SplayNodeStartingBefore(Point);
+  template <typename CoordinateSpace> Node *SplayNodeStartingBefore(Point);
 
-  template<typename CoordinateSpace>
-  Node *SplayNodeEndingAfter(Point, Point);
+  template <typename CoordinateSpace> Node *SplayNodeEndingAfter(Point, Point);
 
-  template<typename CoordinateSpace>
+  template <typename CoordinateSpace>
   Node *SplayNodeStartingAfter(Point, Point);
 
-  template<typename CoordinateSpace>
-  Nan::Maybe<Hunk> HunkForPosition(Point position);
+  template <typename CoordinateSpace>
+  optional<Hunk> HunkForPosition(Point position);
 
   std::unique_ptr<Text> ComputeOldText(std::unique_ptr<Text>, Point, Point);
 
@@ -57,7 +54,8 @@ class Patch {
   void RotateNodeLeft(Node *, Node *, Node *);
   void DeleteRoot();
   void PerformRebalancingRotations(uint32_t);
-  Node *BuildNode(Node *, Node *, Point, Point, Point, Point, std::unique_ptr<Text>, std::unique_ptr<Text>);
+  Node *BuildNode(Node *, Node *, Point, Point, Point, Point,
+                  std::unique_ptr<Text>, std::unique_ptr<Text>);
   void DeleteNode(Node **);
   bool IsFrozen() const;
 

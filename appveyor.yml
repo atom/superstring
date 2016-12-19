@@ -10,6 +10,6 @@ install:
 test_script:
   - node --version
   - npm --version
-  - npm run ci-windows
+  - npm run ci
 
 build: off

@@ -27,9 +27,8 @@ struct Text {
 
   Text(std::vector<uint16_t> &&content);
   Text(TextSlice slice);
-  Text(const Text &other);
+  Text(Text&);
 
-  std::unique_ptr<Text> Copy() const;
   std::pair<TextSlice, TextSlice> Split(Point position) const;
   TextSlice Prefix(Point prefix_end) const;
   TextSlice Suffix(Point suffix_start) const;

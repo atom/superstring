@@ -1,4 +1,4 @@
-#include "helpers/test_helper.h"
+#include "test_helpers.h"
 
 TEST_CASE("Records simple non-overlapping splices") {
   Patch patch;

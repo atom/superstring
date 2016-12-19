@@ -1,16 +1,14 @@
 {
   "name": "atom-patch",
-  "version": "1.0.4",
+  "version": "1.0.2",
   "description": "A data structure to efficiently represent the results of applying patches.",
   "main": "./build/Release/atom_patch",
   "scripts": {
-    "test-native": "node-gyp rebuild --debug --tests && ./build/Debug/tests",
-    "test-js": "mocha ./test/helpers/setup test/*.js",
-    "test": "npm run test-native && npm run test-js",
+    "test-native": "./build/Debug/tests",
+    "test": "mocha ./test/js/helpers/setup test/js/*.js",
     "prepublish": "npm run standard",
     "standard": "standard --recursive src test",
-    "ci": "npm run standard && npm run test",
-    "ci-windows": "npm run standard && npm run test"
+    "ci": "npm run standard && node-gyp rebuild --debug --tests && npm run test"
   },
   "repository": {
     "type": "git",

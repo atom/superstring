@@ -1,5 +1,4 @@
 node_modules
 build
 .DS_Store
-debug.html
 .clang_complete

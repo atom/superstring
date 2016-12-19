@@ -100,7 +100,9 @@ describe('Native Patch', function () {
     const patch = new Patch()
     patch.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, 'ciao', 'hello')
     patch.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5}, 'quick', 'world')
-    assert.deepEqual(JSON.parse(JSON.stringify(patch.invert().getHunks())), [
+
+    const invertedPatch = patch.invert()
+    assert.deepEqual(JSON.parse(JSON.stringify(invertedPatch.getHunks())), [
       {
         oldStart: {row: 0, column: 3}, oldEnd: {row: 0, column: 8},
         newStart: {row: 0, column: 3}, newEnd: {row: 0, column: 7},
@@ -114,32 +116,6 @@ describe('Native Patch', function () {
         newText: 'quick'
       }
     ])
-
-    const patch2 = new Patch()
-    patch2.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5})
-    patch2.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5})
-    assert.deepEqual(JSON.parse(JSON.stringify(patch2.invert().getHunks())), [
-      {
-        oldStart: {row: 0, column: 3}, oldEnd: {row: 0, column: 8},
-        newStart: {row: 0, column: 3}, newEnd: {row: 0, column: 7}
-      },
-      {
-        oldStart: {row: 0, column: 10}, oldEnd: {row: 0, column: 15},
-        newStart: {row: 0, column: 9}, newEnd: {row: 0, column: 14}
-      }
-    ])
-  })
-
-  it('can copy patches', function () {
-    const patch = new Patch()
-    patch.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, 'ciao', 'hello')
-    patch.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5}, 'quick', 'world')
-    assert.deepEqual(patch.copy().getHunks(), patch.getHunks())
-
-    const patch2 = new Patch()
-    patch2.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5})
-    patch2.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5})
-    assert.deepEqual(patch2.copy().getHunks(), patch2.getHunks())
   })
 
   it('can serialize/deserialize patches', () => {
@@ -268,15 +244,10 @@ describe('Native Patch', function () {
         }
 
         let blob = Buffer.from(patch.serialize().toString('base64'), 'base64')
+        const patchCopy = Patch.deserialize(blob)
+        assert.deepEqual(patchCopy.getHunks(), patch.getHunks())
         let oldPoint = originalDocument.buildRandomPoint()
-
-        const patchCopy1 = Patch.deserialize(blob)
-        assert.deepEqual(patchCopy1.getHunks(), patch.getHunks())
-        assert.deepEqual(patchCopy1.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint))
-
-        const patchCopy2 = patch.copy()
-        assert.deepEqual(patchCopy2.getHunks(), patch.getHunks())
-        assert.deepEqual(patchCopy2.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint))
+        assert.deepEqual(patchCopy.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint))
       }
     }
   })
