@@ -3,7 +3,6 @@
 #include <iterator>
 #include <random>
 #include <stdlib.h>
-#include "splice-result.h"
 #include "range.h"
 
 using std::default_random_engine;

@@ -6,8 +6,10 @@
                 "superstring_core"
             ],
             "sources": [
-                "src/bindings/binding.cc"
+                "src/bindings/bindings.cc"
                 "src/bindings/marker-index-wrapper.cc",
+                "src/bindings/patch-wrapper.cc",
+                "src/bindings/point-wrapper.cc",
             ],
             "include_dirs": [
               "src/core",

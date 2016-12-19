@@ -4,8 +4,8 @@
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
-#include "marker-id.h"
 #include "point.h"
+#include "node.h"
 
 class MarkerIndex;
 struct Node;

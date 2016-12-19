@@ -7,10 +7,14 @@
 #include <unordered_set>
 
 #include "iterator.h"
-#include "marker-id.h"
 #include "node.h"
 
-typedef unsigned MarkerId;
+struct SpliceResult {
+  std::unordered_set<MarkerId> touch;
+  std::unordered_set<MarkerId> inside;
+  std::unordered_set<MarkerId> overlap;
+  std::unordered_set<MarkerId> surround;
+};
 
 struct Range;
 struct SpliceResult;

@@ -2,8 +2,9 @@
 #define NODE_H_
 
 #include <unordered_set>
-#include "marker-id.h"
 #include "point.h"
+
+typedef unsigned MarkerId;
 
 struct Node {
   Node(Node *parent, Point left_extent);
