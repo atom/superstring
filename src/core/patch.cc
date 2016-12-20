@@ -109,16 +109,16 @@ Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
       for (auto iter = hunks.begin(), end = hunks.end(); iter != end; ++iter) {
         Splice(iter->new_start, iter->old_end.Traversal(iter->old_start),
                iter->new_end.Traversal(iter->new_start),
-               iter->old_text ? Text::Build(iter->old_text->content) : nullptr,
-               iter->new_text ? Text::Build(iter->new_text->content) : nullptr);
+               iter->old_text ? unique_ptr<Text>{new Text(*iter->old_text)} : nullptr,
+               iter->new_text ? unique_ptr<Text>{new Text(*iter->new_text)} : nullptr);
       }
     } else {
       for (auto iter = hunks.rbegin(), end = hunks.rend(); iter != end;
            ++iter) {
         Splice(iter->old_start, iter->old_end.Traversal(iter->old_start),
                iter->new_end.Traversal(iter->new_start),
-               iter->old_text ? Text::Build(iter->old_text->content) : nullptr,
-               iter->new_text ? Text::Build(iter->new_text->content) : nullptr);
+               iter->old_text ? unique_ptr<Text>{new Text(*iter->old_text)} : nullptr,
+               iter->new_text ? unique_ptr<Text>{new Text(*iter->new_text)} : nullptr);
       }
     }
 
@@ -499,11 +499,11 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
 
       if (inserted_text && lower_bound->new_text && upper_bound->new_text) {
         TextSlice new_text_prefix =
-            lower_bound->new_text->Prefix(new_extent_prefix);
-        TextSlice new_text_suffix = upper_bound->new_text->Suffix(
+            TextSlice(*lower_bound->new_text).Prefix(new_extent_prefix);
+        TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).Suffix(
             new_deletion_end.Traversal(upper_bound_new_start));
-        upper_bound->new_text = Text::Concat(
-            new_text_prefix, inserted_text->AsSlice(), new_text_suffix);
+        upper_bound->new_text = unique_ptr<Text>{new Text(TextSlice::Concat(
+            new_text_prefix, TextSlice(*inserted_text), new_text_suffix))};
       } else {
         upper_bound->new_text = nullptr;
       }
@@ -532,10 +532,10 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
           new_insertion_extent.Traverse(new_extent_suffix);
 
       if (inserted_text && upper_bound->new_text) {
-        TextSlice new_text_suffix = upper_bound->new_text->Suffix(
+        TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).Suffix(
             new_deletion_end.Traversal(upper_bound_new_start));
         upper_bound->new_text =
-            Text::Concat(inserted_text->AsSlice(), new_text_suffix);
+            unique_ptr<Text>{new Text(TextSlice::Concat(TextSlice(*inserted_text), new_text_suffix))};
       } else {
         upper_bound->new_text = nullptr;
       }
@@ -564,9 +564,9 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
           new_extent_prefix.Traverse(new_insertion_extent);
       if (inserted_text && lower_bound->new_text) {
         TextSlice new_text_prefix =
-            lower_bound->new_text->Prefix(new_extent_prefix);
+            TextSlice(*lower_bound->new_text).Prefix(new_extent_prefix);
         lower_bound->new_text =
-            Text::Concat(new_text_prefix, inserted_text->AsSlice());
+            unique_ptr<Text>{new Text(TextSlice::Concat(new_text_prefix, TextSlice(*inserted_text)))};
       } else {
         lower_bound->new_text = nullptr;
       }
@@ -640,10 +640,10 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
       lower_bound->new_extent =
           new_insertion_end.Traversal(lower_bound_new_start);
       if (inserted_text && lower_bound->new_text) {
-        TextSlice new_text_prefix = lower_bound->new_text->Prefix(
+        TextSlice new_text_prefix = TextSlice(*lower_bound->new_text).Prefix(
             new_splice_start.Traversal(lower_bound_new_start));
         lower_bound->new_text =
-            Text::Concat(new_text_prefix, inserted_text->AsSlice());
+            unique_ptr<Text>{new Text(TextSlice::Concat(new_text_prefix, TextSlice(*inserted_text)))};
       } else {
         lower_bound->new_text = nullptr;
       }
@@ -689,10 +689,10 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
           upper_bound_new_end.Traversal(new_deletion_end));
 
       if (inserted_text && upper_bound->new_text) {
-        TextSlice new_text_suffix = upper_bound->new_text->Suffix(
+        TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).Suffix(
             new_deletion_end.Traversal(upper_bound_new_start));
         upper_bound->new_text =
-            Text::Concat(inserted_text->AsSlice(), new_text_suffix);
+            unique_ptr<Text>{new Text(TextSlice::Concat(TextSlice(*inserted_text), new_text_suffix))};
       } else {
         upper_bound->new_text = nullptr;
       }
@@ -1115,13 +1115,12 @@ unique_ptr<Text> Patch::ComputeOldText(unique_ptr<Text> deleted_text,
   if (!deleted_text.get())
     return nullptr;
 
-  vector<uint16_t> content;
-  auto result = Text::Build(content);
+  unique_ptr<Text> result {new Text()};
   Point range_start = new_splice_start, range_end = new_deletion_end;
 
   auto overlapping_hunks =
       GetHunksInNewRange(range_start, range_end, merges_adjacent_hunks);
-  TextSlice deleted_text_slice = deleted_text->AsSlice();
+  TextSlice deleted_text_slice = TextSlice(*deleted_text);
   Point deleted_text_slice_start = new_splice_start;
 
   for (const Hunk &hunk : overlapping_hunks) {
@@ -1133,16 +1132,16 @@ unique_ptr<Text> Patch::ComputeOldText(unique_ptr<Text> deleted_text,
           hunk.new_start.Traversal(deleted_text_slice_start));
       deleted_text_slice_start = hunk.new_start;
       deleted_text_slice = split_result.second;
-      result->Append(split_result.first);
+      result->insert(result->end(), split_result.first.begin(), split_result.first.end());
     }
 
-    result->Append(hunk.old_text->AsSlice());
+    result->insert(result->end(), hunk.old_text->begin(), hunk.old_text->end());
     deleted_text_slice = deleted_text_slice.Suffix(
         hunk.new_end.Traversal(deleted_text_slice_start));
     deleted_text_slice_start = hunk.new_end;
   }
 
-  result->Append(deleted_text_slice);
+  result->insert(result->end(), deleted_text_slice.begin(), deleted_text_slice.end());
   return result;
 }
 
@@ -1193,8 +1192,8 @@ void AppendPointToBuffer(vector<uint8_t> *output, const Point &point) {
 void AppendTextToBuffer(vector<uint8_t> *output, const Text *text) {
   if (text) {
     AppendToBuffer<uint32_t>(output, 1);
-    AppendToBuffer(output, static_cast<uint32_t>(text->content.size()));
-    for (uint16_t character : text->content) {
+    AppendToBuffer(output, static_cast<uint32_t>(text->size()));
+    for (uint16_t character : *text) {
       AppendToBuffer(output, character);
     }
   } else {
@@ -1205,12 +1204,12 @@ void AppendTextToBuffer(vector<uint8_t> *output, const Text *text) {
 unique_ptr<Text> GetTextFromBuffer(const uint8_t **data, const uint8_t *end) {
   if (GetFromBuffer<uint32_t>(data, end)) {
     uint32_t length = GetFromBuffer<uint32_t>(data, end);
-    vector<uint16_t> content;
-    content.reserve(length);
+    unique_ptr<Text> result {new Text()};
+    result->reserve(length);
     for (uint32_t i = 0; i < length; i++) {
-      content.push_back(GetFromBuffer<uint16_t>(data, end));
+      result->push_back(GetFromBuffer<uint16_t>(data, end));
     }
-    return Text::Build(content);
+    return result;
   } else {
     return nullptr;
   }

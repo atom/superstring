@@ -6,54 +6,65 @@ using std::move;
 using std::vector;
 using std::unique_ptr;
 
-unique_ptr<Text> Text::Build(vector<uint16_t> &content) {
-  return unique_ptr<Text>(new Text{move(content)});
+TextSlice::TextSlice(Text &text) : text{&text}, start_index{0}, end_index{text.size()} {}
+
+TextSlice::TextSlice(Text *text, size_t start_index, size_t end_index)
+    : text{text}, start_index{start_index}, end_index{end_index} {}
+
+Text::iterator TextSlice::begin() {
+  return text->begin() + start_index;
 }
 
-unique_ptr<Text> Text::Concat(TextSlice a, TextSlice b) {
-  vector<uint16_t> content;
-  content.reserve(
-    a.end_index - a.start_index +
-    b.end_index - b.start_index
+size_t TextSlice::size() {
+  return end_index - start_index;
+}
+
+Text::iterator TextSlice::end() {
+  return text->begin() + end_index;
+}
+
+Text TextSlice::Concat(TextSlice a, TextSlice b) {
+  Text result;
+  result.reserve(a.size() + b.size());
+  result.insert(
+    result.end(),
+    a.begin(),
+    a.end()
   );
-  auto result = Build(content);
-  result->Append(a);
-  result->Append(b);
+  result.insert(
+    result.end(),
+    b.begin(),
+    b.end()
+  );
   return result;
 }
 
-unique_ptr<Text> Text::Concat(TextSlice a, TextSlice b, TextSlice c) {
-  vector<uint16_t> content;
-  content.reserve(
-    a.end_index - a.start_index +
-    b.end_index - b.start_index +
-    c.end_index - c.start_index
+Text TextSlice::Concat(TextSlice a, TextSlice b, TextSlice c) {
+  Text result;
+  result.reserve(a.size() + b.size() + c.size());
+  result.insert(
+    result.end(),
+    a.begin(),
+    a.end()
   );
-  auto result = Build(content);
-  result->Append(a);
-  result->Append(b);
-  result->Append(c);
+  result.insert(
+    result.end(),
+    b.begin(),
+    b.end()
+  );
+  result.insert(
+    result.end(),
+    c.begin(),
+    c.end()
+  );
   return result;
 }
 
-Text::Text(vector<uint16_t> &&content) : content{content} {}
-
-Text::Text(TextSlice slice) : content{
-  slice.text->content.begin() + slice.start_index,
-  slice.text->content.begin() + slice.end_index
-} {}
-
-Text::Text(Text &other) : content{other.content} {}
-
-std::pair<TextSlice, TextSlice> Text::Split(Point position) const {
-  size_t index = CharacterIndexForPosition(position);
-  return {
-    TextSlice{this, 0, index},
-    TextSlice{this, index, content.size()}
-  };
+TextSlice::operator Text() const {
+  return Text(text->begin() + start_index, text->begin() + end_index);
 }
 
-std::pair<TextSlice, TextSlice> TextSlice::Split(Point position) const {
+std::pair<TextSlice, TextSlice> TextSlice::Split(Point position) {
   size_t index = CharacterIndexForPosition(position);
   return {
     TextSlice{text, start_index, start_index + index},
@@ -61,42 +72,18 @@ std::pair<TextSlice, TextSlice> TextSlice::Split(Point position) const {
   };
 }
 
-TextSlice TextSlice::Suffix(Point suffix_start) const {
+TextSlice TextSlice::Suffix(Point suffix_start) {
   return Split(suffix_start).second;
 }
 
-TextSlice Text::Prefix(Point prefix_end) const {
+TextSlice TextSlice::Prefix(Point prefix_end) {
   return Split(prefix_end).first;
 }
 
-TextSlice Text::Suffix(Point suffix_start) const {
-  return Split(suffix_start).second;
-}
-
-TextSlice Text::AsSlice() const {
-  return TextSlice{this, 0, content.size()};
-}
-
-void Text::Append(TextSlice slice) {
-  content.insert(
-    content.end(),
-    slice.text->content.begin() + slice.start_index,
-    slice.text->content.begin() + slice.end_index
-  );
-}
-
-void Text::TrimLeft(Point position) {
-  content.erase(content.begin(), content.begin() + CharacterIndexForPosition(position));
-}
-
-void Text::TrimRight(Point position) {
-  content.erase(content.begin() + CharacterIndexForPosition(position), content.end());
-}
-
-size_t TextSlice::CharacterIndexForPosition(Point target) const {
+size_t TextSlice::CharacterIndexForPosition(Point target) {
   Point position;
-  auto begin = text->content.begin() + start_index;
-  auto end = text->content.begin() + end_index;
+  auto begin = text->begin() + start_index;
+  auto end = text->begin() + end_index;
   auto iter = begin;
   while (iter != end && position < target) {
     if (*iter == '\n') {
@@ -109,12 +96,4 @@ size_t TextSlice::CharacterIndexForPosition(Point target) const {
   }
 
   return iter - begin;
-}
-
-size_t Text::CharacterIndexForPosition(Point target) const {
-  return AsSlice().CharacterIndexForPosition(target);
-}
-
-size_t TextSlice::Length() const {
-  return end_index - start_index;
 }

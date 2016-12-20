@@ -13,7 +13,7 @@ const {Patch} = fs.existsSync(path.resolve(__dirname, '..', '..', 'build', 'Debu
   ? require('../../build/Debug/superstring')
   : require('../../build/Release/superstring')
 
-describe('Native Patch', function () {
+describe.only('Native Patch', function () {
   it('honors the mergeAdjacentHunks option set to false', function () {
     const patch = new Patch({mergeAdjacentHunks: false})
 

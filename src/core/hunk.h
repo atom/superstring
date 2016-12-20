@@ -18,7 +18,7 @@ public:
 inline std::ostream &operator<<(std::ostream &stream, const Text *text) {
   if (text) {
     stream << "'";
-    for (uint16_t character : text->content) {
+    for (uint16_t character : *text) {
       if (character < CHAR_MAX) {
         stream << (char)character;
       } else {

@@ -9,10 +9,6 @@
 
 using std::vector;
 
-bool operator==(const Text &left, const Text &right) {
-  return left.content == right.content;
-}
-
 bool text_eq(const Text *left, const Text *right) {
   if (left == right)
     return true;

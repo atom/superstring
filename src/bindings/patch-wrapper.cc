@@ -21,13 +21,13 @@ static unique_ptr<Text> TextFromJS(Nan::MaybeLocal<String> maybe_string) {
     return nullptr;
   }
 
-  vector<uint16_t> content(string->Length());
-  string->Write(content.data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
-  return Text::Build(content);
+  unique_ptr<Text> text {new Text(string->Length())};
+  string->Write(text->data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
+  return text;
 }
 
 static Local<String> TextToJS(Text *text) {
-  return Nan::New<String>(text->content.data(), text->content.size()).ToLocalChecked();
+  return Nan::New<String>(text->data(), text->size()).ToLocalChecked();
 }
 
 class HunkWrapper : public Nan::ObjectWrap {
