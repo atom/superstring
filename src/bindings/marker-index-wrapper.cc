@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include "marker-index.h"
 #include "nan.h"
+#include "point-wrapper.h"
 #include "range.h"
 
 #include <iostream>
@@ -16,8 +17,6 @@ static Nan::Persistent<String> touch_string;
 static Nan::Persistent<String> inside_string;
 static Nan::Persistent<String> overlap_string;
 static Nan::Persistent<String> surround_string;
-
-NODE_MODULE(marker_index, MarkerIndexWrapper::Init)
 
 void MarkerIndexWrapper::Init(Local<Object> exports) {
   Local<FunctionTemplate> constructor_template = Nan::New<FunctionTemplate>(New);
@@ -34,6 +33,7 @@ void MarkerIndexWrapper::Init(Local<Object> exports) {
   prototype_template->Set(Nan::New<String>("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(Splice));
   prototype_template->Set(Nan::New<String>("getStart").ToLocalChecked(), Nan::New<FunctionTemplate>(GetStart));
   prototype_template->Set(Nan::New<String>("getEnd").ToLocalChecked(), Nan::New<FunctionTemplate>(GetEnd));
+  prototype_template->Set(Nan::New<String>("getRange").ToLocalChecked(), Nan::New<FunctionTemplate>(GetRange));
   prototype_template->Set(Nan::New<String>("compare").ToLocalChecked(), Nan::New<FunctionTemplate>(Compare));
   prototype_template->Set(Nan::New<String>("findIntersecting").ToLocalChecked(),
                           Nan::New<FunctionTemplate>(FindIntersecting));
@@ -43,7 +43,10 @@ void MarkerIndexWrapper::Init(Local<Object> exports) {
                           Nan::New<FunctionTemplate>(FindContainedIn));
   prototype_template->Set(Nan::New<String>("findStartingIn").ToLocalChecked(),
                           Nan::New<FunctionTemplate>(FindStartingIn));
+  prototype_template->Set(Nan::New<String>("findStartingAt").ToLocalChecked(),
+                          Nan::New<FunctionTemplate>(FindStartingAt));
   prototype_template->Set(Nan::New<String>("findEndingIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindEndingIn));
+  prototype_template->Set(Nan::New<String>("findEndingAt").ToLocalChecked(), Nan::New<FunctionTemplate>(FindEndingAt));
   prototype_template->Set(Nan::New<String>("dump").ToLocalChecked(), Nan::New<FunctionTemplate>(Dump));
 
   start_string.Reset(Nan::Persistent<String>(Nan::New("start").ToLocalChecked()));
@@ -85,8 +88,8 @@ Local<Object> MarkerIndexWrapper::SnapshotToJS(const unordered_map<MarkerId, Ran
   Local<Object> result_object = Nan::New<Object>();
   for (auto &pair : snapshot) {
     Local<Object> range = Nan::New<Object>();
-    range->Set(Nan::New(start_string), PointToJS(pair.second.start));
-    range->Set(Nan::New(end_string), PointToJS(pair.second.end));
+    range->Set(Nan::New(start_string), PointWrapper::FromPoint(pair.second.start));
+    range->Set(Nan::New(end_string), PointWrapper::FromPoint(pair.second.end));
     result_object->Set(Nan::New<Integer>(pair.first), range);
   }
   return result_object;
@@ -116,8 +119,8 @@ void MarkerIndexWrapper::Insert(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
   Nan::Maybe<MarkerId> id = MarkerIdFromJS(Nan::To<Integer>(info[0]));
-  Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[1]));
-  Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[2]));
+  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[1]));
+  Nan::Maybe<Point> end = PointWrapper::PointFromJS(Nan::To<Object>(info[2]));
 
   if (id.IsJust() && start.IsJust() && end.IsJust()) {
     wrapper->marker_index.Insert(id.FromJust(), start.FromJust(), end.FromJust());
@@ -147,9 +150,9 @@ void MarkerIndexWrapper::Delete(const Nan::FunctionCallbackInfo<Value> &info) {
 void MarkerIndexWrapper::Splice(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-  Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
-  Nan::Maybe<Point> old_extent = PointFromJS(Nan::To<Object>(info[1]));
-  Nan::Maybe<Point> new_extent = PointFromJS(Nan::To<Object>(info[2]));
+  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
+  Nan::Maybe<Point> old_extent = PointWrapper::PointFromJS(Nan::To<Object>(info[1]));
+  Nan::Maybe<Point> new_extent = PointWrapper::PointFromJS(Nan::To<Object>(info[2]));
   if (start.IsJust() && old_extent.IsJust() && new_extent.IsJust()) {
     SpliceResult result = wrapper->marker_index.Splice(start.FromJust(), old_extent.FromJust(), new_extent.FromJust());
 
@@ -169,7 +172,7 @@ void MarkerIndexWrapper::GetStart(const Nan::FunctionCallbackInfo<Value> &info) 
   Nan::Maybe<MarkerId> id = MarkerIdFromJS(Nan::To<Integer>(info[0]));
   if (id.IsJust()) {
     Point result = wrapper->marker_index.GetStart(id.FromJust());
-    info.GetReturnValue().Set(PointToJS(result));
+    info.GetReturnValue().Set(PointWrapper::FromPoint(result));
   }
 }
 
@@ -179,7 +182,20 @@ void MarkerIndexWrapper::GetEnd(const Nan::FunctionCallbackInfo<Value> &info) {
   Nan::Maybe<MarkerId> id = MarkerIdFromJS(Nan::To<Integer>(info[0]));
   if (id.IsJust()) {
     Point result = wrapper->marker_index.GetEnd(id.FromJust());
-    info.GetReturnValue().Set(PointToJS(result));
+    info.GetReturnValue().Set(PointWrapper::FromPoint(result));
+  }
+}
+
+void MarkerIndexWrapper::GetRange(const Nan::FunctionCallbackInfo<Value> &info) {
+  MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
+
+  Nan::Maybe<MarkerId> id = MarkerIdFromJS(Nan::To<Integer>(info[0]));
+  if (id.IsJust()) {
+    Range range = wrapper->marker_index.GetRange(id.FromJust());
+    auto result = Nan::New<Array>(2);
+    result->Set(0, PointWrapper::FromPoint(range.start));
+    result->Set(1, PointWrapper::FromPoint(range.end));
+    info.GetReturnValue().Set(result);
   }
 }
 
@@ -195,8 +211,8 @@ void MarkerIndexWrapper::Compare(const Nan::FunctionCallbackInfo<Value> &info) {
 void MarkerIndexWrapper::FindIntersecting(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-  Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
-  Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[1]));
+  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
+  Nan::Maybe<Point> end = PointWrapper::PointFromJS(Nan::To<Object>(info[1]));
 
   if (start.IsJust() && end.IsJust()) {
     unordered_set<MarkerId> result = wrapper->marker_index.FindIntersecting(start.FromJust(), end.FromJust());
@@ -207,8 +223,8 @@ void MarkerIndexWrapper::FindIntersecting(const Nan::FunctionCallbackInfo<Value>
 void MarkerIndexWrapper::FindContaining(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-  Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
-  Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[1]));
+  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
+  Nan::Maybe<Point> end = PointWrapper::PointFromJS(Nan::To<Object>(info[1]));
 
   if (start.IsJust() && end.IsJust()) {
     unordered_set<MarkerId> result = wrapper->marker_index.FindContaining(start.FromJust(), end.FromJust());
@@ -219,8 +235,8 @@ void MarkerIndexWrapper::FindContaining(const Nan::FunctionCallbackInfo<Value> &
 void MarkerIndexWrapper::FindContainedIn(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-  Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
-  Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[1]));
+  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
+  Nan::Maybe<Point> end = PointWrapper::PointFromJS(Nan::To<Object>(info[1]));
 
   if (start.IsJust() && end.IsJust()) {
     unordered_set<MarkerId> result = wrapper->marker_index.FindContainedIn(start.FromJust(), end.FromJust());
@@ -231,8 +247,8 @@ void MarkerIndexWrapper::FindContainedIn(const Nan::FunctionCallbackInfo<Value> 
 void MarkerIndexWrapper::FindStartingIn(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-  Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
-  Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[1]));
+  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
+  Nan::Maybe<Point> end = PointWrapper::PointFromJS(Nan::To<Object>(info[1]));
 
   if (start.IsJust() && end.IsJust()) {
     unordered_set<MarkerId> result = wrapper->marker_index.FindStartingIn(start.FromJust(), end.FromJust());
@@ -240,14 +256,36 @@ void MarkerIndexWrapper::FindStartingIn(const Nan::FunctionCallbackInfo<Value> &
   }
 }
 
+void MarkerIndexWrapper::FindStartingAt(const Nan::FunctionCallbackInfo<Value> &info) {
+  MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
+
+  Nan::Maybe<Point> position = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
+
+  if (position.IsJust()) {
+    unordered_set<MarkerId> result = wrapper->marker_index.FindStartingAt(position.FromJust());
+    info.GetReturnValue().Set(MarkerIdsToJS(result));
+  }
+}
+
 void MarkerIndexWrapper::FindEndingIn(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-  Nan::Maybe<Point> start = PointFromJS(Nan::To<Object>(info[0]));
-  Nan::Maybe<Point> end = PointFromJS(Nan::To<Object>(info[1]));
+  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
+  Nan::Maybe<Point> end = PointWrapper::PointFromJS(Nan::To<Object>(info[1]));
 
   if (start.IsJust() && end.IsJust()) {
     unordered_set<MarkerId> result = wrapper->marker_index.FindEndingIn(start.FromJust(), end.FromJust());
+    info.GetReturnValue().Set(MarkerIdsToJS(result));
+  }
+}
+
+void MarkerIndexWrapper::FindEndingAt(const Nan::FunctionCallbackInfo<Value> &info) {
+  MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
+
+  Nan::Maybe<Point> position = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
+
+  if (position.IsJust()) {
+    unordered_set<MarkerId> result = wrapper->marker_index.FindEndingAt(position.FromJust());
     info.GetReturnValue().Set(MarkerIdsToJS(result));
   }
 }

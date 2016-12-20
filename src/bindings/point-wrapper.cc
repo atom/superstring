@@ -29,20 +29,12 @@ Nan::Maybe<Point> PointWrapper::PointFromJS(Nan::MaybeLocal<Object> maybe_object
     return Nan::Nothing<Point>();
   }
 
-  unsigned row, column;
-  if (std::isfinite(js_row->NumberValue())) {
-    row = static_cast<unsigned>(js_row->Int32Value());
-  } else {
-    row = UINT_MAX;
-  }
-
-  if (std::isfinite(js_column->NumberValue())) {
-    column = static_cast<unsigned>(js_column->Int32Value());
-  } else {
-    column = UINT_MAX;
-  }
-
-  return Nan::Just(Point(row, column));
+  double row = js_row->NumberValue();
+  double column = js_column->NumberValue();
+  return Nan::Just(Point(
+    std::isfinite(row) ? row : UINT32_MAX,
+    std::isfinite(column) ? column : UINT32_MAX
+  ));
 }
 
 void PointWrapper::Init() {

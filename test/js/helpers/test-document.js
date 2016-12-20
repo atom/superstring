@@ -1,9 +1,10 @@
-import Random from 'random-seed'
-import WORDS from './words'
-import * as pointHelpers from './point-helpers'
-import * as textHelpers from './text-helpers'
+const Random = require('random-seed')
+const WORDS = require('./words')
+const pointHelpers = require('./point-helpers')
+const textHelpers = require('./text-helpers')
 
-export default class TestDocument {
+module.exports =
+class TestDocument {
   constructor (randomSeed, text) {
     this.random = new Random(randomSeed)
     this.lines = this.buildRandomLines(1, 50)

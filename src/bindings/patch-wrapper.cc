@@ -33,6 +33,10 @@ static Local<String> TextToJS(Text *text) {
 class HunkWrapper : public Nan::ObjectWrap {
  public:
   static void Init() {
+    new_text_string.Reset(Nan::New("newText").ToLocalChecked());
+    old_text_string.Reset(Nan::New("oldText").ToLocalChecked());
+    static Nan::Persistent<String> old_text_string;
+
     Local<FunctionTemplate> constructor_template = Nan::New<FunctionTemplate>(New);
     constructor_template->SetClassName(Nan::New<String>("Hunk").ToLocalChecked());
     constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
@@ -52,12 +56,12 @@ class HunkWrapper : public Nan::ObjectWrap {
 
     const auto &prototype_template = constructor_template->PrototypeTemplate();
     prototype_template->Set(Nan::New<String>("toString").ToLocalChecked(), Nan::New<FunctionTemplate>(ToString));
-    constructor.Reset(constructor_template->GetFunction());
+    hunk_wrapper_constructor.Reset(constructor_template->GetFunction());
   }
 
   static Local<Value> FromHunk(Hunk hunk) {
     Local<Object> result;
-    if (Nan::NewInstance(Nan::New(constructor)).ToLocal(&result)) {
+    if (Nan::NewInstance(Nan::New(hunk_wrapper_constructor)).ToLocal(&result)) {
       (new HunkWrapper(hunk))->Wrap(result);
       if (hunk.new_text) {
         result->Set(Nan::New(new_text_string), TextToJS(hunk.new_text));
@@ -113,7 +117,6 @@ class HunkWrapper : public Nan::ObjectWrap {
     info.GetReturnValue().Set(Nan::New<String>(result.str()).ToLocalChecked());
   }
 
-  static Nan::Persistent<v8::Function> constructor;
   Hunk hunk;
 };
 

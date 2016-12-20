@@ -220,6 +220,10 @@ Point MarkerIndex::GetEnd(MarkerId id) const {
     return GetNodePosition(result->second);
 }
 
+Range MarkerIndex::GetRange(MarkerId id) const {
+  return Range{GetStart(id), GetEnd(id)};
+}
+
 int MarkerIndex::Compare(MarkerId id1, MarkerId id2) const {
   switch (GetStart(id1).Compare(GetStart(id2))) {
     case -1:
@@ -267,10 +271,18 @@ unordered_set<MarkerId> MarkerIndex::FindStartingIn(Point start, Point end) {
   return result;
 }
 
+unordered_set<MarkerId> MarkerIndex::FindStartingAt(Point position) {
+  return FindStartingIn(position, position);
+}
+
 unordered_set<MarkerId> MarkerIndex::FindEndingIn(Point start, Point end) {
   unordered_set<MarkerId> result;
   iterator.FindEndingIn(start, end, &result);
   return result;
+}
+
+unordered_set<MarkerId> MarkerIndex::FindEndingAt(Point position) {
+  return FindEndingIn(position, position);
 }
 
 unordered_map<MarkerId, Range> MarkerIndex::Dump() {

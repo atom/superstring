@@ -1,19 +1,13 @@
 'use strict';
 
-require('babel/register')()
 const Random = require('random-seed')
-const NativeMarkerIndex = require('../src/native/marker-index')
-const JSMarkerIndex = require('../src/js/marker-index')
-const PointHelpers = require('../src/js/point-helpers')
-const traverse = PointHelpers.traverse
-const traversal = PointHelpers.traversal
-const compare = PointHelpers.compare
+const {MarkerIndex} = require('../build/Release/superstring')
+const {traverse, traversalDistance, compare} = require('../test/js/helpers/point-helpers')
 
 let random = new Random(1)
 let markerIds = []
 let idCounter = 1
-let nativeMarkerIndex = new NativeMarkerIndex()
-let jsMarkerIndex = new JSMarkerIndex()
+let nativeMarkerIndex = new MarkerIndex()
 let insertOperations = []
 let spliceOperations = []
 let deleteOperations = []
@@ -41,13 +35,6 @@ function profileOperations (description, operations) {
   console.time(name)
   for (let operation of operations) {
     nativeMarkerIndex[operation[0]].apply(nativeMarkerIndex, operation[1])
-  }
-  console.timeEnd(name)
-
-  name = 'js: ' + description
-  console.time(name)
-  for (let operation of operations) {
-    jsMarkerIndex[operation[0]].apply(jsMarkerIndex, operation[1])
   }
   console.timeEnd(name)
 }
@@ -96,7 +83,7 @@ function getSplice () {
   let range = getRange()
   let start = range[0]
   let oldEnd = range[1]
-  let oldExtent = traversal(oldEnd, start)
+  let oldExtent = traversalDistance(oldEnd, start)
   let newExtent = {row: 0, column: 0}
   while (random(2)) {
     newExtent = traverse(newExtent, {row: random(10), column: random(10)})

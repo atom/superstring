@@ -1,6 +1,6 @@
-export const INFINITY_POINT = Object.freeze({row: Infinity, column: Infinity})
+exports.INFINITY_POINT = Object.freeze({row: Infinity, column: Infinity})
 
-export function compare (a, b) {
+exports.compare = function compare (a, b) {
   if (a.row === b.row) {
     return compareNumbers(a.column, b.column)
   } else {
@@ -8,15 +8,15 @@ export function compare (a, b) {
   }
 }
 
-export function isZero (point) {
+exports.isZero = function isZero (point) {
   return (point.row === 0 && point.column === 0)
 }
 
-export function isInfinity (point) {
+exports.isInfinity = function isInfinity (point) {
   return (point.row === Infinity || point.column === Infinity)
 }
 
-export function min (a, b) {
+exports.min = function min (a, b) {
   if (compare(a, b) <= 0) {
     return a
   } else {
@@ -24,7 +24,7 @@ export function min (a, b) {
   }
 }
 
-export function traverse (start, distance) {
+exports.traverse = function traverse (start, distance) {
   if (distance.row === 0) {
     return {
       row: start.row,
@@ -38,7 +38,7 @@ export function traverse (start, distance) {
   }
 }
 
-export function traversalDistance (end, start) {
+exports.traversalDistance = function traversalDistance (end, start) {
   if (end.row === start.row) {
     return {row: 0, column: end.column - start.column}
   } else {
@@ -46,7 +46,7 @@ export function traversalDistance (end, start) {
   }
 }
 
-export function format (point) {
+exports.format = function format (point) {
   return `(${point.row}, ${point.column})`
 }
 

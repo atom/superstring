@@ -4,8 +4,9 @@
   "description": "A data structure to efficiently represent the results of applying patches.",
   "main": "./build/Release/atom_patch",
   "scripts": {
-    "test-native": "./build/Debug/tests",
-    "test": "mocha ./test/js/helpers/setup test/js/*.js",
+    "test-native": "script/test-native.js",
+    "test": "mocha test/js/*.js",
+    "benchmark": "node benchmark/marker-index.benchmark.js",
     "prepublish": "npm run standard",
     "standard": "standard --recursive src test",
     "ci": "npm run standard && node-gyp rebuild --debug --tests && npm run test"
@@ -27,8 +28,6 @@
     "nan": "^2.4.0"
   },
   "devDependencies": {
-    "babel": "^5.0.0",
-    "babel-eslint": "^4.0.5",
     "chai": "^2.0.0",
     "mocha": "^2.3.4",
     "random-seed": "^0.2.0",

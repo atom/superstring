@@ -3,7 +3,7 @@
  * http://www.gutenberg.org/ebooks/3201
  * Public Domain
  */
- module.exports = [
+module.exports = [
 'aalii',
 'aardvark',
 'aardwolf',

@@ -17,7 +17,7 @@ void Iterator::Reset() {
     current_node_position = current_node->left_extent;
   }
   left_ancestor_position = Point(0, 0);
-  right_ancestor_position = Point::Max();
+  right_ancestor_position = Point(UINT32_MAX, UINT32_MAX);
   left_ancestor_position_stack.clear();
   right_ancestor_position_stack.clear();
 }
@@ -244,7 +244,7 @@ void Iterator::Ascend() {
     current_node = nullptr;
     current_node_position = Point();
     left_ancestor_position = Point();
-    right_ancestor_position = Point::Max();
+    right_ancestor_position = Point(UINT32_MAX, UINT32_MAX);
   }
 }
 

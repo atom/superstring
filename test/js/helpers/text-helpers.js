@@ -1,6 +1,6 @@
 const NEWLINE_REG_EXP = /\n/g
 
-export function getExtent (text) {
+exports.getExtent = function getExtent (text) {
   let lastLineStartIndex = 0
   let row = 0
   NEWLINE_REG_EXP.lastIndex = 0
@@ -12,15 +12,15 @@ export function getExtent (text) {
   return {row, column}
 }
 
-export function getPrefix (text, prefixExtent) {
+exports.getPrefix = function getPrefix (text, prefixExtent) {
   return text.substring(0, characterIndexForPoint(text, prefixExtent))
 }
 
-export function getSuffix (text, prefixExtent) {
+exports.getSuffix = function getSuffix (text, prefixExtent) {
   return text.substring(characterIndexForPoint(text, prefixExtent))
 }
 
-export function characterIndexForPoint(text, point) {
+exports.characterIndexForPoint = function characterIndexForPoint(text, point) {
   let {row, column} = point
   NEWLINE_REG_EXP.lastIndex = 0
   while (row-- > 0) {

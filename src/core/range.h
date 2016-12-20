@@ -1,6 +1,8 @@
 #ifndef RANGE_H_
 #define RANGE_H_
 
+#include "point.h"
+
 struct Range {
   Point start;
   Point end;
