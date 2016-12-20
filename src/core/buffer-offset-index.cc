@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <random>
-#include "buffer_offset_index.h"
+#include "buffer-offset-index.h"
 
 struct Extent {
   unsigned characters;

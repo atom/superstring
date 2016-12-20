@@ -1,8 +1,8 @@
 {
-  "name": "atom-patch",
+  "name": "superstring",
   "version": "1.0.2",
   "description": "A data structure to efficiently represent the results of applying patches.",
-  "main": "./build/Release/atom_patch",
+  "main": "./build/Release/superstring",
   "scripts": {
     "test-native": "script/test-native.js",
     "test": "mocha test/js/*.js",
@@ -35,7 +35,6 @@
     "standard": "^4.5.4"
   },
   "standard": {
-    "parser": "babel-eslint",
     "global": [
       "describe",
       "it",
