@@ -45,7 +45,7 @@
                 "type": "executable",
                 "cflags_cc": ["-fexceptions"],
                 "sources": [
-                    "test/native/patch_test.cc",
+                    "test/native/patch-test.cc",
                     "test/native/tests.cc",
                 ],
                 "include_dirs": [
