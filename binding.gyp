@@ -24,9 +24,7 @@
                 "src/core/patch.cc",
                 "src/core/point.cc",
                 "src/core/text.cc",
-                "src/core/iterator.cc",
                 "src/core/marker-index.cc",
-                "src/core/node.cc",
                 "src/core/buffer-offset-index.cc"
             ]
         },
