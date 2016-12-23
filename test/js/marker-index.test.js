@@ -16,9 +16,7 @@ describe('MarkerIndex', () => {
     let seed, seedMessage, random, markerIndex, markers, idCounter
 
     for (let i = 0; i < 1000; i++) {
-      console.log(i);
       seed = Date.now()
-      seed = 1482468753947
       // console.log(seed);
       seedMessage = `Random Seed: ${seed}`
       random = new Random(seed)
@@ -45,8 +43,8 @@ describe('MarkerIndex', () => {
       const verifications = [
         verifyRanges,
         // testDump,
-        // testFindIntersecting,
-        // testFindContaining,
+        testFindIntersecting,
+        testFindContaining,
         // testFindContainedIn,
         // testFindStartingIn,
         // testFindEndingIn,
@@ -160,6 +158,8 @@ describe('MarkerIndex', () => {
       for (let i = 0; i < 10; i++) {
         let [start, end] = getRange()
 
+        write(() => `testFindIntersecting ${formatPoint(start)}, ${formatPoint(end)}`)
+
         let expectedIds = new Set()
         for (let marker of markers) {
           if (compare(marker.start, end) <= 0 && compare(start, marker.end) <= 0) {
@@ -179,6 +179,8 @@ describe('MarkerIndex', () => {
     function testFindContaining () {
       for (let i = 0; i < 10; i++) {
         let [start, end] = getRange()
+
+        write(() => `${i} testFindContaining ${formatPoint(start)}, ${formatPoint(end)}`)
 
         let expectedIds = new Set()
         for (let marker of markers) {
