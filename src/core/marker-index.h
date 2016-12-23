@@ -18,8 +18,6 @@ public:
     std::unordered_set<MarkerId> surround;
   };
 
-  MarkerIndex(unsigned seed);
-  int GenerateRandomNumber();
   void Insert(MarkerId id, Point start, Point end);
   void SetExclusive(MarkerId id, bool exclusive);
   void Delete(MarkerId id);
@@ -38,76 +36,40 @@ public:
   std::unordered_set<MarkerId> FindEndingAt(Point position);
 
   std::unordered_map<MarkerId, Range> Dump();
+  std::string GetDotGraph();
 
 private:
-  friend class Iterator;
-
   struct Node {
     Node *parent;
     Node *left;
     Node *right;
-    Point left_extent;
+    Point distance_from_left_ancestor;
     std::unordered_set<MarkerId> left_marker_ids;
     std::unordered_set<MarkerId> right_marker_ids;
     std::unordered_set<MarkerId> start_marker_ids;
     std::unordered_set<MarkerId> end_marker_ids;
-    int priority;
 
-    Node(Node *parent, Point left_extent);
+    Node(Node *parent, Point distance_from_left_ancestor);
     bool IsMarkerEndpoint();
+    void WriteDotGraph(std::stringstream &result, Point left_ancestor_position);
   };
 
-  class Iterator {
-  public:
-    Iterator(MarkerIndex *marker_index);
-    void Reset();
-    Node* InsertMarkerStart(const MarkerId &id, const Point &start_position, const Point &end_position);
-    Node* InsertMarkerEnd(const MarkerId &id, const Point &start_position, const Point &end_position);
-    Node* InsertSpliceBoundary(const Point &position, bool is_insertion_end);
-    void FindIntersecting(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
-    void FindContainedIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
-    void FindStartingIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
-    void FindEndingIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
-    std::unordered_map<MarkerId, Range> Dump();
-
-  private:
-    void Ascend();
-    void DescendLeft();
-    void DescendRight();
-    void MoveToSuccessor();
-    void SeekToFirstNodeGreaterThanOrEqualTo(const Point &position);
-    void MarkRight(const MarkerId &id, const Point &start_position, const Point &end_position);
-    void MarkLeft(const MarkerId &id, const Point &start_position, const Point &end_position);
-    Node* InsertLeftChild(const Point &position);
-    Node* InsertRightChild(const Point &position);
-    void CheckIntersection(const Point &start, const Point &end, std::unordered_set<MarkerId> *results);
-    void CacheNodePosition() const;
-
-    MarkerIndex *marker_index;
-    Node *current_node;
-    Point current_node_position;
-    Point left_ancestor_position;
-    Point right_ancestor_position;
-    std::vector<Point> left_ancestor_position_stack;
-    std::vector<Point> right_ancestor_position_stack;
-  };
-
-  Point GetNodePosition(const Node *node) const;
-  void DeleteNode(Node *node);
-  void DeleteSubtree(Node *node);
-  void BubbleNodeUp(Node *node);
-  void BubbleNodeDown(Node *node);
+  Node *InsertNode(Point position, bool return_existing = true);
+  void SplayNode(Node *node);
   void RotateNodeLeft(Node *pivot);
   void RotateNodeRight(Node *pivot);
-  void GetStartingAndEndingMarkersWithinSubtree(const Node *node, std::unordered_set<MarkerId> *starting, std::unordered_set<MarkerId> *ending);
+  Point GetNodePosition(const Node *node) const;
+  Node *BuildNode(Node *parent, Point distance_from_left_ancestor);
+  void DeleteSubtree(Node **node);
+  void DeleteSingleNode(Node *node);
+  void GetStartingAndEndingMarkersWithinSubtree(Node *node, std::unordered_set<MarkerId> *starting, std::unordered_set<MarkerId> *ending);
   void PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const std::unordered_set<MarkerId> &starting_inside_splice, const std::unordered_set<MarkerId> &ending_inside_splice);
 
-  std::default_random_engine random_engine;
-  std::uniform_int_distribution<int> random_distribution;
-   Node *root;
+  std::vector<Node *> node_stack;
+  Node *root;
+  uint32_t node_count;
   std::map<MarkerId, Node*> start_nodes_by_id;
   std::map<MarkerId, Node*> end_nodes_by_id;
-  Iterator iterator;
   std::unordered_set<MarkerId> exclusive_marker_ids;
   mutable std::unordered_map<const Node*, Point> node_position_cache;
 };

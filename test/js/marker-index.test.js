@@ -10,13 +10,16 @@ const {MarkerIndex} = fs.existsSync(path.resolve(__dirname, '..', '..', 'build',
   : require('../../build/Release/superstring')
 
 describe('MarkerIndex', () => {
-  it('maintains correct marker positions during randomized insertions and mutations', function () {
+  it.only('maintains correct marker positions during randomized insertions and mutations', function () {
     this.timeout(Infinity)
 
     let seed, seedMessage, random, markerIndex, markers, idCounter
 
     for (let i = 0; i < 1000; i++) {
+      console.log(i);
       seed = Date.now()
+      seed = 1482468753947
+      // console.log(seed);
       seedMessage = `Random Seed: ${seed}`
       random = new Random(seed)
       markerIndex = new MarkerIndex(seed)
@@ -33,28 +36,29 @@ describe('MarkerIndex', () => {
           performDelete()
         }
 
+        // console.error(markerIndex.getDotGraph())
+
         verifyRanges()
         verifyHighestPossiblePaths()
       }
 
       const verifications = [
         verifyRanges,
-        testDump,
-        testFindIntersecting,
-        testFindContaining,
-        testFindContainedIn,
-        testFindStartingIn,
-        testFindEndingIn,
-        testFindStartingAt,
-        testFindEndingAt,
+        // testDump,
+        // testFindIntersecting,
+        // testFindContaining,
+        // testFindContainedIn,
+        // testFindStartingIn,
+        // testFindEndingIn,
+        // testFindStartingAt,
+        // testFindEndingAt,
       ].sort((a, b) => random.intBetween(-1, 1))
 
       verifications.forEach(verification => verification())
     }
 
-    //  uncomment for debug output in electron (`npm run tdd`)
     function write (f) {
-      // document.write(f())
+      // console.error(`digraph {label="${f()}"}`)
     }
 
     function verifyRanges () {

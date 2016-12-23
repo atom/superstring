@@ -30,6 +30,6 @@ private:
   static void FindEndingIn(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void FindEndingAt(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void Dump(const Nan::FunctionCallbackInfo<v8::Value> &info);
-  MarkerIndexWrapper(v8::Local<v8::Number> seed);
+  static void GetDotGraph(const Nan::FunctionCallbackInfo<v8::Value> &info);
   MarkerIndex marker_index;
 };
