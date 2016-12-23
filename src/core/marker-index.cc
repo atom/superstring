@@ -395,7 +395,15 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindStartingIn(Point start, Po
 }
 
 unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindStartingAt(Point position) {
-  return FindStartingIn(position, position);
+  unordered_set<MarkerId> result;
+  if (!root) return result;
+
+  Node *node = SplayGreatestLowerBound(position, true);
+  if (node && node->distance_from_left_ancestor == position) {
+    result.insert(node->start_marker_ids.begin(), node->start_marker_ids.end());
+  }
+
+  return result;
 }
 
 unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindEndingIn(Point start, Point end) {
@@ -431,7 +439,15 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindEndingIn(Point start, Poin
 }
 
 unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindEndingAt(Point position) {
-  return FindEndingIn(position, position);
+  unordered_set<MarkerId> result;
+  if (!root) return result;
+
+  Node *node = SplayGreatestLowerBound(position, true);
+  if (node && node->distance_from_left_ancestor == position) {
+    result.insert(node->end_marker_ids.begin(), node->end_marker_ids.end());
+  }
+
+  return result;
 }
 
 unordered_map<MarkerIndex::MarkerId, Range> MarkerIndex::Dump() {
