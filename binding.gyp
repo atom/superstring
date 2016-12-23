@@ -16,6 +16,11 @@
               "src/core",
               "<!(node -e \"require('nan')\")"
             ],
+            'link_settings': {
+                'libraries': [
+                  '/usr/local/lib/libprofiler.a',
+                ]
+            }
         },
         {
             "target_name": "superstring_core",
@@ -31,12 +36,13 @@
     ],
 
     "variables": {
-        "tests": 0
+        "tests": 0,
+        "benchmarks": 0
     },
 
     "conditions": [
         # If --tests is passed to node-gyp configure, we'll build a standalone
-        # executable that runs tests on the patch.
+        # tests executable.
         ['tests != 0', {
             "targets": [{
                 "target_name": "tests",
@@ -45,6 +51,33 @@
                 "sources": [
                     "test/native/patch-test.cc",
                     "test/native/tests.cc",
+                ],
+                "include_dirs": [
+                    "vendor",
+                    "src/core",
+                ],
+                "dependencies": [
+                    "superstring_core"
+                ],
+                "conditions": [
+                    ['OS=="mac"', {
+                        "xcode_settings": {
+                            "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
+                        }
+                    }]
+                ]
+            }]
+        }],
+        # If --benchmarks is passed to node-gyp configure, we'll build a standalone
+        # benchmarks executable.
+        ['benchmarks != 0', {
+            "targets": [{
+                "target_name": "benchmarks",
+                "type": "executable",
+                "cflags_cc": ["-fexceptions"],
+                "sources": [
+                    "benchmark/native/marker-index-benchmark.cc",
+                    "benchmark/native/benchmarks.cc",
                 ],
                 "include_dirs": [
                     "vendor",
