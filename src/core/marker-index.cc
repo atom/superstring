@@ -221,7 +221,7 @@ MarkerIndex::SpliceResult MarkerIndex::Splice(Point start, Point deleted_extent,
   return invalidated;
 }
 
-Point MarkerIndex::GetStart(MarkerId id) const {
+Point MarkerIndex::GetStart(MarkerId id) {
   auto result = start_nodes_by_id.find(id);
   if (result == start_nodes_by_id.end())
     return Point();
@@ -229,7 +229,7 @@ Point MarkerIndex::GetStart(MarkerId id) const {
     return GetNodePosition(result->second);
 }
 
-Point MarkerIndex::GetEnd(MarkerId id) const {
+Point MarkerIndex::GetEnd(MarkerId id) {
   auto result = end_nodes_by_id.find(id);
   if (result == end_nodes_by_id.end())
     return Point();
@@ -237,11 +237,11 @@ Point MarkerIndex::GetEnd(MarkerId id) const {
     return GetNodePosition(result->second);
 }
 
-Range MarkerIndex::GetRange(MarkerId id) const {
+Range MarkerIndex::GetRange(MarkerId id) {
   return Range{GetStart(id), GetEnd(id)};
 }
 
-int MarkerIndex::Compare(MarkerId id1, MarkerId id2) const {
+int MarkerIndex::Compare(MarkerId id1, MarkerId id2) {
   switch (GetStart(id1).Compare(GetStart(id2))) {
     case -1:
       return -1;
@@ -395,7 +395,15 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindStartingIn(Point start, Po
 }
 
 unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindStartingAt(Point position) {
-  return FindStartingIn(position, position);
+  unordered_set<MarkerId> result;
+  if (!root) return result;
+
+  Node *node = SplayGreatestLowerBound(position, true);
+  if (node && node->left_extent == position) {
+    result.insert(node->start_marker_ids.begin(), node->start_marker_ids.end());
+  }
+
+  return result;
 }
 
 unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindEndingIn(Point start, Point end) {
@@ -431,7 +439,15 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindEndingIn(Point start, Poin
 }
 
 unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindEndingAt(Point position) {
-  return FindEndingIn(position, position);
+  unordered_set<MarkerId> result;
+  if (!root) return result;
+
+  Node *node = SplayGreatestLowerBound(position, true);
+  if (node && node->left_extent == position) {
+    result.insert(node->end_marker_ids.begin(), node->end_marker_ids.end());
+  }
+
+  return result;
 }
 
 unordered_map<MarkerIndex::MarkerId, Range> MarkerIndex::Dump() {
@@ -447,20 +463,11 @@ std::string MarkerIndex::GetDotGraph() {
   return result.str();
 }
 
-Point MarkerIndex::GetNodePosition(const Node *node) const {
+Point MarkerIndex::GetNodePosition(Node *node) {
   auto cache_entry = node_position_cache.find(node);
   if (cache_entry == node_position_cache.end()) {
-    Point position = node->left_extent;
-    const Node *current_node = node;
-    while (current_node->parent) {
-      if (current_node->parent->right == current_node) {
-        position = current_node->parent->left_extent.Traverse(position);
-      }
-
-      current_node = current_node->parent;
-    }
-    node_position_cache.insert({node, position});
-    return position;
+    SplayNode(node);
+    return node->left_extent;
   } else {
     return cache_entry->second;
   }
@@ -515,6 +522,7 @@ MarkerIndex::Node *MarkerIndex::SplayGreatestLowerBound(Point target_position, b
   Point left_ancestor_position;
   while (true) {
     Point node_position = left_ancestor_position.Traverse(node->left_extent);
+    node_position_cache.insert({node, node_position});
     if (inclusive && node_position == target_position) {
       greatest_lower_bound = node;
       break;
@@ -547,6 +555,7 @@ MarkerIndex::Node *MarkerIndex::SplayLeastUpperBound(Point target_position, bool
   Point left_ancestor_position;
   while (true) {
     Point node_position = left_ancestor_position.Traverse(node->left_extent);
+    node_position_cache.insert({node, node_position});
     if (inclusive && node_position == target_position) {
       least_upper_bound = node;
       break;

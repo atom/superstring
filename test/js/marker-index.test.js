@@ -48,8 +48,8 @@ describe('MarkerIndex', () => {
         testFindContainedIn,
         testFindStartingIn,
         testFindEndingIn,
-        // testFindStartingAt,
-        // testFindEndingAt,
+        testFindStartingAt,
+        testFindEndingAt,
       ].sort((a, b) => random.intBetween(-1, 1))
 
       verifications.forEach(verification => verification())
@@ -264,6 +264,8 @@ describe('MarkerIndex', () => {
       for (let i = 0; i < 10; i++) {
         let point = {row: random(100), column: random(100)}
 
+        write(() => `${i} testFindStartingAt ${formatPoint(point)}`)
+
         let expectedIds = new Set()
         for (let marker of markers) {
           if (compare(marker.start, point) === 0) {
@@ -282,6 +284,8 @@ describe('MarkerIndex', () => {
     function testFindEndingAt () {
       for (let i = 0; i < 10; i++) {
         let point = {row: random(100), column: random(100)}
+
+        write(() => `${i} testFindEndingAt ${formatPoint(point)}`)
 
         let expectedIds = new Set()
         for (let marker of markers) {
