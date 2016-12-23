@@ -364,6 +364,33 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindContainedIn(Point start, P
 
 unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindStartingIn(Point start, Point end) {
   unordered_set<MarkerId> result;
+  if (!root) return result;
+
+  Node *start_node = SplayGreatestLowerBound(start);
+  Node *end_node = SplayLeastUpperBound(end);
+  Node *contained_subtree {};
+
+  if (start_node) {
+    if (end_node && start_node != end_node->left) RotateNodeRight(start_node);
+    contained_subtree = start_node->right;
+  } else if (end_node) {
+    contained_subtree = end_node->left;
+  } else {
+    contained_subtree = root;
+  }
+
+  if (contained_subtree) {
+    node_stack.clear();
+    node_stack.push_back(contained_subtree);
+    while (!node_stack.empty()) {
+      Node *node = node_stack.back();
+      node_stack.pop_back();
+      if (node->left) node_stack.push_back(node->left);
+      if (node->right) node_stack.push_back(node->right);
+      result.insert(node->start_marker_ids.begin(), node->start_marker_ids.end());
+    }
+  }
+
   return result;
 }
 
@@ -373,6 +400,33 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindStartingAt(Point position)
 
 unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindEndingIn(Point start, Point end) {
   unordered_set<MarkerId> result;
+  if (!root) return result;
+
+  Node *start_node = SplayGreatestLowerBound(start);
+  Node *end_node = SplayLeastUpperBound(end);
+  Node *contained_subtree {};
+
+  if (start_node) {
+    if (end_node && start_node != end_node->left) RotateNodeRight(start_node);
+    contained_subtree = start_node->right;
+  } else if (end_node) {
+    contained_subtree = end_node->left;
+  } else {
+    contained_subtree = root;
+  }
+
+  if (contained_subtree) {
+    node_stack.clear();
+    node_stack.push_back(contained_subtree);
+    while (!node_stack.empty()) {
+      Node *node = node_stack.back();
+      node_stack.pop_back();
+      if (node->left) node_stack.push_back(node->left);
+      if (node->right) node_stack.push_back(node->right);
+      result.insert(node->end_marker_ids.begin(), node->end_marker_ids.end());
+    }
+  }
+
   return result;
 }
 
