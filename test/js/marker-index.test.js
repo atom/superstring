@@ -45,7 +45,7 @@ describe('MarkerIndex', () => {
         // testDump,
         testFindIntersecting,
         testFindContaining,
-        // testFindContainedIn,
+        testFindContainedIn,
         // testFindStartingIn,
         // testFindEndingIn,
         // testFindStartingAt,
@@ -200,6 +200,8 @@ describe('MarkerIndex', () => {
     function testFindContainedIn () {
       for (let i = 0; i < 10; i++) {
         let [start, end] = getRange()
+
+        write(() => `${i} testFindContainedIn ${formatPoint(start)}, ${formatPoint(end)}`)
 
         let expectedIds = new Set()
         for (let marker of markers) {
