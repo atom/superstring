@@ -30,13 +30,13 @@ void MarkerIndex::Node::WriteDotGraph(std::stringstream &result, Point left_ance
   result << "node_" << this << " [shape=box label=\"position: " << position;
 
   result << "\\n left: ";
-  for (auto id : left_marker_ids) result << id;
+  for (auto id : left_marker_ids) result << id << " ";
   result << "\\n end: ";
-  for (auto id : end_marker_ids) result << id;
+  for (auto id : end_marker_ids) result << id << " ";
   result << "\\n start: ";
-  for (auto id : start_marker_ids) result << id;
+  for (auto id : start_marker_ids) result << id << " ";
   result << "\\n right: ";
-  for (auto id : right_marker_ids) result << id;
+  for (auto id : right_marker_ids) result << id << " ";
   result << "\"]" << endl;
   result << "node_" << this << " -> ";
   if (left) {
@@ -124,8 +124,6 @@ MarkerIndex::SpliceResult MarkerIndex::Splice(Point start, Point deleted_extent,
   if (start_node != end_node->left) {
     RotateNodeRight(start_node);
   }
-
-  // std::cerr << GetDotGraph();
 
   unordered_set<MarkerId> starting_inside_splice;
   unordered_set<MarkerId> ending_inside_splice;
@@ -256,6 +254,39 @@ int MarkerIndex::Compare(MarkerId id1, MarkerId id2) const {
 
 unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindIntersecting(Point start, Point end) {
   unordered_set<MarkerId> result;
+  if (!root) return result;
+
+  Node *start_node = SplayGreatestLowerBound(start);
+  Node *end_node = SplayLeastUpperBound(end);
+
+  // std::cerr << GetDotGraph();
+
+  Node *contained_subtree {};
+  if (start_node) {
+    if (end_node) {
+      if (start_node != end_node->left) RotateNodeRight(start_node);
+      result.insert(start_node->right_marker_ids.begin(), start_node->right_marker_ids.end());
+    }
+    contained_subtree = start_node->right;
+  } else if (end_node) {
+    contained_subtree = end_node->left;
+  } else {
+    contained_subtree = root;
+  }
+
+  if (contained_subtree) {
+    node_stack.clear();
+    node_stack.push_back(contained_subtree);
+    while (!node_stack.empty()) {
+      Node *node = node_stack.back();
+      node_stack.pop_back();
+      if (node->left) node_stack.push_back(node->left);
+      if (node->right) node_stack.push_back(node->right);
+      result.insert(node->start_marker_ids.begin(), node->start_marker_ids.end());
+      result.insert(node->end_marker_ids.begin(), node->start_marker_ids.end());
+    }
+  }
+
   return result;
 }
 
@@ -373,6 +404,64 @@ MarkerIndex::Node *MarkerIndex::InsertNode(Point target_position, bool return_ex
 
   SplayNode(node);
   return node;
+}
+
+MarkerIndex::Node *MarkerIndex::SplayGreatestLowerBound(Point target_position) {
+  if (!root) return nullptr;
+
+  Node *greatest_lower_bound {};
+  Node *node = root;
+  Point left_ancestor_position;
+  while (true) {
+    Point node_position = left_ancestor_position.Traverse(node->distance_from_left_ancestor);
+    if (node_position < target_position) {
+      greatest_lower_bound = node;
+      if (node->right) {
+        left_ancestor_position = node_position;
+        node = node->right;
+      } else {
+        break;
+      }
+    } else if (node_position >= target_position) {
+      if (node->left) {
+        node = node->left;
+      } else {
+        break;
+      }
+    }
+  }
+
+  if (greatest_lower_bound) SplayNode(greatest_lower_bound);
+  return greatest_lower_bound;
+}
+
+MarkerIndex::Node *MarkerIndex::SplayLeastUpperBound(Point target_position) {
+  if (!root) return nullptr;
+
+  Node *least_upper_bound {};
+  Node *node = root;
+  Point left_ancestor_position;
+  while (true) {
+    Point node_position = left_ancestor_position.Traverse(node->distance_from_left_ancestor);
+    if (node_position <= target_position) {
+      if (node->right) {
+        left_ancestor_position = node_position;
+        node = node->right;
+      } else {
+        break;
+      }
+    } else if (node_position > target_position) {
+      least_upper_bound = node;
+      if (node->left) {
+        node = node->left;
+      } else {
+        break;
+      }
+    }
+  }
+
+  if (least_upper_bound) SplayNode(least_upper_bound);
+  return least_upper_bound;
 }
 
 void MarkerIndex::SplayNode(Node *node) {
