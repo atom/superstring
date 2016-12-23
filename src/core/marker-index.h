@@ -55,8 +55,8 @@ private:
   };
 
   Node *InsertNode(Point position, bool return_existing = true);
-  Node* SplayGreatestLowerBound(Point target_position);
-  Node* SplayLeastUpperBound(Point target_position);
+  Node* SplayGreatestLowerBound(Point target_position, bool inclusive = false);
+  Node* SplayLeastUpperBound(Point target_position, bool inclusive = false);
 
   void SplayNode(Node *node);
   void RotateNodeLeft(Node *pivot);

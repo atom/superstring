@@ -259,8 +259,6 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindIntersecting(Point start, 
   Node *start_node = SplayGreatestLowerBound(start);
   Node *end_node = SplayLeastUpperBound(end);
 
-  // std::cerr << GetDotGraph();
-
   Node *contained_subtree {};
   if (start_node) {
     if (end_node) {
@@ -291,22 +289,28 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindIntersecting(Point start, 
 }
 
 unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindContaining(Point start, Point end) {
-  unordered_set<MarkerId> containing_start;
-  // iterator.FindIntersecting(start, start, &containing_start);
-  // if (end == start) {
-  //   return containing_start;
-  // } else {
-  //   unordered_set<MarkerId> containing_end;
-  //   iterator.FindIntersecting(end, end, &containing_end);
-  //   unordered_set<MarkerId> containing_start_and_end;
-  //   for (MarkerId id : containing_start) {
-  //     if (containing_end.count(id) > 0) {
-  //       containing_start_and_end.insert(id);
-  //     }
-  //   }
-  //   return containing_start_and_end;
-  // }
-  return containing_start;
+  unordered_set<MarkerId> result;
+  if (!root) return result;
+
+  Node *start_node = SplayGreatestLowerBound(start, true);
+  Node *end_node = SplayLeastUpperBound(end, true);
+
+  if (start_node && end_node) {
+    if (start_node == end_node) {
+      result.insert(start_node->start_marker_ids.begin(), start_node->start_marker_ids.end());
+      result.insert(start_node->end_marker_ids.begin(), start_node->end_marker_ids.end());
+      Node *start_node = SplayGreatestLowerBound(start, false);
+      Node *end_node = SplayLeastUpperBound(end, false);
+      if (start_node && end_node) {
+        result.insert(start_node->right_marker_ids.begin(), start_node->right_marker_ids.end());
+      }
+    } else {
+      if (start_node != end_node->left) RotateNodeRight(start_node);
+      result.insert(start_node->right_marker_ids.begin(), start_node->right_marker_ids.end());
+    }
+  }
+
+  return result;
 }
 
 unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindContainedIn(Point start, Point end) {
@@ -406,7 +410,7 @@ MarkerIndex::Node *MarkerIndex::InsertNode(Point target_position, bool return_ex
   return node;
 }
 
-MarkerIndex::Node *MarkerIndex::SplayGreatestLowerBound(Point target_position) {
+MarkerIndex::Node *MarkerIndex::SplayGreatestLowerBound(Point target_position, bool inclusive) {
   if (!root) return nullptr;
 
   Node *greatest_lower_bound {};
@@ -414,7 +418,10 @@ MarkerIndex::Node *MarkerIndex::SplayGreatestLowerBound(Point target_position) {
   Point left_ancestor_position;
   while (true) {
     Point node_position = left_ancestor_position.Traverse(node->distance_from_left_ancestor);
-    if (node_position < target_position) {
+    if (inclusive && node_position == target_position) {
+      greatest_lower_bound = node;
+      break;
+    } else if (node_position < target_position) {
       greatest_lower_bound = node;
       if (node->right) {
         left_ancestor_position = node_position;
@@ -435,7 +442,7 @@ MarkerIndex::Node *MarkerIndex::SplayGreatestLowerBound(Point target_position) {
   return greatest_lower_bound;
 }
 
-MarkerIndex::Node *MarkerIndex::SplayLeastUpperBound(Point target_position) {
+MarkerIndex::Node *MarkerIndex::SplayLeastUpperBound(Point target_position, bool inclusive) {
   if (!root) return nullptr;
 
   Node *least_upper_bound {};
@@ -443,7 +450,10 @@ MarkerIndex::Node *MarkerIndex::SplayLeastUpperBound(Point target_position) {
   Point left_ancestor_position;
   while (true) {
     Point node_position = left_ancestor_position.Traverse(node->distance_from_left_ancestor);
-    if (node_position <= target_position) {
+    if (inclusive && node_position == target_position) {
+      least_upper_bound = node;
+      break;
+    } else if (node_position <= target_position) {
       if (node->right) {
         left_ancestor_position = node_position;
         node = node->right;
