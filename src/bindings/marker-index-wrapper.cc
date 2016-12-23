@@ -25,8 +25,6 @@ void MarkerIndexWrapper::Init(Local<Object> exports) {
 
   const auto &prototype_template = constructor_template->PrototypeTemplate();
 
-  prototype_template->Set(Nan::New<String>("generateRandomNumber").ToLocalChecked(),
-                          Nan::New<FunctionTemplate>(GenerateRandomNumber));
   prototype_template->Set(Nan::New<String>("insert").ToLocalChecked(), Nan::New<FunctionTemplate>(Insert));
   prototype_template->Set(Nan::New<String>("setExclusive").ToLocalChecked(), Nan::New<FunctionTemplate>(SetExclusive));
   prototype_template->Set(Nan::New<String>("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(Delete));
@@ -48,6 +46,7 @@ void MarkerIndexWrapper::Init(Local<Object> exports) {
   prototype_template->Set(Nan::New<String>("findEndingIn").ToLocalChecked(), Nan::New<FunctionTemplate>(FindEndingIn));
   prototype_template->Set(Nan::New<String>("findEndingAt").ToLocalChecked(), Nan::New<FunctionTemplate>(FindEndingAt));
   prototype_template->Set(Nan::New<String>("dump").ToLocalChecked(), Nan::New<FunctionTemplate>(Dump));
+  prototype_template->Set(Nan::New<String>("getDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(GetDotGraph));
 
   start_string.Reset(Nan::Persistent<String>(Nan::New("start").ToLocalChecked()));
   end_string.Reset(Nan::Persistent<String>(Nan::New("end").ToLocalChecked()));
@@ -60,14 +59,8 @@ void MarkerIndexWrapper::Init(Local<Object> exports) {
 }
 
 void MarkerIndexWrapper::New(const Nan::FunctionCallbackInfo<Value> &info) {
-  MarkerIndexWrapper *marker_index = new MarkerIndexWrapper(Local<Number>::Cast(info[0]));
+  MarkerIndexWrapper *marker_index = new MarkerIndexWrapper();
   marker_index->Wrap(info.This());
-}
-
-void MarkerIndexWrapper::GenerateRandomNumber(const Nan::FunctionCallbackInfo<Value> &info) {
-  MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
-  int random = wrapper->marker_index.GenerateRandomNumber();
-  info.GetReturnValue().Set(Nan::New<v8::Number>(random));
 }
 
 Local<Set> MarkerIndexWrapper::MarkerIdsToJS(const unordered_set<MarkerIndex::MarkerId> &marker_ids) {
@@ -296,5 +289,8 @@ void MarkerIndexWrapper::Dump(const Nan::FunctionCallbackInfo<Value> &info) {
   info.GetReturnValue().Set(SnapshotToJS(snapshot));
 }
 
-MarkerIndexWrapper::MarkerIndexWrapper(v8::Local<v8::Number> seed)
-    : marker_index{static_cast<unsigned>(seed->Int32Value())} {}
+void MarkerIndexWrapper::GetDotGraph(const Nan::FunctionCallbackInfo<v8::Value> &info) {
+  MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
+  std::string dot_graph = wrapper->marker_index.GetDotGraph();
+  info.GetReturnValue().Set(Nan::New(dot_graph).ToLocalChecked());
+}
