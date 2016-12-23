@@ -315,7 +315,50 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindContaining(Point start, Po
 
 unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindContainedIn(Point start, Point end) {
   unordered_set<MarkerId> result;
-  // iterator.FindContainedIn(start, end, &result);
+  if (!root) return result;
+
+  Node *start_node = SplayGreatestLowerBound(start);
+  Node *end_node = SplayLeastUpperBound(end);
+  Node *contained_subtree {};
+
+  if (start_node) {
+    if (end_node && start_node != end_node->left) RotateNodeRight(start_node);
+    contained_subtree = start_node->right;
+  } else if (end_node) {
+    contained_subtree = end_node->left;
+  } else {
+    contained_subtree = root;
+  }
+
+  if (contained_subtree) {
+    unordered_set<MarkerId> starting;
+    unordered_set<MarkerId> ending;
+    node_stack.clear();
+    node_stack.push_back(contained_subtree);
+    while (!node_stack.empty()) {
+      Node *node = node_stack.back();
+      node_stack.pop_back();
+      if (node->left) node_stack.push_back(node->left);
+      if (node->right) node_stack.push_back(node->right);
+      starting.insert(node->start_marker_ids.begin(), node->start_marker_ids.end());
+      for (auto id : node->start_marker_ids) {
+        if (ending.count(id) > 0) {
+          result.insert(id);
+        } else {
+          starting.insert(id);
+        }
+      }
+
+      for (auto id : node->end_marker_ids) {
+        if (starting.count(id) > 0) {
+          result.insert(id);
+        } else {
+          ending.insert(id);
+        }
+      }
+    }
+  }
+
   return result;
 }
 
