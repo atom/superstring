@@ -22,11 +22,11 @@ public:
   void SetExclusive(MarkerId id, bool exclusive);
   void Delete(MarkerId id);
   SpliceResult Splice(Point start, Point old_extent, Point new_extent);
-  Point GetStart(MarkerId id) const;
-  Point GetEnd(MarkerId id) const;
-  Range GetRange(MarkerId id) const;
+  Point GetStart(MarkerId id);
+  Point GetEnd(MarkerId id);
+  Range GetRange(MarkerId id);
 
-  int Compare(MarkerId id1, MarkerId id2) const;
+  int Compare(MarkerId id1, MarkerId id2);
   std::unordered_set<MarkerId> FindIntersecting(Point start, Point end);
   std::unordered_set<MarkerId> FindContaining(Point start, Point end);
   std::unordered_set<MarkerId> FindContainedIn(Point start, Point end);
@@ -61,7 +61,7 @@ private:
   void SplayNode(Node *node);
   void RotateNodeLeft(Node *pivot);
   void RotateNodeRight(Node *pivot);
-  Point GetNodePosition(const Node *node) const;
+  Point GetNodePosition(Node *node);
   Node *BuildNode(Node *parent, Point distance_from_left_ancestor);
   void DeleteSubtree(Node **node);
   void DeleteSingleNode(Node *node);
