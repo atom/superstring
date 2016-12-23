@@ -10,7 +10,7 @@ const {MarkerIndex} = fs.existsSync(path.resolve(__dirname, '..', '..', 'build',
   : require('../../build/Release/superstring')
 
 describe('MarkerIndex', () => {
-  it.only('maintains correct marker positions during randomized insertions and mutations', function () {
+  it('maintains correct marker positions during randomized insertions and mutations', function () {
     this.timeout(Infinity)
 
     let seed, seedMessage, random, markerIndex, markers, idCounter
@@ -46,8 +46,8 @@ describe('MarkerIndex', () => {
         testFindIntersecting,
         testFindContaining,
         testFindContainedIn,
-        // testFindStartingIn,
-        // testFindEndingIn,
+        testFindStartingIn,
+        testFindEndingIn,
         // testFindStartingAt,
         // testFindEndingAt,
       ].sort((a, b) => random.intBetween(-1, 1))
@@ -222,6 +222,8 @@ describe('MarkerIndex', () => {
       for (let i = 0; i < 10; i++) {
         let [start, end] = getRange()
 
+        write(() => `${i} testFindStartingIn ${formatPoint(start)}, ${formatPoint(end)}`)
+
         let expectedIds = new Set()
         for (let marker of markers) {
           if (compare(start, marker.start) <= 0 && compare(marker.start, end) <= 0) {
@@ -240,6 +242,8 @@ describe('MarkerIndex', () => {
     function testFindEndingIn () {
       for (let i = 0; i < 10; i++) {
         let [start, end] = getRange()
+
+        write(() => `${i} testFindEndingIn ${formatPoint(start)}, ${formatPoint(end)}`)
 
         let expectedIds = new Set()
         for (let marker of markers) {
