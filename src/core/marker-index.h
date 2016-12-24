@@ -18,6 +18,7 @@ public:
     std::unordered_set<MarkerId> surround;
   };
 
+  MarkerIndex();
   void Insert(MarkerId id, Point start, Point end);
   void SetExclusive(MarkerId id, bool exclusive);
   void Delete(MarkerId id);

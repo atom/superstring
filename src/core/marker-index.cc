@@ -57,6 +57,8 @@ void MarkerIndex::Node::WriteDotGraph(std::stringstream &result, Point left_ance
   }
 }
 
+MarkerIndex::MarkerIndex() : root{nullptr} {}
+
 void MarkerIndex::Insert(MarkerId id, Point start, Point end) {
   Node *start_node = InsertNode(start);
   Node *end_node = InsertNode(end);
