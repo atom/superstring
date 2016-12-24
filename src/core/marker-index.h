@@ -5,6 +5,7 @@
 #include <random>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 #include "point.h"
 #include "range.h"
 
@@ -16,6 +17,28 @@ public:
     std::unordered_set<MarkerId> inside;
     std::unordered_set<MarkerId> overlap;
     std::unordered_set<MarkerId> surround;
+  };
+
+  class MarkerIdSet {
+    std::vector<MarkerId> marker_ids;
+    MarkerIdSet(std::vector<MarkerId> &&markers);
+
+  public:
+    MarkerIdSet();
+    using iterator = std::vector<MarkerId>::iterator;
+    using const_iterator = std::vector<MarkerId>::const_iterator;
+    MarkerIdSet operator +(const MarkerIdSet &) const;
+    MarkerIdSet operator +=(const MarkerIdSet &) const;
+    MarkerIdSet operator -(const MarkerIdSet &) const;
+    MarkerIdSet operator -=(const MarkerIdSet &) const;
+    void Insert(MarkerId);
+    void Erase(MarkerId);
+    bool Has(MarkerId);
+    std::vector<MarkerId>::size_type Size();
+    iterator begin();
+    iterator end();
+    const_iterator begin() const;
+    const_iterator end() const;
   };
 
   MarkerIndex();
@@ -45,14 +68,14 @@ private:
     Node *left;
     Node *right;
     Point distance_from_left_ancestor;
-    std::unordered_set<MarkerId> left_marker_ids;
-    std::unordered_set<MarkerId> right_marker_ids;
-    std::unordered_set<MarkerId> start_marker_ids;
-    std::unordered_set<MarkerId> end_marker_ids;
+    MarkerIdSet markers_to_left_ancestor;
+    MarkerIdSet markers_to_right_ancestor;
+    MarkerIdSet starting_markers;
+    MarkerIdSet ending_markers;
 
     Node(Node *parent, Point distance_from_left_ancestor);
     bool IsMarkerEndpoint();
-    void WriteDotGraph(std::stringstream &result, Point left_ancestor_position);
+    void WriteDotGraph(std::stringstream &result, Point left_ancestor_position) const;
   };
 
   Node *InsertNode(Point position, bool return_existing = true);
