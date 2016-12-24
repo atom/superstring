@@ -6,6 +6,8 @@
 struct Range {
   Point start;
   Point end;
+
+  Range(Point start, Point end);
 };
 
 #endif // RANGE_H_

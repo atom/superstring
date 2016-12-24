@@ -17,6 +17,8 @@ Point::Point() : Point(0, 0) {}
 
 Point::Point(unsigned row, unsigned column) : row {row}, column {column} {}
 
+Point::Point(const Point &other) : row{other.row}, column{other.column} {}
+
 int Point::Compare(const Point &other) const {
   if (row < other.row) return -1;
   if (row > other.row) return 1;
