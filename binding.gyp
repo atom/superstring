@@ -28,6 +28,7 @@
             "sources": [
                 "src/core/patch.cc",
                 "src/core/point.cc",
+                "src/core/range.cc",
                 "src/core/text.cc",
                 "src/core/marker-index.cc",
                 "src/core/buffer-offset-index.cc"

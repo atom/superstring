@@ -13,6 +13,7 @@ struct Point {
 
   Point();
   Point(unsigned row, unsigned column);
+  Point(const Point &);
 
   int Compare(const Point &other) const;
   bool IsZero() const;
