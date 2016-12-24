@@ -482,7 +482,6 @@ MarkerIndex::Node *MarkerIndex::InsertNode(Point target_position, bool return_ex
   }
 
   Node *node = root;
-  node_stack.clear();
   Point left_ancestor_position = Point::Zero();
 
   while (true) {
@@ -490,7 +489,6 @@ MarkerIndex::Node *MarkerIndex::InsertNode(Point target_position, bool return_ex
     if (position == target_position && return_existing) {
       break;
     } else {
-      node_stack.push_back(node);
       if (position <= target_position) {
         if (node->right) {
           left_ancestor_position = position;
