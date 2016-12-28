@@ -6,7 +6,7 @@ template <typename T> class optional {
   bool is_some;
 
 public:
-  optional(T value) : value{value}, is_some{true} {}
+  optional(const T &value) : value{value}, is_some{true} {}
   optional() : value{T()}, is_some{false} {}
 
 
