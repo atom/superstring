@@ -59,7 +59,7 @@ class HunkWrapper : public Nan::ObjectWrap {
     hunk_wrapper_constructor.Reset(constructor_template->GetFunction());
   }
 
-  static Local<Value> FromHunk(Hunk hunk) {
+  static Local<Value> FromHunk(Patch::Hunk hunk) {
     Local<Object> result;
     if (Nan::NewInstance(Nan::New(hunk_wrapper_constructor)).ToLocal(&result)) {
       (new HunkWrapper(hunk))->Wrap(result);
@@ -76,48 +76,48 @@ class HunkWrapper : public Nan::ObjectWrap {
   }
 
  private:
-  HunkWrapper(Hunk hunk) : hunk(hunk) {}
+  HunkWrapper(Patch::Hunk hunk) : hunk(hunk) {}
 
   static void New(const Nan::FunctionCallbackInfo<Value> &info) {}
 
   static void GetOldStart(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.old_start));
   }
 
   static void GetNewStart(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.new_start));
   }
 
   static void GetOldEnd(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.old_end));
   }
 
   static void GetNewEnd(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.new_end));
   }
 
   static void GetOldExtent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.old_end.Traversal(hunk.old_start)));
   }
 
   static void GetNewExtent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.new_end.Traversal(hunk.new_start)));
   }
 
   static void ToString(const Nan::FunctionCallbackInfo<Value> &info) {
-    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     std::stringstream result;
     result << hunk;
     info.GetReturnValue().Set(Nan::New<String>(result.str()).ToLocalChecked());
   }
 
-  Hunk hunk;
+  Patch::Hunk hunk;
 };
 
 void PatchWrapper::Init(Local<Object> exports) {
@@ -225,7 +225,7 @@ void PatchWrapper::GetHunks(const Nan::FunctionCallbackInfo<Value> &info) {
   Local<Array> js_result = Nan::New<Array>();
 
   size_t i = 0;
-  for (Hunk hunk : patch.GetHunks()) {
+  for (auto hunk : patch.GetHunks()) {
     js_result->Set(i++, HunkWrapper::FromHunk(hunk));
   }
 
@@ -242,7 +242,7 @@ void PatchWrapper::GetHunksInOldRange(const Nan::FunctionCallbackInfo<Value> &in
     Local<Array> js_result = Nan::New<Array>();
 
     size_t i = 0;
-    for (Hunk hunk : patch.GetHunksInOldRange(start.FromJust(), end.FromJust())) {
+    for (auto hunk : patch.GetHunksInOldRange(start.FromJust(), end.FromJust())) {
       js_result->Set(i++, HunkWrapper::FromHunk(hunk));
     }
 
@@ -260,7 +260,7 @@ void PatchWrapper::GetHunksInNewRange(const Nan::FunctionCallbackInfo<Value> &in
     Local<Array> js_result = Nan::New<Array>();
 
     size_t i = 0;
-    for (Hunk hunk : patch.GetHunksInNewRange(start.FromJust(), end.FromJust())) {
+    for (auto hunk : patch.GetHunksInNewRange(start.FromJust(), end.FromJust())) {
       js_result->Set(i++, HunkWrapper::FromHunk(hunk));
     }
 

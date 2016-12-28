@@ -16,6 +16,8 @@
 using std::move;
 using std::vector;
 using std::unique_ptr;
+using std::ostream;
+typedef Patch::Hunk Hunk;
 
 struct Patch::Node {
   Node *left;
@@ -1320,4 +1322,10 @@ Patch::Patch(const vector<uint8_t> &input)
       return;
     }
   }
+}
+
+ostream &operator<<(ostream &stream, const Patch::Hunk &hunk) {
+  return stream <<
+    "{Hunk old-range: (" << hunk.old_start << " - " << hunk.old_end << ")" <<
+    ", new-range: (" << hunk.new_start << " - " << hunk.new_end << ")}";
 }

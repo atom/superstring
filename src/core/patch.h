@@ -1,9 +1,9 @@
-#include "hunk.h"
 #include "optional.h"
 #include "point.h"
 #include "text.h"
 #include <memory>
 #include <vector>
+#include <ostream>
 
 class Patch {
   struct Node;
@@ -19,6 +19,15 @@ class Patch {
   uint32_t hunk_count;
 
 public:
+  struct Hunk {
+    Point old_start;
+    Point old_end;
+    Point new_start;
+    Point new_end;
+    Text *old_text;
+    Text *new_text;
+  };
+
   Patch();
   Patch(bool merges_adjacent_hunks);
   Patch(const std::vector<uint8_t> &);
@@ -72,3 +81,5 @@ private:
   friend void GetNodeFromBuffer(const uint8_t **data, const uint8_t *end, Node *node);
   friend void AppendNodeToBuffer(std::vector<uint8_t> *output, const Node &node);
 };
+
+std::ostream &operator<<(std::ostream &, const Patch::Hunk &);

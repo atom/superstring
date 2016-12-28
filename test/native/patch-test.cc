@@ -1,5 +1,7 @@
 #include "test-helpers.h"
 
+typedef Patch::Hunk Hunk;
+
 TEST_CASE("Records simple non-overlapping splices") {
   Patch patch;
 
