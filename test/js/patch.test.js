@@ -270,11 +270,16 @@ describe('Patch', function () {
           )
         }
 
-        let blob = Buffer.from(patch.serialize().toString('base64'), 'base64')
-        const patchCopy = Patch.deserialize(blob)
-        assert.deepEqual(patchCopy.getHunks(), patch.getHunks())
         let oldPoint = originalDocument.buildRandomPoint()
-        assert.deepEqual(patchCopy.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint))
+
+        let blob = Buffer.from(patch.serialize().toString('base64'), 'base64')
+        const patchCopy1 = Patch.deserialize(blob)
+        assert.deepEqual(patchCopy1.getHunks(), patch.getHunks())
+        assert.deepEqual(patchCopy1.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint))
+
+        const patchCopy2 = patch.copy()
+        assert.deepEqual(patchCopy2.getHunks(), patch.getHunks())
+        assert.deepEqual(patchCopy2.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint))
       }
     }
   })
