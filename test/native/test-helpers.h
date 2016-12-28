@@ -3,6 +3,7 @@
 
 #include "patch.h"
 #include <catch.hpp>
+#include <cstring>
 #include <memory>
 #include <ostream>
 #include <vector>
