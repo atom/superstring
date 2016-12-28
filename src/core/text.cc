@@ -1,4 +1,5 @@
 #include "text.h"
+#include <limits.h>
 #include <vector>
 #include <memory>
 
