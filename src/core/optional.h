@@ -6,8 +6,8 @@ template <typename T> class optional {
   bool is_some;
 
 public:
-  optional(T value) : value{value}, is_some{true} {}
-  optional() : value{T()}, is_some{false} {}
+  optional(const T &value) : value(value), is_some(true) {}
+  optional() : value(T()), is_some(false) {}
 
 
   const T &operator*() const { return value; }
