@@ -42,6 +42,9 @@
                 "target_name": "tests",
                 "type": "executable",
                 "cflags_cc": ["-fexceptions"],
+                "defines": [
+                    "CATCH_CONFIG_CPP11_NO_IS_ENUM"
+                ],
                 "sources": [
                     "test/native/patch-test.cc",
                     "test/native/tests.cc",
