@@ -10,6 +10,7 @@ class PatchWrapper : public Nan::ObjectWrap {
   static void New(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void Splice(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void SpliceOld(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void Copy(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void Invert(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void GetHunks(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void GetHunksInOldRange(const Nan::FunctionCallbackInfo<v8::Value> &info);

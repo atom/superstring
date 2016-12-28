@@ -44,6 +44,19 @@ struct Patch::Node {
     }
   }
 
+  Node *Copy() {
+    return new Node{
+        left,
+        right,
+        old_distance_from_left_ancestor,
+        new_distance_from_left_ancestor,
+        old_extent,
+        new_extent,
+        old_text ? unique_ptr<Text>(new Text(*old_text)) : nullptr,
+        new_text ? unique_ptr<Text>(new Text(*new_text)) : nullptr,
+    };
+  }
+
   Node *Invert() {
     return new Node{
         left,
@@ -52,8 +65,8 @@ struct Patch::Node {
         old_distance_from_left_ancestor,
         new_extent,
         old_extent,
-        unique_ptr<Text>(new Text(*new_text)),
-        unique_ptr<Text>(new Text(*old_text)),
+        new_text ? unique_ptr<Text>(new Text(*new_text)) : nullptr,
+        old_text ? unique_ptr<Text>(new Text(*old_text)) : nullptr,
     };
   }
 
@@ -851,6 +864,30 @@ bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent,
   }
 
   return true;
+}
+
+Patch Patch::Copy() {
+  Node *new_root = nullptr;
+  if (root) {
+    new_root = root->Copy();
+    node_stack.clear();
+    node_stack.push_back(new_root);
+
+    while (!node_stack.empty()) {
+      Node *node = node_stack.back();
+      node_stack.pop_back();
+      if (node->left) {
+        node->left = node->left->Copy();
+        node_stack.push_back(node->left);
+      }
+      if (node->right) {
+        node->right = node->right->Copy();
+        node_stack.push_back(node->right);
+      }
+    }
+  }
+
+  return Patch{new_root, hunk_count, merges_adjacent_hunks};
 }
 
 Patch Patch::Invert() {

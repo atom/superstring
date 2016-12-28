@@ -38,6 +38,7 @@ public:
   bool Splice(Point start, Point deletion_extent, Point insertion_extent,
               std::unique_ptr<Text> old_text, std::unique_ptr<Text> new_text);
   bool SpliceOld(Point start, Point deletion_extent, Point insertion_extent);
+  Patch Copy();
   Patch Invert();
   std::vector<Hunk> GetHunks() const;
   std::vector<Hunk> GetHunksInNewRange(Point start, Point end,
