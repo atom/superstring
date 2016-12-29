@@ -10,7 +10,7 @@ private:
   static void New(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void GenerateRandomNumber(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static bool IsFinite(v8::Local<v8::Integer> number);
-  static v8::Local<v8::Set> MarkerIdsToJS(const std::unordered_set<MarkerIndex::MarkerId> &marker_ids);
+  static v8::Local<v8::Set> MarkerIdsToJS(const MarkerIndex::MarkerIdSet &marker_ids);
   static v8::Local<v8::Object> SnapshotToJS(const std::unordered_map<MarkerIndex::MarkerId, Range> &snapshot);
   static Nan::Maybe<MarkerIndex::MarkerId> MarkerIdFromJS(Nan::MaybeLocal<v8::Integer> maybe_id);
   static Nan::Maybe<bool> BoolFromJS(Nan::MaybeLocal<v8::Boolean> maybe_boolean);
