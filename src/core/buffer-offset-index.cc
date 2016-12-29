@@ -91,7 +91,7 @@ void BufferOffsetIndex::Splice(unsigned start_row, unsigned deleted_lines_count,
     end_node->compute_subtree_extents();
   }
 
-  auto rng = std::uniform_int_distribution<>(1u, UINT32_MAX);
+  std::uniform_int_distribution<unsigned> rng(1u, UINT_MAX);
 
   if (start_node) {
     start_node->priority = rng(rng_engine);
@@ -198,8 +198,8 @@ LineNode *BufferOffsetIndex::FindAndBubbleNodeUpToRoot(unsigned row) {
 
 void BufferOffsetIndex::BubbleNodeDown(LineNode * root, LineNode * root_parent) {
   while (true) {
-    auto left_child_priority = root->left ? root->left->priority : UINT32_MAX;
-    auto right_child_priority = root->right ? root->right->priority : UINT32_MAX;
+    auto left_child_priority = root->left ? root->left->priority : UINT_MAX;
+    auto right_child_priority = root->right ? root->right->priority : UINT_MAX;
     if (left_child_priority < right_child_priority && left_child_priority < root->priority) {
       auto pivot = root->left;
       RotateNodeRight(pivot, root, root_parent);
@@ -254,7 +254,7 @@ LineNode *BufferOffsetIndex::BuildLineNodeTreeFromLineLengths(std::vector<unsign
   if (start == end) {
     return nullptr;
   } else {
-    auto rng = std::uniform_int_distribution<>(min_priority, UINT32_MAX);
+    std::uniform_int_distribution<unsigned> rng(min_priority, UINT_MAX);
     unsigned priority = rng(rng_engine) - 1;
     auto middle = (start + end) / 2;
     auto line_node = new LineNode {
