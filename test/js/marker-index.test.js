@@ -1,13 +1,7 @@
-'use strict'
-
-const fs = require('fs')
-const path = require('path')
 const Random = require('random-seed')
 const {traverse, traversalDistance, compare, isZero, max, format: formatPoint} = require('./helpers/point-helpers')
 const {assert} = require('chai')
-const {MarkerIndex} = fs.existsSync(path.resolve(__dirname, '..', '..', 'build', 'Debug'))
-  ? require('../../build/Debug/superstring')
-  : require('../../build/Release/superstring')
+const {MarkerIndex} = require('../..')
 
 describe('MarkerIndex', () => {
   it('maintains correct marker positions during randomized insertions and mutations', function () {

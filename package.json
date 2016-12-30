@@ -2,7 +2,6 @@
   "name": "superstring",
   "version": "1.0.3",
   "description": "A data structure to efficiently represent the results of applying patches.",
-  "main": "./build/Release/superstring",
   "scripts": {
     "test-native": "script/test-native.js",
     "test": "mocha test/js/*.js",

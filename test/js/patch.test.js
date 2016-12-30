@@ -1,7 +1,5 @@
 require('segfault-handler').registerHandler()
 
-const fs = require('fs')
-const path = require('path')
 const Random = require('random-seed')
 const {assert} = require('chai')
 const TestDocument = require('./helpers/test-document')
@@ -9,9 +7,7 @@ const {
   traverse, traversalDistance, compare, isZero, format: formatPoint
 } = require('./helpers/point-helpers')
 
-const {Patch} = fs.existsSync(path.resolve(__dirname, '..', '..', 'build', 'Debug'))
-  ? require('../../build/Debug/superstring')
-  : require('../../build/Release/superstring')
+const {Patch} = require('../..')
 
 describe('Patch', function () {
   it('honors the mergeAdjacentHunks option set to false', function () {

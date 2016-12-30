@@ -1,7 +1,7 @@
 'use strict';
 
 const Random = require('random-seed')
-const {MarkerIndex} = require('../build/Release/superstring')
+const {MarkerIndex} = require('..')
 const {traverse, traversalDistance, compare} = require('../test/js/helpers/point-helpers')
 
 let random = new Random(1)
