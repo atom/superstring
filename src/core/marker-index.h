@@ -1,7 +1,6 @@
 #ifndef MARKER_INDEX_H_
 #define MARKER_INDEX_H_
 
-#include <map>
 #include <random>
 #include <unordered_map>
 #include "flat_set.h"
@@ -106,9 +105,9 @@ private:
 
   std::default_random_engine random_engine;
   std::uniform_int_distribution<int> random_distribution;
-   Node *root;
-  std::map<MarkerId, Node*> start_nodes_by_id;
-  std::map<MarkerId, Node*> end_nodes_by_id;
+  Node *root;
+  std::unordered_map<MarkerId, Node*> start_nodes_by_id;
+  std::unordered_map<MarkerId, Node*> end_nodes_by_id;
   Iterator iterator;
   flat_set<MarkerId> exclusive_marker_ids;
   mutable std::unordered_map<const Node*, Point> node_position_cache;
