@@ -171,11 +171,11 @@ void PatchWrapper::New(const Nan::FunctionCallbackInfo<Value> &info) {
 void PatchWrapper::Splice(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
-  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
-  Nan::Maybe<Point> deletion_extent = PointWrapper::PointFromJS(Nan::To<Object>(info[1]));
-  Nan::Maybe<Point> insertion_extent = PointWrapper::PointFromJS(Nan::To<Object>(info[2]));
+  optional<Point> start = PointWrapper::PointFromJS(info[0]);
+  optional<Point> deletion_extent = PointWrapper::PointFromJS(info[1]);
+  optional<Point> insertion_extent = PointWrapper::PointFromJS(info[2]);
 
-  if (start.IsJust() && deletion_extent.IsJust() && insertion_extent.IsJust()) {
+  if (start && deletion_extent && insertion_extent) {
     unique_ptr<Text> deleted_text;
     unique_ptr<Text> inserted_text;
 
@@ -189,7 +189,7 @@ void PatchWrapper::Splice(const Nan::FunctionCallbackInfo<Value> &info) {
       if (!inserted_text) return;
     }
 
-    if (!patch.Splice(start.FromJust(), deletion_extent.FromJust(), insertion_extent.FromJust(), move(deleted_text),
+    if (!patch.Splice(*start, *deletion_extent, *insertion_extent, move(deleted_text),
                       move(inserted_text))) {
       Nan::ThrowError("Can't splice into a frozen patch");
     }
@@ -199,12 +199,12 @@ void PatchWrapper::Splice(const Nan::FunctionCallbackInfo<Value> &info) {
 void PatchWrapper::SpliceOld(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
-  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
-  Nan::Maybe<Point> deletion_extent = PointWrapper::PointFromJS(Nan::To<Object>(info[1]));
-  Nan::Maybe<Point> insertion_extent = PointWrapper::PointFromJS(Nan::To<Object>(info[2]));
+  optional<Point> start = PointWrapper::PointFromJS(info[0]);
+  optional<Point> deletion_extent = PointWrapper::PointFromJS(info[1]);
+  optional<Point> insertion_extent = PointWrapper::PointFromJS(info[2]);
 
-  if (start.IsJust() && deletion_extent.IsJust() && insertion_extent.IsJust()) {
-    if (!patch.SpliceOld(start.FromJust(), deletion_extent.FromJust(), insertion_extent.FromJust())) {
+  if (start && deletion_extent && insertion_extent) {
+    if (!patch.SpliceOld(*start, *deletion_extent, *insertion_extent)) {
       Nan::ThrowError("Can't spliceOld into a frozen patch");
     }
   }
@@ -246,14 +246,14 @@ void PatchWrapper::GetHunks(const Nan::FunctionCallbackInfo<Value> &info) {
 void PatchWrapper::GetHunksInOldRange(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
-  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
-  Nan::Maybe<Point> end = PointWrapper::PointFromJS(Nan::To<Object>(info[1]));
+  optional<Point> start = PointWrapper::PointFromJS(info[0]);
+  optional<Point> end = PointWrapper::PointFromJS(info[1]);
 
-  if (start.IsJust() && end.IsJust()) {
+  if (start && end) {
     Local<Array> js_result = Nan::New<Array>();
 
     size_t i = 0;
-    for (auto hunk : patch.GetHunksInOldRange(start.FromJust(), end.FromJust())) {
+    for (auto hunk : patch.GetHunksInOldRange(*start, *end)) {
       js_result->Set(i++, HunkWrapper::FromHunk(hunk));
     }
 
@@ -264,14 +264,14 @@ void PatchWrapper::GetHunksInOldRange(const Nan::FunctionCallbackInfo<Value> &in
 void PatchWrapper::GetHunksInNewRange(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
-  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
-  Nan::Maybe<Point> end = PointWrapper::PointFromJS(Nan::To<Object>(info[1]));
+  optional<Point> start = PointWrapper::PointFromJS(info[0]);
+  optional<Point> end = PointWrapper::PointFromJS(info[1]);
 
-  if (start.IsJust() && end.IsJust()) {
+  if (start && end) {
     Local<Array> js_result = Nan::New<Array>();
 
     size_t i = 0;
-    for (auto hunk : patch.GetHunksInNewRange(start.FromJust(), end.FromJust())) {
+    for (auto hunk : patch.GetHunksInNewRange(*start, *end)) {
       js_result->Set(i++, HunkWrapper::FromHunk(hunk));
     }
 
@@ -281,9 +281,9 @@ void PatchWrapper::GetHunksInNewRange(const Nan::FunctionCallbackInfo<Value> &in
 
 void PatchWrapper::HunkForOldPosition(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
-  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
-  if (start.IsJust()) {
-    auto hunk = patch.HunkForOldPosition(start.FromJust());
+  optional<Point> start = PointWrapper::PointFromJS(info[0]);
+  if (start) {
+    auto hunk = patch.HunkForOldPosition(*start);
     if (hunk) {
       info.GetReturnValue().Set(HunkWrapper::FromHunk(*hunk));
     } else {
@@ -294,9 +294,9 @@ void PatchWrapper::HunkForOldPosition(const Nan::FunctionCallbackInfo<Value> &in
 
 void PatchWrapper::HunkForNewPosition(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
-  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
-  if (start.IsJust()) {
-    auto hunk = patch.HunkForNewPosition(start.FromJust());
+  optional<Point> start = PointWrapper::PointFromJS(info[0]);
+  if (start) {
+    auto hunk = patch.HunkForNewPosition(*start);
     if (hunk) {
       info.GetReturnValue().Set(HunkWrapper::FromHunk(*hunk));
     } else {
