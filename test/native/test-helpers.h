@@ -3,6 +3,7 @@
 
 #include "patch.h"
 #include <catch.hpp>
+#include <cstring>
 #include <memory>
 #include <ostream>
 #include <vector>
@@ -19,7 +20,7 @@ bool text_eq(const Text *left, const Text *right) {
   return *left == *right;
 }
 
-bool operator==(const Hunk &left, const Hunk &right) {
+bool operator==(const Patch::Hunk &left, const Patch::Hunk &right) {
   return left.old_start == right.old_start &&
          left.new_start == right.new_start && left.old_end == right.old_end &&
          left.new_end == right.new_end &&

@@ -1,10 +1,12 @@
 #include "text.h"
+#include <limits.h>
 #include <vector>
 #include <memory>
 
 using std::move;
 using std::vector;
 using std::unique_ptr;
+using std::ostream;
 
 TextSlice::TextSlice(Text &text) : text{&text}, start_index{0}, end_index{text.size()} {}
 
@@ -96,4 +98,21 @@ size_t TextSlice::CharacterIndexForPosition(Point target) {
   }
 
   return iter - begin;
+}
+
+ostream &operator<<(ostream &stream, const Text *text) {
+  if (text) {
+    stream << "'";
+    for (uint16_t character : *text) {
+      if (character < CHAR_MAX) {
+        stream << (char)character;
+      } else {
+        stream << "\\u" << character;
+      }
+    }
+    stream << "'";
+    return stream;
+  } else {
+    return stream << "null";
+  }
 }

@@ -59,7 +59,7 @@ class HunkWrapper : public Nan::ObjectWrap {
     hunk_wrapper_constructor.Reset(constructor_template->GetFunction());
   }
 
-  static Local<Value> FromHunk(Hunk hunk) {
+  static Local<Value> FromHunk(Patch::Hunk hunk) {
     Local<Object> result;
     if (Nan::NewInstance(Nan::New(hunk_wrapper_constructor)).ToLocal(&result)) {
       (new HunkWrapper(hunk))->Wrap(result);
@@ -76,48 +76,48 @@ class HunkWrapper : public Nan::ObjectWrap {
   }
 
  private:
-  HunkWrapper(Hunk hunk) : hunk(hunk) {}
+  HunkWrapper(Patch::Hunk hunk) : hunk(hunk) {}
 
   static void New(const Nan::FunctionCallbackInfo<Value> &info) {}
 
   static void GetOldStart(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.old_start));
   }
 
   static void GetNewStart(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.new_start));
   }
 
   static void GetOldEnd(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.old_end));
   }
 
   static void GetNewEnd(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.new_end));
   }
 
   static void GetOldExtent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.old_end.Traversal(hunk.old_start)));
   }
 
   static void GetNewExtent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.new_end.Traversal(hunk.new_start)));
   }
 
   static void ToString(const Nan::FunctionCallbackInfo<Value> &info) {
-    Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     std::stringstream result;
     result << hunk;
     info.GetReturnValue().Set(Nan::New<String>(result.str()).ToLocalChecked());
   }
 
-  Hunk hunk;
+  Patch::Hunk hunk;
 };
 
 void PatchWrapper::Init(Local<Object> exports) {
@@ -131,6 +131,7 @@ void PatchWrapper::Init(Local<Object> exports) {
   const auto &prototype_template = constructor_template_local->PrototypeTemplate();
   prototype_template->Set(Nan::New("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(Splice));
   prototype_template->Set(Nan::New("spliceOld").ToLocalChecked(), Nan::New<FunctionTemplate>(SpliceOld));
+  prototype_template->Set(Nan::New("copy").ToLocalChecked(), Nan::New<FunctionTemplate>(Copy));
   prototype_template->Set(Nan::New("invert").ToLocalChecked(), Nan::New<FunctionTemplate>(Invert));
   prototype_template->Set(Nan::New("getHunks").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunks));
   prototype_template->Set(Nan::New("getHunksInOldRange").ToLocalChecked(),
@@ -170,11 +171,11 @@ void PatchWrapper::New(const Nan::FunctionCallbackInfo<Value> &info) {
 void PatchWrapper::Splice(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
-  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
-  Nan::Maybe<Point> deletion_extent = PointWrapper::PointFromJS(Nan::To<Object>(info[1]));
-  Nan::Maybe<Point> insertion_extent = PointWrapper::PointFromJS(Nan::To<Object>(info[2]));
+  optional<Point> start = PointWrapper::PointFromJS(info[0]);
+  optional<Point> deletion_extent = PointWrapper::PointFromJS(info[1]);
+  optional<Point> insertion_extent = PointWrapper::PointFromJS(info[2]);
 
-  if (start.IsJust() && deletion_extent.IsJust() && insertion_extent.IsJust()) {
+  if (start && deletion_extent && insertion_extent) {
     unique_ptr<Text> deleted_text;
     unique_ptr<Text> inserted_text;
 
@@ -188,7 +189,7 @@ void PatchWrapper::Splice(const Nan::FunctionCallbackInfo<Value> &info) {
       if (!inserted_text) return;
     }
 
-    if (!patch.Splice(start.FromJust(), deletion_extent.FromJust(), insertion_extent.FromJust(), move(deleted_text),
+    if (!patch.Splice(*start, *deletion_extent, *insertion_extent, move(deleted_text),
                       move(inserted_text))) {
       Nan::ThrowError("Can't splice into a frozen patch");
     }
@@ -198,14 +199,24 @@ void PatchWrapper::Splice(const Nan::FunctionCallbackInfo<Value> &info) {
 void PatchWrapper::SpliceOld(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
-  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
-  Nan::Maybe<Point> deletion_extent = PointWrapper::PointFromJS(Nan::To<Object>(info[1]));
-  Nan::Maybe<Point> insertion_extent = PointWrapper::PointFromJS(Nan::To<Object>(info[2]));
+  optional<Point> start = PointWrapper::PointFromJS(info[0]);
+  optional<Point> deletion_extent = PointWrapper::PointFromJS(info[1]);
+  optional<Point> insertion_extent = PointWrapper::PointFromJS(info[2]);
 
-  if (start.IsJust() && deletion_extent.IsJust() && insertion_extent.IsJust()) {
-    if (!patch.SpliceOld(start.FromJust(), deletion_extent.FromJust(), insertion_extent.FromJust())) {
+  if (start && deletion_extent && insertion_extent) {
+    if (!patch.SpliceOld(*start, *deletion_extent, *insertion_extent)) {
       Nan::ThrowError("Can't spliceOld into a frozen patch");
     }
+  }
+}
+
+void PatchWrapper::Copy(const Nan::FunctionCallbackInfo<Value> &info) {
+  Local<Object> result;
+  if (Nan::NewInstance(Nan::New(patch_wrapper_constructor)).ToLocal(&result)) {
+    Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
+    auto wrapper = new PatchWrapper{patch.Copy()};
+    wrapper->Wrap(result);
+    info.GetReturnValue().Set(result);
   }
 }
 
@@ -225,7 +236,7 @@ void PatchWrapper::GetHunks(const Nan::FunctionCallbackInfo<Value> &info) {
   Local<Array> js_result = Nan::New<Array>();
 
   size_t i = 0;
-  for (Hunk hunk : patch.GetHunks()) {
+  for (auto hunk : patch.GetHunks()) {
     js_result->Set(i++, HunkWrapper::FromHunk(hunk));
   }
 
@@ -235,14 +246,14 @@ void PatchWrapper::GetHunks(const Nan::FunctionCallbackInfo<Value> &info) {
 void PatchWrapper::GetHunksInOldRange(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
-  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
-  Nan::Maybe<Point> end = PointWrapper::PointFromJS(Nan::To<Object>(info[1]));
+  optional<Point> start = PointWrapper::PointFromJS(info[0]);
+  optional<Point> end = PointWrapper::PointFromJS(info[1]);
 
-  if (start.IsJust() && end.IsJust()) {
+  if (start && end) {
     Local<Array> js_result = Nan::New<Array>();
 
     size_t i = 0;
-    for (Hunk hunk : patch.GetHunksInOldRange(start.FromJust(), end.FromJust())) {
+    for (auto hunk : patch.GetHunksInOldRange(*start, *end)) {
       js_result->Set(i++, HunkWrapper::FromHunk(hunk));
     }
 
@@ -253,14 +264,14 @@ void PatchWrapper::GetHunksInOldRange(const Nan::FunctionCallbackInfo<Value> &in
 void PatchWrapper::GetHunksInNewRange(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
-  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
-  Nan::Maybe<Point> end = PointWrapper::PointFromJS(Nan::To<Object>(info[1]));
+  optional<Point> start = PointWrapper::PointFromJS(info[0]);
+  optional<Point> end = PointWrapper::PointFromJS(info[1]);
 
-  if (start.IsJust() && end.IsJust()) {
+  if (start && end) {
     Local<Array> js_result = Nan::New<Array>();
 
     size_t i = 0;
-    for (Hunk hunk : patch.GetHunksInNewRange(start.FromJust(), end.FromJust())) {
+    for (auto hunk : patch.GetHunksInNewRange(*start, *end)) {
       js_result->Set(i++, HunkWrapper::FromHunk(hunk));
     }
 
@@ -270,9 +281,9 @@ void PatchWrapper::GetHunksInNewRange(const Nan::FunctionCallbackInfo<Value> &in
 
 void PatchWrapper::HunkForOldPosition(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
-  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
-  if (start.IsJust()) {
-    auto hunk = patch.HunkForOldPosition(start.FromJust());
+  optional<Point> start = PointWrapper::PointFromJS(info[0]);
+  if (start) {
+    auto hunk = patch.HunkForOldPosition(*start);
     if (hunk) {
       info.GetReturnValue().Set(HunkWrapper::FromHunk(*hunk));
     } else {
@@ -283,9 +294,9 @@ void PatchWrapper::HunkForOldPosition(const Nan::FunctionCallbackInfo<Value> &in
 
 void PatchWrapper::HunkForNewPosition(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
-  Nan::Maybe<Point> start = PointWrapper::PointFromJS(Nan::To<Object>(info[0]));
-  if (start.IsJust()) {
-    auto hunk = patch.HunkForNewPosition(start.FromJust());
+  optional<Point> start = PointWrapper::PointFromJS(info[0]);
+  if (start) {
+    auto hunk = patch.HunkForNewPosition(*start);
     if (hunk) {
       info.GetReturnValue().Set(HunkWrapper::FromHunk(*hunk));
     } else {

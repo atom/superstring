@@ -8,33 +8,34 @@ static Nan::Persistent<String> row_string;
 static Nan::Persistent<String> column_string;
 static Nan::Persistent<v8::Function> constructor;
 
-Nan::Maybe<Point> PointWrapper::PointFromJS(Nan::MaybeLocal<Object> maybe_object) {
+optional<Point> PointWrapper::PointFromJS(Local<Value> value) {
+  Nan::MaybeLocal<Object> maybe_object = Nan::To<Object>(value);
   Local<Object> object;
   if (!maybe_object.ToLocal(&object)) {
     Nan::ThrowTypeError("Expected an object with 'row' and 'column' properties.");
-    return Nan::Nothing<Point>();
+    return optional<Point>{};
   }
 
   Nan::MaybeLocal<Integer> maybe_row = Nan::To<Integer>(object->Get(Nan::New(row_string)));
   Local<Integer> js_row;
   if (!maybe_row.ToLocal(&js_row)) {
     Nan::ThrowTypeError("Expected an object with 'row' and 'column' properties.");
-    return Nan::Nothing<Point>();
+    return optional<Point>{};
   }
 
   Nan::MaybeLocal<Integer> maybe_column = Nan::To<Integer>(object->Get(Nan::New(column_string)));
   Local<Integer> js_column;
   if (!maybe_column.ToLocal(&js_column)) {
     Nan::ThrowTypeError("Expected an object with 'row' and 'column' properties.");
-    return Nan::Nothing<Point>();
+    return optional<Point>{};
   }
 
   double row = js_row->NumberValue();
   double column = js_column->NumberValue();
-  return Nan::Just(Point(
+  return Point(
     std::isfinite(row) ? row : UINT32_MAX,
     std::isfinite(column) ? column : UINT32_MAX
-  ));
+  );
 }
 
 void PointWrapper::Init() {

@@ -1,20 +1,26 @@
 'use strict';
 
 const Random = require('random-seed')
-const {MarkerIndex} = require('../../build/Release/superstring')
+const {MarkerIndex} = require('../..')
 const {traverse, traversalDistance, compare} = require('../../test/js/helpers/point-helpers')
 
 let random = new Random(1)
 let markerIds = []
 let idCounter = 1
-let nativeMarkerIndex = new MarkerIndex()
+let lastInsertionEnd = {row: 0, column: 0}
+let markerIndex = null
+let sequentialInsertOperations = []
 let insertOperations = []
 let spliceOperations = []
 let deleteOperations = []
 let rangeQueryOperations = []
 
 function runBenchmark () {
-  for (let i = 0; i < 20000; i++) {
+  for (let i = 0; i < 40000; i++) {
+    enqueueSequentialInsert()
+  }
+
+  for (let i = 0; i < 40000; i++) {
     enqueueInsert()
     enqueueSplice()
     enqueueDelete()
@@ -24,19 +30,39 @@ function runBenchmark () {
     enqueueRangeQuery()
   }
 
+  markerIndex = new MarkerIndex()
+  profileOperations('sequential inserts', sequentialInsertOperations)
+
+  markerIndex = new MarkerIndex()
   profileOperations('inserts', insertOperations)
-  profileOperations('rangeQueries', rangeQueryOperations)
+  profileOperations('range queries', rangeQueryOperations)
   profileOperations('splices', spliceOperations)
   profileOperations('deletes', deleteOperations)
 }
 
-function profileOperations (description, operations) {
-  let name = 'native: ' + description
+function profileOperations (name, operations) {
   console.time(name)
-  for (let operation of operations) {
-    nativeMarkerIndex[operation[0]].apply(nativeMarkerIndex, operation[1])
+  for (let i = 0, n = operations.length; i < n; i++) {
+    const operation = operations[i]
+    markerIndex[operation[0]].apply(markerIndex, operation[1])
   }
   console.timeEnd(name)
+}
+
+function enqueueSequentialInsert () {
+  let id = (idCounter++).toString()
+  let row, startColumn, endColumn
+  if (random(10) < 3) {
+    row = lastInsertionEnd.row + 1 + random(3)
+    startColumn = random(100)
+    endColumn = startColumn + random(20)
+  } else {
+    row = lastInsertionEnd.row
+    startColumn = lastInsertionEnd.column + 1 + random(20)
+    endColumn = startColumn + random(20)
+  }
+  lastInsertionEnd = {row, column: endColumn}
+  sequentialInsertOperations.push(['insert', [id, {row, column: startColumn}, lastInsertionEnd]])
 }
 
 function enqueueInsert () {

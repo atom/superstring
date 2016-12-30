@@ -1,7 +1,5 @@
 require('segfault-handler').registerHandler()
 
-const fs = require('fs')
-const path = require('path')
 const Random = require('random-seed')
 const {assert} = require('chai')
 const TestDocument = require('./helpers/test-document')
@@ -9,9 +7,7 @@ const {
   traverse, traversalDistance, compare, isZero, format: formatPoint
 } = require('./helpers/point-helpers')
 
-const {Patch} = fs.existsSync(path.resolve(__dirname, '..', '..', 'build', 'Debug'))
-  ? require('../../build/Debug/superstring')
-  : require('../../build/Release/superstring')
+const {Patch} = require('../..')
 
 describe('Patch', function () {
   it('honors the mergeAdjacentHunks option set to false', function () {
@@ -117,6 +113,32 @@ describe('Patch', function () {
         newText: 'quick'
       }
     ])
+
+    const patch2 = new Patch()
+    patch2.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5})
+    patch2.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5})
+    assert.deepEqual(JSON.parse(JSON.stringify(patch2.invert().getHunks())), [
+      {
+        oldStart: {row: 0, column: 3}, oldEnd: {row: 0, column: 8},
+        newStart: {row: 0, column: 3}, newEnd: {row: 0, column: 7}
+      },
+      {
+        oldStart: {row: 0, column: 10}, oldEnd: {row: 0, column: 15},
+        newStart: {row: 0, column: 9}, newEnd: {row: 0, column: 14}
+      }
+    ])
+  })
+
+  it('can copy patches', function () {
+    const patch = new Patch()
+    patch.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, 'ciao', 'hello')
+    patch.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5}, 'quick', 'world')
+    assert.deepEqual(patch.copy().getHunks(), patch.getHunks())
+
+    const patch2 = new Patch()
+    patch2.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5})
+    patch2.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5})
+    assert.deepEqual(patch2.copy().getHunks(), patch2.getHunks())
   })
 
   it('can serialize/deserialize patches', () => {
@@ -244,11 +266,16 @@ describe('Patch', function () {
           )
         }
 
-        let blob = Buffer.from(patch.serialize().toString('base64'), 'base64')
-        const patchCopy = Patch.deserialize(blob)
-        assert.deepEqual(patchCopy.getHunks(), patch.getHunks())
         let oldPoint = originalDocument.buildRandomPoint()
-        assert.deepEqual(patchCopy.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint))
+
+        let blob = Buffer.from(patch.serialize().toString('base64'), 'base64')
+        const patchCopy1 = Patch.deserialize(blob)
+        assert.deepEqual(patchCopy1.getHunks(), patch.getHunks())
+        assert.deepEqual(patchCopy1.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint))
+
+        const patchCopy2 = patch.copy()
+        assert.deepEqual(patchCopy2.getHunks(), patch.getHunks())
+        assert.deepEqual(patchCopy2.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint))
       }
     }
   })

@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <ostream>
 #include "point.h"
 
 using Text = std::vector<uint16_t>;
@@ -28,5 +29,7 @@ struct TextSlice {
   TextSlice Suffix(Point);
   size_t CharacterIndexForPosition(Point);
 };
+
+std::ostream &operator<<(std::ostream &stream, const Text *text);
 
 #endif  // TEXT_H_

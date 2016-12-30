@@ -7,15 +7,17 @@
 #include <unordered_set>
 #include "point.h"
 #include "range.h"
+#include "flat_set.h"
 
 class MarkerIndex {
 public:
   using MarkerId = unsigned;
+  using MarkerIdSet = flat_set<MarkerId>;
   struct SpliceResult {
-    std::unordered_set<MarkerId> touch;
-    std::unordered_set<MarkerId> inside;
-    std::unordered_set<MarkerId> overlap;
-    std::unordered_set<MarkerId> surround;
+    MarkerIdSet touch;
+    MarkerIdSet inside;
+    MarkerIdSet overlap;
+    MarkerIdSet surround;
   };
 
   MarkerIndex();
@@ -28,13 +30,13 @@ public:
   Range GetRange(MarkerId id);
 
   int Compare(MarkerId id1, MarkerId id2);
-  std::unordered_set<MarkerId> FindIntersecting(Point start, Point end);
-  std::unordered_set<MarkerId> FindContaining(Point start, Point end);
-  std::unordered_set<MarkerId> FindContainedIn(Point start, Point end);
-  std::unordered_set<MarkerId> FindStartingIn(Point start, Point end);
-  std::unordered_set<MarkerId> FindStartingAt(Point position);
-  std::unordered_set<MarkerId> FindEndingIn(Point start, Point end);
-  std::unordered_set<MarkerId> FindEndingAt(Point position);
+  MarkerIdSet FindIntersecting(Point start, Point end);
+  MarkerIdSet FindContaining(Point start, Point end);
+  MarkerIdSet FindContainedIn(Point start, Point end);
+  MarkerIdSet FindStartingIn(Point start, Point end);
+  MarkerIdSet FindStartingAt(Point position);
+  MarkerIdSet FindEndingIn(Point start, Point end);
+  MarkerIdSet FindEndingAt(Point position);
 
   std::unordered_map<MarkerId, Range> Dump();
   std::string GetDotGraph();
@@ -45,10 +47,10 @@ private:
     Node *left;
     Node *right;
     Point left_extent;
-    std::unordered_set<MarkerId> left_marker_ids;
-    std::unordered_set<MarkerId> right_marker_ids;
-    std::unordered_set<MarkerId> start_marker_ids;
-    std::unordered_set<MarkerId> end_marker_ids;
+    MarkerIdSet left_marker_ids;
+    MarkerIdSet right_marker_ids;
+    MarkerIdSet start_marker_ids;
+    MarkerIdSet end_marker_ids;
 
     Node(Node *parent, Point left_extent);
     bool IsMarkerEndpoint();
@@ -66,8 +68,8 @@ private:
   Node *BuildNode(Node *parent, Point left_extent);
   void DeleteSubtree(Node **node);
   void DeleteSingleNode(Node *node);
-  void GetStartingAndEndingMarkersWithinSubtree(Node *node, std::unordered_set<MarkerId> *starting, std::unordered_set<MarkerId> *ending);
-  void PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const std::unordered_set<MarkerId> &starting_inside_splice, const std::unordered_set<MarkerId> &ending_inside_splice);
+  void GetStartingAndEndingMarkersWithinSubtree(Node *node, MarkerIdSet *starting, MarkerIdSet *ending);
+  void PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const MarkerIdSet &starting_inside_splice, const MarkerIdSet &ending_inside_splice);
 
   std::vector<Node *> node_stack;
   Node *root;

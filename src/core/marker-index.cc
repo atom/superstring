@@ -127,14 +127,14 @@ MarkerIndex::SpliceResult MarkerIndex::Splice(Point start, Point deleted_extent,
     RotateNodeRight(start_node);
   }
 
-  unordered_set<MarkerId> starting_inside_splice;
-  unordered_set<MarkerId> ending_inside_splice;
+  MarkerIdSet starting_inside_splice;
+  MarkerIdSet ending_inside_splice;
 
   if (deleted_extent.IsZero()) {
     for (auto iter = start_node->start_marker_ids.begin(); iter != start_node->start_marker_ids.end();) {
       MarkerId id = *iter;
       if (exclusive_marker_ids.count(id) > 0) {
-        start_node->start_marker_ids.erase(iter++);
+        iter = start_node->start_marker_ids.erase(iter);
         start_node->right_marker_ids.erase(id);
         end_node->start_marker_ids.insert(id);
         start_nodes_by_id[id] = end_node;
@@ -145,7 +145,7 @@ MarkerIndex::SpliceResult MarkerIndex::Splice(Point start, Point deleted_extent,
     for (auto iter = start_node->end_marker_ids.begin(); iter != start_node->end_marker_ids.end();) {
       MarkerId id = *iter;
       if (exclusive_marker_ids.count(id) == 0 || end_node->start_marker_ids.count(id) > 0) {
-        start_node->end_marker_ids.erase(iter++);
+        iter = start_node->end_marker_ids.erase(iter);
         if (end_node->start_marker_ids.count(id) == 0) {
           start_node->right_marker_ids.insert(id);
         }
@@ -180,7 +180,7 @@ MarkerIndex::SpliceResult MarkerIndex::Splice(Point start, Point deleted_extent,
     for (auto iter = start_node->start_marker_ids.begin(); iter != start_node->start_marker_ids.end();) {
       MarkerId id = *iter;
       if (exclusive_marker_ids.count(id) && !start_node->end_marker_ids.count(id)) {
-        start_node->start_marker_ids.erase(iter++);
+        iter = start_node->start_marker_ids.erase(iter);
         start_node->right_marker_ids.erase(id);
         end_node->start_marker_ids.insert(id);
         start_nodes_by_id[id] = end_node;
@@ -254,8 +254,8 @@ int MarkerIndex::Compare(MarkerId id1, MarkerId id2) {
   }
 }
 
-unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindIntersecting(Point start, Point end) {
-  unordered_set<MarkerId> result;
+MarkerIndex::MarkerIdSet MarkerIndex::FindIntersecting(Point start, Point end) {
+  MarkerIdSet result;
   if (!root) return result;
 
   Node *start_node = SplayGreatestLowerBound(start);
@@ -283,15 +283,15 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindIntersecting(Point start, 
       if (node->left) node_stack.push_back(node->left);
       if (node->right) node_stack.push_back(node->right);
       result.insert(node->start_marker_ids.begin(), node->start_marker_ids.end());
-      result.insert(node->end_marker_ids.begin(), node->start_marker_ids.end());
+      result.insert(node->end_marker_ids.begin(), node->end_marker_ids.end());
     }
   }
 
   return result;
 }
 
-unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindContaining(Point start, Point end) {
-  unordered_set<MarkerId> result;
+MarkerIndex::MarkerIdSet MarkerIndex::FindContaining(Point start, Point end) {
+  MarkerIdSet result;
   if (!root) return result;
 
   Node *start_node = SplayGreatestLowerBound(start, true);
@@ -315,8 +315,8 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindContaining(Point start, Po
   return result;
 }
 
-unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindContainedIn(Point start, Point end) {
-  unordered_set<MarkerId> result;
+MarkerIndex::MarkerIdSet MarkerIndex::FindContainedIn(Point start, Point end) {
+  MarkerIdSet result;
   if (!root) return result;
 
   Node *start_node = SplayGreatestLowerBound(start);
@@ -333,8 +333,8 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindContainedIn(Point start, P
   }
 
   if (contained_subtree) {
-    unordered_set<MarkerId> starting;
-    unordered_set<MarkerId> ending;
+    MarkerIdSet starting;
+    MarkerIdSet ending;
     node_stack.clear();
     node_stack.push_back(contained_subtree);
     while (!node_stack.empty()) {
@@ -364,8 +364,8 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindContainedIn(Point start, P
   return result;
 }
 
-unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindStartingIn(Point start, Point end) {
-  unordered_set<MarkerId> result;
+MarkerIndex::MarkerIdSet MarkerIndex::FindStartingIn(Point start, Point end) {
+  MarkerIdSet result;
   if (!root) return result;
 
   Node *start_node = SplayGreatestLowerBound(start);
@@ -396,8 +396,8 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindStartingIn(Point start, Po
   return result;
 }
 
-unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindStartingAt(Point position) {
-  unordered_set<MarkerId> result;
+MarkerIndex::MarkerIdSet MarkerIndex::FindStartingAt(Point position) {
+  MarkerIdSet result;
   if (!root) return result;
 
   Node *node = SplayGreatestLowerBound(position, true);
@@ -408,8 +408,8 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindStartingAt(Point position)
   return result;
 }
 
-unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindEndingIn(Point start, Point end) {
-  unordered_set<MarkerId> result;
+MarkerIndex::MarkerIdSet MarkerIndex::FindEndingIn(Point start, Point end) {
+  MarkerIdSet result;
   if (!root) return result;
 
   Node *start_node = SplayGreatestLowerBound(start);
@@ -440,8 +440,8 @@ unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindEndingIn(Point start, Poin
   return result;
 }
 
-unordered_set<MarkerIndex::MarkerId> MarkerIndex::FindEndingAt(Point position) {
-  unordered_set<MarkerId> result;
+MarkerIndex::MarkerIdSet MarkerIndex::FindEndingAt(Point position) {
+  MarkerIdSet result;
   if (!root) return result;
 
   Node *node = SplayGreatestLowerBound(position, true);
@@ -643,7 +643,7 @@ void MarkerIndex::RotateNodeLeft(Node *rotation_pivot) {
       ++it;
     } else {
       rotation_root->right_marker_ids.insert(*it);
-      rotation_pivot->left_marker_ids.erase(it++);
+      it = rotation_pivot->left_marker_ids.erase(it);
     }
   }
 }
@@ -684,7 +684,7 @@ void MarkerIndex::RotateNodeRight(Node *rotation_pivot) {
       ++it;
     } else {
       rotation_root->left_marker_ids.insert(*it);
-      rotation_pivot->right_marker_ids.erase(it++);
+      it = rotation_pivot->right_marker_ids.erase(it);
     }
   }
 }
@@ -735,7 +735,7 @@ void MarkerIndex::DeleteSubtree(Node **node_to_delete) {
   }
 }
 
-void MarkerIndex::GetStartingAndEndingMarkersWithinSubtree(Node *node, unordered_set<MarkerId> *starting, unordered_set<MarkerId> *ending) {
+void MarkerIndex::GetStartingAndEndingMarkersWithinSubtree(Node *node, MarkerIdSet *starting, MarkerIdSet *ending) {
   if (node == nullptr) {
     return;
   }
@@ -755,8 +755,8 @@ void MarkerIndex::GetStartingAndEndingMarkersWithinSubtree(Node *node, unordered
 
 void MarkerIndex::PopulateSpliceInvalidationSets(SpliceResult *invalidated,
                                                  const Node *start_node, const Node *end_node,
-                                                 const unordered_set<MarkerId> &starting_inside_splice,
-                                                 const unordered_set<MarkerId> &ending_inside_splice) {
+                                                 const MarkerIdSet &starting_inside_splice,
+                                                 const MarkerIdSet &ending_inside_splice) {
   invalidated->touch.insert(start_node->end_marker_ids.begin(), start_node->end_marker_ids.end());
   invalidated->touch.insert(end_node->start_marker_ids.begin(), end_node->start_marker_ids.end());
 

@@ -1,0 +1,13 @@
+PID 33389 received SIGSEGV for address: 0x0
+0   segfault-handler.node               0x0000000101db7588 _ZL16segfault_handleriP9__siginfoPv + 280
+1   libsystem_platform.dylib            0x00007fffad159bba _sigtramp + 26
+2   node                                0x0000000100887a2f _ZN2v88internal17FullCodeGenerator23EmitBackEdgeBookkeepingEPNS0_18IterationStatementEPNS0_5LabelE + 511
+3   superstring.node                    0x0000000101dbf355 _ZN18MarkerIndexWrapper16FindIntersectingERKN3Nan20FunctionCallbackInfoIN2v85ValueEEE + 221
+4   superstring.node                    0x0000000101dc0760 _ZN3Nan3impL23FunctionCallbackWrapperERKN2v820FunctionCallbackInfoINS1_5ValueEEE + 131
+5   node                                0x00000001001799a4 _ZN2v88internal25FunctionCallbackArguments4CallEPFvRKNS_20FunctionCallbackInfoINS_5ValueEEEE + 356
+6   node                                0x00000001001c39ad _ZN2v88internal12_GLOBAL__N_119HandleApiCallHelperILb0EEENS0_11MaybeHandleINS0_6ObjectEEEPNS0_7IsolateENS1_16BuiltinArgumentsILNS0_21BuiltinExtraArgumentsE1EEE + 1069
+7   node                                0x00000001001ce001 _ZN2v88internalL21Builtin_HandleApiCallEiPPNS0_6ObjectEPNS0_7IsolateE + 465
+8   ???                                 0x00003e09a2d092a7 0x0 + 68211107205799
+9   ???                                 0x00003e09a2f671e0 0x0 + 68211109687776
+10  ???                                 0x00003e09a2f6606f 0x0 + 68211109683311
+11  ???                                 0x00003e09a2d09895 0x0 + 68211107207317

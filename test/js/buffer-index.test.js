@@ -3,11 +3,7 @@ require('segfault-handler').registerHandler()
 const assert = require('assert')
 const ReferenceBufferOffsetIndex = require('./reference-buffer-offset-index')
 const randomSeed = require('random-seed')
-const fs = require('fs')
-const path = require('path')
-const {BufferOffsetIndex} = fs.existsSync(path.resolve(__dirname, '..', '..', 'build', 'Debug'))
-  ? require('../../build/Debug/superstring')
-  : require('../../build/Release/superstring')
+const {BufferOffsetIndex} = require('../..')
 
 describe('BufferOffsetIndex', () => {
   it('maps character indices to 2d points and viceversa', function () {
