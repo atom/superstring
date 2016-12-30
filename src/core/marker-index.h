@@ -4,18 +4,20 @@
 #include <map>
 #include <random>
 #include <unordered_map>
-#include <unordered_set>
+#include "flat_set.h"
 #include "point.h"
 #include "range.h"
 
 class MarkerIndex {
 public:
   using MarkerId = unsigned;
+  using MarkerIdSet = flat_set<MarkerId>;
+
   struct SpliceResult {
-    std::unordered_set<MarkerId> touch;
-    std::unordered_set<MarkerId> inside;
-    std::unordered_set<MarkerId> overlap;
-    std::unordered_set<MarkerId> surround;
+    flat_set<MarkerId> touch;
+    flat_set<MarkerId> inside;
+    flat_set<MarkerId> overlap;
+    flat_set<MarkerId> surround;
   };
 
   MarkerIndex(unsigned seed);
@@ -29,13 +31,13 @@ public:
   Range GetRange(MarkerId id) const;
 
   int Compare(MarkerId id1, MarkerId id2) const;
-  std::unordered_set<MarkerId> FindIntersecting(Point start, Point end);
-  std::unordered_set<MarkerId> FindContaining(Point start, Point end);
-  std::unordered_set<MarkerId> FindContainedIn(Point start, Point end);
-  std::unordered_set<MarkerId> FindStartingIn(Point start, Point end);
-  std::unordered_set<MarkerId> FindStartingAt(Point position);
-  std::unordered_set<MarkerId> FindEndingIn(Point start, Point end);
-  std::unordered_set<MarkerId> FindEndingAt(Point position);
+  flat_set<MarkerId> FindIntersecting(Point start, Point end);
+  flat_set<MarkerId> FindContaining(Point start, Point end);
+  flat_set<MarkerId> FindContainedIn(Point start, Point end);
+  flat_set<MarkerId> FindStartingIn(Point start, Point end);
+  flat_set<MarkerId> FindStartingAt(Point position);
+  flat_set<MarkerId> FindEndingIn(Point start, Point end);
+  flat_set<MarkerId> FindEndingAt(Point position);
 
   std::unordered_map<MarkerId, Range> Dump();
 
@@ -47,10 +49,10 @@ private:
     Node *left;
     Node *right;
     Point left_extent;
-    std::unordered_set<MarkerId> left_marker_ids;
-    std::unordered_set<MarkerId> right_marker_ids;
-    std::unordered_set<MarkerId> start_marker_ids;
-    std::unordered_set<MarkerId> end_marker_ids;
+    flat_set<MarkerId> left_marker_ids;
+    flat_set<MarkerId> right_marker_ids;
+    flat_set<MarkerId> start_marker_ids;
+    flat_set<MarkerId> end_marker_ids;
     int priority;
 
     Node(Node *parent, Point left_extent);
@@ -64,10 +66,10 @@ private:
     Node* InsertMarkerStart(const MarkerId &id, const Point &start_position, const Point &end_position);
     Node* InsertMarkerEnd(const MarkerId &id, const Point &start_position, const Point &end_position);
     Node* InsertSpliceBoundary(const Point &position, bool is_insertion_end);
-    void FindIntersecting(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
-    void FindContainedIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
-    void FindStartingIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
-    void FindEndingIn(const Point &start, const Point &end, std::unordered_set<MarkerId> *result);
+    void FindIntersecting(const Point &start, const Point &end, flat_set<MarkerId> *result);
+    void FindContainedIn(const Point &start, const Point &end, flat_set<MarkerId> *result);
+    void FindStartingIn(const Point &start, const Point &end, flat_set<MarkerId> *result);
+    void FindEndingIn(const Point &start, const Point &end, flat_set<MarkerId> *result);
     std::unordered_map<MarkerId, Range> Dump();
 
   private:
@@ -80,7 +82,7 @@ private:
     void MarkLeft(const MarkerId &id, const Point &start_position, const Point &end_position);
     Node* InsertLeftChild(const Point &position);
     Node* InsertRightChild(const Point &position);
-    void CheckIntersection(const Point &start, const Point &end, std::unordered_set<MarkerId> *results);
+    void CheckIntersection(const Point &start, const Point &end, flat_set<MarkerId> *results);
     void CacheNodePosition() const;
 
     MarkerIndex *marker_index;
@@ -99,8 +101,8 @@ private:
   void BubbleNodeDown(Node *node);
   void RotateNodeLeft(Node *pivot);
   void RotateNodeRight(Node *pivot);
-  void GetStartingAndEndingMarkersWithinSubtree(const Node *node, std::unordered_set<MarkerId> *starting, std::unordered_set<MarkerId> *ending);
-  void PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const std::unordered_set<MarkerId> &starting_inside_splice, const std::unordered_set<MarkerId> &ending_inside_splice);
+  void GetStartingAndEndingMarkersWithinSubtree(const Node *node, flat_set<MarkerId> *starting, flat_set<MarkerId> *ending);
+  void PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const flat_set<MarkerId> &starting_inside_splice, const flat_set<MarkerId> &ending_inside_splice);
 
   std::default_random_engine random_engine;
   std::uniform_int_distribution<int> random_distribution;
@@ -108,7 +110,7 @@ private:
   std::map<MarkerId, Node*> start_nodes_by_id;
   std::map<MarkerId, Node*> end_nodes_by_id;
   Iterator iterator;
-  std::unordered_set<MarkerId> exclusive_marker_ids;
+  flat_set<MarkerId> exclusive_marker_ids;
   mutable std::unordered_map<const Node*, Point> node_position_cache;
 };
 
