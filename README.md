@@ -1,4 +1,5 @@
-# Superstring [![Build Status](https://travis-ci.org/atom/superstring.svg?branch=master)](https://travis-ci.org/atom/superstring) [![Build status](https://ci.appveyor.com/api/projects/status/n5pack4yk7w80fso?svg=true)](https://ci.appveyor.com/project/Atom/superstring)
+# Superstring [![Build Status](https://travis-ci.org/atom/superstring.svg?branch=master)](https://travis-ci.org/atom/superstring) [![Build status](https://ci.appveyor.com/api/projects/status/n5pack4yk7w80fso/branch/master?svg=true)](https://ci.appveyor.com/project/Atom/superstring/branch/master)
+
 
 
 Native library at the core of Atom's text editor.
