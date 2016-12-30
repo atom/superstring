@@ -16,11 +16,11 @@ let deleteOperations = []
 let rangeQueryOperations = []
 
 function runBenchmark () {
-  for (let i = 0; i < 50000; i++) {
+  for (let i = 0; i < 40000; i++) {
     enqueueSequentialInsert()
   }
 
-  for (let i = 0; i < 20000; i++) {
+  for (let i = 0; i < 40000; i++) {
     enqueueInsert()
     enqueueSplice()
     enqueueDelete()
@@ -53,15 +53,16 @@ function enqueueSequentialInsert () {
   let id = (idCounter++).toString()
   let row, startColumn, endColumn
   if (random(10) < 3) {
-    let row = lastInsertionEnd.row + 1 + random(3)
-    let startColumn = random(100)
-    let endColumn = startColumn + random(20)
+    row = lastInsertionEnd.row + 1 + random(3)
+    startColumn = random(100)
+    endColumn = startColumn + random(20)
   } else {
-    let row = lastInsertionEnd.row
-    let startColumn = lastInsertionEnd.column + 1 + random(20)
-    let endColumn = startColumn + random(20)
+    row = lastInsertionEnd.row
+    startColumn = lastInsertionEnd.column + 1 + random(20)
+    endColumn = startColumn + random(20)
   }
-  sequentialInsertOperations.push(['insert', [id, {row, column: startColumn}, {row, column: endColumn}]])
+  lastInsertionEnd = {row, column: endColumn}
+  sequentialInsertOperations.push(['insert', [id, {row, column: startColumn}, lastInsertionEnd]])
 }
 
 function enqueueInsert () {
