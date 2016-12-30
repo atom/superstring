@@ -1,8 +1,8 @@
 'use strict';
 
 const Random = require('random-seed')
-const {MarkerIndex} = require('../build/Release/superstring')
-const {traverse, traversalDistance, compare} = require('../test/js/helpers/point-helpers')
+const {MarkerIndex} = require('../../build/Release/superstring')
+const {traverse, traversalDistance, compare} = require('../../test/js/helpers/point-helpers')
 
 let random = new Random(1)
 let markerIds = []

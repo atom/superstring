@@ -6,7 +6,7 @@
   "scripts": {
     "test-native": "script/test-native.js",
     "test": "mocha test/js/*.js",
-    "benchmark": "node benchmark/marker-index.benchmark.js",
+    "benchmark": "node benchmark/js/marker-index.benchmark.js",
     "prepublish": "npm run standard",
     "standard": "standard --recursive src test",
     "ci": "npm run standard && node-gyp rebuild --debug --tests && npm run test"
