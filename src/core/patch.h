@@ -48,6 +48,7 @@ public:
   optional<Hunk> HunkForNewPosition(Point position);
   void Serialize(std::vector<uint8_t> *) const;
   void PrintDotGraph() const;
+  std::string GetDotGraph() const;
   void Rebalance();
   size_t GetHunkCount() const;
 

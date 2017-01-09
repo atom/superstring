@@ -143,7 +143,7 @@ void PatchWrapper::Init(Local<Object> exports) {
   prototype_template->Set(Nan::New("hunkForNewPosition").ToLocalChecked(),
                           Nan::New<FunctionTemplate>(HunkForNewPosition));
   prototype_template->Set(Nan::New("serialize").ToLocalChecked(), Nan::New<FunctionTemplate>(Serialize));
-  prototype_template->Set(Nan::New("printDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(PrintDotGraph));
+  prototype_template->Set(Nan::New("getDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(GetDotGraph));
   prototype_template->Set(Nan::New("rebalance").ToLocalChecked(), Nan::New<FunctionTemplate>(Rebalance));
   prototype_template->Set(Nan::New("getHunkCount").ToLocalChecked(), Nan::New<FunctionTemplate>(GetHunkCount));
   patch_wrapper_constructor_template.Reset(constructor_template_local);
@@ -361,9 +361,10 @@ void PatchWrapper::Compose(const Nan::FunctionCallbackInfo<Value> &info) {
   }
 }
 
-void PatchWrapper::PrintDotGraph(const Nan::FunctionCallbackInfo<Value> &info) {
+void PatchWrapper::GetDotGraph(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
-  patch.PrintDotGraph();
+  std::string graph = patch.GetDotGraph();
+  info.GetReturnValue().Set(Nan::New<String>(graph).ToLocalChecked());
 }
 
 void PatchWrapper::GetHunkCount(const Nan::FunctionCallbackInfo<Value> &info) {

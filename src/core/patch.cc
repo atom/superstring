@@ -5,6 +5,7 @@
 #include <cmath>
 #include <memory>
 #include <stdio.h>
+#include <sstream>
 #include <vector>
 
 #ifdef _WIN32
@@ -17,6 +18,7 @@ using std::move;
 using std::vector;
 using std::unique_ptr;
 using std::ostream;
+using std::endl;
 typedef Patch::Hunk Hunk;
 
 struct Patch::Node {
@@ -70,37 +72,38 @@ struct Patch::Node {
     };
   }
 
-  void PrintDotGraph(Point left_ancestor_old_end, Point left_ancestor_new_end) {
+  void WriteDotGraph(std::stringstream &result, Point left_ancestor_old_end, Point left_ancestor_new_end) {
     Point node_old_start = left_ancestor_old_end.Traverse(old_distance_from_left_ancestor);
     Point node_new_start = left_ancestor_new_end.Traverse(new_distance_from_left_ancestor);
     Point node_old_end = node_old_start.Traverse(old_extent);
     Point node_new_end = node_new_start.Traverse(new_extent);
 
-    fprintf(stderr, "node_%p [label=\"new: (%u, %u) - (%u, %u)\nold: (%u, %u) - "
-                    "(%u, %u)\n\", tooltip=\"%p\"]\n",
-            this, node_new_start.row, node_new_start.column, node_new_end.row,
-            node_new_end.column, node_old_start.row, node_old_start.column,
-            node_old_end.row, node_old_end.column, this);
+    result << "node_" << this << " ["
+      << "label=\""
+      << "new: " << node_new_start << " - " << node_new_end << ", " << endl
+      << "old: " << node_old_start << " - " << node_old_end << ", " << endl
+      << "\""
+      << "tooltip=\"" << this
+      << "\"]" << endl;
 
-    fprintf(stderr, "node_%p -> ", this);
+    result << "node_" << this << " -> ";
     if (left) {
-      fprintf(stderr, "node_%p\n", left);
-      left->PrintDotGraph(left_ancestor_old_end, left_ancestor_new_end);
+      result << "node_" << left << endl;
+      left->WriteDotGraph(result, left_ancestor_old_end, left_ancestor_new_end);
     } else {
-      fprintf(stderr, "node_%p_left_null\n", this);
-      fprintf(stderr, "node_%p_left_null [label=\"\" shape=point]\n", this);
+      result << "node_" << this << "_left_null" << endl;
+      result << "node_" << this << "_left_null [label=\"\" shape=point]" << endl;
     }
 
-    fprintf(stderr, "node_%p -> ", this);
+    result << "node_" << this << " -> ";
     if (right) {
-      fprintf(stderr, "node_%p\n", right);
-      right->PrintDotGraph(node_old_end, node_new_end);
+      result << "node_" << right << endl;
+      right->WriteDotGraph(result, node_old_end, node_new_end);
     } else {
-      fprintf(stderr, "node_%p_right_null\n", this);
-      fprintf(stderr, "node_%p_right_null [label=\"\" shape=point]\n", this);
+      result << "node_" << this << "_right_null" << endl;
+      result << "node_" << this << "_right_null [label=\"\" shape=point]" << endl;
     }
   }
-
 };
 
 struct Patch::PositionStackEntry {
@@ -789,10 +792,6 @@ bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent,
   Node *upper_bound = SplayNodeStartingAfter<OldCoordinates>(old_splice_start,
                                                              old_deletion_end);
 
-  // fprintf(stderr, "graph message { label=\"splayed upper and lower bounds\"
-  // }\n");
-  // PrintDotGraph();
-
   if (!lower_bound && !upper_bound) {
     DeleteNode(&root);
     return true;
@@ -1020,12 +1019,12 @@ void Patch::DeleteRoot() {
   }
 }
 
-void Patch::PrintDotGraph() const {
-  fprintf(stderr, "digraph patch {\n");
-  if (root) {
-    root->PrintDotGraph(Point::Zero(), Point::Zero());
-  }
-  fprintf(stderr, "}\n");
+std::string Patch::GetDotGraph() const {
+  std::stringstream result;
+  result << "digraph patch {" << endl;
+  if (root) root->WriteDotGraph(result, Point::Zero(), Point::Zero());
+  result << "}" << endl;
+  return result.str();
 }
 
 size_t Patch::GetHunkCount() const { return hunk_count; }
