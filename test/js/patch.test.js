@@ -4,7 +4,7 @@ const Random = require('random-seed')
 const {assert} = require('chai')
 const TestDocument = require('./helpers/test-document')
 const {
-  traverse, traversalDistance, compare, isZero, format: formatPoint
+  traverse, traversalDistance, compare, format: formatPoint
 } = require('./helpers/point-helpers')
 
 const {Patch} = require('../..')
@@ -285,23 +285,7 @@ function last (array) {
   return array[array.length - 1]
 }
 
-function translateOldPosition (patch, oldPosition) {
-  const hunk = patch.hunkForOldPosition(oldPosition)
-  if (hunk) {
-    if (compare(oldPosition, hunk.oldEnd) >= 0) {
-      return traverse(hunk.newEnd, traversalDistance(oldPosition, hunk.oldEnd))
-    } else {
-      return min(
-        hunk.newEnd,
-        traverse(hunk.newStart, traversalDistance(oldPosition, hunk.oldStart))
-      )
-    }
-  } else {
-    return oldPosition
-  }
-}
-
-function translateSpliceFromOriginalDocument(originalDocument, patch, originalSplice) {
+function translateSpliceFromOriginalDocument (originalDocument, patch, originalSplice) {
   const originalDeletionEnd = traverse(originalSplice.start, originalSplice.deletedExtent)
   const originalInsertionEnd = traverse(originalSplice.start, originalSplice.insertedExtent)
 
