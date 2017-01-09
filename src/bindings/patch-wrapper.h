@@ -21,6 +21,7 @@ class PatchWrapper : public Nan::ObjectWrap {
   static void Deserialize(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void Compose(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void GetDotGraph(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void GetJSON(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void GetHunkCount(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void Rebalance(const Nan::FunctionCallbackInfo<v8::Value> &info);
 

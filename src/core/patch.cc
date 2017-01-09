@@ -104,6 +104,34 @@ struct Patch::Node {
       result << "node_" << this << "_right_null [label=\"\" shape=point]" << endl;
     }
   }
+
+  void WriteJSON(std::stringstream &result, Point left_ancestor_old_end, Point left_ancestor_new_end) {
+    Point node_old_start = left_ancestor_old_end.Traverse(old_distance_from_left_ancestor);
+    Point node_new_start = left_ancestor_new_end.Traverse(new_distance_from_left_ancestor);
+    Point node_old_end = node_old_start.Traverse(old_extent);
+    Point node_new_end = node_new_start.Traverse(new_extent);
+
+    result << "{";
+    result << "\"id\": \"" << this << "\", ";
+    result << "\"oldStart\": {\"row\": " << node_old_start.row << ", \"column\": " << node_old_start.column << "}, ";
+    result << "\"oldEnd\": {\"row\": " << node_old_end.row << ", \"column\": " << node_old_end.column << "}, ";
+    result << "\"newStart\": {\"row\": " << node_new_start.row << ", \"column\": " << node_new_start.column << "}, ";
+    result << "\"newEnd\": {\"row\": " << node_new_end.row << ", \"column\": " << node_new_end.column << "}, ";
+    result << "\"left\": ";
+    if (left) {
+      left->WriteJSON(result, left_ancestor_old_end, left_ancestor_new_end);
+    } else {
+      result << "null";
+    }
+    result << ", ";
+    result << "\"right\": ";
+    if (right) {
+      right->WriteJSON(result, node_old_end, node_new_end);
+    } else {
+      result << "null";
+    }
+    result << "}";
+  }
 };
 
 struct Patch::PositionStackEntry {
@@ -1024,6 +1052,12 @@ std::string Patch::GetDotGraph() const {
   result << "digraph patch {" << endl;
   if (root) root->WriteDotGraph(result, Point::Zero(), Point::Zero());
   result << "}" << endl;
+  return result.str();
+}
+
+std::string Patch::GetJSON() const {
+  std::stringstream result;
+  if (root) root->WriteJSON(result, Point::Zero(), Point::Zero());
   return result.str();
 }
 
