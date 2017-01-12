@@ -1,4 +1,0 @@
-{
-  "blacklist": ["es6.forOf"],
-  "ignore": "test/helpers/words.js"
-}
