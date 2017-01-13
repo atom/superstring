@@ -13,6 +13,7 @@ static Nan::Persistent<String> old_text_string;
 static Nan::Persistent<v8::Function> hunk_wrapper_constructor;
 static Nan::Persistent<v8::FunctionTemplate> patch_wrapper_constructor_template;
 static Nan::Persistent<v8::Function> patch_wrapper_constructor;
+static vector<uint16_t> text_conversion_vector;
 
 static unique_ptr<Text> text_from_js(Nan::MaybeLocal<String> maybe_string) {
   Local<String> string;
@@ -21,13 +22,60 @@ static unique_ptr<Text> text_from_js(Nan::MaybeLocal<String> maybe_string) {
     return nullptr;
   }
 
-  unique_ptr<Text> text {new Text(string->Length())};
-  string->Write(text->data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
+  text_conversion_vector.clear();
+  text_conversion_vector.resize(string->Length());
+  string->Write(text_conversion_vector.data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
+
+  unique_ptr<Text> text {new Text()};
+  auto end = text_conversion_vector.end();
+  auto line_start = text_conversion_vector.begin();
+  auto line_end = line_start;
+
+  while (line_end != end) {
+    switch (*line_end) {
+      case '\n': {
+        auto &line = text->lines.back();
+        line.content.assign(line_start, line_end);
+        line.ending = LineEnding::LF;
+        text->lines.push_back(Line{});
+        ++line_end;
+        line_start = line_end;
+        break;
+      }
+
+      case '\r': {
+        auto &line = text->lines.back();
+        line.content.assign(line_start, line_end);
+        if (line_end + 1 != end && *(line_end + 1) == '\n') {
+          line.ending = LineEnding::CRLF;
+          line_end += 2;
+          line_start = line_end;
+        } else {
+          line.ending = LineEnding::CR;
+          ++line_end;
+          line_start = line_end;
+        }
+        text->lines.push_back(Line{});
+        break;
+      }
+
+      default: {
+        ++line_end;
+        break;
+      }
+    }
+  }
+
+  auto &line = text->lines.back();
+  line.content.assign(line_start, line_end);
+
   return text;
 }
 
 static Local<String> text_to_js(Text *text) {
-  return Nan::New<String>(text->data(), text->size()).ToLocalChecked();
+  text_conversion_vector.clear();
+  text->write(text_conversion_vector);
+  return Nan::New<String>(text_conversion_vector.data(), text_conversion_vector.size()).ToLocalChecked();
 }
 
 class HunkWrapper : public Nan::ObjectWrap {

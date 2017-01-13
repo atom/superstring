@@ -6,71 +6,88 @@
 using std::move;
 using std::vector;
 using std::unique_ptr;
-using std::ostream;
+using std::basic_ostream;
 
-TextSlice::TextSlice(Text &text) : text{&text}, start_index{0}, end_index{text.size()} {}
+Text::Text() : lines {Line{{}, LineEnding::NONE}} {}
 
-TextSlice::TextSlice(Text *text, size_t start_index, size_t end_index)
-    : text{text}, start_index{start_index}, end_index{end_index} {}
+void Text::append(TextSlice slice) {
+  Line &last_line = lines.back();
 
-Text::iterator TextSlice::begin() {
-  return text->begin() + start_index;
+  if (slice.start.row == slice.end.row) {
+    last_line.content.insert(
+      last_line.content.end(),
+      slice.text->lines[slice.start.row].content.begin() + slice.start.column,
+      slice.text->lines[slice.end.row].content.begin() + slice.end.column
+    );
+  } else {
+    last_line.content.insert(
+      last_line.content.end(),
+      slice.text->lines[slice.start.row].content.begin() + slice.start.column,
+      slice.text->lines[slice.start.row].content.end()
+    );
+    last_line.ending = slice.text->lines[slice.start.row].ending;
+    lines.insert(
+      lines.end(),
+      slice.text->lines.begin() + slice.start.row + 1,
+      slice.text->lines.begin() + slice.end.row
+    );
+    lines.push_back({
+      slice.text->lines[slice.end.row].content.substr(0, slice.end.column),
+      LineEnding::NONE
+    });
+  }
 }
 
-size_t TextSlice::size() {
-  return end_index - start_index;
+void Text::write(vector<uint16_t> &vector) const {
+  for (const Line &line : lines) {
+    for (char16_t character : line.content) {
+      vector.push_back(character);
+    }
+    switch (line.ending) {
+      case LineEnding::NONE:
+        break;
+      case LineEnding::LF:
+        vector.push_back('\n');
+        break;
+      case LineEnding::CR:
+        vector.push_back('\r');
+        break;
+      case LineEnding::CRLF:
+        vector.push_back('\r');
+        vector.push_back('\n');
+        break;
+    }
+  }
 }
 
-Text::iterator TextSlice::end() {
-  return text->begin() + end_index;
+Point Text::Extent() const {
+  return Point(lines.size() - 1, lines.back().content.size());
 }
+
+TextSlice::TextSlice(Text &text) : text{&text}, start{Point()}, end{text.Extent()} {}
+
+TextSlice::TextSlice(Text *text, Point start, Point end) : text{text}, start{start}, end{end} {}
 
 Text TextSlice::concat(TextSlice a, TextSlice b) {
   Text result;
-  result.reserve(a.size() + b.size());
-  result.insert(
-    result.end(),
-    a.begin(),
-    a.end()
-  );
-  result.insert(
-    result.end(),
-    b.begin(),
-    b.end()
-  );
+  result.append(a);
+  result.append(b);
   return result;
 }
 
 Text TextSlice::concat(TextSlice a, TextSlice b, TextSlice c) {
   Text result;
-  result.reserve(a.size() + b.size() + c.size());
-  result.insert(
-    result.end(),
-    a.begin(),
-    a.end()
-  );
-  result.insert(
-    result.end(),
-    b.begin(),
-    b.end()
-  );
-  result.insert(
-    result.end(),
-    c.begin(),
-    c.end()
-  );
+  result.append(a);
+  result.append(b);
+  result.append(c);
   return result;
 }
 
-TextSlice::operator Text() const {
-  return Text(text->begin() + start_index, text->begin() + end_index);
-}
-
 std::pair<TextSlice, TextSlice> TextSlice::split(Point position) {
-  size_t index = character_index_for_position(position);
+  Point split_point = start.traverse(position);
   return {
-    TextSlice{text, start_index, start_index + index},
-    TextSlice{text, start_index + index, end_index}
+    TextSlice{text, start, split_point},
+    TextSlice{text, split_point, end}
   };
 }
 
@@ -82,37 +99,68 @@ TextSlice TextSlice::prefix(Point prefix_end) {
   return split(prefix_end).first;
 }
 
-size_t TextSlice::character_index_for_position(Point target) {
-  Point position;
-  auto begin = text->begin() + start_index;
-  auto end = text->begin() + end_index;
-  auto iter = begin;
-  while (iter != end && position < target) {
-    if (*iter == '\n') {
-      position.row++;
-      position.column = 0;
-    } else {
-      position.column++;
-    }
-    ++iter;
-  }
-
-  return iter - begin;
-}
-
-ostream &operator<<(ostream &stream, const Text *text) {
-  if (text) {
-    stream << "'";
-    for (uint16_t character : *text) {
+std::ostream &operator<<(std::ostream &stream, const Text &text) {
+  for (Line line : text.lines) {
+    for (char16_t character : line.content) {
       if (character < CHAR_MAX) {
-        stream << (char)character;
+        stream << static_cast<char>(character);
       } else {
         stream << "\\u" << character;
       }
     }
-    stream << "'";
-    return stream;
-  } else {
-    return stream << "null";
+
+    switch (line.ending) {
+      case LineEnding::NONE:
+        break;
+      case LineEnding::LF:
+        stream << '\n';
+        break;
+      case LineEnding::CR:
+        stream << '\r';
+        break;
+      case LineEnding::CRLF:
+        stream << "\r\n";
+        break;
+    }
   }
+  return stream;
+}
+
+std::ostream &operator<<(std::ostream &stream, const TextSlice &slice) {
+  for (uint32_t row = slice.start.row; row <= slice.end.row; row++) {
+    Line &line = slice.text->lines[row];
+
+    uint32_t column = 0;
+    if (row == slice.start.row) column = slice.start.column;
+
+    uint32_t end_column = line.content.size();
+    if (row == slice.end.row) end_column = slice.end.column;
+
+    for (; column < end_column; column++) {
+      char16_t character = line.content[column];
+      if (character < CHAR_MAX) {
+        stream << static_cast<char>(character);
+      } else {
+        stream << "\\u" << character;
+      }
+    }
+
+    if (row != slice.end.row) {
+      switch (line.ending) {
+        case LineEnding::NONE:
+          break;
+        case LineEnding::LF:
+          stream << '\n';
+          break;
+        case LineEnding::CR:
+          stream << '\r';
+          break;
+        case LineEnding::CRLF:
+          stream << "\r\n";
+          break;
+      }
+    }
+  }
+
+  return stream;
 }

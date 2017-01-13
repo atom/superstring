@@ -28,14 +28,8 @@ bool operator==(const Patch::Hunk &left, const Patch::Hunk &right) {
          text_eq(left.new_text, right.new_text);
 }
 
-std::unique_ptr<Text> GetText(const char *string) {
-  size_t length = strlen(string);
-  vector<uint16_t> content;
-  content.reserve(length);
-  for (size_t i = 0; i < length; i++) {
-    content.push_back(static_cast<uint16_t>(string[i]));
-  }
-  return std::unique_ptr<Text>(new Text(move(content)));
+std::unique_ptr<Text> get_text(std::string s) {
+  return std::unique_ptr<Text>(new Text(s.begin(), s.end()));
 }
 
 #endif // SUPERSTRING_TEST_HELPERS_H
