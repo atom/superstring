@@ -82,9 +82,22 @@ struct Patch::Node {
       << "label=\""
       << "new range: " << node_new_start << " - " << node_new_end << ", " << endl
       << "old range: " << node_old_start << " - " << node_old_end << ", " << endl
-      << "new text: " << new_text.get() << endl << ", "
-      << "old text: " << old_text.get() << endl
-      << "\""
+      << "new text: ";
+
+    if (new_text) {
+      result << "\\\"" << *new_text << "\\\"" << endl;
+    } else {
+      result << "null" << endl;
+    }
+
+    result << "old text: ";
+    if (old_text) {
+      result << "\\\"" << *old_text <<  "\\\""  << endl;
+    } else {
+      result << "null" << endl;
+    }
+
+    result << "\""
       << "tooltip=\"" << this
       << "\"]" << endl;
 
