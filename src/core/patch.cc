@@ -883,11 +883,7 @@ bool Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
         upper_bound->old_extent =
             lower_bound->old_extent.traverse(upper_bound->old_extent);
         if (lower_bound->old_text && upper_bound->old_text) {
-          lower_bound->old_text->insert(
-            lower_bound->old_text->end(),
-            upper_bound->old_text->begin(),
-            upper_bound->old_text->end()
-          );
+          lower_bound->old_text->append(*upper_bound->old_text);
           std::swap(upper_bound->old_text, lower_bound->old_text);
         } else {
           upper_bound->old_text = nullptr;
@@ -896,11 +892,7 @@ bool Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
         upper_bound->new_extent =
             lower_bound->new_extent.traverse(upper_bound->new_extent);
         if (lower_bound->new_text && upper_bound->new_text) {
-          lower_bound->new_text->insert(
-            lower_bound->new_text->end(),
-            upper_bound->new_text->begin(),
-            upper_bound->new_text->end()
-          );
+          lower_bound->new_text->append(*upper_bound->new_text);
           std::swap(upper_bound->new_text, lower_bound->new_text);
         } else {
           upper_bound->new_text = nullptr;
@@ -908,6 +900,7 @@ bool Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
 
         upper_bound->left = lower_bound->left;
         lower_bound->left = nullptr;
+
         delete_node(&lower_bound);
       }
     } else {
