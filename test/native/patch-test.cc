@@ -71,15 +71,15 @@ TEST_CASE("Records overlapping splices with text") {
     Point{0, 5},
     Point{0, 3},
     Point{0, 4},
-    get_text("abc"),
-    get_text("1234")
+    get_text({u"abc"}),
+    get_text({u"1234"})
   );
   REQUIRE(patch.get_hunks() == vector<Hunk>({
     Hunk{
       Point{0, 5}, Point{0, 8},
       Point{0, 5}, Point{0, 9},
-      get_text("abc").get(),
-      get_text("1234").get()
+      get_text({u"abc"}).get(),
+      get_text({u"1234"}).get()
     },
   }));
 
@@ -88,15 +88,15 @@ TEST_CASE("Records overlapping splices with text") {
     Point{0, 7},
     Point{0, 3},
     Point{0, 4},
-    get_text("34d"),
-    get_text("5678")
+    get_text({u"34d"}),
+    get_text({u"5678"})
   );
   REQUIRE(patch.get_hunks() == vector<Hunk>({
     Hunk{
       Point{0, 5}, Point{0, 9},
       Point{0, 5}, Point{0, 11},
-      get_text("abcd").get(),
-      get_text("125678").get()
+      get_text({u"abcd"}).get(),
+      get_text({u"125678"}).get()
     },
   }));
 
@@ -105,15 +105,15 @@ TEST_CASE("Records overlapping splices with text") {
     Point{0, 3},
     Point{0, 3},
     Point{0, 4},
-    get_text("efa"),
-    get_text("1234")
+    get_text({u"efa"}),
+    get_text({u"1234"})
   );
   REQUIRE(patch.get_hunks() == vector<Hunk>({
     {
       Point{0, 3}, Point{0, 9},
       Point{0, 3}, Point{0, 12},
-      get_text("efabcd").get(),
-      get_text("123425678").get()
+      get_text({u"efabcd"}).get(),
+      get_text({u"123425678"}).get()
     },
   }));
 
@@ -122,21 +122,21 @@ TEST_CASE("Records overlapping splices with text") {
     Point{0, 15},
     Point{0, 3},
     Point{0, 4},
-    get_text("ghi"),
-    get_text("5678")
+    get_text({u"ghi"}),
+    get_text({u"5678"})
   );
   REQUIRE(patch.get_hunks() == vector<Hunk>({
     Hunk{
       Point{0, 3}, Point{0, 9},
       Point{0, 3}, Point{0, 12},
-      get_text("efabcd").get(),
-      get_text("123425678").get()
+      get_text({u"efabcd"}).get(),
+      get_text({u"123425678"}).get()
     },
     Hunk{
       Point{0, 12}, Point{0, 15},
       Point{0, 15}, Point{0, 19},
-      get_text("ghi").get(),
-      get_text("5678").get()
+      get_text({u"ghi"}).get(),
+      get_text({u"5678"}).get()
     },
   }));
 
@@ -145,15 +145,15 @@ TEST_CASE("Records overlapping splices with text") {
     Point{0, 1},
     Point{0, 21},
     Point{0, 5},
-    get_text("xx123425678yyy5678zzz"),
-    get_text("99999")
+    get_text({u"xx123425678yyy5678zzz"}),
+    get_text({u"99999"})
   );
   REQUIRE(patch.get_hunks() == vector<Hunk>({
     Hunk{
       Point{0, 1}, Point{0, 18},
       Point{0, 1}, Point{0, 6},
-      get_text("xxefabcdyyyghizzz").get(),
-      get_text("99999").get()
+      get_text({u"xxefabcdyyyghizzz"}).get(),
+      get_text({u"99999"}).get()
     }
   }));
 }

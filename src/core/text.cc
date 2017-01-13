@@ -8,6 +8,10 @@ using std::vector;
 using std::unique_ptr;
 using std::basic_ostream;
 
+bool Line::operator==(const Line &other) const {
+  return content == other.content && ending == other.ending;
+}
+
 Text::Text() : lines {Line{{}, LineEnding::NONE}} {}
 
 void Text::append(TextSlice slice) {
@@ -62,6 +66,10 @@ void Text::write(vector<uint16_t> &vector) const {
 
 Point Text::Extent() const {
   return Point(lines.size() - 1, lines.back().content.size());
+}
+
+bool Text::operator==(const Text &other) const {
+  return lines == other.lines;
 }
 
 TextSlice::TextSlice(Text &text) : text{&text}, start{Point()}, end{text.Extent()} {}

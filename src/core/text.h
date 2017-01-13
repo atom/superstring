@@ -18,6 +18,7 @@ struct Line {
   Line(const std::u16string &content, LineEnding ending) :
     content{content}, ending{ending} {}
 
+  bool operator==(const Line &other) const;
   std::u16string content;
   LineEnding ending;
 };
@@ -29,6 +30,7 @@ struct Text {
 
   Text();
 
+  bool operator==(const Text &other) const;
   Point Extent() const;
   void append(TextSlice slice);
   void write(std::vector<uint16_t> &) const;

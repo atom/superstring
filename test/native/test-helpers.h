@@ -9,6 +9,7 @@
 #include <vector>
 
 using std::vector;
+using std::u16string;
 
 bool text_eq(const Text *left, const Text *right) {
   if (left == right)
@@ -28,8 +29,14 @@ bool operator==(const Patch::Hunk &left, const Patch::Hunk &right) {
          text_eq(left.new_text, right.new_text);
 }
 
-std::unique_ptr<Text> get_text(std::string s) {
-  return std::unique_ptr<Text>(new Text(s.begin(), s.end()));
+std::unique_ptr<Text> get_text(const vector<u16string> strings) {
+  std::unique_ptr<Text> result { new Text };
+  result->lines.pop_back();
+  for (const u16string &string : strings) {
+    result->lines.push_back({ string, LineEnding::LF });
+  }
+  result->lines.back().ending = LineEnding::NONE;
+  return result;
 }
 
 #endif // SUPERSTRING_TEST_HELPERS_H
