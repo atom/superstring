@@ -213,7 +213,7 @@ describe('Patch', function () {
           const splice = mutatedDocument.performRandomSplice()
 
           // process.stderr.write(`graph message {
-          //   label="splice(${formatPoint(splice.start)}, ${formatPoint(splice.deletedExtent)}, ${formatPoint(splice.insertedExtent)})"
+          //   label="splice(${formatPoint(splice.start)}, ${formatPoint(splice.deletedExtent)}, ${formatPoint(splice.insertedExtent)}, '${splice.deletedText}', '${splice.insertedText}')"
           // }\n`)
 
           patch.splice(
@@ -225,11 +225,11 @@ describe('Patch', function () {
           )
         }
 
-        // patch.printDotGraph()
+        // process.stderr.write(patch.getDotGraph())
 
         const originalDocumentCopy = originalDocument.clone()
         const hunks = patch.getHunks()
-        assert.equal(patch.getHunkCount(), hunks.length)
+        assert.equal(patch.getHunkCount(), hunks.length, seedMessage)
 
         let previousHunk
         for (let hunk of patch.getHunks()) {
@@ -238,8 +238,8 @@ describe('Patch', function () {
           assert.equal(hunk.oldText, originalDocument.getTextInRange(hunk.oldStart, hunk.oldEnd), seedMessage)
           originalDocumentCopy.splice(hunk.newStart, oldExtent, hunk.newText)
           if (previousHunk && mergeAdjacentHunks) {
-            assert.notDeepEqual(previousHunk.oldEnd, hunk.oldStart)
-            assert.notDeepEqual(previousHunk.newEnd, hunk.newStart)
+            assert.notDeepEqual(previousHunk.oldEnd, hunk.oldStart, seedMessage)
+            assert.notDeepEqual(previousHunk.newEnd, hunk.newStart, seedMessage)
           }
           previousHunk = hunk
         }
@@ -270,13 +270,15 @@ describe('Patch', function () {
           let oldPoint = originalDocument.buildRandomPoint()
           assert.deepEqual(
             patch.hunkForOldPosition(oldPoint),
-            last(hunks.filter(hunk => compare(hunk.oldStart, oldPoint) <= 0))
+            last(hunks.filter(hunk => compare(hunk.oldStart, oldPoint) <= 0)),
+            seedMessage
           )
 
           let newPoint = mutatedDocument.buildRandomPoint()
           assert.deepEqual(
             patch.hunkForNewPosition(newPoint),
-            last(hunks.filter(hunk => compare(hunk.newStart, newPoint) <= 0))
+            last(hunks.filter(hunk => compare(hunk.newStart, newPoint) <= 0)),
+            seedMessage
           )
         }
 
@@ -284,12 +286,12 @@ describe('Patch', function () {
 
         let blob = Buffer.from(patch.serialize().toString('base64'), 'base64')
         const patchCopy1 = Patch.deserialize(blob)
-        assert.deepEqual(patchCopy1.getHunks(), patch.getHunks())
-        assert.deepEqual(patchCopy1.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint))
+        assert.deepEqual(patchCopy1.getHunks(), patch.getHunks(), seedMessage)
+        assert.deepEqual(patchCopy1.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint), seedMessage)
 
         const patchCopy2 = patch.copy()
-        assert.deepEqual(patchCopy2.getHunks(), patch.getHunks())
-        assert.deepEqual(patchCopy2.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint))
+        assert.deepEqual(patchCopy2.getHunks(), patch.getHunks(), seedMessage)
+        assert.deepEqual(patchCopy2.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint), seedMessage)
       }
     }
   })

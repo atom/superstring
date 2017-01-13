@@ -46,7 +46,7 @@ class TestDocument {
     let start = deletedRange.start
     let deletedText = this.getTextInRange(start, deletedRange.end)
     let deletedExtent = pointHelpers.traversalDistance(deletedRange.end, deletedRange.start)
-    let insertedText = this.buildRandomLines(0, 10, true).join('\n')
+    let insertedText = this.buildRandomLines(0, 3, true).join('\n')
     let insertedExtent = textHelpers.getExtent(insertedText)
     this.splice(start, deletedExtent, insertedText)
     return {start, deletedExtent, insertedExtent, deletedText, insertedText}
@@ -80,7 +80,7 @@ class TestDocument {
   }
 
   buildRandomLine (upperCase) {
-    let wordCount = this.random(20)
+    let wordCount = this.random(5)
     let words = []
     for (let i = 0; i < wordCount; i++) {
       words.push(this.buildRandomWord(upperCase))
