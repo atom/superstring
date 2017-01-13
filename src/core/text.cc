@@ -2,17 +2,69 @@
 #include <limits.h>
 #include <vector>
 #include <memory>
+#include <iconv.h>
 
 using std::move;
 using std::vector;
 using std::unique_ptr;
 using std::basic_ostream;
+using std::istream;
 
 bool Line::operator==(const Line &other) const {
   return content == other.content && ending == other.ending;
 }
 
 Text::Text() : lines {Line{{}, LineEnding::NONE}} {}
+
+Text::Text(const vector<Line> &lines) : lines{lines} {}
+
+Text::Text(istream &stream, const char *encoding_name, size_t chunk_size) {
+  lines.push_back({u"", LineEnding::NONE});
+
+  iconv_t conversion = iconv_open("UTF-16LE", encoding_name);
+  if (conversion == reinterpret_cast<iconv_t>(-1)) {
+    return;
+  }
+
+  vector<char> byte_vector(chunk_size);
+  vector<char16_t> character_vector(chunk_size);
+  char *byte_buffer = byte_vector.data();
+  char16_t *character_buffer = character_vector.data();
+
+  for (;;) {
+    stream.read(byte_buffer, chunk_size);
+    size_t bytes_read = stream.gcount();
+    if (bytes_read == 0) break;
+
+    char *byte_pointer = byte_buffer;
+    char *character_pointer = reinterpret_cast<char *>(character_buffer);
+    size_t character_limit = chunk_size * (sizeof(char16_t) / sizeof(char));
+
+    iconv(
+      conversion,
+      &byte_pointer,
+      &bytes_read,
+      &character_pointer,
+      &character_limit
+    );
+
+    for (char16_t *character = character_buffer,
+         *end_character = reinterpret_cast<char16_t *>(character_pointer);
+         character != end_character;
+         character++) {
+      switch (*character) {
+        case '\n':
+          lines.back().ending = LineEnding::LF;
+          lines.push_back({u"", LineEnding::NONE});
+          break;
+
+        default:
+          lines.back().content.push_back(*character);
+          break;
+      }
+    }
+  }
+}
 
 void Text::append(TextSlice slice) {
   Line &last_line = lines.back();

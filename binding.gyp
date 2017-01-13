@@ -26,6 +26,13 @@
                 "src/core/text.cc",
                 "src/core/marker-index.cc",
                 "src/core/buffer-offset-index.cc"
+            ],
+            "conditions": [
+                ['OS=="mac"', {
+                    'link_settings': {
+                        'libraries': ['libiconv.dylib'],
+                    }
+                }],
             ]
         },
     ],
@@ -46,6 +53,7 @@
                     "CATCH_CONFIG_CPP11_NO_IS_ENUM"
                 ],
                 "sources": [
+                    "test/native/text-test.cc",
                     "test/native/patch-test.cc",
                     "test/native/tests.cc",
                 ],

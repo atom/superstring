@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <ostream>
+#include <istream>
 #include "point.h"
 
 enum class LineEnding : uint8_t {
@@ -29,6 +30,8 @@ struct Text {
   std::vector<Line> lines;
 
   Text();
+  Text(const std::vector<Line> &);
+  Text(std::istream &stream, const char *encoding_name, size_t chunk_size);
 
   bool operator==(const Text &other) const;
   Point Extent() const;
