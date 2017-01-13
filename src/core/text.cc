@@ -95,7 +95,7 @@ std::pair<TextSlice, TextSlice> TextSlice::split(Point position) {
   Point split_point = start.traverse(position);
   return {
     TextSlice{text, start, split_point},
-    TextSlice{text, split_point, end}
+    TextSlice{text, Point::min(split_point, end), end}
   };
 }
 
