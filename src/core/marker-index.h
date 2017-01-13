@@ -20,6 +20,7 @@ public:
   };
 
   MarkerIndex(unsigned seed);
+  ~MarkerIndex();
   int GenerateRandomNumber();
   void Insert(MarkerId id, Point start, Point end);
   void SetExclusive(MarkerId id, bool exclusive);

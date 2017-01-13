@@ -364,6 +364,10 @@ MarkerIndex::MarkerIndex(unsigned seed)
     root {nullptr},
     iterator {this} {}
 
+MarkerIndex::~MarkerIndex() {
+  if (root) DeleteSubtree(root);
+}
+
 int MarkerIndex::GenerateRandomNumber() {
   return random_distribution(random_engine);
 }
