@@ -11,7 +11,7 @@
 using std::vector;
 using std::u16string;
 
-bool text_eq(const Text *left, const Text *right) {
+static inline bool text_eq(const Text *left, const Text *right) {
   if (left == right)
     return true;
   if (!left && right)
@@ -21,7 +21,7 @@ bool text_eq(const Text *left, const Text *right) {
   return *left == *right;
 }
 
-bool operator==(const Patch::Hunk &left, const Patch::Hunk &right) {
+static inline bool operator==(const Patch::Hunk &left, const Patch::Hunk &right) {
   return left.old_start == right.old_start &&
          left.new_start == right.new_start && left.old_end == right.old_end &&
          left.new_end == right.new_end &&
@@ -29,7 +29,7 @@ bool operator==(const Patch::Hunk &left, const Patch::Hunk &right) {
          text_eq(left.new_text, right.new_text);
 }
 
-std::unique_ptr<Text> get_text(const vector<u16string> strings) {
+static inline std::unique_ptr<Text> get_text(const vector<u16string> strings) {
   std::unique_ptr<Text> result { new Text };
   result->lines.pop_back();
   for (const u16string &string : strings) {
