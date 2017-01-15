@@ -31,8 +31,8 @@ describe('BufferOffsetIndex', () => {
           const row = random(10) <= 1 ? Infinity : random.intBetween(0, referenceIndex.getLineCount() + 10)
           const column = random(10) <= 1 ? Infinity : random.intBetween(0, referenceIndex.getLongestColumn() + 10)
           const position = {row, column}
-          assert.equal(bufferIndex.characterIndexForPosition(position), referenceIndex.characterIndexForPosition(position))
-          assert.deepEqual(bufferIndex.positionForCharacterIndex(index), referenceIndex.positionForCharacterIndex(index))
+          assert.equal(bufferIndex.character_index_for_position(position), referenceIndex.character_index_for_position(position))
+          assert.deepEqual(bufferIndex.position_for_character_index(index), referenceIndex.position_for_character_index(index))
         }
       }
     }

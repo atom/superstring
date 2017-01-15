@@ -7,10 +7,10 @@
 using namespace v8;
 
 void Init(Local<Object> exports) {
-  PointWrapper::Init();
-  PatchWrapper::Init(exports);
-  MarkerIndexWrapper::Init(exports);
-  BufferOffsetIndexWrapper::Init(exports);
+  PointWrapper::init();
+  PatchWrapper::init(exports);
+  MarkerIndexWrapper::init(exports);
+  BufferOffsetIndexWrapper::init(exports);
 }
 
 NODE_MODULE(superstring, Init)

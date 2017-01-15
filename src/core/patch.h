@@ -35,53 +35,53 @@ public:
   Patch(Node *root, uint32_t hunk_count, bool merges_adjacent_hunks);
   Patch(Patch &&);
   ~Patch();
-  bool Splice(Point start, Point deletion_extent, Point insertion_extent,
+  bool splice(Point start, Point deletion_extent, Point insertion_extent,
               std::unique_ptr<Text> old_text, std::unique_ptr<Text> new_text);
-  bool SpliceOld(Point start, Point deletion_extent, Point insertion_extent);
-  Patch Copy();
-  Patch Invert();
-  std::vector<Hunk> GetHunks() const;
-  std::vector<Hunk> GetHunksInNewRange(Point start, Point end,
+  bool splice_old(Point start, Point deletion_extent, Point insertion_extent);
+  Patch copy();
+  Patch invert();
+  std::vector<Hunk> get_hunks() const;
+  std::vector<Hunk> get_hunks_in_new_range(Point start, Point end,
                                        bool inclusive = false);
-  std::vector<Hunk> GetHunksInOldRange(Point start, Point end);
-  optional<Hunk> HunkForOldPosition(Point position);
-  optional<Hunk> HunkForNewPosition(Point position);
-  void Serialize(std::vector<uint8_t> *) const;
-  std::string GetDotGraph() const;
-  std::string GetJSON() const;
-  void Rebalance();
-  size_t GetHunkCount() const;
+  std::vector<Hunk> get_hunks_in_old_range(Point start, Point end);
+  optional<Hunk> hunk_for_old_position(Point position);
+  optional<Hunk> hunk_for_new_position(Point position);
+  void serialize(std::vector<uint8_t> *) const;
+  std::string get_dot_graph() const;
+  std::string get_json() const;
+  void rebalance();
+  size_t get_hunk_count() const;
 
 private:
   template <typename CoordinateSpace>
-  std::vector<Hunk> GetHunksInRange(Point, Point, bool inclusive = false);
+  std::vector<Hunk> get_hunks_in_range(Point, Point, bool inclusive = false);
 
-  template <typename CoordinateSpace> Node *SplayNodeEndingBefore(Point);
+  template <typename CoordinateSpace> Node *splay_node_ending_before(Point);
 
-  template <typename CoordinateSpace> Node *SplayNodeStartingBefore(Point);
+  template <typename CoordinateSpace> Node *splay_node_starting_before(Point);
 
-  template <typename CoordinateSpace> Node *SplayNodeEndingAfter(Point, Point);
-
-  template <typename CoordinateSpace>
-  Node *SplayNodeStartingAfter(Point, Point);
+  template <typename CoordinateSpace> Node *splay_node_ending_after(Point, Point);
 
   template <typename CoordinateSpace>
-  optional<Hunk> HunkForPosition(Point position);
+  Node *splay_node_starting_after(Point, Point);
 
-  std::unique_ptr<Text> ComputeOldText(std::unique_ptr<Text>, Point, Point);
+  template <typename CoordinateSpace>
+  optional<Hunk> hunk_for_position(Point position);
 
-  void SplayNode(Node *);
-  void RotateNodeRight(Node *, Node *, Node *);
-  void RotateNodeLeft(Node *, Node *, Node *);
-  void DeleteRoot();
-  void PerformRebalancingRotations(uint32_t);
-  Node *BuildNode(Node *, Node *, Point, Point, Point, Point,
+  std::unique_ptr<Text> compute_old_text(std::unique_ptr<Text>, Point, Point);
+
+  void splay_node(Node *);
+  void rotate_node_right(Node *, Node *, Node *);
+  void rotate_node_left(Node *, Node *, Node *);
+  void delete_root();
+  void perform_rebalancing_rotations(uint32_t);
+  Node *build_node(Node *, Node *, Point, Point, Point, Point,
                   std::unique_ptr<Text>, std::unique_ptr<Text>);
-  void DeleteNode(Node **);
-  bool IsFrozen() const;
+  void delete_node(Node **);
+  bool is_frozen() const;
 
-  friend void GetNodeFromBuffer(const uint8_t **data, const uint8_t *end, Node *node);
-  friend void AppendNodeToBuffer(std::vector<uint8_t> *output, const Node &node);
+  friend void get_node_from_buffer(const uint8_t **data, const uint8_t *end, Node *node);
+  friend void append_node_to_buffer(std::vector<uint8_t> *output, const Node &node);
 };
 
 std::ostream &operator<<(std::ostream &, const Patch::Hunk &);

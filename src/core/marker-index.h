@@ -21,25 +21,25 @@ public:
 
   MarkerIndex(unsigned seed);
   ~MarkerIndex();
-  int GenerateRandomNumber();
-  void Insert(MarkerId id, Point start, Point end);
-  void SetExclusive(MarkerId id, bool exclusive);
-  void Delete(MarkerId id);
-  SpliceResult Splice(Point start, Point old_extent, Point new_extent);
-  Point GetStart(MarkerId id) const;
-  Point GetEnd(MarkerId id) const;
-  Range GetRange(MarkerId id) const;
+  int generate_random_number();
+  void insert(MarkerId id, Point start, Point end);
+  void set_exclusive(MarkerId id, bool exclusive);
+  void delete_marker(MarkerId id);
+  SpliceResult splice(Point start, Point old_extent, Point new_extent);
+  Point get_start(MarkerId id) const;
+  Point get_end(MarkerId id) const;
+  Range get_range(MarkerId id) const;
 
-  int Compare(MarkerId id1, MarkerId id2) const;
-  flat_set<MarkerId> FindIntersecting(Point start, Point end);
-  flat_set<MarkerId> FindContaining(Point start, Point end);
-  flat_set<MarkerId> FindContainedIn(Point start, Point end);
-  flat_set<MarkerId> FindStartingIn(Point start, Point end);
-  flat_set<MarkerId> FindStartingAt(Point position);
-  flat_set<MarkerId> FindEndingIn(Point start, Point end);
-  flat_set<MarkerId> FindEndingAt(Point position);
+  int compare(MarkerId id1, MarkerId id2) const;
+  flat_set<MarkerId> find_intersecting(Point start, Point end);
+  flat_set<MarkerId> find_containing(Point start, Point end);
+  flat_set<MarkerId> find_contained_in(Point start, Point end);
+  flat_set<MarkerId> find_starting_in(Point start, Point end);
+  flat_set<MarkerId> find_starting_at(Point position);
+  flat_set<MarkerId> find_ending_in(Point start, Point end);
+  flat_set<MarkerId> find_ending_at(Point position);
 
-  std::unordered_map<MarkerId, Range> Dump();
+  std::unordered_map<MarkerId, Range> dump();
 
 private:
   friend class Iterator;
@@ -56,34 +56,34 @@ private:
     int priority;
 
     Node(Node *parent, Point left_extent);
-    bool IsMarkerEndpoint();
+    bool is_marker_endpoint();
   };
 
   class Iterator {
   public:
     Iterator(MarkerIndex *marker_index);
-    void Reset();
-    Node* InsertMarkerStart(const MarkerId &id, const Point &start_position, const Point &end_position);
-    Node* InsertMarkerEnd(const MarkerId &id, const Point &start_position, const Point &end_position);
-    Node* InsertSpliceBoundary(const Point &position, bool is_insertion_end);
-    void FindIntersecting(const Point &start, const Point &end, flat_set<MarkerId> *result);
-    void FindContainedIn(const Point &start, const Point &end, flat_set<MarkerId> *result);
-    void FindStartingIn(const Point &start, const Point &end, flat_set<MarkerId> *result);
-    void FindEndingIn(const Point &start, const Point &end, flat_set<MarkerId> *result);
-    std::unordered_map<MarkerId, Range> Dump();
+    void reset();
+    Node* insert_marker_start(const MarkerId &id, const Point &start_position, const Point &end_position);
+    Node* insert_marker_end(const MarkerId &id, const Point &start_position, const Point &end_position);
+    Node* insert_splice_boundary(const Point &position, bool is_insertion_end);
+    void find_intersecting(const Point &start, const Point &end, flat_set<MarkerId> *result);
+    void find_contained_in(const Point &start, const Point &end, flat_set<MarkerId> *result);
+    void find_starting_in(const Point &start, const Point &end, flat_set<MarkerId> *result);
+    void find_ending_in(const Point &start, const Point &end, flat_set<MarkerId> *result);
+    std::unordered_map<MarkerId, Range> dump();
 
   private:
-    void Ascend();
-    void DescendLeft();
-    void DescendRight();
-    void MoveToSuccessor();
-    void SeekToFirstNodeGreaterThanOrEqualTo(const Point &position);
-    void MarkRight(const MarkerId &id, const Point &start_position, const Point &end_position);
-    void MarkLeft(const MarkerId &id, const Point &start_position, const Point &end_position);
-    Node* InsertLeftChild(const Point &position);
-    Node* InsertRightChild(const Point &position);
-    void CheckIntersection(const Point &start, const Point &end, flat_set<MarkerId> *results);
-    void CacheNodePosition() const;
+    void ascend();
+    void descend_left();
+    void descend_right();
+    void move_to_successor();
+    void seek_to_first_node_greater_than_or_equal_to(const Point &position);
+    void mark_right(const MarkerId &id, const Point &start_position, const Point &end_position);
+    void mark_left(const MarkerId &id, const Point &start_position, const Point &end_position);
+    Node* insert_left_child(const Point &position);
+    Node* insert_right_child(const Point &position);
+    void check_intersection(const Point &start, const Point &end, flat_set<MarkerId> *results);
+    void cache_node_position() const;
 
     MarkerIndex *marker_index;
     Node *current_node;
@@ -94,15 +94,15 @@ private:
     std::vector<Point> right_ancestor_position_stack;
   };
 
-  Point GetNodePosition(const Node *node) const;
-  void DeleteNode(Node *node);
-  void DeleteSubtree(Node *node);
-  void BubbleNodeUp(Node *node);
-  void BubbleNodeDown(Node *node);
-  void RotateNodeLeft(Node *pivot);
-  void RotateNodeRight(Node *pivot);
-  void GetStartingAndEndingMarkersWithinSubtree(const Node *node, flat_set<MarkerId> *starting, flat_set<MarkerId> *ending);
-  void PopulateSpliceInvalidationSets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const flat_set<MarkerId> &starting_inside_splice, const flat_set<MarkerId> &ending_inside_splice);
+  Point get_node_position(const Node *node) const;
+  void delete_node(Node *node);
+  void delete_subtree(Node *node);
+  void bubble_node_up(Node *node);
+  void bubble_node_down(Node *node);
+  void rotate_node_left(Node *pivot);
+  void rotate_node_right(Node *pivot);
+  void get_starting_and_ending_markers_within_subtree(const Node *node, flat_set<MarkerId> *starting, flat_set<MarkerId> *ending);
+  void populate_splice_invalidation_sets(SpliceResult *invalidated, const Node *start_node, const Node *end_node, const flat_set<MarkerId> &starting_inside_splice, const flat_set<MarkerId> &ending_inside_splice);
 
   std::default_random_engine random_engine;
   std::uniform_int_distribution<int> random_distribution;

@@ -33,20 +33,20 @@ struct Patch::Node {
   unique_ptr<Text> old_text;
   unique_ptr<Text> new_text;
 
-  void GetSubtreeEnd(Point *old_end, Point *new_end) {
+  void get_subtree_end(Point *old_end, Point *new_end) {
     Node *node = this;
-    *old_end = Point::Zero();
-    *new_end = Point::Zero();
+    *old_end = Point();
+    *new_end = Point();
     while (node) {
-      *old_end = old_end->Traverse(node->old_distance_from_left_ancestor)
-                     .Traverse(node->old_extent);
-      *new_end = new_end->Traverse(node->new_distance_from_left_ancestor)
-                     .Traverse(node->new_extent);
+      *old_end = old_end->traverse(node->old_distance_from_left_ancestor)
+                     .traverse(node->old_extent);
+      *new_end = new_end->traverse(node->new_distance_from_left_ancestor)
+                     .traverse(node->new_extent);
       node = node->right;
     }
   }
 
-  Node *Copy() {
+  Node *copy() {
     return new Node{
         left,
         right,
@@ -59,7 +59,7 @@ struct Patch::Node {
     };
   }
 
-  Node *Invert() {
+  Node *invert() {
     return new Node{
         left,
         right,
@@ -72,11 +72,11 @@ struct Patch::Node {
     };
   }
 
-  void WriteDotGraph(std::stringstream &result, Point left_ancestor_old_end, Point left_ancestor_new_end) {
-    Point node_old_start = left_ancestor_old_end.Traverse(old_distance_from_left_ancestor);
-    Point node_new_start = left_ancestor_new_end.Traverse(new_distance_from_left_ancestor);
-    Point node_old_end = node_old_start.Traverse(old_extent);
-    Point node_new_end = node_new_start.Traverse(new_extent);
+  void write_dot_graph(std::stringstream &result, Point left_ancestor_old_end, Point left_ancestor_new_end) {
+    Point node_old_start = left_ancestor_old_end.traverse(old_distance_from_left_ancestor);
+    Point node_new_start = left_ancestor_new_end.traverse(new_distance_from_left_ancestor);
+    Point node_old_end = node_old_start.traverse(old_extent);
+    Point node_new_end = node_new_start.traverse(new_extent);
 
     result << "node_" << this << " ["
       << "label=\""
@@ -89,7 +89,7 @@ struct Patch::Node {
     result << "node_" << this << " -> ";
     if (left) {
       result << "node_" << left << endl;
-      left->WriteDotGraph(result, left_ancestor_old_end, left_ancestor_new_end);
+      left->write_dot_graph(result, left_ancestor_old_end, left_ancestor_new_end);
     } else {
       result << "node_" << this << "_left_null" << endl;
       result << "node_" << this << "_left_null [label=\"\" shape=point]" << endl;
@@ -98,18 +98,18 @@ struct Patch::Node {
     result << "node_" << this << " -> ";
     if (right) {
       result << "node_" << right << endl;
-      right->WriteDotGraph(result, node_old_end, node_new_end);
+      right->write_dot_graph(result, node_old_end, node_new_end);
     } else {
       result << "node_" << this << "_right_null" << endl;
       result << "node_" << this << "_right_null [label=\"\" shape=point]" << endl;
     }
   }
 
-  void WriteJSON(std::stringstream &result, Point left_ancestor_old_end, Point left_ancestor_new_end) {
-    Point node_old_start = left_ancestor_old_end.Traverse(old_distance_from_left_ancestor);
-    Point node_new_start = left_ancestor_new_end.Traverse(new_distance_from_left_ancestor);
-    Point node_old_end = node_old_start.Traverse(old_extent);
-    Point node_new_end = node_new_start.Traverse(new_extent);
+  void write_json(std::stringstream &result, Point left_ancestor_old_end, Point left_ancestor_new_end) {
+    Point node_old_start = left_ancestor_old_end.traverse(old_distance_from_left_ancestor);
+    Point node_new_start = left_ancestor_new_end.traverse(new_distance_from_left_ancestor);
+    Point node_old_end = node_old_start.traverse(old_extent);
+    Point node_new_end = node_new_start.traverse(new_extent);
 
     result << "{";
     result << "\"id\": \"" << this << "\", ";
@@ -119,14 +119,14 @@ struct Patch::Node {
     result << "\"newEnd\": {\"row\": " << node_new_end.row << ", \"column\": " << node_new_end.column << "}, ";
     result << "\"left\": ";
     if (left) {
-      left->WriteJSON(result, left_ancestor_old_end, left_ancestor_new_end);
+      left->write_json(result, left_ancestor_old_end, left_ancestor_new_end);
     } else {
       result << "null";
     }
     result << ", ";
     result << "\"right\": ";
     if (right) {
-      right->WriteJSON(result, node_old_end, node_new_end);
+      right->write_json(result, node_old_end, node_new_end);
     } else {
       result << "null";
     }
@@ -181,20 +181,20 @@ Patch::Patch(Node *root, uint32_t hunk_count, bool merges_adjacent_hunks)
 Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
   bool left_to_right = true;
   for (const Patch *patch : patches_to_compose) {
-    auto hunks = patch->GetHunks();
+    auto hunks = patch->get_hunks();
 
     if (left_to_right) {
       for (auto iter = hunks.begin(), end = hunks.end(); iter != end; ++iter) {
-        Splice(iter->new_start, iter->old_end.Traversal(iter->old_start),
-               iter->new_end.Traversal(iter->new_start),
+        splice(iter->new_start, iter->old_end.traversal(iter->old_start),
+               iter->new_end.traversal(iter->new_start),
                iter->old_text ? unique_ptr<Text>{new Text(*iter->old_text)} : nullptr,
                iter->new_text ? unique_ptr<Text>{new Text(*iter->new_text)} : nullptr);
       }
     } else {
       for (auto iter = hunks.rbegin(), end = hunks.rend(); iter != end;
            ++iter) {
-        Splice(iter->old_start, iter->old_end.Traversal(iter->old_start),
-               iter->new_end.Traversal(iter->new_start),
+        splice(iter->old_start, iter->old_end.traversal(iter->old_start),
+               iter->new_end.traversal(iter->new_start),
                iter->old_text ? unique_ptr<Text>{new Text(*iter->old_text)} : nullptr,
                iter->new_text ? unique_ptr<Text>{new Text(*iter->new_text)} : nullptr);
       }
@@ -209,12 +209,12 @@ Patch::~Patch() {
     if (frozen_node_array) {
       free(frozen_node_array);
     } else {
-      DeleteNode(&root);
+      delete_node(&root);
     }
   }
 }
 
-Patch::Node *Patch::BuildNode(Node *left, Node *right,
+Patch::Node *Patch::build_node(Node *left, Node *right,
                        Point old_distance_from_left_ancestor,
                        Point new_distance_from_left_ancestor, Point old_extent,
                        Point new_extent, unique_ptr<Text> old_text,
@@ -230,7 +230,7 @@ Patch::Node *Patch::BuildNode(Node *left, Node *right,
                   move(new_text)};
 }
 
-void Patch::DeleteNode(Node **node_to_delete) {
+void Patch::delete_node(Node **node_to_delete) {
   if (*node_to_delete) {
     node_stack.clear();
     node_stack.push_back(*node_to_delete);
@@ -251,22 +251,22 @@ void Patch::DeleteNode(Node **node_to_delete) {
 }
 
 template <typename CoordinateSpace>
-Patch::Node *Patch::SplayNodeEndingBefore(Point target) {
+Patch::Node *Patch::splay_node_ending_before(Point target) {
   Node *splayed_node = nullptr;
-  Point left_ancestor_end = Point::Zero();
+  Point left_ancestor_end = Point();
   Node *node = root;
 
   node_stack.clear();
   size_t splayed_node_ancestor_count = 0;
   while (node) {
-    Point node_start = left_ancestor_end.Traverse(
+    Point node_start = left_ancestor_end.traverse(
         CoordinateSpace::distance_from_left_ancestor(node));
-    Point node_end = node_start.Traverse(CoordinateSpace::extent(node));
+    Point node_end = node_start.traverse(CoordinateSpace::extent(node));
     if (node_end <= target) {
       splayed_node = node;
       splayed_node_ancestor_count = node_stack.size();
       if (node->right) {
-        left_ancestor_end = node_start.Traverse(CoordinateSpace::extent(node));
+        left_ancestor_end = node_start.traverse(CoordinateSpace::extent(node));
         node_stack.push_back(node);
         node = node->right;
       } else {
@@ -284,24 +284,24 @@ Patch::Node *Patch::SplayNodeEndingBefore(Point target) {
 
   if (splayed_node) {
     node_stack.resize(splayed_node_ancestor_count);
-    SplayNode(splayed_node);
+    splay_node(splayed_node);
   }
 
   return splayed_node;
 }
 
 template <typename CoordinateSpace>
-Patch::Node *Patch::SplayNodeStartingBefore(Point target) {
+Patch::Node *Patch::splay_node_starting_before(Point target) {
   Node *splayed_node = nullptr;
-  Point left_ancestor_end = Point::Zero();
+  Point left_ancestor_end = Point();
   Node *node = root;
 
   node_stack.clear();
   size_t splayed_node_ancestor_count = 0;
   while (node) {
-    Point node_start = left_ancestor_end.Traverse(
+    Point node_start = left_ancestor_end.traverse(
         CoordinateSpace::distance_from_left_ancestor(node));
-    Point node_end = node_start.Traverse(CoordinateSpace::extent(node));
+    Point node_end = node_start.traverse(CoordinateSpace::extent(node));
     if (node_start <= target) {
       splayed_node = node;
       splayed_node_ancestor_count = node_stack.size();
@@ -324,24 +324,24 @@ Patch::Node *Patch::SplayNodeStartingBefore(Point target) {
 
   if (splayed_node) {
     node_stack.resize(splayed_node_ancestor_count);
-    SplayNode(splayed_node);
+    splay_node(splayed_node);
   }
 
   return splayed_node;
 }
 
 template <typename CoordinateSpace>
-Patch::Node *Patch::SplayNodeEndingAfter(Point splice_start, Point splice_end) {
+Patch::Node *Patch::splay_node_ending_after(Point splice_start, Point splice_end) {
   Node *splayed_node = nullptr;
-  Point left_ancestor_end = Point::Zero();
+  Point left_ancestor_end = Point();
   Node *node = root;
 
   node_stack.clear();
   size_t splayed_node_ancestor_count = 0;
   while (node) {
-    Point node_start = left_ancestor_end.Traverse(
+    Point node_start = left_ancestor_end.traverse(
         CoordinateSpace::distance_from_left_ancestor(node));
-    Point node_end = node_start.Traverse(CoordinateSpace::extent(node));
+    Point node_end = node_start.traverse(CoordinateSpace::extent(node));
     if (node_end >= splice_end && node_end > splice_start) {
       splayed_node = node;
       splayed_node_ancestor_count = node_stack.size();
@@ -364,24 +364,24 @@ Patch::Node *Patch::SplayNodeEndingAfter(Point splice_start, Point splice_end) {
 
   if (splayed_node) {
     node_stack.resize(splayed_node_ancestor_count);
-    SplayNode(splayed_node);
+    splay_node(splayed_node);
   }
 
   return splayed_node;
 }
 
 template <typename CoordinateSpace>
-Patch::Node *Patch::SplayNodeStartingAfter(Point splice_start, Point splice_end) {
+Patch::Node *Patch::splay_node_starting_after(Point splice_start, Point splice_end) {
   Node *splayed_node = nullptr;
-  Point left_ancestor_end = Point::Zero();
+  Point left_ancestor_end = Point();
   Node *node = root;
 
   node_stack.clear();
   size_t splayed_node_ancestor_count = 0;
   while (node) {
-    Point node_start = left_ancestor_end.Traverse(
+    Point node_start = left_ancestor_end.traverse(
         CoordinateSpace::distance_from_left_ancestor(node));
-    Point node_end = node_start.Traverse(CoordinateSpace::extent(node));
+    Point node_end = node_start.traverse(CoordinateSpace::extent(node));
     if (node_start >= splice_end && node_start > splice_start) {
       splayed_node = node;
       splayed_node_ancestor_count = node_stack.size();
@@ -404,23 +404,23 @@ Patch::Node *Patch::SplayNodeStartingAfter(Point splice_start, Point splice_end)
 
   if (splayed_node) {
     node_stack.resize(splayed_node_ancestor_count);
-    SplayNode(splayed_node);
+    splay_node(splayed_node);
   }
 
   return splayed_node;
 }
 
 template <typename CoordinateSpace>
-vector<Hunk> Patch::GetHunksInRange(Point start, Point end, bool inclusive) {
+vector<Hunk> Patch::get_hunks_in_range(Point start, Point end, bool inclusive) {
   vector<Hunk> result;
   if (!root)
     return result;
 
-  Node *lower_bound = SplayNodeStartingBefore<CoordinateSpace>(start);
+  Node *lower_bound = splay_node_starting_before<CoordinateSpace>(start);
 
   node_stack.clear();
   left_ancestor_stack.clear();
-  left_ancestor_stack.push_back({Point::Zero(), Point::Zero()});
+  left_ancestor_stack.push_back({Point(), Point()});
 
   Node *node = root;
   if (!lower_bound) {
@@ -433,12 +433,12 @@ vector<Hunk> Patch::GetHunksInRange(Point start, Point end, bool inclusive) {
   while (node) {
     Patch::PositionStackEntry &left_ancestor_position =
         left_ancestor_stack.back();
-    Point old_start = left_ancestor_position.old_end.Traverse(
+    Point old_start = left_ancestor_position.old_end.traverse(
         node->old_distance_from_left_ancestor);
-    Point new_start = left_ancestor_position.new_end.Traverse(
+    Point new_start = left_ancestor_position.new_end.traverse(
         node->new_distance_from_left_ancestor);
-    Point old_end = old_start.Traverse(node->old_extent);
-    Point new_end = new_start.Traverse(node->new_extent);
+    Point old_end = old_start.traverse(node->old_extent);
+    Point new_end = new_start.traverse(node->new_extent);
     Text *old_text = node->old_text.get();
     Text *new_text = node->new_text.get();
     Hunk hunk = {old_start, old_end, new_start, new_end, old_text, new_text};
@@ -491,13 +491,13 @@ vector<Hunk> Patch::GetHunksInRange(Point start, Point end, bool inclusive) {
 }
 
 template <typename CoordinateSpace>
-optional<Hunk> Patch::HunkForPosition(Point target) {
-  Node *lower_bound = SplayNodeStartingBefore<CoordinateSpace>(target);
+optional<Hunk> Patch::hunk_for_position(Point target) {
+  Node *lower_bound = splay_node_starting_before<CoordinateSpace>(target);
   if (lower_bound) {
     Point old_start = lower_bound->old_distance_from_left_ancestor;
     Point new_start = lower_bound->new_distance_from_left_ancestor;
-    Point old_end = old_start.Traverse(lower_bound->old_extent);
-    Point new_end = new_start.Traverse(lower_bound->new_extent);
+    Point old_end = old_start.traverse(lower_bound->old_extent);
+    Point new_end = new_start.traverse(lower_bound->new_extent);
     Text *old_text = lower_bound->old_text.get();
     Text *new_text = lower_bound->new_text.get();
     return Hunk{old_start, old_end, new_start, new_end, old_text, new_text};
@@ -506,35 +506,35 @@ optional<Hunk> Patch::HunkForPosition(Point target) {
   }
 }
 
-bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
+bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
                    Point new_insertion_extent, unique_ptr<Text> deleted_text,
                    unique_ptr<Text> inserted_text) {
-  if (IsFrozen()) {
+  if (is_frozen()) {
     return false;
   }
 
-  if (new_deletion_extent.IsZero() && new_insertion_extent.IsZero()) {
+  if (new_deletion_extent.is_zero() && new_insertion_extent.is_zero()) {
     return true;
   }
 
   if (!root) {
-    root = BuildNode(nullptr, nullptr, new_splice_start, new_splice_start,
+    root = build_node(nullptr, nullptr, new_splice_start, new_splice_start,
                      new_deletion_extent, new_insertion_extent,
                      move(deleted_text), move(inserted_text));
     return true;
   }
 
-  Point new_deletion_end = new_splice_start.Traverse(new_deletion_extent);
-  Point new_insertion_end = new_splice_start.Traverse(new_insertion_extent);
+  Point new_deletion_end = new_splice_start.traverse(new_deletion_extent);
+  Point new_insertion_end = new_splice_start.traverse(new_insertion_extent);
 
-  Node *lower_bound = SplayNodeStartingBefore<NewCoordinates>(new_splice_start);
+  Node *lower_bound = splay_node_starting_before<NewCoordinates>(new_splice_start);
   unique_ptr<Text> old_text =
-      ComputeOldText(move(deleted_text), new_splice_start, new_deletion_end);
+      compute_old_text(move(deleted_text), new_splice_start, new_deletion_end);
   Node *upper_bound =
-      SplayNodeEndingAfter<NewCoordinates>(new_splice_start, new_deletion_end);
+      splay_node_ending_after<NewCoordinates>(new_splice_start, new_deletion_end);
   if (upper_bound && lower_bound && lower_bound != upper_bound) {
     if (lower_bound != upper_bound->left) {
-      RotateNodeRight(lower_bound, upper_bound->left, upper_bound);
+      rotate_node_right(lower_bound, upper_bound->left, upper_bound);
     }
   }
 
@@ -544,13 +544,13 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
     Point upper_bound_old_start = upper_bound->old_distance_from_left_ancestor;
     Point upper_bound_new_start = upper_bound->new_distance_from_left_ancestor;
     Point lower_bound_old_end =
-        lower_bound_old_start.Traverse(lower_bound->old_extent);
+        lower_bound_old_start.traverse(lower_bound->old_extent);
     Point lower_bound_new_end =
-        lower_bound_new_start.Traverse(lower_bound->new_extent);
+        lower_bound_new_start.traverse(lower_bound->new_extent);
     Point upper_bound_old_end =
-        upper_bound_old_start.Traverse(upper_bound->old_extent);
+        upper_bound_old_start.traverse(upper_bound->old_extent);
     Point upper_bound_new_end =
-        upper_bound_new_start.Traverse(upper_bound->new_extent);
+        upper_bound_new_start.traverse(upper_bound->new_extent);
 
     bool overlaps_lower_bound, overlaps_upper_bound;
     if (merges_adjacent_hunks) {
@@ -565,22 +565,22 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
 
     if (overlaps_lower_bound && overlaps_upper_bound) {
       Point new_extent_prefix =
-          new_splice_start.Traversal(lower_bound_new_start);
-      Point new_extent_suffix = upper_bound_new_end.Traversal(new_deletion_end);
+          new_splice_start.traversal(lower_bound_new_start);
+      Point new_extent_suffix = upper_bound_new_end.traversal(new_deletion_end);
 
       upper_bound->old_extent =
-          upper_bound_old_end.Traversal(lower_bound_old_start);
-      upper_bound->new_extent = new_extent_prefix.Traverse(new_insertion_extent)
-                                    .Traverse(new_extent_suffix);
+          upper_bound_old_end.traversal(lower_bound_old_start);
+      upper_bound->new_extent = new_extent_prefix.traverse(new_insertion_extent)
+                                    .traverse(new_extent_suffix);
       upper_bound->old_distance_from_left_ancestor = lower_bound_old_start;
       upper_bound->new_distance_from_left_ancestor = lower_bound_new_start;
 
       if (inserted_text && lower_bound->new_text && upper_bound->new_text) {
         TextSlice new_text_prefix =
-            TextSlice(*lower_bound->new_text).Prefix(new_extent_prefix);
-        TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).Suffix(
-            new_deletion_end.Traversal(upper_bound_new_start));
-        upper_bound->new_text = unique_ptr<Text>{new Text(TextSlice::Concat(
+            TextSlice(*lower_bound->new_text).prefix(new_extent_prefix);
+        TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).suffix(
+            new_deletion_end.traversal(upper_bound_new_start));
+        upper_bound->new_text = unique_ptr<Text>{new Text(TextSlice::concat(
             new_text_prefix, TextSlice(*inserted_text), new_text_suffix))};
       } else {
         upper_bound->new_text = nullptr;
@@ -589,70 +589,70 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
       upper_bound->old_text = move(old_text);
 
       if (lower_bound == upper_bound) {
-        if (root->old_extent.IsZero() && root->new_extent.IsZero()) {
-          DeleteRoot();
+        if (root->old_extent.is_zero() && root->new_extent.is_zero()) {
+          delete_root();
         }
       } else {
         upper_bound->left = lower_bound->left;
         lower_bound->left = nullptr;
-        DeleteNode(&lower_bound);
+        delete_node(&lower_bound);
       }
 
     } else if (overlaps_upper_bound) {
-      Point old_splice_start = lower_bound_old_end.Traverse(
-          new_splice_start.Traversal(lower_bound_new_end));
-      Point new_extent_suffix = upper_bound_new_end.Traversal(new_deletion_end);
+      Point old_splice_start = lower_bound_old_end.traverse(
+          new_splice_start.traversal(lower_bound_new_end));
+      Point new_extent_suffix = upper_bound_new_end.traversal(new_deletion_end);
 
       upper_bound->old_distance_from_left_ancestor = old_splice_start;
       upper_bound->new_distance_from_left_ancestor = new_splice_start;
-      upper_bound->old_extent = upper_bound_old_end.Traversal(old_splice_start);
+      upper_bound->old_extent = upper_bound_old_end.traversal(old_splice_start);
       upper_bound->new_extent =
-          new_insertion_extent.Traverse(new_extent_suffix);
+          new_insertion_extent.traverse(new_extent_suffix);
 
       if (inserted_text && upper_bound->new_text) {
-        TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).Suffix(
-            new_deletion_end.Traversal(upper_bound_new_start));
+        TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).suffix(
+            new_deletion_end.traversal(upper_bound_new_start));
         upper_bound->new_text =
-            unique_ptr<Text>{new Text(TextSlice::Concat(TextSlice(*inserted_text), new_text_suffix))};
+            unique_ptr<Text>{new Text(TextSlice::concat(TextSlice(*inserted_text), new_text_suffix))};
       } else {
         upper_bound->new_text = nullptr;
       }
 
       upper_bound->old_text = move(old_text);
 
-      DeleteNode(&lower_bound->right);
+      delete_node(&lower_bound->right);
       if (upper_bound->left != lower_bound) {
-        DeleteNode(&upper_bound->left);
+        delete_node(&upper_bound->left);
       }
 
     } else if (overlaps_lower_bound) {
       Point rightmost_child_old_end, rightmost_child_new_end;
-      lower_bound->GetSubtreeEnd(&rightmost_child_old_end,
+      lower_bound->get_subtree_end(&rightmost_child_old_end,
                                  &rightmost_child_new_end);
-      Point old_deletion_end = rightmost_child_old_end.Traverse(
-          new_deletion_end.Traversal(rightmost_child_new_end));
+      Point old_deletion_end = rightmost_child_old_end.traverse(
+          new_deletion_end.traversal(rightmost_child_new_end));
       Point new_extent_prefix =
-          new_splice_start.Traversal(lower_bound_new_start);
+          new_splice_start.traversal(lower_bound_new_start);
 
-      upper_bound->new_distance_from_left_ancestor = new_insertion_end.Traverse(
-          upper_bound_new_start.Traversal(new_deletion_end));
+      upper_bound->new_distance_from_left_ancestor = new_insertion_end.traverse(
+          upper_bound_new_start.traversal(new_deletion_end));
       lower_bound->old_extent =
-          old_deletion_end.Traversal(lower_bound_old_start);
+          old_deletion_end.traversal(lower_bound_old_start);
       lower_bound->new_extent =
-          new_extent_prefix.Traverse(new_insertion_extent);
+          new_extent_prefix.traverse(new_insertion_extent);
       if (inserted_text && lower_bound->new_text) {
         TextSlice new_text_prefix =
-            TextSlice(*lower_bound->new_text).Prefix(new_extent_prefix);
+            TextSlice(*lower_bound->new_text).prefix(new_extent_prefix);
         lower_bound->new_text =
-            unique_ptr<Text>{new Text(TextSlice::Concat(new_text_prefix, TextSlice(*inserted_text)))};
+            unique_ptr<Text>{new Text(TextSlice::concat(new_text_prefix, TextSlice(*inserted_text)))};
       } else {
         lower_bound->new_text = nullptr;
       }
 
       lower_bound->old_text = move(old_text);
 
-      DeleteNode(&lower_bound->right);
-      RotateNodeRight(lower_bound, upper_bound, nullptr);
+      delete_node(&lower_bound->right);
+      rotate_node_right(lower_bound, upper_bound, nullptr);
 
       // Splice doesn't overlap either bound
     } else {
@@ -660,37 +660,37 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
       // that node with merges_adjacent_hunks set to false.
       if (lower_bound == upper_bound) {
         assert(!merges_adjacent_hunks);
-        assert(new_deletion_extent.IsZero());
+        assert(new_deletion_extent.is_zero());
         assert(new_splice_start == upper_bound_new_start);
 
-        root = BuildNode(upper_bound->left, upper_bound, upper_bound_old_start,
-                         upper_bound_new_start, Point::Zero(),
+        root = build_node(upper_bound->left, upper_bound, upper_bound_old_start,
+                         upper_bound_new_start, Point(),
                          new_insertion_extent, move(old_text),
                          move(inserted_text));
 
         upper_bound->left = nullptr;
-        upper_bound->old_distance_from_left_ancestor = Point::Zero();
-        upper_bound->new_distance_from_left_ancestor = Point::Zero();
+        upper_bound->old_distance_from_left_ancestor = Point();
+        upper_bound->new_distance_from_left_ancestor = Point();
       } else {
         Point rightmost_child_old_end, rightmost_child_new_end;
-        lower_bound->GetSubtreeEnd(&rightmost_child_old_end,
+        lower_bound->get_subtree_end(&rightmost_child_old_end,
                                    &rightmost_child_new_end);
-        Point old_splice_start = lower_bound_old_end.Traverse(
-            new_splice_start.Traversal(lower_bound_new_end));
-        Point old_deletion_end = rightmost_child_old_end.Traverse(
-            new_deletion_end.Traversal(rightmost_child_new_end));
+        Point old_splice_start = lower_bound_old_end.traverse(
+            new_splice_start.traversal(lower_bound_new_end));
+        Point old_deletion_end = rightmost_child_old_end.traverse(
+            new_deletion_end.traversal(rightmost_child_new_end));
 
-        root = BuildNode(
+        root = build_node(
             lower_bound, upper_bound, old_splice_start, new_splice_start,
-            old_deletion_end.Traversal(old_splice_start), new_insertion_extent,
+            old_deletion_end.traversal(old_splice_start), new_insertion_extent,
             move(old_text), move(inserted_text));
 
-        DeleteNode(&lower_bound->right);
+        delete_node(&lower_bound->right);
         upper_bound->left = nullptr;
         upper_bound->old_distance_from_left_ancestor =
-            upper_bound_old_start.Traversal(old_deletion_end);
+            upper_bound_old_start.traversal(old_deletion_end);
         upper_bound->new_distance_from_left_ancestor =
-            upper_bound_new_start.Traversal(new_deletion_end);
+            upper_bound_new_start.traversal(new_deletion_end);
       }
     }
 
@@ -698,41 +698,41 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
     Point lower_bound_old_start = lower_bound->old_distance_from_left_ancestor;
     Point lower_bound_new_start = lower_bound->new_distance_from_left_ancestor;
     Point lower_bound_new_end =
-        lower_bound_new_start.Traverse(lower_bound->new_extent);
+        lower_bound_new_start.traverse(lower_bound->new_extent);
     Point lower_bound_old_end =
-        lower_bound_old_start.Traverse(lower_bound->old_extent);
+        lower_bound_old_start.traverse(lower_bound->old_extent);
     Point rightmost_child_old_end, rightmost_child_new_end;
-    lower_bound->GetSubtreeEnd(&rightmost_child_old_end,
+    lower_bound->get_subtree_end(&rightmost_child_old_end,
                                &rightmost_child_new_end);
-    Point old_deletion_end = rightmost_child_old_end.Traverse(
-        new_deletion_end.Traversal(rightmost_child_new_end));
+    Point old_deletion_end = rightmost_child_old_end.traverse(
+        new_deletion_end.traversal(rightmost_child_new_end));
     bool overlaps_lower_bound =
         new_splice_start < lower_bound_new_end ||
         (merges_adjacent_hunks && new_splice_start == lower_bound_new_end);
 
-    DeleteNode(&lower_bound->right);
+    delete_node(&lower_bound->right);
 
     if (overlaps_lower_bound) {
       lower_bound->old_extent =
-          old_deletion_end.Traversal(lower_bound_old_start);
+          old_deletion_end.traversal(lower_bound_old_start);
       lower_bound->new_extent =
-          new_insertion_end.Traversal(lower_bound_new_start);
+          new_insertion_end.traversal(lower_bound_new_start);
       if (inserted_text && lower_bound->new_text) {
-        TextSlice new_text_prefix = TextSlice(*lower_bound->new_text).Prefix(
-            new_splice_start.Traversal(lower_bound_new_start));
+        TextSlice new_text_prefix = TextSlice(*lower_bound->new_text).prefix(
+            new_splice_start.traversal(lower_bound_new_start));
         lower_bound->new_text =
-            unique_ptr<Text>{new Text(TextSlice::Concat(new_text_prefix, TextSlice(*inserted_text)))};
+            unique_ptr<Text>{new Text(TextSlice::concat(new_text_prefix, TextSlice(*inserted_text)))};
       } else {
         lower_bound->new_text = nullptr;
       }
 
       lower_bound->old_text = move(old_text);
     } else {
-      Point old_splice_start = lower_bound_old_end.Traverse(
-          new_splice_start.Traversal(lower_bound_new_end));
+      Point old_splice_start = lower_bound_old_end.traverse(
+          new_splice_start.traversal(lower_bound_new_end));
       root =
-          BuildNode(lower_bound, nullptr, old_splice_start, new_splice_start,
-                    old_deletion_end.Traversal(old_splice_start),
+          build_node(lower_bound, nullptr, old_splice_start, new_splice_start,
+                    old_deletion_end.traversal(old_splice_start),
                     new_insertion_extent, move(old_text), move(inserted_text));
     }
 
@@ -740,7 +740,7 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
     Point upper_bound_new_start = upper_bound->new_distance_from_left_ancestor;
     Point upper_bound_old_start = upper_bound->old_distance_from_left_ancestor;
     Point upper_bound_new_end =
-        upper_bound_new_start.Traverse(upper_bound->new_extent);
+        upper_bound_new_start.traverse(upper_bound->new_extent);
     bool overlaps_upper_bound =
         new_deletion_end > upper_bound_new_start ||
         (merges_adjacent_hunks && new_deletion_end == upper_bound_new_start);
@@ -748,29 +748,29 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
     Point old_deletion_end;
     if (upper_bound->left) {
       Point rightmost_child_old_end, rightmost_child_new_end;
-      upper_bound->left->GetSubtreeEnd(&rightmost_child_old_end,
+      upper_bound->left->get_subtree_end(&rightmost_child_old_end,
                                        &rightmost_child_new_end);
-      old_deletion_end = rightmost_child_old_end.Traverse(
-          new_deletion_end.Traversal(rightmost_child_new_end));
+      old_deletion_end = rightmost_child_old_end.traverse(
+          new_deletion_end.traversal(rightmost_child_new_end));
     } else {
       old_deletion_end = new_deletion_end;
     }
 
-    DeleteNode(&upper_bound->left);
+    delete_node(&upper_bound->left);
     if (overlaps_upper_bound) {
       upper_bound->old_distance_from_left_ancestor = new_splice_start;
       upper_bound->new_distance_from_left_ancestor = new_splice_start;
       upper_bound->old_extent =
-          upper_bound_old_start.Traversal(new_splice_start)
-              .Traverse(upper_bound->old_extent);
-      upper_bound->new_extent = new_insertion_extent.Traverse(
-          upper_bound_new_end.Traversal(new_deletion_end));
+          upper_bound_old_start.traversal(new_splice_start)
+              .traverse(upper_bound->old_extent);
+      upper_bound->new_extent = new_insertion_extent.traverse(
+          upper_bound_new_end.traversal(new_deletion_end));
 
       if (inserted_text && upper_bound->new_text) {
-        TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).Suffix(
-            new_deletion_end.Traversal(upper_bound_new_start));
+        TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).suffix(
+            new_deletion_end.traversal(upper_bound_new_start));
         upper_bound->new_text =
-            unique_ptr<Text>{new Text(TextSlice::Concat(TextSlice(*inserted_text), new_text_suffix))};
+            unique_ptr<Text>{new Text(TextSlice::concat(TextSlice(*inserted_text), new_text_suffix))};
       } else {
         upper_bound->new_text = nullptr;
       }
@@ -778,11 +778,11 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
       upper_bound->old_text = move(old_text);
     } else {
       root =
-          BuildNode(nullptr, upper_bound, new_splice_start, new_splice_start,
-                    old_deletion_end.Traversal(new_splice_start),
+          build_node(nullptr, upper_bound, new_splice_start, new_splice_start,
+                    old_deletion_end.traversal(new_splice_start),
                     new_insertion_extent, move(old_text), move(inserted_text));
       Point distance_from_end_of_root_to_start_of_upper_bound =
-          upper_bound_new_start.Traversal(new_deletion_end);
+          upper_bound_new_start.traversal(new_deletion_end);
       upper_bound->old_distance_from_left_ancestor =
           distance_from_end_of_root_to_start_of_upper_bound;
       upper_bound->new_distance_from_left_ancestor =
@@ -791,21 +791,21 @@ bool Patch::Splice(Point new_splice_start, Point new_deletion_extent,
 
   } else {
     Point rightmost_child_old_end, rightmost_child_new_end;
-    root->GetSubtreeEnd(&rightmost_child_old_end, &rightmost_child_new_end);
-    Point old_deletion_end = rightmost_child_old_end.Traverse(
-        new_deletion_end.Traversal(rightmost_child_new_end));
-    DeleteNode(&root);
-    root = BuildNode(nullptr, nullptr, new_splice_start, new_splice_start,
-                     old_deletion_end.Traversal(new_splice_start),
+    root->get_subtree_end(&rightmost_child_old_end, &rightmost_child_new_end);
+    Point old_deletion_end = rightmost_child_old_end.traverse(
+        new_deletion_end.traversal(rightmost_child_new_end));
+    delete_node(&root);
+    root = build_node(nullptr, nullptr, new_splice_start, new_splice_start,
+                     old_deletion_end.traversal(new_splice_start),
                      new_insertion_extent, move(old_text), move(inserted_text));
   }
 
   return true;
 }
 
-bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent,
+bool Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
                       Point old_insertion_extent) {
-  if (IsFrozen()) {
+  if (is_frozen()) {
     return false;
   }
 
@@ -813,31 +813,31 @@ bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent,
     return true;
   }
 
-  Point old_deletion_end = old_splice_start.Traverse(old_deletion_extent);
-  Point old_insertion_end = old_splice_start.Traverse(old_insertion_extent);
+  Point old_deletion_end = old_splice_start.traverse(old_deletion_extent);
+  Point old_insertion_end = old_splice_start.traverse(old_insertion_extent);
 
-  Node *lower_bound = SplayNodeEndingBefore<OldCoordinates>(old_splice_start);
-  Node *upper_bound = SplayNodeStartingAfter<OldCoordinates>(old_splice_start,
+  Node *lower_bound = splay_node_ending_before<OldCoordinates>(old_splice_start);
+  Node *upper_bound = splay_node_starting_after<OldCoordinates>(old_splice_start,
                                                              old_deletion_end);
 
   if (!lower_bound && !upper_bound) {
-    DeleteNode(&root);
+    delete_node(&root);
     return true;
   }
 
   if (upper_bound == lower_bound) {
-    assert(upper_bound->old_extent.IsZero());
-    assert(old_deletion_extent.IsZero());
+    assert(upper_bound->old_extent.is_zero());
+    assert(old_deletion_extent.is_zero());
     root->old_distance_from_left_ancestor =
-        root->old_distance_from_left_ancestor.Traverse(old_insertion_extent);
+        root->old_distance_from_left_ancestor.traverse(old_insertion_extent);
     root->new_distance_from_left_ancestor =
-        root->new_distance_from_left_ancestor.Traverse(old_insertion_extent);
+        root->new_distance_from_left_ancestor.traverse(old_insertion_extent);
     return true;
   }
 
   if (upper_bound && lower_bound) {
     if (lower_bound != upper_bound->left) {
-      RotateNodeRight(lower_bound, upper_bound->left, upper_bound);
+      rotate_node_right(lower_bound, upper_bound->left, upper_bound);
     }
   }
 
@@ -847,15 +847,15 @@ bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent,
     Point lower_bound_old_start = lower_bound->old_distance_from_left_ancestor;
     Point lower_bound_new_start = lower_bound->new_distance_from_left_ancestor;
     Point lower_bound_old_end =
-        lower_bound_old_start.Traverse(lower_bound->old_extent);
+        lower_bound_old_start.traverse(lower_bound->old_extent);
     Point lower_bound_new_end =
-        lower_bound_new_start.Traverse(lower_bound->new_extent);
-    new_deletion_end = lower_bound_new_end.Traverse(
-        old_deletion_end.Traversal(lower_bound_old_end));
-    new_insertion_end = lower_bound_new_end.Traverse(
-        old_insertion_end.Traversal(lower_bound_old_end));
+        lower_bound_new_start.traverse(lower_bound->new_extent);
+    new_deletion_end = lower_bound_new_end.traverse(
+        old_deletion_end.traversal(lower_bound_old_end));
+    new_insertion_end = lower_bound_new_end.traverse(
+        old_insertion_end.traversal(lower_bound_old_end));
 
-    DeleteNode(&lower_bound->right);
+    delete_node(&lower_bound->right);
   } else {
     new_deletion_end = old_deletion_end;
     new_insertion_end = old_insertion_end;
@@ -863,15 +863,15 @@ bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent,
 
   if (upper_bound) {
     Point distance_between_splice_and_upper_bound =
-        upper_bound->old_distance_from_left_ancestor.Traversal(
+        upper_bound->old_distance_from_left_ancestor.traversal(
             old_deletion_end);
     upper_bound->old_distance_from_left_ancestor =
-        old_insertion_end.Traverse(distance_between_splice_and_upper_bound);
+        old_insertion_end.traverse(distance_between_splice_and_upper_bound);
     upper_bound->new_distance_from_left_ancestor =
-        new_insertion_end.Traverse(distance_between_splice_and_upper_bound);
+        new_insertion_end.traverse(distance_between_splice_and_upper_bound);
 
     if (lower_bound) {
-      if (lower_bound->old_distance_from_left_ancestor.Traverse(
+      if (lower_bound->old_distance_from_left_ancestor.traverse(
               lower_bound->old_extent) ==
           upper_bound->old_distance_from_left_ancestor) {
         upper_bound->old_distance_from_left_ancestor =
@@ -879,24 +879,24 @@ bool Patch::SpliceOld(Point old_splice_start, Point old_deletion_extent,
         upper_bound->new_distance_from_left_ancestor =
             lower_bound->new_distance_from_left_ancestor;
         upper_bound->old_extent =
-            lower_bound->old_extent.Traverse(upper_bound->old_extent);
+            lower_bound->old_extent.traverse(upper_bound->old_extent);
         upper_bound->new_extent =
-            lower_bound->new_extent.Traverse(upper_bound->new_extent);
+            lower_bound->new_extent.traverse(upper_bound->new_extent);
         upper_bound->left = lower_bound->left;
-        DeleteNode(&lower_bound);
+        delete_node(&lower_bound);
       }
     } else {
-      DeleteNode(&upper_bound->left);
+      delete_node(&upper_bound->left);
     }
   }
 
   return true;
 }
 
-Patch Patch::Copy() {
+Patch Patch::copy() {
   Node *new_root = nullptr;
   if (root) {
-    new_root = root->Copy();
+    new_root = root->copy();
     node_stack.clear();
     node_stack.push_back(new_root);
 
@@ -904,11 +904,11 @@ Patch Patch::Copy() {
       Node *node = node_stack.back();
       node_stack.pop_back();
       if (node->left) {
-        node->left = node->left->Copy();
+        node->left = node->left->copy();
         node_stack.push_back(node->left);
       }
       if (node->right) {
-        node->right = node->right->Copy();
+        node->right = node->right->copy();
         node_stack.push_back(node->right);
       }
     }
@@ -917,10 +917,10 @@ Patch Patch::Copy() {
   return Patch{new_root, hunk_count, merges_adjacent_hunks};
 }
 
-Patch Patch::Invert() {
+Patch Patch::invert() {
   Node *inverted_root = nullptr;
   if (root) {
-    inverted_root = root->Invert();
+    inverted_root = root->invert();
     node_stack.clear();
     node_stack.push_back(inverted_root);
 
@@ -928,11 +928,11 @@ Patch Patch::Invert() {
       Node *node = node_stack.back();
       node_stack.pop_back();
       if (node->left) {
-        node->left = node->left->Invert();
+        node->left = node->left->invert();
         node_stack.push_back(node->left);
       }
       if (node->right) {
-        node->right = node->right->Invert();
+        node->right = node->right->invert();
         node_stack.push_back(node->right);
       }
     }
@@ -941,7 +941,7 @@ Patch Patch::Invert() {
   return Patch{inverted_root, hunk_count, merges_adjacent_hunks};
 }
 
-void Patch::SplayNode(Node *node) {
+void Patch::splay_node(Node *node) {
   while (!node_stack.empty()) {
     Node *parent = node_stack.back();
     node_stack.pop_back();
@@ -959,23 +959,23 @@ void Patch::SplayNode(Node *node) {
       }
 
       if (grandparent->left == parent && parent->right == node) {
-        RotateNodeLeft(node, parent, grandparent);
-        RotateNodeRight(node, grandparent, great_grandparent);
+        rotate_node_left(node, parent, grandparent);
+        rotate_node_right(node, grandparent, great_grandparent);
       } else if (grandparent->right == parent && parent->left == node) {
-        RotateNodeRight(node, parent, grandparent);
-        RotateNodeLeft(node, grandparent, great_grandparent);
+        rotate_node_right(node, parent, grandparent);
+        rotate_node_left(node, grandparent, great_grandparent);
       } else if (grandparent->left == parent && parent->left == node) {
-        RotateNodeRight(parent, grandparent, great_grandparent);
-        RotateNodeRight(node, parent, great_grandparent);
+        rotate_node_right(parent, grandparent, great_grandparent);
+        rotate_node_right(node, parent, great_grandparent);
       } else if (grandparent->right == parent && parent->right == node) {
-        RotateNodeLeft(parent, grandparent, great_grandparent);
-        RotateNodeLeft(node, parent, great_grandparent);
+        rotate_node_left(parent, grandparent, great_grandparent);
+        rotate_node_left(node, parent, great_grandparent);
       }
     } else {
       if (parent->left == node) {
-        RotateNodeRight(node, parent, nullptr);
+        rotate_node_right(node, parent, nullptr);
       } else if (parent->right == node) {
-        RotateNodeLeft(node, parent, nullptr);
+        rotate_node_left(node, parent, nullptr);
       } else {
         assert(!"Unexpected state");
       }
@@ -983,7 +983,7 @@ void Patch::SplayNode(Node *node) {
   }
 }
 
-void Patch::RotateNodeLeft(Node *pivot, Node *root, Node *root_parent) {
+void Patch::rotate_node_left(Node *pivot, Node *root, Node *root_parent) {
   if (root_parent) {
     if (root_parent->left == root) {
       root_parent->left = pivot;
@@ -998,14 +998,14 @@ void Patch::RotateNodeLeft(Node *pivot, Node *root, Node *root_parent) {
   pivot->left = root;
 
   pivot->old_distance_from_left_ancestor =
-      root->old_distance_from_left_ancestor.Traverse(root->old_extent)
-          .Traverse(pivot->old_distance_from_left_ancestor);
+      root->old_distance_from_left_ancestor.traverse(root->old_extent)
+          .traverse(pivot->old_distance_from_left_ancestor);
   pivot->new_distance_from_left_ancestor =
-      root->new_distance_from_left_ancestor.Traverse(root->new_extent)
-          .Traverse(pivot->new_distance_from_left_ancestor);
+      root->new_distance_from_left_ancestor.traverse(root->new_extent)
+          .traverse(pivot->new_distance_from_left_ancestor);
 }
 
-void Patch::RotateNodeRight(Node *pivot, Node *root, Node *root_parent) {
+void Patch::rotate_node_right(Node *pivot, Node *root, Node *root_parent) {
   if (root_parent) {
     if (root_parent->left == root) {
       root_parent->left = pivot;
@@ -1020,50 +1020,50 @@ void Patch::RotateNodeRight(Node *pivot, Node *root, Node *root_parent) {
   pivot->right = root;
 
   root->old_distance_from_left_ancestor =
-      root->old_distance_from_left_ancestor.Traversal(
-          pivot->old_distance_from_left_ancestor.Traverse(pivot->old_extent));
+      root->old_distance_from_left_ancestor.traversal(
+          pivot->old_distance_from_left_ancestor.traverse(pivot->old_extent));
   root->new_distance_from_left_ancestor =
-      root->new_distance_from_left_ancestor.Traversal(
-          pivot->new_distance_from_left_ancestor.Traverse(pivot->new_extent));
+      root->new_distance_from_left_ancestor.traversal(
+          pivot->new_distance_from_left_ancestor.traverse(pivot->new_extent));
 }
 
-void Patch::DeleteRoot() {
+void Patch::delete_root() {
   Node *node = root, *parent = nullptr;
   while (true) {
     if (node->left) {
-      RotateNodeRight(node->left, node, parent);
+      rotate_node_right(node->left, node, parent);
     } else if (node->right) {
-      RotateNodeLeft(node->right, node, parent);
+      rotate_node_left(node->right, node, parent);
     } else if (parent) {
       if (parent->left == node) {
-        DeleteNode(&parent->left);
+        delete_node(&parent->left);
       } else if (parent->right == node) {
-        DeleteNode(&parent->right);
+        delete_node(&parent->right);
       }
     } else {
-      DeleteNode(&root);
+      delete_node(&root);
       break;
     }
   }
 }
 
-std::string Patch::GetDotGraph() const {
+std::string Patch::get_dot_graph() const {
   std::stringstream result;
   result << "digraph patch {" << endl;
-  if (root) root->WriteDotGraph(result, Point::Zero(), Point::Zero());
+  if (root) root->write_dot_graph(result, Point(), Point());
   result << "}" << endl;
   return result.str();
 }
 
-std::string Patch::GetJSON() const {
+std::string Patch::get_json() const {
   std::stringstream result;
-  if (root) root->WriteJSON(result, Point::Zero(), Point::Zero());
+  if (root) root->write_json(result, Point(), Point());
   return result.str();
 }
 
-size_t Patch::GetHunkCount() const { return hunk_count; }
+size_t Patch::get_hunk_count() const { return hunk_count; }
 
-void Patch::Rebalance() {
+void Patch::rebalance() {
   if (!root)
     return;
 
@@ -1073,7 +1073,7 @@ void Patch::Rebalance() {
     Node *left = pseudo_root->left;
     Node *right = pseudo_root->right;
     if (left) {
-      RotateNodeRight(left, pseudo_root, pseudo_root_parent);
+      rotate_node_right(left, pseudo_root, pseudo_root_parent);
       pseudo_root = left;
     } else {
       pseudo_root_parent = pseudo_root;
@@ -1084,14 +1084,14 @@ void Patch::Rebalance() {
   // Transform vine to balanced tree
   uint32_t n = hunk_count;
   uint32_t m = std::pow(2, std::floor(std::log2(n + 1))) - 1;
-  PerformRebalancingRotations(n - m);
+  perform_rebalancing_rotations(n - m);
   while (m > 1) {
     m = m / 2;
-    PerformRebalancingRotations(m);
+    perform_rebalancing_rotations(m);
   }
 }
 
-void Patch::PerformRebalancingRotations(uint32_t count) {
+void Patch::perform_rebalancing_rotations(uint32_t count) {
   Node *pseudo_root = root, *pseudo_root_parent = nullptr;
   for (uint32_t i = 0; i < count; i++) {
     if (!pseudo_root)
@@ -1099,13 +1099,13 @@ void Patch::PerformRebalancingRotations(uint32_t count) {
     Node *right_child = pseudo_root->right;
     if (!right_child)
       return;
-    RotateNodeLeft(right_child, pseudo_root, pseudo_root_parent);
+    rotate_node_left(right_child, pseudo_root, pseudo_root_parent);
     pseudo_root = right_child->right;
     pseudo_root_parent = right_child;
   }
 }
 
-vector<Hunk> Patch::GetHunks() const {
+vector<Hunk> Patch::get_hunks() const {
   vector<Hunk> result;
   if (!root) {
     return result;
@@ -1114,7 +1114,7 @@ vector<Hunk> Patch::GetHunks() const {
   Node *node = root;
   node_stack.clear();
   left_ancestor_stack.clear();
-  left_ancestor_stack.push_back({Point::Zero(), Point::Zero()});
+  left_ancestor_stack.push_back({Point(), Point()});
 
   while (node->left) {
     node_stack.push_back(node);
@@ -1123,12 +1123,12 @@ vector<Hunk> Patch::GetHunks() const {
 
   while (node) {
     PositionStackEntry &left_ancestor_position = left_ancestor_stack.back();
-    Point old_start = left_ancestor_position.old_end.Traverse(
+    Point old_start = left_ancestor_position.old_end.traverse(
         node->old_distance_from_left_ancestor);
-    Point new_start = left_ancestor_position.new_end.Traverse(
+    Point new_start = left_ancestor_position.new_end.traverse(
         node->new_distance_from_left_ancestor);
-    Point old_end = old_start.Traverse(node->old_extent);
-    Point new_end = new_start.Traverse(node->new_extent);
+    Point old_end = old_start.traverse(node->old_extent);
+    Point new_end = new_start.traverse(node->new_extent);
     Text *old_text = node->old_text.get();
     Text *new_text = node->new_text.get();
     result.push_back(
@@ -1162,23 +1162,23 @@ vector<Hunk> Patch::GetHunks() const {
   return result;
 }
 
-vector<Hunk> Patch::GetHunksInOldRange(Point start, Point end) {
-  return GetHunksInRange<OldCoordinates>(start, end);
+vector<Hunk> Patch::get_hunks_in_old_range(Point start, Point end) {
+  return get_hunks_in_range<OldCoordinates>(start, end);
 }
 
-vector<Hunk> Patch::GetHunksInNewRange(Point start, Point end, bool inclusive) {
-  return GetHunksInRange<NewCoordinates>(start, end, inclusive);
+vector<Hunk> Patch::get_hunks_in_new_range(Point start, Point end, bool inclusive) {
+  return get_hunks_in_range<NewCoordinates>(start, end, inclusive);
 }
 
-optional<Hunk> Patch::HunkForOldPosition(Point target) {
-  return HunkForPosition<OldCoordinates>(target);
+optional<Hunk> Patch::hunk_for_old_position(Point target) {
+  return hunk_for_position<OldCoordinates>(target);
 }
 
-optional<Hunk> Patch::HunkForNewPosition(Point target) {
-  return HunkForPosition<NewCoordinates>(target);
+optional<Hunk> Patch::hunk_for_new_position(Point target) {
+  return hunk_for_position<NewCoordinates>(target);
 }
 
-unique_ptr<Text> Patch::ComputeOldText(unique_ptr<Text> deleted_text,
+unique_ptr<Text> Patch::compute_old_text(unique_ptr<Text> deleted_text,
                                        Point new_splice_start,
                                        Point new_deletion_end) {
   if (!deleted_text.get())
@@ -1188,7 +1188,7 @@ unique_ptr<Text> Patch::ComputeOldText(unique_ptr<Text> deleted_text,
   Point range_start = new_splice_start, range_end = new_deletion_end;
 
   auto overlapping_hunks =
-      GetHunksInNewRange(range_start, range_end, merges_adjacent_hunks);
+      get_hunks_in_new_range(range_start, range_end, merges_adjacent_hunks);
   TextSlice deleted_text_slice = TextSlice(*deleted_text);
   Point deleted_text_slice_start = new_splice_start;
 
@@ -1197,16 +1197,16 @@ unique_ptr<Text> Patch::ComputeOldText(unique_ptr<Text> deleted_text,
       return nullptr;
 
     if (hunk.new_start > deleted_text_slice_start) {
-      auto split_result = deleted_text_slice.Split(
-          hunk.new_start.Traversal(deleted_text_slice_start));
+      auto split_result = deleted_text_slice.split(
+          hunk.new_start.traversal(deleted_text_slice_start));
       deleted_text_slice_start = hunk.new_start;
       deleted_text_slice = split_result.second;
       result->insert(result->end(), split_result.first.begin(), split_result.first.end());
     }
 
     result->insert(result->end(), hunk.old_text->begin(), hunk.old_text->end());
-    deleted_text_slice = deleted_text_slice.Suffix(
-        hunk.new_end.Traversal(deleted_text_slice_start));
+    deleted_text_slice = deleted_text_slice.suffix(
+        hunk.new_end.traversal(deleted_text_slice_start));
     deleted_text_slice_start = hunk.new_end;
   }
 
@@ -1230,14 +1230,14 @@ template <> uint32_t network_to_host(uint32_t input) { return ntohl(input); }
 
 template <> uint32_t host_to_network(uint32_t input) { return htonl(input); }
 
-template <typename T> void AppendToBuffer(vector<uint8_t> *output, T value) {
+template <typename T> void append_to_buffer(vector<uint8_t> *output, T value) {
   value = host_to_network(value);
   const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&value);
   output->insert(output->end(), bytes, bytes + sizeof(T));
 }
 
 template <typename T>
-T GetFromBuffer(const uint8_t **data, const uint8_t *end) {
+T get_from_buffer(const uint8_t **data, const uint8_t *end) {
   const T *pointer = reinterpret_cast<const T *>(*data);
   *data = *data + sizeof(T);
   if (*data <= end) {
@@ -1247,36 +1247,36 @@ T GetFromBuffer(const uint8_t **data, const uint8_t *end) {
   }
 }
 
-void GetPointFromBuffer(const uint8_t **data, const uint8_t *end,
+void get_point_from_buffer(const uint8_t **data, const uint8_t *end,
                         Point *point) {
-  point->row = GetFromBuffer<uint32_t>(data, end);
-  point->column = GetFromBuffer<uint32_t>(data, end);
+  point->row = get_from_buffer<uint32_t>(data, end);
+  point->column = get_from_buffer<uint32_t>(data, end);
 }
 
-void AppendPointToBuffer(vector<uint8_t> *output, const Point &point) {
-  AppendToBuffer(output, point.row);
-  AppendToBuffer(output, point.column);
+void append_point_to_buffer(vector<uint8_t> *output, const Point &point) {
+  append_to_buffer(output, point.row);
+  append_to_buffer(output, point.column);
 }
 
-void AppendTextToBuffer(vector<uint8_t> *output, const Text *text) {
+void append_text_to_buffer(vector<uint8_t> *output, const Text *text) {
   if (text) {
-    AppendToBuffer<uint32_t>(output, 1);
-    AppendToBuffer(output, static_cast<uint32_t>(text->size()));
+    append_to_buffer<uint32_t>(output, 1);
+    append_to_buffer(output, static_cast<uint32_t>(text->size()));
     for (uint16_t character : *text) {
-      AppendToBuffer(output, character);
+      append_to_buffer(output, character);
     }
   } else {
-    AppendToBuffer<uint32_t>(output, 0);
+    append_to_buffer<uint32_t>(output, 0);
   }
 }
 
-unique_ptr<Text> GetTextFromBuffer(const uint8_t **data, const uint8_t *end) {
-  if (GetFromBuffer<uint32_t>(data, end)) {
-    uint32_t length = GetFromBuffer<uint32_t>(data, end);
+unique_ptr<Text> get_text_from_buffer(const uint8_t **data, const uint8_t *end) {
+  if (get_from_buffer<uint32_t>(data, end)) {
+    uint32_t length = get_from_buffer<uint32_t>(data, end);
     unique_ptr<Text> result {new Text()};
     result->reserve(length);
     for (uint32_t i = 0; i < length; i++) {
-      result->push_back(GetFromBuffer<uint16_t>(data, end));
+      result->push_back(get_from_buffer<uint16_t>(data, end));
     }
     return result;
   } else {
@@ -1284,35 +1284,35 @@ unique_ptr<Text> GetTextFromBuffer(const uint8_t **data, const uint8_t *end) {
   }
 }
 
-void GetNodeFromBuffer(const uint8_t **data, const uint8_t *end, Patch::Node *node) {
-  GetPointFromBuffer(data, end, &node->old_extent);
-  GetPointFromBuffer(data, end, &node->new_extent);
-  GetPointFromBuffer(data, end, &node->old_distance_from_left_ancestor);
-  GetPointFromBuffer(data, end, &node->new_distance_from_left_ancestor);
-  node->old_text = GetTextFromBuffer(data, end);
-  node->new_text = GetTextFromBuffer(data, end);
+void get_node_from_buffer(const uint8_t **data, const uint8_t *end, Patch::Node *node) {
+  get_point_from_buffer(data, end, &node->old_extent);
+  get_point_from_buffer(data, end, &node->new_extent);
+  get_point_from_buffer(data, end, &node->old_distance_from_left_ancestor);
+  get_point_from_buffer(data, end, &node->new_distance_from_left_ancestor);
+  node->old_text = get_text_from_buffer(data, end);
+  node->new_text = get_text_from_buffer(data, end);
   node->left = nullptr;
   node->right = nullptr;
 }
 
-void AppendNodeToBuffer(vector<uint8_t> *output, const Patch::Node &node) {
-  AppendPointToBuffer(output, node.old_extent);
-  AppendPointToBuffer(output, node.new_extent);
-  AppendPointToBuffer(output, node.old_distance_from_left_ancestor);
-  AppendPointToBuffer(output, node.new_distance_from_left_ancestor);
-  AppendTextToBuffer(output, node.old_text.get());
-  AppendTextToBuffer(output, node.new_text.get());
+void append_node_to_buffer(vector<uint8_t> *output, const Patch::Node &node) {
+  append_point_to_buffer(output, node.old_extent);
+  append_point_to_buffer(output, node.new_extent);
+  append_point_to_buffer(output, node.old_distance_from_left_ancestor);
+  append_point_to_buffer(output, node.new_distance_from_left_ancestor);
+  append_text_to_buffer(output, node.old_text.get());
+  append_text_to_buffer(output, node.new_text.get());
 }
 
-void Patch::Serialize(vector<uint8_t> *output) const {
+void Patch::serialize(vector<uint8_t> *output) const {
   if (!root)
     return;
 
-  AppendToBuffer(output, SERIALIZATION_VERSION);
+  append_to_buffer(output, SERIALIZATION_VERSION);
 
-  AppendToBuffer(output, hunk_count);
+  append_to_buffer(output, hunk_count);
 
-  AppendNodeToBuffer(output, *root);
+  append_node_to_buffer(output, *root);
 
   Node *node = root;
   node_stack.clear();
@@ -1320,19 +1320,19 @@ void Patch::Serialize(vector<uint8_t> *output) const {
 
   while (node) {
     if (node->left && previous_node_child_index < 0) {
-      AppendToBuffer<uint32_t>(output, Left);
-      AppendNodeToBuffer(output, *node->left);
+      append_to_buffer<uint32_t>(output, Left);
+      append_node_to_buffer(output, *node->left);
       node_stack.push_back(node);
       node = node->left;
       previous_node_child_index = -1;
     } else if (node->right && previous_node_child_index < 1) {
-      AppendToBuffer<uint32_t>(output, Right);
-      AppendNodeToBuffer(output, *node->right);
+      append_to_buffer<uint32_t>(output, Right);
+      append_node_to_buffer(output, *node->right);
       node_stack.push_back(node);
       node = node->right;
       previous_node_child_index = -1;
     } else if (!node_stack.empty()) {
-      AppendToBuffer<uint32_t>(output, Up);
+      append_to_buffer<uint32_t>(output, Up);
       Node *parent = node_stack.back();
       node_stack.pop_back();
       previous_node_child_index = (node == parent->left) ? 0 : 1;
@@ -1343,7 +1343,7 @@ void Patch::Serialize(vector<uint8_t> *output) const {
   }
 }
 
-bool Patch::IsFrozen() const { return frozen_node_array != nullptr; }
+bool Patch::is_frozen() const { return frozen_node_array != nullptr; }
 
 Patch::Patch(const vector<uint8_t> &input)
     : root{nullptr}, frozen_node_array{nullptr}, merges_adjacent_hunks{true} {
@@ -1351,12 +1351,12 @@ Patch::Patch(const vector<uint8_t> &input)
   const uint8_t *data = begin;
   const uint8_t *end = data + input.size();
 
-  uint32_t serialization_version = GetFromBuffer<uint32_t>(&data, end);
+  uint32_t serialization_version = get_from_buffer<uint32_t>(&data, end);
   if (serialization_version != SERIALIZATION_VERSION) {
     return;
   }
 
-  hunk_count = GetFromBuffer<uint32_t>(&data, end);
+  hunk_count = get_from_buffer<uint32_t>(&data, end);
   if (hunk_count == 0) {
     return;
   }
@@ -1365,19 +1365,19 @@ Patch::Patch(const vector<uint8_t> &input)
   frozen_node_array = static_cast<Node *>(calloc(hunk_count, sizeof(Node)));
   root = frozen_node_array;
   Node *node = root, *next_node = root + 1;
-  GetNodeFromBuffer(&data, end, node);
+  get_node_from_buffer(&data, end, node);
 
   while (next_node < root + hunk_count) {
-    switch (GetFromBuffer<uint32_t>(&data, end)) {
+    switch (get_from_buffer<uint32_t>(&data, end)) {
     case Left:
-      GetNodeFromBuffer(&data, end, next_node);
+      get_node_from_buffer(&data, end, next_node);
       node->left = next_node;
       node_stack.push_back(node);
       node = next_node;
       next_node++;
       break;
     case Right:
-      GetNodeFromBuffer(&data, end, next_node);
+      get_node_from_buffer(&data, end, next_node);
       node->right = next_node;
       node_stack.push_back(node);
       node = next_node;

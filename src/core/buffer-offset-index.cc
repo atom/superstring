@@ -54,9 +54,9 @@ BufferOffsetIndex::~BufferOffsetIndex() {
   }
 }
 
-void BufferOffsetIndex::Splice(unsigned start_row, unsigned deleted_lines_count, std::vector<unsigned> &new_line_lengths) {
-  auto start_node = FindAndBubbleNodeUpToRoot(start_row - 1);
-  auto end_node = FindAndBubbleNodeUpToRoot(start_row + deleted_lines_count);
+void BufferOffsetIndex::splice(unsigned start_row, unsigned deleted_lines_count, std::vector<unsigned> &new_line_lengths) {
+  auto start_node = find_and_bubble_node_up_to_root(start_row - 1);
+  auto end_node = find_and_bubble_node_up_to_root(start_row + deleted_lines_count);
 
   if (start_node) {
     if (start_node->right) {
@@ -65,7 +65,7 @@ void BufferOffsetIndex::Splice(unsigned start_row, unsigned deleted_lines_count,
     }
 
     if (!new_line_lengths.empty()) {
-      start_node->right = BuildLineNodeTreeFromLineLengths(new_line_lengths, 0, new_line_lengths.size(), 1);
+      start_node->right = build_node_tree_from_line_lengths(new_line_lengths, 0, new_line_lengths.size(), 1);
     }
 
     start_node->compute_subtree_extents();
@@ -76,7 +76,7 @@ void BufferOffsetIndex::Splice(unsigned start_row, unsigned deleted_lines_count,
     }
 
     if (!new_line_lengths.empty()) {
-      end_node->left = BuildLineNodeTreeFromLineLengths(new_line_lengths, 0, new_line_lengths.size(), 1);
+      end_node->left = build_node_tree_from_line_lengths(new_line_lengths, 0, new_line_lengths.size(), 1);
     }
 
     end_node->compute_subtree_extents();
@@ -85,7 +85,7 @@ void BufferOffsetIndex::Splice(unsigned start_row, unsigned deleted_lines_count,
       delete root;
     }
 
-    root = BuildLineNodeTreeFromLineLengths(new_line_lengths, 0, new_line_lengths.size(), 1);
+    root = build_node_tree_from_line_lengths(new_line_lengths, 0, new_line_lengths.size(), 1);
   }
 
   if (end_node) {
@@ -96,16 +96,16 @@ void BufferOffsetIndex::Splice(unsigned start_row, unsigned deleted_lines_count,
 
   if (start_node) {
     start_node->priority = rng(rng_engine);
-    BubbleNodeDown(start_node, end_node);
+    bubble_node_down(start_node, end_node);
   }
 
   if (end_node) {
     end_node->priority = rng(rng_engine);
-    BubbleNodeDown(end_node, nullptr);
+    bubble_node_down(end_node, nullptr);
   }
 }
 
-unsigned BufferOffsetIndex::CharacterIndexForPosition(Point position) const {
+unsigned BufferOffsetIndex::character_index_for_position(Point position) const {
   auto left_ancestor_row = 0u;
   auto left_ancestor_char_index = 0u;
   auto current_node_char_index = 0u;
@@ -131,7 +131,7 @@ unsigned BufferOffsetIndex::CharacterIndexForPosition(Point position) const {
   }
 }
 
-Point BufferOffsetIndex::PositionForCharacterIndex(unsigned char_index) const {
+Point BufferOffsetIndex::position_for_character_index(unsigned char_index) const {
   auto left_ancestor_row = 0u;
   auto left_ancestor_char_index = 0u;
   auto left_ancestor_length = 0u;
@@ -161,7 +161,7 @@ Point BufferOffsetIndex::PositionForCharacterIndex(unsigned char_index) const {
   }
 }
 
-LineNode *BufferOffsetIndex::FindAndBubbleNodeUpToRoot(unsigned row) {
+LineNode *BufferOffsetIndex::find_and_bubble_node_up_to_root(unsigned row) {
   auto left_ancestor_row = 0u;
   auto current_node = root;
   auto ancestors_stack = std::vector<LineNode*>();
@@ -185,9 +185,9 @@ LineNode *BufferOffsetIndex::FindAndBubbleNodeUpToRoot(unsigned row) {
       ancestors_stack.pop_back();
       auto root_parent = ancestors_stack.empty() ? nullptr : ancestors_stack.back();
       if (root->right == current_node) {
-        RotateNodeLeft(current_node, root, root_parent);
+        rotate_node_left(current_node, root, root_parent);
       } else { // root->left == current_node
-        RotateNodeRight(current_node, root, root_parent);
+        rotate_node_right(current_node, root, root_parent);
       }
     }
 
@@ -197,17 +197,17 @@ LineNode *BufferOffsetIndex::FindAndBubbleNodeUpToRoot(unsigned row) {
   }
 }
 
-void BufferOffsetIndex::BubbleNodeDown(LineNode * root, LineNode * root_parent) {
+void BufferOffsetIndex::bubble_node_down(LineNode * root, LineNode * root_parent) {
   while (true) {
     auto left_child_priority = root->left ? root->left->priority : UINT_MAX;
     auto right_child_priority = root->right ? root->right->priority : UINT_MAX;
     if (left_child_priority < right_child_priority && left_child_priority < root->priority) {
       auto pivot = root->left;
-      RotateNodeRight(pivot, root, root_parent);
+      rotate_node_right(pivot, root, root_parent);
       root_parent = pivot;
     } else if (right_child_priority < root->priority) {
       auto pivot = root->right;
-      RotateNodeLeft(pivot, root, root_parent);
+      rotate_node_left(pivot, root, root_parent);
       root_parent = pivot;
     } else {
       break;
@@ -215,7 +215,7 @@ void BufferOffsetIndex::BubbleNodeDown(LineNode * root, LineNode * root_parent) 
   }
 }
 
-void BufferOffsetIndex::RotateNodeLeft(LineNode * pivot, LineNode * root, LineNode * root_parent) {
+void BufferOffsetIndex::rotate_node_left(LineNode * pivot, LineNode * root, LineNode * root_parent) {
   if (root_parent) {
     if (root == root_parent->left) {
       root_parent->left = pivot;
@@ -233,7 +233,7 @@ void BufferOffsetIndex::RotateNodeLeft(LineNode * pivot, LineNode * root, LineNo
   pivot->compute_subtree_extents();
 }
 
-void BufferOffsetIndex::RotateNodeRight(LineNode * pivot, LineNode * root, LineNode * root_parent) {
+void BufferOffsetIndex::rotate_node_right(LineNode * pivot, LineNode * root, LineNode * root_parent) {
   if (root_parent) {
     if (root == root_parent->left) {
       root_parent->left = pivot;
@@ -251,7 +251,7 @@ void BufferOffsetIndex::RotateNodeRight(LineNode * pivot, LineNode * root, LineN
   pivot->compute_subtree_extents();
 }
 
-LineNode *BufferOffsetIndex::BuildLineNodeTreeFromLineLengths(std::vector<unsigned> &line_lengths, unsigned start, unsigned end, unsigned min_priority) {
+LineNode *BufferOffsetIndex::build_node_tree_from_line_lengths(std::vector<unsigned> &line_lengths, unsigned start, unsigned end, unsigned min_priority) {
   if (start == end) {
     return nullptr;
   } else {
@@ -259,8 +259,8 @@ LineNode *BufferOffsetIndex::BuildLineNodeTreeFromLineLengths(std::vector<unsign
     unsigned priority = rng(rng_engine) - 1;
     auto middle = (start + end) / 2;
     auto line_node = new LineNode {
-      BuildLineNodeTreeFromLineLengths(line_lengths, start, middle, priority + 1),
-      BuildLineNodeTreeFromLineLengths(line_lengths, middle + 1, end, priority + 1),
+      build_node_tree_from_line_lengths(line_lengths, start, middle, priority + 1),
+      build_node_tree_from_line_lengths(line_lengths, middle + 1, end, priority + 1),
       priority,
       line_lengths[middle],
       Extent {0, 0},

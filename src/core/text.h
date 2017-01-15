@@ -13,8 +13,8 @@ struct TextSlice {
   size_t start_index;
   size_t end_index;
 
-  static Text Concat(TextSlice a, TextSlice b);
-  static Text Concat(TextSlice a, TextSlice b, TextSlice c);
+  static Text concat(TextSlice a, TextSlice b);
+  static Text concat(TextSlice a, TextSlice b, TextSlice c);
 
   TextSlice(Text &text);
   TextSlice(Text *text, size_t start_index, size_t end_index);
@@ -24,10 +24,10 @@ struct TextSlice {
   Text::iterator begin();
   Text::iterator end();
 
-  std::pair<TextSlice, TextSlice> Split(Point);
-  TextSlice Prefix(Point);
-  TextSlice Suffix(Point);
-  size_t CharacterIndexForPosition(Point);
+  std::pair<TextSlice, TextSlice> split(Point);
+  TextSlice prefix(Point);
+  TextSlice suffix(Point);
+  size_t character_index_for_position(Point);
 };
 
 std::ostream &operator<<(std::ostream &stream, const Text *text);
