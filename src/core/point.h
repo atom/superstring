@@ -7,17 +7,16 @@ struct Point {
   unsigned row;
   unsigned column;
 
-  static Point Zero();
-  static Point Min(const Point &left, const Point &right);
-  static Point Max(const Point &left, const Point &right);
+  static Point min(const Point &left, const Point &right);
+  static Point max(const Point &left, const Point &right);
 
   Point();
   Point(unsigned row, unsigned column);
 
-  int Compare(const Point &other) const;
-  bool IsZero() const;
-  Point Traverse(const Point &other) const;
-  Point Traversal(const Point &other) const;
+  int compare(const Point &other) const;
+  bool is_zero() const;
+  Point traverse(const Point &other) const;
+  Point traversal(const Point &other) const;
 
   bool operator==(const Point &other) const;
   bool operator<(const Point &other) const;

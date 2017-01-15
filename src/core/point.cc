@@ -1,15 +1,11 @@
 #include <climits>
 #include "point.h"
 
-Point Point::Zero() {
-  return Point(0, 0);
-}
-
-Point Point::Min(const Point &left, const Point &right) {
+Point Point::min(const Point &left, const Point &right) {
   return left <= right ? left : right;
 }
 
-Point Point::Max(const Point &left, const Point &right) {
+Point Point::max(const Point &left, const Point &right) {
   return left >= right ? left : right;
 }
 
@@ -17,7 +13,7 @@ Point::Point() : Point(0, 0) {}
 
 Point::Point(unsigned row, unsigned column) : row {row}, column {column} {}
 
-int Point::Compare(const Point &other) const {
+int Point::compare(const Point &other) const {
   if (row < other.row) return -1;
   if (row > other.row) return 1;
   if (column < other.column) return -1;
@@ -25,11 +21,11 @@ int Point::Compare(const Point &other) const {
   return 0;
 }
 
-bool Point::IsZero() const {
+bool Point::is_zero() const {
   return row == 0 && column == 0;
 }
 
-Point Point::Traverse(const Point &traversal) const {
+Point Point::traverse(const Point &traversal) const {
   if (traversal.row == 0) {
     return Point(row , column + traversal.column);
   } else {
@@ -37,7 +33,7 @@ Point Point::Traverse(const Point &traversal) const {
   }
 }
 
-Point Point::Traversal(const Point &start) const {
+Point Point::traversal(const Point &start) const {
   if (row == start.row) {
     return Point(0, column - start.column);
   } else {
@@ -46,21 +42,21 @@ Point Point::Traversal(const Point &start) const {
 }
 
 bool Point::operator==(const Point &other) const {
-  return Compare(other) == 0;
+  return compare(other) == 0;
 }
 
 bool Point::operator<(const Point &other) const {
-  return Compare(other) < 0;
+  return compare(other) < 0;
 }
 
 bool Point::operator<=(const Point &other) const {
-  return Compare(other) <= 0;
+  return compare(other) <= 0;
 }
 
 bool Point::operator>(const Point &other) const {
-  return Compare(other) > 0;
+  return compare(other) > 0;
 }
 
 bool Point::operator>=(const Point &other) const {
-  return Compare(other) >= 0;
+  return compare(other) >= 0;
 }

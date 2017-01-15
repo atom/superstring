@@ -14,7 +14,7 @@ Range GetRandomRange() {
   Point start(rand() % 100, rand() % 100);
   Point end = start;
   if (rand() % 10 < 5) {
-    end = end.Traverse(Point(rand() % 10, rand() % 10));
+    end = end.traverse(Point(rand() % 10, rand() % 10));
   }
   return Range{start, end};
 }

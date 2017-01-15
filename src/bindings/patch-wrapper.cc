@@ -102,12 +102,12 @@ class HunkWrapper : public Nan::ObjectWrap {
 
   static void get_old_extent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
     Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.old_end.Traversal(hunk.old_start)));
+    info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.old_end.traversal(hunk.old_start)));
   }
 
   static void get_new_extent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
     Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.new_end.Traversal(hunk.new_start)));
+    info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.new_end.traversal(hunk.new_start)));
   }
 
   static void to_string(const Nan::FunctionCallbackInfo<Value> &info) {

@@ -42,7 +42,7 @@ MarkerIndex::Node *MarkerIndex::Iterator::insert_marker_start(const MarkerId &id
   }
 
   while (true) {
-    switch (start_position.Compare(current_node_position)) {
+    switch (start_position.compare(current_node_position)) {
       case 0:
         mark_right(id, start_position, end_position);
         return current_node;
@@ -79,7 +79,7 @@ MarkerIndex::Node *MarkerIndex::Iterator::insert_marker_end(const MarkerId &id, 
   }
 
   while (true) {
-    switch (end_position.Compare(current_node_position)) {
+    switch (end_position.compare(current_node_position)) {
       case 0:
         mark_left(id, start_position, end_position);
         return current_node;
@@ -112,7 +112,7 @@ MarkerIndex::Node *MarkerIndex::Iterator::insert_splice_boundary(const Point &po
   reset();
 
   while (true) {
-    int comparison = position.Compare(current_node_position);
+    int comparison = position.compare(current_node_position);
     if (comparison == 0 && !is_insertion_end) {
       return current_node;
     } else if (comparison < 0) {
@@ -266,7 +266,7 @@ void MarkerIndex::Iterator::descend_left() {
 
   right_ancestor_position = current_node_position;
   current_node = current_node->left;
-  current_node_position = left_ancestor_position.Traverse(current_node->left_extent);
+  current_node_position = left_ancestor_position.traverse(current_node->left_extent);
 }
 
 void MarkerIndex::Iterator::descend_right() {
@@ -275,7 +275,7 @@ void MarkerIndex::Iterator::descend_right() {
 
   left_ancestor_position = current_node_position;
   current_node = current_node->right;
-  current_node_position = left_ancestor_position.Traverse(current_node->left_extent);
+  current_node_position = left_ancestor_position.traverse(current_node->left_extent);
 }
 
 void MarkerIndex::Iterator::move_to_successor() {
@@ -326,17 +326,17 @@ void MarkerIndex::Iterator::mark_right(const MarkerId &id, const Point &start_po
 }
 
 void MarkerIndex::Iterator::mark_left(const MarkerId &id, const Point &start_position, const Point &end_position) {
-  if (!current_node_position.IsZero() && start_position <= left_ancestor_position && current_node_position <= end_position) {
+  if (!current_node_position.is_zero() && start_position <= left_ancestor_position && current_node_position <= end_position) {
     current_node->left_marker_ids.insert(id);
   }
 }
 
 MarkerIndex::Node *MarkerIndex::Iterator::insert_left_child(const Point &position) {
-  return current_node->left = new Node(current_node, position.Traversal(left_ancestor_position));
+  return current_node->left = new Node(current_node, position.traversal(left_ancestor_position));
 }
 
 MarkerIndex::Node *MarkerIndex::Iterator::insert_right_child(const Point &position) {
-  return current_node->right = new Node(current_node, position.Traversal(current_node_position));
+  return current_node->right = new Node(current_node, position.traversal(current_node_position));
 }
 
 void MarkerIndex::Iterator::check_intersection(const Point &start, const Point &end, MarkerIdSet *result) {
@@ -440,11 +440,11 @@ MarkerIndex::SpliceResult MarkerIndex::splice(Point start, Point old_extent, Poi
 
   SpliceResult invalidated;
 
-  if (!root || (old_extent.IsZero() && new_extent.IsZero())) return invalidated;
+  if (!root || (old_extent.is_zero() && new_extent.is_zero())) return invalidated;
 
-  bool is_insertion = old_extent.IsZero();
+  bool is_insertion = old_extent.is_zero();
   Node *start_node = iterator.insert_splice_boundary(start, false);
-  Node *end_node = iterator.insert_splice_boundary(start.Traverse(old_extent), is_insertion);
+  Node *end_node = iterator.insert_splice_boundary(start.traverse(old_extent), is_insertion);
 
   start_node->priority = -1;
   bubble_node_up(start_node);
@@ -522,7 +522,7 @@ MarkerIndex::SpliceResult MarkerIndex::splice(Point start, Point old_extent, Poi
     start_node->right = nullptr;
   }
 
-  end_node->left_extent = start.Traverse(new_extent);
+  end_node->left_extent = start.traverse(new_extent);
 
   if (start_node->left_extent == end_node->left_extent) {
     for (MarkerId id : end_node->start_marker_ids) {
@@ -578,13 +578,13 @@ Range MarkerIndex::get_range(MarkerId id) const {
 }
 
 int MarkerIndex::compare(MarkerId id1, MarkerId id2) const {
-  switch (get_start(id1).Compare(get_start(id2))) {
+  switch (get_start(id1).compare(get_start(id2))) {
     case -1:
       return -1;
     case 1:
       return 1;
     default:
-      return get_end(id2).Compare(get_end(id1));
+      return get_end(id2).compare(get_end(id1));
   }
 }
 
@@ -649,7 +649,7 @@ Point MarkerIndex::get_node_position(const Node *node) const {
     const Node *current_node = node;
     while (current_node->parent) {
       if (current_node->parent->right == current_node) {
-        position = current_node->parent->left_extent.Traverse(position);
+        position = current_node->parent->left_extent.traverse(position);
       }
 
       current_node = current_node->parent;
@@ -733,7 +733,7 @@ void MarkerIndex::rotate_node_left(Node *rotation_pivot) {
   rotation_pivot->left = rotation_root;
   rotation_root->parent = rotation_pivot;
 
-  rotation_pivot->left_extent = rotation_root->left_extent.Traverse(rotation_pivot->left_extent);
+  rotation_pivot->left_extent = rotation_root->left_extent.traverse(rotation_pivot->left_extent);
 
   rotation_pivot->right_marker_ids.insert(rotation_root->right_marker_ids.begin(), rotation_root->right_marker_ids.end());
 
@@ -770,7 +770,7 @@ void MarkerIndex::rotate_node_right(Node *rotation_pivot) {
   rotation_pivot->right = rotation_root;
   rotation_root->parent = rotation_pivot;
 
-  rotation_root->left_extent = rotation_root->left_extent.Traversal(rotation_pivot->left_extent);
+  rotation_root->left_extent = rotation_root->left_extent.traversal(rotation_pivot->left_extent);
 
   for (auto it = rotation_root->left_marker_ids.begin(); it != rotation_root->left_marker_ids.end(); ++it) {
     if (!rotation_pivot->start_marker_ids.count(*it)) {
