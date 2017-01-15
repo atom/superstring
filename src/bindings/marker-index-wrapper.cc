@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include "marker-index.h"
 #include "nan.h"
+#include "noop.h"
 #include "optional.h"
 #include "point-wrapper.h"
 #include "range.h"
@@ -23,6 +24,7 @@ void MarkerIndexWrapper::init(Local<Object> exports) {
 
   const auto &prototype_template = constructor_template->PrototypeTemplate();
 
+  prototype_template->Set(Nan::New<String>("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(noop));
   prototype_template->Set(Nan::New<String>("generateRandomNumber").ToLocalChecked(),
                           Nan::New<FunctionTemplate>(generate_random_number));
   prototype_template->Set(Nan::New<String>("insert").ToLocalChecked(), Nan::New<FunctionTemplate>(insert));
@@ -199,9 +201,9 @@ void MarkerIndexWrapper::get_range(const Nan::FunctionCallbackInfo<Value> &info)
   optional<MarkerIndex::MarkerId> id = marker_id_from_js(info[0]);
   if (id) {
     Range range = wrapper->marker_index.get_range(*id);
-    auto result = Nan::New<Array>(2);
-    result->Set(0, PointWrapper::from_point(range.start));
-    result->Set(1, PointWrapper::from_point(range.end));
+    auto result = Nan::New<Object>();
+    result->Set(Nan::New(start_string), PointWrapper::from_point(range.start));
+    result->Set(Nan::New(end_string), PointWrapper::from_point(range.end));
     info.GetReturnValue().Set(result);
   }
 }

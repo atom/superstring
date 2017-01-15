@@ -19,7 +19,7 @@ public:
     flat_set<MarkerId> surround;
   };
 
-  MarkerIndex(unsigned seed);
+  MarkerIndex(unsigned seed = 0u);
   ~MarkerIndex();
   int generate_random_number();
   void insert(MarkerId id, Point start, Point end);

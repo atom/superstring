@@ -35,14 +35,14 @@ public:
   Patch(Node *root, uint32_t hunk_count, bool merges_adjacent_hunks);
   Patch(Patch &&);
   ~Patch();
-  bool splice(Point start, Point deletion_extent, Point insertion_extent,
-              std::unique_ptr<Text> old_text, std::unique_ptr<Text> new_text);
+  bool splice(Point start, Point deletion_extent, Point insertion_extent) { return this->splice(start, deletion_extent, insertion_extent, {}, {}); }
+  bool splice(Point start, Point deletion_extent, Point insertion_extent, std::unique_ptr<Text> old_text, std::unique_ptr<Text> new_text);
   bool splice_old(Point start, Point deletion_extent, Point insertion_extent);
   Patch copy();
   Patch invert();
   std::vector<Hunk> get_hunks() const;
-  std::vector<Hunk> get_hunks_in_new_range(Point start, Point end,
-                                       bool inclusive = false);
+  std::vector<Hunk> get_hunks_in_new_range(Point start, Point end) { return this->get_hunks_in_new_range(start, end, false); }
+  std::vector<Hunk> get_hunks_in_new_range(Point start, Point end, bool inclusive);
   std::vector<Hunk> get_hunks_in_old_range(Point start, Point end);
   optional<Hunk> hunk_for_old_position(Point position);
   optional<Hunk> hunk_for_new_position(Point position);

@@ -1218,37 +1218,33 @@ static const uint32_t SERIALIZATION_VERSION = 1;
 
 enum Transition : uint32_t { None, Left, Right, Up };
 
-template <typename T> T network_to_host(T input);
-
-template <typename T> T host_to_network(T input);
-
-template <> uint16_t network_to_host(uint16_t input) { return ntohs(input); }
-
-template <> uint16_t host_to_network(uint16_t input) { return htons(input); }
-
-template <> uint32_t network_to_host(uint32_t input) { return ntohl(input); }
-
-template <> uint32_t host_to_network(uint32_t input) { return htonl(input); }
-
-template <typename T> void append_to_buffer(vector<uint8_t> *output, T value) {
-  value = host_to_network(value);
-  const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&value);
-  output->insert(output->end(), bytes, bytes + sizeof(T));
+template <typename T>
+void append_to_buffer(vector<uint8_t> *output, T value) {
+  for (auto t = 0u; t < sizeof(T); ++t) {
+    output->push_back(value & 0xFF);
+    value >>= 8;
+  }
 }
 
 template <typename T>
 T get_from_buffer(const uint8_t **data, const uint8_t *end) {
-  const T *pointer = reinterpret_cast<const T *>(*data);
-  *data = *data + sizeof(T);
-  if (*data <= end) {
-    return network_to_host<T>(*pointer);
-  } else {
-    return 0;
-  }
+
+  // Note: We can't optimize this function by casting the data argument into a T*,
+  // because it would only work on architectures that support reading from unaligned
+  // memory. It would work on X86, but not on asm.js and possibly other architectures.
+
+  T value = 0;
+
+  if (end - *data >= sizeof(T))
+    for (auto t = 0u; t < sizeof(T); ++t)
+      value |= static_cast<T>(*((*data)++)) << static_cast<T>(8 * t);
+
+  return value;
+
 }
 
 void get_point_from_buffer(const uint8_t **data, const uint8_t *end,
-                        Point *point) {
+                           Point *point) {
   point->row = get_from_buffer<uint32_t>(data, end);
   point->column = get_from_buffer<uint32_t>(data, end);
 }

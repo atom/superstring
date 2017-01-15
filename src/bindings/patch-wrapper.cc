@@ -1,3 +1,4 @@
+#include "noop.h"
 #include "patch-wrapper.h"
 #include <memory>
 #include <sstream>
@@ -129,6 +130,7 @@ void PatchWrapper::init(Local<Object> exports) {
   constructor_template_local->Set(Nan::New("compose").ToLocalChecked(), Nan::New<FunctionTemplate>(compose));
   constructor_template_local->InstanceTemplate()->SetInternalFieldCount(1);
   const auto &prototype_template = constructor_template_local->PrototypeTemplate();
+  prototype_template->Set(Nan::New("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(noop));
   prototype_template->Set(Nan::New("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(splice));
   prototype_template->Set(Nan::New("spliceOld").ToLocalChecked(), Nan::New<FunctionTemplate>(splice_old));
   prototype_template->Set(Nan::New("copy").ToLocalChecked(), Nan::New<FunctionTemplate>(copy));

@@ -54,7 +54,7 @@ BufferOffsetIndex::~BufferOffsetIndex() {
   }
 }
 
-void BufferOffsetIndex::splice(unsigned start_row, unsigned deleted_lines_count, std::vector<unsigned> &new_line_lengths) {
+void BufferOffsetIndex::splice(unsigned start_row, unsigned deleted_lines_count, std::vector<unsigned> const &new_line_lengths) {
   auto start_node = find_and_bubble_node_up_to_root(start_row - 1);
   auto end_node = find_and_bubble_node_up_to_root(start_row + deleted_lines_count);
 
@@ -251,7 +251,7 @@ void BufferOffsetIndex::rotate_node_right(LineNode * pivot, LineNode * root, Lin
   pivot->compute_subtree_extents();
 }
 
-LineNode *BufferOffsetIndex::build_node_tree_from_line_lengths(std::vector<unsigned> &line_lengths, unsigned start, unsigned end, unsigned min_priority) {
+LineNode *BufferOffsetIndex::build_node_tree_from_line_lengths(std::vector<unsigned> const &line_lengths, unsigned start, unsigned end, unsigned min_priority) {
   if (start == end) {
     return nullptr;
   } else {
