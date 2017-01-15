@@ -8,7 +8,7 @@ using namespace v8;
 
 void Init(Local<Object> exports) {
   PointWrapper::Init();
-  PatchWrapper::Init(exports);
+  PatchWrapper::init(exports);
   MarkerIndexWrapper::init(exports);
   BufferOffsetIndexWrapper::init(exports);
 }
