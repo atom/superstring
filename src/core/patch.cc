@@ -577,10 +577,10 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
 
       if (inserted_text && lower_bound->new_text && upper_bound->new_text) {
         TextSlice new_text_prefix =
-            TextSlice(*lower_bound->new_text).Prefix(new_extent_prefix);
-        TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).Suffix(
+            TextSlice(*lower_bound->new_text).prefix(new_extent_prefix);
+        TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).suffix(
             new_deletion_end.traversal(upper_bound_new_start));
-        upper_bound->new_text = unique_ptr<Text>{new Text(TextSlice::Concat(
+        upper_bound->new_text = unique_ptr<Text>{new Text(TextSlice::concat(
             new_text_prefix, TextSlice(*inserted_text), new_text_suffix))};
       } else {
         upper_bound->new_text = nullptr;
@@ -610,10 +610,10 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
           new_insertion_extent.traverse(new_extent_suffix);
 
       if (inserted_text && upper_bound->new_text) {
-        TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).Suffix(
+        TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).suffix(
             new_deletion_end.traversal(upper_bound_new_start));
         upper_bound->new_text =
-            unique_ptr<Text>{new Text(TextSlice::Concat(TextSlice(*inserted_text), new_text_suffix))};
+            unique_ptr<Text>{new Text(TextSlice::concat(TextSlice(*inserted_text), new_text_suffix))};
       } else {
         upper_bound->new_text = nullptr;
       }
@@ -642,9 +642,9 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
           new_extent_prefix.traverse(new_insertion_extent);
       if (inserted_text && lower_bound->new_text) {
         TextSlice new_text_prefix =
-            TextSlice(*lower_bound->new_text).Prefix(new_extent_prefix);
+            TextSlice(*lower_bound->new_text).prefix(new_extent_prefix);
         lower_bound->new_text =
-            unique_ptr<Text>{new Text(TextSlice::Concat(new_text_prefix, TextSlice(*inserted_text)))};
+            unique_ptr<Text>{new Text(TextSlice::concat(new_text_prefix, TextSlice(*inserted_text)))};
       } else {
         lower_bound->new_text = nullptr;
       }
@@ -718,10 +718,10 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
       lower_bound->new_extent =
           new_insertion_end.traversal(lower_bound_new_start);
       if (inserted_text && lower_bound->new_text) {
-        TextSlice new_text_prefix = TextSlice(*lower_bound->new_text).Prefix(
+        TextSlice new_text_prefix = TextSlice(*lower_bound->new_text).prefix(
             new_splice_start.traversal(lower_bound_new_start));
         lower_bound->new_text =
-            unique_ptr<Text>{new Text(TextSlice::Concat(new_text_prefix, TextSlice(*inserted_text)))};
+            unique_ptr<Text>{new Text(TextSlice::concat(new_text_prefix, TextSlice(*inserted_text)))};
       } else {
         lower_bound->new_text = nullptr;
       }
@@ -767,10 +767,10 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
           upper_bound_new_end.traversal(new_deletion_end));
 
       if (inserted_text && upper_bound->new_text) {
-        TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).Suffix(
+        TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).suffix(
             new_deletion_end.traversal(upper_bound_new_start));
         upper_bound->new_text =
-            unique_ptr<Text>{new Text(TextSlice::Concat(TextSlice(*inserted_text), new_text_suffix))};
+            unique_ptr<Text>{new Text(TextSlice::concat(TextSlice(*inserted_text), new_text_suffix))};
       } else {
         upper_bound->new_text = nullptr;
       }
@@ -1197,7 +1197,7 @@ unique_ptr<Text> Patch::compute_old_text(unique_ptr<Text> deleted_text,
       return nullptr;
 
     if (hunk.new_start > deleted_text_slice_start) {
-      auto split_result = deleted_text_slice.Split(
+      auto split_result = deleted_text_slice.split(
           hunk.new_start.traversal(deleted_text_slice_start));
       deleted_text_slice_start = hunk.new_start;
       deleted_text_slice = split_result.second;
@@ -1205,7 +1205,7 @@ unique_ptr<Text> Patch::compute_old_text(unique_ptr<Text> deleted_text,
     }
 
     result->insert(result->end(), hunk.old_text->begin(), hunk.old_text->end());
-    deleted_text_slice = deleted_text_slice.Suffix(
+    deleted_text_slice = deleted_text_slice.suffix(
         hunk.new_end.traversal(deleted_text_slice_start));
     deleted_text_slice_start = hunk.new_end;
   }

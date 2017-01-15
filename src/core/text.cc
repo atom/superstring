@@ -25,7 +25,7 @@ Text::iterator TextSlice::end() {
   return text->begin() + end_index;
 }
 
-Text TextSlice::Concat(TextSlice a, TextSlice b) {
+Text TextSlice::concat(TextSlice a, TextSlice b) {
   Text result;
   result.reserve(a.size() + b.size());
   result.insert(
@@ -41,7 +41,7 @@ Text TextSlice::Concat(TextSlice a, TextSlice b) {
   return result;
 }
 
-Text TextSlice::Concat(TextSlice a, TextSlice b, TextSlice c) {
+Text TextSlice::concat(TextSlice a, TextSlice b, TextSlice c) {
   Text result;
   result.reserve(a.size() + b.size() + c.size());
   result.insert(
@@ -66,7 +66,7 @@ TextSlice::operator Text() const {
   return Text(text->begin() + start_index, text->begin() + end_index);
 }
 
-std::pair<TextSlice, TextSlice> TextSlice::Split(Point position) {
+std::pair<TextSlice, TextSlice> TextSlice::split(Point position) {
   size_t index = character_index_for_position(position);
   return {
     TextSlice{text, start_index, start_index + index},
@@ -74,12 +74,12 @@ std::pair<TextSlice, TextSlice> TextSlice::Split(Point position) {
   };
 }
 
-TextSlice TextSlice::Suffix(Point suffix_start) {
-  return Split(suffix_start).second;
+TextSlice TextSlice::suffix(Point suffix_start) {
+  return split(suffix_start).second;
 }
 
-TextSlice TextSlice::Prefix(Point prefix_end) {
-  return Split(prefix_end).first;
+TextSlice TextSlice::prefix(Point prefix_end) {
+  return split(prefix_end).first;
 }
 
 size_t TextSlice::character_index_for_position(Point target) {
