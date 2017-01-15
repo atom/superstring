@@ -86,8 +86,8 @@ Local<Object> MarkerIndexWrapper::snapshot_to_js(const unordered_map<MarkerIndex
   Local<Object> result_object = Nan::New<Object>();
   for (auto &pair : snapshot) {
     Local<Object> range = Nan::New<Object>();
-    range->Set(Nan::New(start_string), PointWrapper::FromPoint(pair.second.start));
-    range->Set(Nan::New(end_string), PointWrapper::FromPoint(pair.second.end));
+    range->Set(Nan::New(start_string), PointWrapper::from_point(pair.second.start));
+    range->Set(Nan::New(end_string), PointWrapper::from_point(pair.second.end));
     result_object->Set(Nan::New<Integer>(pair.first), range);
   }
   return result_object;
@@ -126,8 +126,8 @@ void MarkerIndexWrapper::insert(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
   optional<MarkerIndex::MarkerId> id = marker_id_from_js(info[0]);
-  optional<Point> start = PointWrapper::PointFromJS(info[1]);
-  optional<Point> end = PointWrapper::PointFromJS(info[2]);
+  optional<Point> start = PointWrapper::point_from_js(info[1]);
+  optional<Point> end = PointWrapper::point_from_js(info[2]);
 
   if (id && start && end) {
     wrapper->marker_index.insert(*id, *start, *end);
@@ -157,9 +157,9 @@ void MarkerIndexWrapper::delete_marker(const Nan::FunctionCallbackInfo<Value> &i
 void MarkerIndexWrapper::splice(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-  optional<Point> start = PointWrapper::PointFromJS(info[0]);
-  optional<Point> old_extent = PointWrapper::PointFromJS(info[1]);
-  optional<Point> new_extent = PointWrapper::PointFromJS(info[2]);
+  optional<Point> start = PointWrapper::point_from_js(info[0]);
+  optional<Point> old_extent = PointWrapper::point_from_js(info[1]);
+  optional<Point> new_extent = PointWrapper::point_from_js(info[2]);
   if (start && old_extent && new_extent) {
     MarkerIndex::SpliceResult result = wrapper->marker_index.splice(*start, *old_extent, *new_extent);
 
@@ -179,7 +179,7 @@ void MarkerIndexWrapper::get_start(const Nan::FunctionCallbackInfo<Value> &info)
   optional<MarkerIndex::MarkerId> id = marker_id_from_js(info[0]);
   if (id) {
     Point result = wrapper->marker_index.get_start(*id);
-    info.GetReturnValue().Set(PointWrapper::FromPoint(result));
+    info.GetReturnValue().Set(PointWrapper::from_point(result));
   }
 }
 
@@ -189,7 +189,7 @@ void MarkerIndexWrapper::get_end(const Nan::FunctionCallbackInfo<Value> &info) {
   optional<MarkerIndex::MarkerId> id = marker_id_from_js(info[0]);
   if (id) {
     Point result = wrapper->marker_index.get_end(*id);
-    info.GetReturnValue().Set(PointWrapper::FromPoint(result));
+    info.GetReturnValue().Set(PointWrapper::from_point(result));
   }
 }
 
@@ -200,8 +200,8 @@ void MarkerIndexWrapper::get_range(const Nan::FunctionCallbackInfo<Value> &info)
   if (id) {
     Range range = wrapper->marker_index.get_range(*id);
     auto result = Nan::New<Array>(2);
-    result->Set(0, PointWrapper::FromPoint(range.start));
-    result->Set(1, PointWrapper::FromPoint(range.end));
+    result->Set(0, PointWrapper::from_point(range.start));
+    result->Set(1, PointWrapper::from_point(range.end));
     info.GetReturnValue().Set(result);
   }
 }
@@ -218,8 +218,8 @@ void MarkerIndexWrapper::compare(const Nan::FunctionCallbackInfo<Value> &info) {
 void MarkerIndexWrapper::find_intersecting(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-  optional<Point> start = PointWrapper::PointFromJS(info[0]);
-  optional<Point> end = PointWrapper::PointFromJS(info[1]);
+  optional<Point> start = PointWrapper::point_from_js(info[0]);
+  optional<Point> end = PointWrapper::point_from_js(info[1]);
 
   if (start && end) {
     MarkerIndex::MarkerIdSet result = wrapper->marker_index.find_intersecting(*start, *end);
@@ -230,8 +230,8 @@ void MarkerIndexWrapper::find_intersecting(const Nan::FunctionCallbackInfo<Value
 void MarkerIndexWrapper::find_containing(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-  optional<Point> start = PointWrapper::PointFromJS(info[0]);
-  optional<Point> end = PointWrapper::PointFromJS(info[1]);
+  optional<Point> start = PointWrapper::point_from_js(info[0]);
+  optional<Point> end = PointWrapper::point_from_js(info[1]);
 
   if (start && end) {
     MarkerIndex::MarkerIdSet result = wrapper->marker_index.find_containing(*start, *end);
@@ -242,8 +242,8 @@ void MarkerIndexWrapper::find_containing(const Nan::FunctionCallbackInfo<Value> 
 void MarkerIndexWrapper::find_contained_in(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-  optional<Point> start = PointWrapper::PointFromJS(info[0]);
-  optional<Point> end = PointWrapper::PointFromJS(info[1]);
+  optional<Point> start = PointWrapper::point_from_js(info[0]);
+  optional<Point> end = PointWrapper::point_from_js(info[1]);
 
   if (start && end) {
     MarkerIndex::MarkerIdSet result = wrapper->marker_index.find_contained_in(*start, *end);
@@ -254,8 +254,8 @@ void MarkerIndexWrapper::find_contained_in(const Nan::FunctionCallbackInfo<Value
 void MarkerIndexWrapper::find_starting_in(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-  optional<Point> start = PointWrapper::PointFromJS(info[0]);
-  optional<Point> end = PointWrapper::PointFromJS(info[1]);
+  optional<Point> start = PointWrapper::point_from_js(info[0]);
+  optional<Point> end = PointWrapper::point_from_js(info[1]);
 
   if (start && end) {
     MarkerIndex::MarkerIdSet result = wrapper->marker_index.find_starting_in(*start, *end);
@@ -266,7 +266,7 @@ void MarkerIndexWrapper::find_starting_in(const Nan::FunctionCallbackInfo<Value>
 void MarkerIndexWrapper::find_starting_at(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-  optional<Point> position = PointWrapper::PointFromJS(info[0]);
+  optional<Point> position = PointWrapper::point_from_js(info[0]);
 
   if (position) {
     MarkerIndex::MarkerIdSet result = wrapper->marker_index.find_starting_at(*position);
@@ -277,8 +277,8 @@ void MarkerIndexWrapper::find_starting_at(const Nan::FunctionCallbackInfo<Value>
 void MarkerIndexWrapper::find_ending_in(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-  optional<Point> start = PointWrapper::PointFromJS(info[0]);
-  optional<Point> end = PointWrapper::PointFromJS(info[1]);
+  optional<Point> start = PointWrapper::point_from_js(info[0]);
+  optional<Point> end = PointWrapper::point_from_js(info[1]);
 
   if (start && end) {
     MarkerIndex::MarkerIdSet result = wrapper->marker_index.find_ending_in(*start, *end);
@@ -289,7 +289,7 @@ void MarkerIndexWrapper::find_ending_in(const Nan::FunctionCallbackInfo<Value> &
 void MarkerIndexWrapper::find_ending_at(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
-  optional<Point> position = PointWrapper::PointFromJS(info[0]);
+  optional<Point> position = PointWrapper::point_from_js(info[0]);
 
   if (position) {
     MarkerIndex::MarkerIdSet result = wrapper->marker_index.find_ending_at(*position);

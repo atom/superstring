@@ -35,7 +35,7 @@ void BufferOffsetIndexWrapper::splice(const Nan::FunctionCallbackInfo<Value> &in
 void BufferOffsetIndexWrapper::character_index_for_position(const Nan::FunctionCallbackInfo<Value> &info) {
   BufferOffsetIndex &buffer_offset_index = Nan::ObjectWrap::Unwrap<BufferOffsetIndexWrapper>(info.This())->buffer_offset_index;
 
-  auto position = PointWrapper::PointFromJS(info[0]);
+  auto position = PointWrapper::point_from_js(info[0]);
   if (position) {
     auto result = buffer_offset_index.character_index_for_position(*position);
     info.GetReturnValue().Set(Nan::New(result));
@@ -48,6 +48,6 @@ void BufferOffsetIndexWrapper::position_for_character_index(const Nan::FunctionC
   auto character_index = Nan::To<unsigned>(info[0]);
   if (character_index.IsJust()) {
     auto result = buffer_offset_index.position_for_character_index(character_index.FromJust());
-    info.GetReturnValue().Set(PointWrapper::FromPoint(result));
+    info.GetReturnValue().Set(PointWrapper::from_point(result));
   }
 }

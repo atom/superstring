@@ -82,32 +82,32 @@ class HunkWrapper : public Nan::ObjectWrap {
 
   static void get_old_start(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
     Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.old_start));
+    info.GetReturnValue().Set(PointWrapper::from_point(hunk.old_start));
   }
 
   static void get_new_start(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
     Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.new_start));
+    info.GetReturnValue().Set(PointWrapper::from_point(hunk.new_start));
   }
 
   static void get_old_end(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
     Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.old_end));
+    info.GetReturnValue().Set(PointWrapper::from_point(hunk.old_end));
   }
 
   static void get_new_end(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
     Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.new_end));
+    info.GetReturnValue().Set(PointWrapper::from_point(hunk.new_end));
   }
 
   static void get_old_extent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
     Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.old_end.traversal(hunk.old_start)));
+    info.GetReturnValue().Set(PointWrapper::from_point(hunk.old_end.traversal(hunk.old_start)));
   }
 
   static void get_new_extent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
     Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::FromPoint(hunk.new_end.traversal(hunk.new_start)));
+    info.GetReturnValue().Set(PointWrapper::from_point(hunk.new_end.traversal(hunk.new_start)));
   }
 
   static void to_string(const Nan::FunctionCallbackInfo<Value> &info) {
@@ -172,9 +172,9 @@ void PatchWrapper::construct(const Nan::FunctionCallbackInfo<Value> &info) {
 void PatchWrapper::splice(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
-  optional<Point> start = PointWrapper::PointFromJS(info[0]);
-  optional<Point> deletion_extent = PointWrapper::PointFromJS(info[1]);
-  optional<Point> insertion_extent = PointWrapper::PointFromJS(info[2]);
+  optional<Point> start = PointWrapper::point_from_js(info[0]);
+  optional<Point> deletion_extent = PointWrapper::point_from_js(info[1]);
+  optional<Point> insertion_extent = PointWrapper::point_from_js(info[2]);
 
   if (start && deletion_extent && insertion_extent) {
     unique_ptr<Text> deleted_text;
@@ -200,9 +200,9 @@ void PatchWrapper::splice(const Nan::FunctionCallbackInfo<Value> &info) {
 void PatchWrapper::splice_old(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
-  optional<Point> start = PointWrapper::PointFromJS(info[0]);
-  optional<Point> deletion_extent = PointWrapper::PointFromJS(info[1]);
-  optional<Point> insertion_extent = PointWrapper::PointFromJS(info[2]);
+  optional<Point> start = PointWrapper::point_from_js(info[0]);
+  optional<Point> deletion_extent = PointWrapper::point_from_js(info[1]);
+  optional<Point> insertion_extent = PointWrapper::point_from_js(info[2]);
 
   if (start && deletion_extent && insertion_extent) {
     if (!patch.splice_old(*start, *deletion_extent, *insertion_extent)) {
@@ -247,8 +247,8 @@ void PatchWrapper::get_hunks(const Nan::FunctionCallbackInfo<Value> &info) {
 void PatchWrapper::get_hunks_in_old_range(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
-  optional<Point> start = PointWrapper::PointFromJS(info[0]);
-  optional<Point> end = PointWrapper::PointFromJS(info[1]);
+  optional<Point> start = PointWrapper::point_from_js(info[0]);
+  optional<Point> end = PointWrapper::point_from_js(info[1]);
 
   if (start && end) {
     Local<Array> js_result = Nan::New<Array>();
@@ -265,8 +265,8 @@ void PatchWrapper::get_hunks_in_old_range(const Nan::FunctionCallbackInfo<Value>
 void PatchWrapper::get_hunks_in_new_range(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
-  optional<Point> start = PointWrapper::PointFromJS(info[0]);
-  optional<Point> end = PointWrapper::PointFromJS(info[1]);
+  optional<Point> start = PointWrapper::point_from_js(info[0]);
+  optional<Point> end = PointWrapper::point_from_js(info[1]);
 
   if (start && end) {
     Local<Array> js_result = Nan::New<Array>();
@@ -282,7 +282,7 @@ void PatchWrapper::get_hunks_in_new_range(const Nan::FunctionCallbackInfo<Value>
 
 void PatchWrapper::hunk_for_old_position(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
-  optional<Point> start = PointWrapper::PointFromJS(info[0]);
+  optional<Point> start = PointWrapper::point_from_js(info[0]);
   if (start) {
     auto hunk = patch.hunk_for_old_position(*start);
     if (hunk) {
@@ -295,7 +295,7 @@ void PatchWrapper::hunk_for_old_position(const Nan::FunctionCallbackInfo<Value> 
 
 void PatchWrapper::hunk_for_new_position(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
-  optional<Point> start = PointWrapper::PointFromJS(info[0]);
+  optional<Point> start = PointWrapper::point_from_js(info[0]);
   if (start) {
     auto hunk = patch.hunk_for_new_position(*start);
     if (hunk) {
