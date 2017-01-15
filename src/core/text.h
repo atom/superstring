@@ -27,7 +27,7 @@ struct TextSlice {
   std::pair<TextSlice, TextSlice> Split(Point);
   TextSlice Prefix(Point);
   TextSlice Suffix(Point);
-  size_t CharacterIndexForPosition(Point);
+  size_t character_index_for_position(Point);
 };
 
 std::ostream &operator<<(std::ostream &stream, const Text *text);

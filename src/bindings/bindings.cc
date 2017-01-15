@@ -10,7 +10,7 @@ void Init(Local<Object> exports) {
   PointWrapper::Init();
   PatchWrapper::Init(exports);
   MarkerIndexWrapper::Init(exports);
-  BufferOffsetIndexWrapper::Init(exports);
+  BufferOffsetIndexWrapper::init(exports);
 }
 
 NODE_MODULE(superstring, Init)

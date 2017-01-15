@@ -98,7 +98,7 @@ private:
   void DeleteNode(Node *node);
   void DeleteSubtree(Node *node);
   void BubbleNodeUp(Node *node);
-  void BubbleNodeDown(Node *node);
+  void bubble_node_down(Node *node);
   void RotateNodeLeft(Node *pivot);
   void RotateNodeRight(Node *pivot);
   void GetStartingAndEndingMarkersWithinSubtree(const Node *node, flat_set<MarkerId> *starting, flat_set<MarkerId> *ending);

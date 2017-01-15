@@ -542,14 +542,14 @@ MarkerIndex::SpliceResult MarkerIndex::Splice(Point start, Point old_extent, Poi
     DeleteNode(end_node);
   } else if (end_node->IsMarkerEndpoint()) {
     end_node->priority = GenerateRandomNumber();
-    BubbleNodeDown(end_node);
+    bubble_node_down(end_node);
   } else {
     DeleteNode(end_node);
   }
 
   if (start_node->IsMarkerEndpoint()) {
     start_node->priority = GenerateRandomNumber();
-    BubbleNodeDown(start_node);
+    bubble_node_down(start_node);
   } else {
     DeleteNode(start_node);
   }
@@ -665,7 +665,7 @@ void MarkerIndex::DeleteNode(Node *node) {
   node_position_cache.erase(node);
   node->priority = INT_MAX;
 
-  BubbleNodeDown(node);
+  bubble_node_down(node);
 
   if (node->parent) {
     if (node->parent->left == node) {
@@ -696,7 +696,7 @@ void MarkerIndex::BubbleNodeUp(Node *node) {
   }
 }
 
-void MarkerIndex::BubbleNodeDown(Node *node) {
+void MarkerIndex::bubble_node_down(Node *node) {
   while (true) {
     int left_child_priority = (node->left) ? node->left->priority : INT_MAX;
     int right_child_priority = (node->right) ? node->right->priority : INT_MAX;

@@ -67,7 +67,7 @@ TextSlice::operator Text() const {
 }
 
 std::pair<TextSlice, TextSlice> TextSlice::Split(Point position) {
-  size_t index = CharacterIndexForPosition(position);
+  size_t index = character_index_for_position(position);
   return {
     TextSlice{text, start_index, start_index + index},
     TextSlice{text, start_index + index, end_index}
@@ -82,7 +82,7 @@ TextSlice TextSlice::Prefix(Point prefix_end) {
   return Split(prefix_end).first;
 }
 
-size_t TextSlice::CharacterIndexForPosition(Point target) {
+size_t TextSlice::character_index_for_position(Point target) {
   Point position;
   auto begin = text->begin() + start_index;
   auto end = text->begin() + end_index;
