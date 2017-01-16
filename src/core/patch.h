@@ -1,3 +1,5 @@
+#pragma once
+
 #include "optional.h"
 #include "point.h"
 #include "text.h"

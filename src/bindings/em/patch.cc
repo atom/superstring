@@ -1,6 +1,7 @@
 #include <memory>
 #include <vector>
 
+#include "as.h"
 #include "auto-wrap.h"
 #include "patch.h"
 
@@ -23,6 +24,11 @@ std::vector<uint8_t> serialize(Patch const & patch)
     patch.serialize(&vec);
 
     return vec;
+}
+
+Patch * compose(std::vector<Patch const *> const & vec)
+{
+    return new Patch(vec);
 }
 
 Patch * deserialize(std::vector<uint8_t> const & vec)
@@ -57,6 +63,8 @@ EMSCRIPTEN_BINDINGS(Patch) {
         .function("rebalance", WRAP(&Patch::rebalance))
 
         .function("serialize", WRAP(&serialize))
+
+        .class_function("compose", WRAP_STATIC(&compose), emscripten::allow_raw_pointers())
 
         .class_function("deserialize", WRAP_STATIC(&deserialize), emscripten::allow_raw_pointers())
 
