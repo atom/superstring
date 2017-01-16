@@ -9,8 +9,8 @@ void BufferOffsetIndexWrapper::init(Local<Object> exports) {
   constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
   const auto &prototype_template = constructor_template->PrototypeTemplate();
   prototype_template->Set(Nan::New<String>("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(splice));
-  prototype_template->Set(Nan::New<String>("position_for_character_index").ToLocalChecked(), Nan::New<FunctionTemplate>(position_for_character_index));
-  prototype_template->Set(Nan::New<String>("character_index_for_position").ToLocalChecked(), Nan::New<FunctionTemplate>(character_index_for_position));
+  prototype_template->Set(Nan::New<String>("positionForCharacterIndex").ToLocalChecked(), Nan::New<FunctionTemplate>(position_for_character_index));
+  prototype_template->Set(Nan::New<String>("characterIndexForPosition").ToLocalChecked(), Nan::New<FunctionTemplate>(character_index_for_position));
   exports->Set(Nan::New("BufferOffsetIndex").ToLocalChecked(), constructor_template->GetFunction());
 }
 
