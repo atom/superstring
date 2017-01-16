@@ -23,7 +23,7 @@ module.exports = class ReferenceBufferOffsetIndex {
     this.longestColumn = this.lineLengths.reduce((a, b) => Math.max(a, b), 0)
   }
 
-  position_for_character_index (index) {
+  positionForCharacterIndex (index) {
     let charIndex = 0
     let row = 0
     for (const lineLength of this.lineLengths) {
@@ -38,7 +38,7 @@ module.exports = class ReferenceBufferOffsetIndex {
     return {row, column: Math.min(index - charIndex, lineLength)}
   }
 
-  character_index_for_position (position) {
+  characterIndexForPosition (position) {
     const charIndex = this.lineLengths.slice(0, position.row).reduce((a, b) => a + b, 0)
     const lineLength = this.lineLengths[position.row]
     if (lineLength == null) {
