@@ -21,6 +21,7 @@
             "target_name": "superstring_core",
             "type": "static_library",
             "sources": [
+                "src/core/flat-text.cc",
                 "src/core/patch.cc",
                 "src/core/point.cc",
                 "src/core/text.cc",
@@ -53,7 +54,7 @@
                     "CATCH_CONFIG_CPP11_NO_IS_ENUM"
                 ],
                 "sources": [
-                    "test/native/text-test.cc",
+                    "test/native/flat-text-test.cc",
                     "test/native/patch-test.cc",
                     "test/native/tests.cc",
                 ],
