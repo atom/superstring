@@ -4,7 +4,8 @@ using std::vector;
 using std::ostream;
 using std::function;
 
-static uint32_t BYTES_PER_CHARACTER = (sizeof(char16_t) / sizeof(char));
+static const uint32_t bytes_per_character = (sizeof(char16_t) / sizeof(char));
+static const char16_t replacement_character = 0xFFFD;
 
 FlatText::FlatText(const std::u16string &string) :
   content {string.begin(), string.end()}, line_offsets({ 0 }) {
@@ -29,15 +30,14 @@ FlatText FlatText::build(std::istream &stream, size_t input_size, const char *en
     return FlatText {{}, {}};
   }
 
-  std::vector<char> input_vector(chunk_size);
-  std::vector<char16_t> output_vector(input_size);
-  std::vector<uint32_t> line_offsets;
-  line_offsets.push_back(0);
+  vector<char> input_vector(chunk_size);
+  vector<char16_t> output_vector(input_size);
+  vector<uint32_t> line_offsets({ 0 });
 
   char *input_buffer = input_vector.data();
   char16_t *output_buffer = output_vector.data();
   char *output_pointer = reinterpret_cast<char *>(output_buffer);
-  size_t output_bytes_remaining = output_vector.size() * BYTES_PER_CHARACTER;
+  size_t output_bytes_remaining = output_vector.size() * bytes_per_character;
   size_t character_offset = 0;
 
   size_t total_bytes_read = 0;
@@ -46,14 +46,13 @@ FlatText FlatText::build(std::istream &stream, size_t input_size, const char *en
   for (;;) {
     stream.read(input_buffer + unconverted_byte_count, chunk_size - unconverted_byte_count);
     size_t bytes_read = stream.gcount();
-    if (bytes_read == 0) break;
-
-    total_bytes_read += bytes_read;
-    progress_callback(total_bytes_read);
-
     size_t bytes_to_convert = unconverted_byte_count + bytes_read;
-    char *input_pointer = input_buffer;
+    total_bytes_read += bytes_read;
+    if (bytes_to_convert == 0) break;
 
+    if (bytes_read > 0) progress_callback(total_bytes_read);
+
+    char *input_pointer = input_buffer;
     size_t conversion_result = iconv(
       conversion,
       &input_pointer,
@@ -63,6 +62,8 @@ FlatText FlatText::build(std::istream &stream, size_t input_size, const char *en
     );
 
     unconverted_byte_count = 0;
+    size_t characters_written =
+      output_vector.size() - (output_bytes_remaining / bytes_per_character);
 
     if (conversion_result == static_cast<size_t>(-1)) {
       switch (errno) {
@@ -70,11 +71,17 @@ FlatText FlatText::build(std::istream &stream, size_t input_size, const char *en
           unconverted_byte_count = input_buffer + chunk_size - input_pointer;
           memcpy(input_buffer, input_pointer, unconverted_byte_count);
           break;
+
+        case EILSEQ:
+          output_vector[characters_written++] = replacement_character;
+          output_pointer += bytes_per_character;
+          output_bytes_remaining -= bytes_per_character;
+          input_pointer++;
+          unconverted_byte_count = input_buffer + chunk_size - input_pointer;
+          memcpy(input_buffer, input_pointer, unconverted_byte_count);
+          break;
       }
     }
-
-    size_t characters_written =
-      output_vector.size() - (output_bytes_remaining / BYTES_PER_CHARACTER);
 
     while (character_offset < characters_written) {
       switch (output_vector[character_offset]) {
@@ -90,9 +97,7 @@ FlatText FlatText::build(std::istream &stream, size_t input_size, const char *en
     }
   }
 
-  // Remove trailing null byte written by iconv
-  output_vector.pop_back();
-
+  output_vector.resize(character_offset);
   return FlatText {output_vector, line_offsets};
 }
 
