@@ -1031,14 +1031,20 @@ void Patch::delete_root() {
   Node *node = root, *parent = nullptr;
   while (true) {
     if (node->left) {
+      Node *left = node->left;
       rotate_node_right(node->left, node, parent);
+      parent = left;
     } else if (node->right) {
+      Node *right = node->right;
       rotate_node_left(node->right, node, parent);
+      parent = right;
     } else if (parent) {
       if (parent->left == node) {
         delete_node(&parent->left);
+        break;
       } else if (parent->right == node) {
         delete_node(&parent->right);
+        break;
       }
     } else {
       delete_node(&root);
@@ -1395,7 +1401,27 @@ Patch::Patch(const vector<uint8_t> &input)
 }
 
 ostream &operator<<(ostream &stream, const Patch::Hunk &hunk) {
-  return stream <<
-    "{Hunk old-range: (" << hunk.old_start << " - " << hunk.old_end << ")" <<
-    ", new-range: (" << hunk.new_start << " - " << hunk.new_end << ")}";
+  stream
+    << "{Hunk "
+    << "old_range: (" << hunk.old_start << " - " << hunk.old_end << ")"
+    << ", new_range: (" << hunk.new_start << " - " << hunk.new_end << ")"
+    << ", old_text: ";
+
+  if (hunk.old_text) {
+    stream << hunk.old_text;
+  } else {
+    stream << "null";
+  }
+
+  stream << ", new_text: ";
+
+  if (hunk.new_text) {
+    stream << hunk.new_text;
+  } else {
+    stream << "null";
+  }
+
+  stream << "}";
+
+  return stream;
 }

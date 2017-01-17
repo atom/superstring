@@ -156,6 +156,20 @@ describe('Patch', function () {
     }])
   })
 
+  it('removes a hunk when it becomes empty', () => {
+    const patch = new Patch()
+    patch.splice({row: 1, column: 0}, {row: 0, column: 0}, {row: 0, column: 5})
+    patch.splice({row: 2, column: 0}, {row: 0, column: 0}, {row: 0, column: 5})
+    patch.splice({row: 1, column: 0}, {row: 0, column: 5}, {row: 0, column: 0})
+
+    assert.deepEqual(JSON.parse(JSON.stringify(patch.getHunks())), [{
+      oldStart: {row: 2, column: 0},
+      newStart: {row: 2, column: 0},
+      oldEnd: {row: 2, column: 0},
+      newEnd: {row: 2, column: 5}
+    }])
+  })
+
   it('correctly records random splices', function () {
     this.timeout(Infinity)
 
