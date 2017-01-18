@@ -5,7 +5,11 @@
   "main": "./index",
   "browser": "./browser",
   "scripts": {
+    "build:node": "node-gyp configure build",
     "build:browser": "em++ --bind -o browser.js -O3 -std=c++14 -I src/bindings/em -I src/core -include iostream src/core/*.cc src/bindings/em/*.cc -s TOTAL_MEMORY=134217728 --memory-init-file 0",
+    "build:browser:maybe": "test -f browser.js || test -n \"$CI\" || ! command -v em++ 2>&1 > /dev/null || npm run build:browser",
+    "build:all": "npm run build:node && npm run build:browser",
+    "install": "npm run build:node && npm run build:browser:maybe",
     "test-native": "script/test-native.js",
     "test": "mocha test/js/*.js",
     "benchmark": "node benchmark/marker-index.benchmark.js",
