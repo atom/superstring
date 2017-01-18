@@ -1235,7 +1235,7 @@ T get_from_buffer(const uint8_t **data, const uint8_t *end) {
 
   T value = 0;
 
-  if (end - *data >= sizeof(T))
+  if (static_cast<unsigned>(end - *data) >= sizeof(T))
     for (auto t = 0u; t < sizeof(T); ++t)
       value |= static_cast<T>(*((*data)++)) << static_cast<T>(8 * t);
 
