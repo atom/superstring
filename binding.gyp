@@ -80,6 +80,9 @@
                 "link_settings": {
                     "libraries": ["ws2_32.lib"]
                 }
+                "defines": [
+                    "NOMINMAX"
+                ]
             }]
         ]
     }
