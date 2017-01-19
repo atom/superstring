@@ -15,9 +15,21 @@ FlatText::FlatText(const std::u16string &string) :
     switch (content[offset]) {
       case '\n':
         line_offsets.push_back(offset + 1);
+        offset += 1;
+        break;
+      case '\r':
+        if (offset < content.size() - 1 && content[offset + 1] == '\n') {
+          line_offsets.push_back(offset + 2);
+          offset += 2;
+        } else {
+          line_offsets.push_back(offset + 1);
+          offset += 1;
+        }
+        break;
+      default:
+        offset += 1;
         break;
     }
-    offset++;
   }
 }
 
@@ -115,6 +127,22 @@ FlatText FlatText::build(std::istream &stream, size_t input_size, const char *en
   size_t output_characters_written = output_vector.size() - output_characters_remaining;
   output_vector.resize(output_characters_written);
   return FlatText {output_vector, line_offsets};
+}
+
+std::pair<FlatText::iterator, FlatText::iterator> FlatText::line_iterators(uint32_t row) {
+  iterator begin = content.begin() + line_offsets[row];
+
+  iterator end;
+  if (row < line_offsets.size() - 1) {
+    end = content.begin() + line_offsets[row + 1] - 1;
+    if (*(end - 1) == '\r') {
+      --end;
+    }
+  } else {
+    end = content.end();
+  }
+
+  return std::pair<iterator, iterator>(begin, end);
 }
 
 bool FlatText::operator==(const FlatText &other) const {

@@ -12,10 +12,14 @@ class FlatText {
   FlatText(const std::vector<char16_t> &, const std::vector<uint32_t> &);
 
  public:
+  using iterator = std::vector<char16_t>::iterator;
+
   FlatText(const std::u16string &string);
 
   static FlatText build(std::istream &stream, size_t input_size, const char *encoding_name,
                         size_t chunk_size, std::function<void(size_t)> progress_callback);
+
+  std::pair<iterator, iterator> line_iterators(uint32_t row);
 
   bool operator==(const FlatText &) const;
 
