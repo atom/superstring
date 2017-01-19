@@ -41,9 +41,17 @@ TEST_CASE("replaces invalid byte sequences at the end of the stream with the Uni
 }
 
 TEST_CASE("handles characters that require two 16-bit code units") {
-  string input = "ab" "\xf0\x9f\x98\x81" "cd"; // 'ab😁cd'
+  string input = "ab" "\xf0\x9f" "\x98\x81" "cd"; // 'ab😁cd'
   stringstream stream(input, std::ios_base::in);
 
   FlatText text = FlatText::build(stream, input.size(), "UTF8", 5, [&](size_t percent_done) {});
   REQUIRE(text == FlatText { u"ab" "\xd83d" "\xde01" "cd" });
+}
+
+TEST_CASE("resizes the buffer if the encoding conversion runs out of room") {
+  string input = "abcdef";
+  stringstream stream(input, std::ios_base::in);
+
+  FlatText text = FlatText::build(stream, 3, "UTF8", 5, [&](size_t percent_done) {});
+  REQUIRE(text == FlatText { u"abcdef" });
 }
