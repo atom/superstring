@@ -72,3 +72,11 @@ TEST_CASE("FlatText::build - resizes the buffer if the encoding conversion runs 
   FlatText text = FlatText::build(stream, 3, "UTF8", 5, [&](size_t percent_done) {});
   REQUIRE(text == FlatText { u"abcdef" });
 }
+
+TEST_CASE("FlatText::build - handles CRLF newlines") {
+  string input = "abc\r\nde\rf\r\ng\r";
+  stringstream stream(input, std::ios_base::in);
+
+  FlatText text = FlatText::build(stream, input.size(), "UTF8", 4, [&](size_t percent_done) {});
+  REQUIRE(text == FlatText { u"abc\r\nde\rf\r\ng\r" });
+}

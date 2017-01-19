@@ -49,6 +49,7 @@ FlatText FlatText::build(std::istream &stream, size_t input_size, const char *en
 
   size_t total_bytes_read = 0;
   size_t indexed_character_count = 0;
+  bool pending_carriage_return = false;
 
   char *input_buffer = input_vector.data();
   size_t input_bytes_remaining = 0;
@@ -112,15 +113,29 @@ FlatText FlatText::build(std::istream &stream, size_t input_size, const char *en
     while (indexed_character_count < output_characters_written) {
       switch (output_vector[indexed_character_count]) {
         case '\n':
+          pending_carriage_return = false;
           line_offsets.push_back(indexed_character_count + 1);
           break;
-
+        case '\r':
+          if (pending_carriage_return) {
+            line_offsets.push_back(indexed_character_count);
+          }
+          pending_carriage_return = true;
+          break;
         default:
+          if (pending_carriage_return) {
+            line_offsets.push_back(indexed_character_count);
+            pending_carriage_return = false;
+          }
           break;
       }
 
       indexed_character_count++;
     }
+  }
+
+  if (pending_carriage_return) {
+    line_offsets.push_back(indexed_character_count);
   }
 
   size_t output_characters_remaining = (output_bytes_remaining / bytes_per_character);
