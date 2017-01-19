@@ -1,4 +1,7 @@
-# Superstring [![Build Status](https://travis-ci.org/atom/superstring.svg?branch=master)](https://travis-ci.org/atom/superstring) [![Build status](https://ci.appveyor.com/api/projects/status/n5pack4yk7w80fso/branch/master?svg=true)](https://ci.appveyor.com/project/Atom/superstring/branch/master)
+# Superstring
+[![macOS Build Status](https://travis-ci.org/atom/superstring.svg?branch=master)](https://travis-ci.org/atom/superstring)
+[![Windows Build Status](https://ci.appveyor.com/api/projects/status/n5pack4yk7w80fso/branch/master?svg=true)](https://ci.appveyor.com/project/Atom/superstring/branch/master)
+[![Dependency Status](https://david-dm.org/atom/superstring.svg)](https://david-dm.org/atom/superstring)
 
 
 
