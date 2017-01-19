@@ -36,6 +36,21 @@ Patch * deserialize(std::vector<uint8_t> const & vec)
     return new Patch(vec);
 }
 
+Point get_old_extent(Patch::Hunk const & hunk)
+{
+    return hunk.old_end.traversal(hunk.old_start);
+}
+
+Point get_new_extent(Patch::Hunk const & hunk)
+{
+    return hunk.new_end.traversal(hunk.new_start);
+}
+
+template <typename T>
+void hunk_set_noop(Patch::Hunk & hunk, T const &)
+{
+}
+
 EMSCRIPTEN_BINDINGS(Patch) {
 
     emscripten::class_<Patch>("Patch")
@@ -80,6 +95,13 @@ EMSCRIPTEN_BINDINGS(Patch) {
 
         .field("oldText", WRAP_FIELD(Patch::Hunk, old_text))
         .field("newText", WRAP_FIELD(Patch::Hunk, new_text))
+
+        // The following fields are legacy only (most notably, TextBuffer doesn't work without them)
+
+        .field("start", WRAP_FIELD(Patch::Hunk, new_start))
+
+        .field("oldExtent", WRAP(&get_old_extent), WRAP(&hunk_set_noop<Point>))
+        .field("newExtent", WRAP(&get_new_extent), WRAP(&hunk_set_noop<Point>))
 
         ;
 

@@ -34,6 +34,18 @@ describe('Patch', function () {
     patch.delete();
   })
 
+  it('expose legacy fields', function () {
+    const patch = new Patch({ mergeAdjacentHunks: false })
+
+    patch.splice({row: 0, column: 10}, {row: 0, column: 0}, {row: 1, column: 5})
+    patch.splice({row: 1, column: 5}, {row: 0, column: 2}, {row: 0, column: 8})
+
+    const hunk = patch.getHunks()[0];
+
+    assert.ok(hunk.oldExtent);
+    assert.ok(hunk.newExtent);
+  })
+
   it('honors the mergeAdjacentHunks option set to true', function () {
     const patch = new Patch({ mergeAdjacentHunks: true })
 
