@@ -12,6 +12,9 @@ size_t FlatTextSlice::end_offset() const {
   return text.line_offsets[end.row] + end.column;
 }
 
+FlatTextSlice::FlatTextSlice(const FlatText &text) :
+  text{text}, start{Point(0, 0)}, end{text.extent()} {}
+
 std::pair<FlatTextSlice, FlatTextSlice> FlatTextSlice::split(Point split_point) const {
   Point absolute_split_point = start.traverse(split_point);
   return std::pair<FlatTextSlice, FlatTextSlice> {

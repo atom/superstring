@@ -17,6 +17,7 @@ class FlatTextSlice {
   size_t end_offset() const;
 
  public:
+  FlatTextSlice(const FlatText &text);
   std::pair<FlatTextSlice, FlatTextSlice> split(Point) const;
   FlatTextSlice prefix(Point) const;
   FlatTextSlice suffix(Point) const;

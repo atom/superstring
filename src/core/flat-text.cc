@@ -184,7 +184,7 @@ Point FlatText::extent() const {
 }
 
 std::pair<FlatTextSlice, FlatTextSlice> FlatText::split(Point split_point) const {
-  return FlatTextSlice(*this, Point(0, 0), extent()).split(split_point);
+  return FlatTextSlice(*this).split(split_point);
 }
 
 bool FlatText::operator==(const FlatText &other) const {
