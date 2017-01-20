@@ -18,6 +18,21 @@ Text::Text() : lines {Line{{}, LineEnding::NONE}} {}
 
 Text::Text(const vector<Line> &lines) : lines{lines} {}
 
+Text::Text(Serializer &input) {
+  uint32_t line_count = input.read<uint32_t>();
+  lines.reserve(line_count);
+  for (uint32_t i = 0; i < line_count; i++) {
+    uint32_t line_length = input.read<uint32_t>();
+    LineEnding line_ending = static_cast<LineEnding>(input.read<uint16_t>());
+    Line line {{}, line_ending};
+    line.content.reserve(line_length);
+    for (uint32_t j = 0; j < line_length; j++) {
+      line.content.push_back(input.read<uint16_t>());
+    }
+    lines.push_back(line);
+  }
+}
+
 void Text::append(TextSlice slice) {
   Line &last_line = lines.back();
 
@@ -64,6 +79,18 @@ void Text::write(vector<uint16_t> &vector) const {
         vector.push_back('\r');
         vector.push_back('\n');
         break;
+    }
+  }
+}
+
+void Text::serialize(Serializer &output) const {
+  output.append<uint32_t>(1);
+  output.append(static_cast<uint32_t>(lines.size()));
+  for (const Line &line : lines) {
+    output.append(static_cast<uint32_t>(line.content.size()));
+    output.append(static_cast<uint16_t>(line.ending));
+    for (uint16_t character : line.content) {
+      output.append(character);
     }
   }
 }

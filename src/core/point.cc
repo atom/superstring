@@ -13,6 +13,10 @@ Point::Point() : Point(0, 0) {}
 
 Point::Point(unsigned row, unsigned column) : row {row}, column {column} {}
 
+Point::Point(Serializer &input) :
+  row {input.read<uint32_t>()},
+  column {input.read<uint32_t>()} {}
+
 int Point::compare(const Point &other) const {
   if (row < other.row) return -1;
   if (row > other.row) return 1;
@@ -39,6 +43,11 @@ Point Point::traversal(const Point &start) const {
   } else {
     return Point(row - start.row, column);
   }
+}
+
+void Point::serialize(Serializer &output) const {
+  output.append(row);
+  output.append(column);
 }
 
 bool Point::operator==(const Point &other) const {

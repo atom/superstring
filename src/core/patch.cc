@@ -25,13 +25,54 @@ struct Patch::Node {
   Node *left;
   Node *right;
 
-  Point old_distance_from_left_ancestor;
-  Point new_distance_from_left_ancestor;
   Point old_extent;
   Point new_extent;
 
+  Point old_distance_from_left_ancestor;
+  Point new_distance_from_left_ancestor;
+
   unique_ptr<Text> old_text;
   unique_ptr<Text> new_text;
+
+  Node(
+    Node *left,
+    Node *right,
+    Point old_extent,
+    Point new_extent,
+    Point old_distance_from_left_ancestor,
+    Point new_distance_from_left_ancestor,
+    unique_ptr<Text> &&old_text,
+    unique_ptr<Text> &&new_text
+  ) :
+    left {left},
+    right {right},
+    old_extent {old_extent},
+    new_extent {new_extent},
+    old_distance_from_left_ancestor {old_distance_from_left_ancestor},
+    new_distance_from_left_ancestor {new_distance_from_left_ancestor},
+    old_text {std::move(old_text)},
+    new_text {std::move(new_text)} {}
+
+  Node(Serializer &input) :
+    left {nullptr},
+    right {nullptr},
+    old_extent {input},
+    new_extent {input},
+    old_distance_from_left_ancestor {input},
+    new_distance_from_left_ancestor {input} {
+
+    if (input.read<uint32_t>()) {
+      old_text = unique_ptr<Text> {new Text {input}};
+    } else {
+      old_text = nullptr;
+    }
+
+    if (input.read<uint32_t>()) {
+      new_text = unique_ptr<Text> {new Text {input}};
+    } else {
+      new_text = nullptr;
+    }
+  }
 
   void get_subtree_end(Point *old_end, Point *new_end) {
     Node *node = this;
@@ -47,29 +88,46 @@ struct Patch::Node {
   }
 
   Node *copy() {
-    return new Node{
-        left,
-        right,
-        old_distance_from_left_ancestor,
-        new_distance_from_left_ancestor,
-        old_extent,
-        new_extent,
-        old_text ? unique_ptr<Text>(new Text(*old_text)) : nullptr,
-        new_text ? unique_ptr<Text>(new Text(*new_text)) : nullptr,
+    return new Node {
+      left,
+      right,
+      old_extent,
+      new_extent,
+      old_distance_from_left_ancestor,
+      new_distance_from_left_ancestor,
+      old_text ? unique_ptr<Text>(new Text(*old_text)) : nullptr,
+      new_text ? unique_ptr<Text>(new Text(*new_text)) : nullptr,
     };
   }
 
   Node *invert() {
-    return new Node{
-        left,
-        right,
-        new_distance_from_left_ancestor,
-        old_distance_from_left_ancestor,
-        new_extent,
-        old_extent,
-        new_text ? unique_ptr<Text>(new Text(*new_text)) : nullptr,
-        old_text ? unique_ptr<Text>(new Text(*old_text)) : nullptr,
+    return new Node {
+      left,
+      right,
+      new_extent,
+      old_extent,
+      new_distance_from_left_ancestor,
+      old_distance_from_left_ancestor,
+      new_text ? unique_ptr<Text>(new Text(*new_text)) : nullptr,
+      old_text ? unique_ptr<Text>(new Text(*old_text)) : nullptr,
     };
+  }
+
+  void serialize(Serializer &output) const {
+    old_extent.serialize(output);
+    new_extent.serialize(output);
+    old_distance_from_left_ancestor.serialize(output);
+    new_distance_from_left_ancestor.serialize(output);
+    if (old_text) {
+      old_text->serialize(output);
+    } else {
+      output.append<uint32_t>(0);
+    }
+    if (new_text) {
+      new_text->serialize(output);
+    } else {
+      output.append<uint32_t>(0);
+    }
   }
 
   void write_dot_graph(std::stringstream &result, Point left_ancestor_old_end, Point left_ancestor_new_end) {
@@ -235,14 +293,16 @@ Patch::Node *Patch::build_node(Node *left, Node *right,
                        Point new_extent, unique_ptr<Text> old_text,
                        unique_ptr<Text> new_text) {
   hunk_count++;
-  return new Node{left,
-                  right,
-                  old_distance_from_left_ancestor,
-                  new_distance_from_left_ancestor,
-                  old_extent,
-                  new_extent,
-                  move(old_text),
-                  move(new_text)};
+  return new Node {
+    left,
+    right,
+    old_extent,
+    new_extent,
+    old_distance_from_left_ancestor,
+    new_distance_from_left_ancestor,
+    move(old_text),
+    move(new_text)
+  };
 }
 
 void Patch::delete_node(Node **node_to_delete) {
@@ -1255,112 +1315,15 @@ static const uint32_t SERIALIZATION_VERSION = 1;
 
 enum Transition : uint32_t { None, Left, Right, Up };
 
-template <typename T> T network_to_host(T input);
-
-template <typename T> T host_to_network(T input);
-
-template <> uint16_t network_to_host(uint16_t input) { return ntohs(input); }
-
-template <> uint16_t host_to_network(uint16_t input) { return htons(input); }
-
-template <> uint32_t network_to_host(uint32_t input) { return ntohl(input); }
-
-template <> uint32_t host_to_network(uint32_t input) { return htonl(input); }
-
-template <typename T> void append_to_buffer(vector<uint8_t> *output, T value) {
-  value = host_to_network(value);
-  const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&value);
-  output->insert(output->end(), bytes, bytes + sizeof(T));
-}
-
-template <typename T>
-T get_from_buffer(const uint8_t **data, const uint8_t *end) {
-  const T *pointer = reinterpret_cast<const T *>(*data);
-  *data = *data + sizeof(T);
-  if (*data <= end) {
-    return network_to_host<T>(*pointer);
-  } else {
-    return 0;
-  }
-}
-
-void get_point_from_buffer(const uint8_t **data, const uint8_t *end,
-                        Point *point) {
-  point->row = get_from_buffer<uint32_t>(data, end);
-  point->column = get_from_buffer<uint32_t>(data, end);
-}
-
-void append_point_to_buffer(vector<uint8_t> *output, const Point &point) {
-  append_to_buffer(output, point.row);
-  append_to_buffer(output, point.column);
-}
-
-void append_text_to_buffer(vector<uint8_t> *output, const Text *text) {
-  if (text) {
-    append_to_buffer<uint32_t>(output, 1);
-    append_to_buffer(output, static_cast<uint32_t>(text->lines.size()));
-    for (const Line &line : text->lines) {
-      append_to_buffer(output, static_cast<uint32_t>(line.content.size()));
-      append_to_buffer(output, static_cast<uint16_t>(line.ending));
-      for (uint16_t character : line.content) {
-        append_to_buffer(output, character);
-      }
-    }
-  } else {
-    append_to_buffer<uint32_t>(output, 0);
-  }
-}
-
-unique_ptr<Text> get_text_from_buffer(const uint8_t **data, const uint8_t *end) {
-  if (get_from_buffer<uint32_t>(data, end)) {
-    uint32_t line_count = get_from_buffer<uint32_t>(data, end);
-    unique_ptr<Text> result {new Text()};
-    result->lines.reserve(line_count);
-    for (uint32_t i = 0; i < line_count; i++) {
-      uint32_t line_length = get_from_buffer<uint32_t>(data, end);
-      LineEnding line_ending = static_cast<LineEnding>(get_from_buffer<uint16_t>(data, end));
-      Line line {{}, line_ending};
-      line.content.reserve(line_length);
-      for (uint32_t j = 0; j < line_length; j++) {
-        line.content.push_back(get_from_buffer<uint16_t>(data, end));
-      }
-      result->lines.push_back(line);
-    }
-    return result;
-  } else {
-    return nullptr;
-  }
-}
-
-void get_node_from_buffer(const uint8_t **data, const uint8_t *end, Patch::Node *node) {
-  get_point_from_buffer(data, end, &node->old_extent);
-  get_point_from_buffer(data, end, &node->new_extent);
-  get_point_from_buffer(data, end, &node->old_distance_from_left_ancestor);
-  get_point_from_buffer(data, end, &node->new_distance_from_left_ancestor);
-  node->old_text = get_text_from_buffer(data, end);
-  node->new_text = get_text_from_buffer(data, end);
-  node->left = nullptr;
-  node->right = nullptr;
-}
-
-void append_node_to_buffer(vector<uint8_t> *output, const Patch::Node &node) {
-  append_point_to_buffer(output, node.old_extent);
-  append_point_to_buffer(output, node.new_extent);
-  append_point_to_buffer(output, node.old_distance_from_left_ancestor);
-  append_point_to_buffer(output, node.new_distance_from_left_ancestor);
-  append_text_to_buffer(output, node.old_text.get());
-  append_text_to_buffer(output, node.new_text.get());
-}
-
-void Patch::serialize(vector<uint8_t> *output) const {
+void Patch::serialize(Serializer &output) const {
   if (!root)
     return;
 
-  append_to_buffer(output, SERIALIZATION_VERSION);
+  output.append(SERIALIZATION_VERSION);
 
-  append_to_buffer(output, hunk_count);
+  output.append(hunk_count);
 
-  append_node_to_buffer(output, *root);
+  root->serialize(output);
 
   Node *node = root;
   node_stack.clear();
@@ -1368,19 +1331,19 @@ void Patch::serialize(vector<uint8_t> *output) const {
 
   while (node) {
     if (node->left && previous_node_child_index < 0) {
-      append_to_buffer<uint32_t>(output, Left);
-      append_node_to_buffer(output, *node->left);
+      output.append<uint32_t>(Left);
+      node->left->serialize(output);
       node_stack.push_back(node);
       node = node->left;
       previous_node_child_index = -1;
     } else if (node->right && previous_node_child_index < 1) {
-      append_to_buffer<uint32_t>(output, Right);
-      append_node_to_buffer(output, *node->right);
+      output.append<uint32_t>(Right);
+      node->right->serialize(output);
       node_stack.push_back(node);
       node = node->right;
       previous_node_child_index = -1;
     } else if (!node_stack.empty()) {
-      append_to_buffer<uint32_t>(output, Up);
+      output.append<uint32_t>(Up);
       Node *parent = node_stack.back();
       node_stack.pop_back();
       previous_node_child_index = (node == parent->left) ? 0 : 1;
@@ -1393,18 +1356,14 @@ void Patch::serialize(vector<uint8_t> *output) const {
 
 bool Patch::is_frozen() const { return frozen_node_array != nullptr; }
 
-Patch::Patch(const vector<uint8_t> &input)
+Patch::Patch(Serializer &input)
     : root{nullptr}, frozen_node_array{nullptr}, merges_adjacent_hunks{true} {
-  const uint8_t *begin = input.data();
-  const uint8_t *data = begin;
-  const uint8_t *end = data + input.size();
-
-  uint32_t serialization_version = get_from_buffer<uint32_t>(&data, end);
+  uint32_t serialization_version = input.read<uint32_t>();
   if (serialization_version != SERIALIZATION_VERSION) {
     return;
   }
 
-  hunk_count = get_from_buffer<uint32_t>(&data, end);
+  hunk_count = input.read<uint32_t>();
   if (hunk_count == 0) {
     return;
   }
@@ -1413,19 +1372,20 @@ Patch::Patch(const vector<uint8_t> &input)
   frozen_node_array = static_cast<Node *>(calloc(hunk_count, sizeof(Node)));
   root = frozen_node_array;
   Node *node = root, *next_node = root + 1;
-  get_node_from_buffer(&data, end, node);
+
+  new(node) Node(input);
 
   while (next_node < root + hunk_count) {
-    switch (get_from_buffer<uint32_t>(&data, end)) {
+    switch (input.read<uint32_t>()) {
     case Left:
-      get_node_from_buffer(&data, end, next_node);
+      new(next_node) Node(input);
       node->left = next_node;
       node_stack.push_back(node);
       node = next_node;
       next_node++;
       break;
     case Right:
-      get_node_from_buffer(&data, end, next_node);
+      new(next_node) Node(input);
       node->right = next_node;
       node_stack.push_back(node);
       node = next_node;

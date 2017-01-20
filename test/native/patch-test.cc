@@ -189,9 +189,10 @@ TEST_CASE("Serializes and deserializes") {
     }
   }));
 
+  Serializer serializer;
   vector<uint8_t> serialization_vector;
-  patch.serialize(&serialization_vector);
-  Patch patch_copy(serialization_vector);
+  patch.serialize(serializer);
+  Patch patch_copy(serializer);
   REQUIRE(patch_copy.get_hunks() == vector<Hunk>({
     Hunk{
       Point{0, 0}, Point{0, 0},

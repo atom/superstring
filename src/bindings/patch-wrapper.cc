@@ -357,13 +357,13 @@ void PatchWrapper::hunk_for_new_position(const Nan::FunctionCallbackInfo<Value> 
 void PatchWrapper::serialize(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
-  static vector<uint8_t> serialization_vector;
+  static Serializer output;
 
-  serialization_vector.clear();
-  patch.serialize(&serialization_vector);
+  output.clear();
+  patch.serialize(output);
   Local<Object> result;
   auto maybe_result =
-      Nan::CopyBuffer(reinterpret_cast<char *>(serialization_vector.data()), serialization_vector.size());
+      Nan::CopyBuffer(reinterpret_cast<char *>(output.data()), output.size());
   if (maybe_result.ToLocal(&result)) {
     info.GetReturnValue().Set(result);
   }
@@ -374,9 +374,10 @@ void PatchWrapper::deserialize(const Nan::FunctionCallbackInfo<Value> &info) {
   if (Nan::NewInstance(Nan::New(patch_wrapper_constructor)).ToLocal(&result)) {
     if (info[0]->IsUint8Array()) {
       auto *data = node::Buffer::Data(info[0]);
-      static vector<uint8_t> serialization_vector;
-      serialization_vector.assign(data, data + node::Buffer::Length(info[0]));
-      PatchWrapper *wrapper = new PatchWrapper(Patch{serialization_vector});
+
+      static Serializer input;
+      input.assign(data, data + node::Buffer::Length(info[0]));
+      PatchWrapper *wrapper = new PatchWrapper(Patch{input});
       wrapper->Wrap(result);
       info.GetReturnValue().Set(result);
     }

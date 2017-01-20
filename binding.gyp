@@ -21,13 +21,14 @@
             "target_name": "superstring_core",
             "type": "static_library",
             "sources": [
+                "src/core/buffer-offset-index.cc",
                 "src/core/flat-text.cc",
                 "src/core/flat-text-slice.cc",
+                "src/core/marker-index.cc",
                 "src/core/patch.cc",
                 "src/core/point.cc",
+                "src/core/serializer.cc",
                 "src/core/text.cc",
-                "src/core/marker-index.cc",
-                "src/core/buffer-offset-index.cc"
             ],
             "conditions": [
                 ['OS=="mac"', {

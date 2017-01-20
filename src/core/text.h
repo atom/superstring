@@ -5,6 +5,7 @@
 #include <vector>
 #include <ostream>
 #include "point.h"
+#include "serializer.h"
 
 enum class LineEnding : uint8_t {
   NONE,
@@ -30,11 +31,13 @@ struct Text {
 
   Text();
   Text(const std::vector<Line> &);
+  Text(Serializer &input);
 
   bool operator==(const Text &other) const;
   Point Extent() const;
   void append(TextSlice slice);
   void write(std::vector<uint16_t> &) const;
+  void serialize(Serializer &output) const;
 };
 
 struct TextSlice {

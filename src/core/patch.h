@@ -1,5 +1,6 @@
 #include "optional.h"
 #include "point.h"
+#include "serializer.h"
 #include "text.h"
 #include <memory>
 #include <vector>
@@ -30,7 +31,7 @@ public:
 
   Patch();
   Patch(bool merges_adjacent_hunks);
-  Patch(const std::vector<uint8_t> &);
+  Patch(Serializer &input);
   Patch(const std::vector<const Patch *> &);
   Patch(Node *root, uint32_t hunk_count, bool merges_adjacent_hunks);
   Patch(Patch &&);
@@ -46,7 +47,7 @@ public:
   std::vector<Hunk> get_hunks_in_old_range(Point start, Point end);
   optional<Hunk> hunk_for_old_position(Point position);
   optional<Hunk> hunk_for_new_position(Point position);
-  void serialize(std::vector<uint8_t> *) const;
+  void serialize(Serializer &serializer) const;
   std::string get_dot_graph() const;
   std::string get_json() const;
   void rebalance();
@@ -79,9 +80,6 @@ private:
                   std::unique_ptr<Text>, std::unique_ptr<Text>);
   void delete_node(Node **);
   bool is_frozen() const;
-
-  friend void get_node_from_buffer(const uint8_t **data, const uint8_t *end, Node *node);
-  friend void append_node_to_buffer(std::vector<uint8_t> *output, const Node &node);
 };
 
 std::ostream &operator<<(std::ostream &, const Patch::Hunk &);
