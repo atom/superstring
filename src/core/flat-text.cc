@@ -1,4 +1,5 @@
 #include "flat-text.h"
+#include "flat-text-slice.h"
 
 using std::vector;
 using std::ostream;
@@ -30,6 +31,24 @@ FlatText::FlatText(const std::u16string &string) :
         offset += 1;
         break;
     }
+  }
+}
+
+FlatText::FlatText(FlatTextSlice slice) :
+  content {
+    slice.text.content.begin() + slice.start_offset(),
+    slice.text.content.begin() + slice.end_offset()
+  }, line_offsets {} {
+
+  line_offsets.push_back(slice.start_offset());
+  line_offsets.insert(
+    line_offsets.end(),
+    slice.text.line_offsets.begin() + slice.start.row + 1,
+    slice.text.line_offsets.begin() + slice.end.row + 1
+  );
+
+  for (uint32_t &line_offset : line_offsets) {
+    line_offset -= slice.start_offset();
   }
 }
 
@@ -144,12 +163,12 @@ FlatText FlatText::build(std::istream &stream, size_t input_size, const char *en
   return FlatText {output_vector, line_offsets};
 }
 
-std::pair<FlatText::iterator, FlatText::iterator> FlatText::line_iterators(uint32_t row) {
-  iterator begin = content.begin() + line_offsets[row];
+std::pair<FlatText::const_iterator, FlatText::const_iterator> FlatText::line_iterators(uint32_t row) const {
+  const_iterator begin = content.cbegin() + line_offsets[row];
 
-  iterator end;
+  const_iterator end;
   if (row < line_offsets.size() - 1) {
-    end = content.begin() + line_offsets[row + 1] - 1;
+    end = content.cbegin() + line_offsets[row + 1] - 1;
     if (*(end - 1) == '\r') {
       --end;
     }
@@ -157,7 +176,15 @@ std::pair<FlatText::iterator, FlatText::iterator> FlatText::line_iterators(uint3
     end = content.end();
   }
 
-  return std::pair<iterator, iterator>(begin, end);
+  return std::pair<const_iterator, const_iterator>(begin, end);
+}
+
+Point FlatText::extent() const {
+  return Point(line_offsets.size() - 1, content.size() - line_offsets.back());
+}
+
+std::pair<FlatTextSlice, FlatTextSlice> FlatText::split(Point split_point) const {
+  return FlatTextSlice(*this, Point(0, 0), extent()).split(split_point);
 }
 
 bool FlatText::operator==(const FlatText &other) const {

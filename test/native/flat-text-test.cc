@@ -5,23 +5,6 @@
 using std::string;
 using std::stringstream;
 
-TEST_CASE("FlatText::line_iterators - returns iterators at the start and end of lines") {
-  FlatText text { u"a\nbc\r\nde\rf\r\ng\r" };
-
-  auto line0 = text.line_iterators(0);
-  REQUIRE(std::string(line0.first, line0.second) == "a");
-  auto line1 = text.line_iterators(1);
-  REQUIRE(std::string(line1.first, line1.second) == "bc");
-  auto line2 = text.line_iterators(2);
-  REQUIRE(std::string(line2.first, line2.second) == "de");
-  auto line3 = text.line_iterators(3);
-  REQUIRE(std::string(line3.first, line3.second) == "f");
-  auto line4 = text.line_iterators(4);
-  REQUIRE(std::string(line4.first, line4.second) == "g");
-  auto line5 = text.line_iterators(5);
-  REQUIRE(std::string(line5.first, line5.second) == "");
-}
-
 TEST_CASE("FlatText::build - can build a FlatText from a UTF8 stream") {
   string input = "abγdefg\nhijklmnop";
   stringstream stream(input, std::ios_base::in);
@@ -79,4 +62,44 @@ TEST_CASE("FlatText::build - handles CRLF newlines") {
 
   FlatText text = FlatText::build(stream, input.size(), "UTF8", 4, [&](size_t percent_done) {});
   REQUIRE(text == FlatText { u"abc\r\nde\rf\r\ng\r" });
+}
+
+TEST_CASE("FlatText::line_iterators - returns iterators at the start and end of lines") {
+  FlatText text { u"a\nbc\r\nde\rf\r\ng\r" };
+
+  auto line0 = text.line_iterators(0);
+  REQUIRE(std::string(line0.first, line0.second) == "a");
+  auto line1 = text.line_iterators(1);
+  REQUIRE(std::string(line1.first, line1.second) == "bc");
+  auto line2 = text.line_iterators(2);
+  REQUIRE(std::string(line2.first, line2.second) == "de");
+  auto line3 = text.line_iterators(3);
+  REQUIRE(std::string(line3.first, line3.second) == "f");
+  auto line4 = text.line_iterators(4);
+  REQUIRE(std::string(line4.first, line4.second) == "g");
+  auto line5 = text.line_iterators(5);
+  REQUIRE(std::string(line5.first, line5.second) == "");
+}
+
+TEST_CASE("FlatText::split") {
+  FlatText text { u"abc\ndef\r\nghi\rjkl" };
+  auto slices1 = text.split({0, 2});
+  REQUIRE(FlatText(slices1.first) == FlatText(u"ab"));
+  REQUIRE(FlatText(slices1.second) == FlatText(u"c\ndef\r\nghi\rjkl"));
+
+  auto slices2 = text.split({1, 2});
+  REQUIRE(FlatText(slices2.first) == FlatText(u"abc\nde"));
+  REQUIRE(FlatText(slices2.second) == FlatText(u"f\r\nghi\rjkl"));
+
+  auto slices3 = text.split({1, 3});
+  REQUIRE(FlatText(slices3.first) == FlatText(u"abc\ndef"));
+  REQUIRE(FlatText(slices3.second) == FlatText(u"\r\nghi\rjkl"));
+
+  auto slices4 = text.split({2, 0});
+  REQUIRE(FlatText(slices4.first) == FlatText(u"abc\ndef\r\n"));
+  REQUIRE(FlatText(slices4.second) == FlatText(u"ghi\rjkl"));
+
+  auto slices5 = text.split({3, 3});
+  REQUIRE(FlatText(slices5.first) == FlatText(u"abc\ndef\r\nghi\rjkl"));
+  REQUIRE(FlatText(slices5.second) == FlatText(u""));
 }

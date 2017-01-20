@@ -22,6 +22,7 @@
             "type": "static_library",
             "sources": [
                 "src/core/flat-text.cc",
+                "src/core/flat-text-slice.cc",
                 "src/core/patch.cc",
                 "src/core/point.cc",
                 "src/core/text.cc",
