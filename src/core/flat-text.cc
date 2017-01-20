@@ -38,15 +38,15 @@ FlatText::FlatText(const std::u16string &string) :
 
 FlatText::FlatText(FlatTextSlice slice) :
   content {
-    slice.text.content.begin() + slice.start_offset(),
-    slice.text.content.begin() + slice.end_offset()
+    slice.text->content.begin() + slice.start_offset(),
+    slice.text->content.begin() + slice.end_offset()
   }, line_offsets {} {
 
   line_offsets.push_back(slice.start_offset());
   line_offsets.insert(
     line_offsets.end(),
-    slice.text.line_offsets.begin() + slice.start_position.row + 1,
-    slice.text.line_offsets.begin() + slice.end_position.row + 1
+    slice.text->line_offsets.begin() + slice.start_position.row + 1,
+    slice.text->line_offsets.begin() + slice.end_position.row + 1
   );
 
   for (uint32_t &line_offset : line_offsets) {
@@ -220,8 +220,8 @@ void FlatText::append(FlatTextSlice slice) {
   size_t original_size = line_offsets.size();
   line_offsets.insert(
     line_offsets.end(),
-    slice.text.line_offsets.begin() + slice.start_position.row + 1,
-    slice.text.line_offsets.begin() + slice.end_position.row + 1
+    slice.text->line_offsets.begin() + slice.start_position.row + 1,
+    slice.text->line_offsets.begin() + slice.end_position.row + 1
   );
 
   for (size_t i = original_size; i < line_offsets.size(); i++) {

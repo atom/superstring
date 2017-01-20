@@ -9,16 +9,17 @@
 class FlatTextSlice {
   friend class FlatText;
 
-  const FlatText &text;
+  const FlatText *text;
   const Point start_position;
   const Point end_position;
 
-  FlatTextSlice(const FlatText &text, Point start_position, Point end_position);
+  FlatTextSlice(const FlatText *text, Point start_position, Point end_position);
   size_t start_offset() const;
   size_t end_offset() const;
 
  public:
   FlatTextSlice(const FlatText &text);
+  FlatTextSlice &operator=(const FlatTextSlice &);
   std::pair<FlatTextSlice, FlatTextSlice> split(Point) const;
   FlatTextSlice prefix(Point) const;
   FlatTextSlice suffix(Point) const;
