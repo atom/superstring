@@ -9,6 +9,8 @@ static const uint32_t bytes_per_character = (sizeof(char16_t) / sizeof(char));
 static const char16_t replacement_character = 0xFFFD;
 static const float buffer_growth_factor = 2;
 
+FlatText::FlatText() : line_offsets {0} {}
+
 FlatText::FlatText(const std::u16string &string) :
   content {string.begin(), string.end()}, line_offsets({ 0 }) {
   uint32_t offset = 0;
@@ -43,8 +45,8 @@ FlatText::FlatText(FlatTextSlice slice) :
   line_offsets.push_back(slice.start_offset());
   line_offsets.insert(
     line_offsets.end(),
-    slice.text.line_offsets.begin() + slice.start.row + 1,
-    slice.text.line_offsets.begin() + slice.end.row + 1
+    slice.text.line_offsets.begin() + slice.start_position.row + 1,
+    slice.text.line_offsets.begin() + slice.end_position.row + 1
   );
 
   for (uint32_t &line_offset : line_offsets) {
@@ -163,6 +165,21 @@ FlatText FlatText::build(std::istream &stream, size_t input_size, const char *en
   return FlatText {output_vector, line_offsets};
 }
 
+FlatText FlatText::concat(FlatTextSlice a, FlatTextSlice b) {
+  FlatText result;
+  result.append(a);
+  result.append(b);
+  return result;
+}
+
+FlatText FlatText::concat(FlatTextSlice a, FlatTextSlice b, FlatTextSlice c) {
+  FlatText result;
+  result.append(a);
+  result.append(b);
+  result.append(c);
+  return result;
+}
+
 std::pair<FlatText::const_iterator, FlatText::const_iterator> FlatText::line_iterators(uint32_t row) const {
   const_iterator begin = content.cbegin() + line_offsets[row];
 
@@ -179,12 +196,37 @@ std::pair<FlatText::const_iterator, FlatText::const_iterator> FlatText::line_ite
   return std::pair<const_iterator, const_iterator>(begin, end);
 }
 
+FlatText::const_iterator FlatText::cbegin() const {
+  return content.cbegin();
+}
+
+FlatText::const_iterator FlatText::cend() const {
+  return content.cend();
+}
+
 Point FlatText::extent() const {
   return Point(line_offsets.size() - 1, content.size() - line_offsets.back());
 }
 
-std::pair<FlatTextSlice, FlatTextSlice> FlatText::split(Point split_point) const {
-  return FlatTextSlice(*this).split(split_point);
+void FlatText::append(FlatTextSlice slice) {
+  int64_t line_offset_delta = static_cast<int64_t>(content.size()) - static_cast<int64_t>(slice.start_offset());
+
+  content.insert(
+    content.end(),
+    slice.cbegin(),
+    slice.cend()
+  );
+
+  size_t original_size = line_offsets.size();
+  line_offsets.insert(
+    line_offsets.end(),
+    slice.text.line_offsets.begin() + slice.start_position.row + 1,
+    slice.text.line_offsets.begin() + slice.end_position.row + 1
+  );
+
+  for (size_t i = original_size; i < line_offsets.size(); i++) {
+    line_offsets[i] += line_offset_delta;
+  }
 }
 
 bool FlatText::operator==(const FlatText &other) const {

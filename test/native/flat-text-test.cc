@@ -1,6 +1,7 @@
 #include "test-helpers.h"
 #include <sstream>
 #include "flat-text.h"
+#include "flat-text-slice.h"
 
 using std::string;
 using std::stringstream;
@@ -82,24 +83,51 @@ TEST_CASE("FlatText::line_iterators - returns iterators at the start and end of 
 }
 
 TEST_CASE("FlatText::split") {
-  FlatText text { u"abc\ndef\r\nghi\rjkl" };
-  auto slices1 = text.split({0, 2});
+  FlatText text {u"abc\ndef\r\nghi\rjkl"};
+  FlatTextSlice base_slice {text};
+
+  auto slices1 = base_slice.split({0, 2});
   REQUIRE(FlatText(slices1.first) == FlatText(u"ab"));
   REQUIRE(FlatText(slices1.second) == FlatText(u"c\ndef\r\nghi\rjkl"));
 
-  auto slices2 = text.split({1, 2});
+  auto slices2 = base_slice.split({1, 2});
   REQUIRE(FlatText(slices2.first) == FlatText(u"abc\nde"));
   REQUIRE(FlatText(slices2.second) == FlatText(u"f\r\nghi\rjkl"));
 
-  auto slices3 = text.split({1, 3});
+  auto slices3 = base_slice.split({1, 3});
   REQUIRE(FlatText(slices3.first) == FlatText(u"abc\ndef"));
   REQUIRE(FlatText(slices3.second) == FlatText(u"\r\nghi\rjkl"));
 
-  auto slices4 = text.split({2, 0});
+  auto slices4 = base_slice.split({2, 0});
   REQUIRE(FlatText(slices4.first) == FlatText(u"abc\ndef\r\n"));
   REQUIRE(FlatText(slices4.second) == FlatText(u"ghi\rjkl"));
 
-  auto slices5 = text.split({3, 3});
+  auto slices5 = base_slice.split({3, 3});
   REQUIRE(FlatText(slices5.first) == FlatText(u"abc\ndef\r\nghi\rjkl"));
   REQUIRE(FlatText(slices5.second) == FlatText(u""));
+}
+
+TEST_CASE("FlatText::concat") {
+  FlatText text {u"abc\ndef\r\nghi\rjkl"};
+  FlatTextSlice base_slice {text};
+
+  REQUIRE(FlatText::concat(base_slice, base_slice) == FlatText(u"abc\ndef\r\nghi\rjklabc\ndef\r\nghi\rjkl"));
+
+  {
+    auto prefix = base_slice.prefix({0, 2});
+    auto suffix = base_slice.suffix({2, 2});
+    REQUIRE(FlatText::concat(prefix, suffix) == FlatText(u"abi\rjkl"));
+  }
+
+  {
+    auto prefix = base_slice.prefix({1, 3});
+    auto suffix = base_slice.suffix({2, 3});
+    REQUIRE(FlatText::concat(prefix, suffix) == FlatText(u"abc\ndef\rjkl"));
+  }
+
+  {
+    auto prefix = base_slice.prefix({1, 3});
+    auto suffix = base_slice.suffix({3, 0});
+    REQUIRE(FlatText::concat(prefix, suffix) == FlatText(u"abc\ndefjkl"));
+  }
 }
