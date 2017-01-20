@@ -86,25 +86,35 @@ TEST_CASE("FlatText::split") {
   FlatText text {u"abc\ndef\r\nghi\rjkl"};
   FlatTextSlice base_slice {text};
 
-  auto slices1 = base_slice.split({0, 2});
-  REQUIRE(FlatText(slices1.first) == FlatText(u"ab"));
-  REQUIRE(FlatText(slices1.second) == FlatText(u"c\ndef\r\nghi\rjkl"));
+  {
+    auto slices = base_slice.split({0, 2});
+    REQUIRE(FlatText(slices.first) == FlatText(u"ab"));
+    REQUIRE(FlatText(slices.second) == FlatText(u"c\ndef\r\nghi\rjkl"));
+  }
 
-  auto slices2 = base_slice.split({1, 2});
-  REQUIRE(FlatText(slices2.first) == FlatText(u"abc\nde"));
-  REQUIRE(FlatText(slices2.second) == FlatText(u"f\r\nghi\rjkl"));
+  {
+    auto slices = base_slice.split({1, 2});
+    REQUIRE(FlatText(slices.first) == FlatText(u"abc\nde"));
+    REQUIRE(FlatText(slices.second) == FlatText(u"f\r\nghi\rjkl"));
+  }
 
-  auto slices3 = base_slice.split({1, 3});
-  REQUIRE(FlatText(slices3.first) == FlatText(u"abc\ndef"));
-  REQUIRE(FlatText(slices3.second) == FlatText(u"\r\nghi\rjkl"));
+  {
+    auto slices = base_slice.split({1, 3});
+    REQUIRE(FlatText(slices.first) == FlatText(u"abc\ndef"));
+    REQUIRE(FlatText(slices.second) == FlatText(u"\r\nghi\rjkl"));
+  }
 
-  auto slices4 = base_slice.split({2, 0});
-  REQUIRE(FlatText(slices4.first) == FlatText(u"abc\ndef\r\n"));
-  REQUIRE(FlatText(slices4.second) == FlatText(u"ghi\rjkl"));
+  {
+    auto slices = base_slice.split({2, 0});
+    REQUIRE(FlatText(slices.first) == FlatText(u"abc\ndef\r\n"));
+    REQUIRE(FlatText(slices.second) == FlatText(u"ghi\rjkl"));
+  }
 
-  auto slices5 = base_slice.split({3, 3});
-  REQUIRE(FlatText(slices5.first) == FlatText(u"abc\ndef\r\nghi\rjkl"));
-  REQUIRE(FlatText(slices5.second) == FlatText(u""));
+  {
+    auto slices = base_slice.split({3, 3});
+    REQUIRE(FlatText(slices.first) == FlatText(u"abc\ndef\r\nghi\rjkl"));
+    REQUIRE(FlatText(slices.second) == FlatText(u""));
+  }
 }
 
 TEST_CASE("FlatText::concat") {
