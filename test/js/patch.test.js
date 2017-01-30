@@ -187,7 +187,7 @@ describe('Patch', function () {
         if (random(10) < 1) {
           patch.rebalance()
         } else if (random(10) < 4) {
-          const originalSplice = originalDocument.performRandomSplice()
+          const originalSplice = originalDocument.performRandomSplice(false)
           const mutatedSplice = translateSpliceFromOriginalDocument(
             originalDocument,
             patch,
@@ -201,7 +201,11 @@ describe('Patch', function () {
           )
 
           // process.stderr.write(`graph message {
-          //   label="spliceOld(${formatPoint(originalSplice.start)}, ${formatPoint(originalSplice.deletedExtent)}, ${formatPoint(originalSplice.insertedExtent)})"
+          //   label="spliceOld(${formatPoint(originalSplice.start)}, ${formatPoint(originalSplice.deletedExtent)}, ${formatPoint(originalSplice.insertedExtent)}, ${originalSplice.deletedText}, ${originalSplice.insertedText})"
+          // }\n`)
+          //
+          // process.stderr.write(`graph message {
+          //   label="document: ${mutatedDocument.getText()}"
           // }\n`)
 
           patch.spliceOld(
@@ -210,10 +214,14 @@ describe('Patch', function () {
             originalSplice.insertedExtent
           )
         } else {
-          const splice = mutatedDocument.performRandomSplice()
+          const splice = mutatedDocument.performRandomSplice(true)
 
           // process.stderr.write(`graph message {
           //   label="splice(${formatPoint(splice.start)}, ${formatPoint(splice.deletedExtent)}, ${formatPoint(splice.insertedExtent)}, '${splice.deletedText}', '${splice.insertedText}')"
+          // }\n`)
+          //
+          // process.stderr.write(`graph message {
+          //   label="document: ${mutatedDocument.getText()}"
           // }\n`)
 
           patch.splice(
@@ -320,8 +328,14 @@ function translateSpliceFromOriginalDocument (originalDocument, patch, originalS
     newStart = originalSplice.start
   }
 
+  let endHunk
+  for (const hunk of patch.getHunks()) {
+    const comparison = compare(hunk.oldStart, originalDeletionEnd)
+    if (comparison <= 0) endHunk = hunk
+    if (comparison >= 0 && compare(hunk.oldStart, originalSplice.start) > 0) break
+  }
+
   let oldInsertionEnd, newDeletionEnd
-  const endHunk = patch.hunkForOldPosition(originalDeletionEnd)
   if (endHunk) {
     if (compare(originalDeletionEnd, endHunk.oldStart) === 0 &&
         compare(originalSplice.start, endHunk.oldStart) < 0) {
