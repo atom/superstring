@@ -41,12 +41,12 @@ class TestDocument {
     }
   }
 
-  performRandomSplice () {
+  performRandomSplice (upperCase) {
     let deletedRange = this.buildRandomRange()
     let start = deletedRange.start
     let deletedText = this.getTextInRange(start, deletedRange.end)
     let deletedExtent = pointHelpers.traversalDistance(deletedRange.end, deletedRange.start)
-    let insertedText = this.buildRandomLines(0, 3, true).join('\n')
+    let insertedText = this.buildRandomLines(0, 3, upperCase).join('\n')
     let insertedExtent = textHelpers.getExtent(insertedText)
     this.splice(start, deletedExtent, insertedText)
     return {start, deletedExtent, insertedExtent, deletedText, insertedText}

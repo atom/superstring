@@ -80,8 +80,10 @@ struct Patch::Node {
 
     result << "node_" << this << " ["
       << "label=\""
-      << "new: " << node_new_start << " - " << node_new_end << ", " << endl
-      << "old: " << node_old_start << " - " << node_old_end << ", " << endl
+      << "new range: " << node_new_start << " - " << node_new_end << ", " << endl
+      << "old range: " << node_old_start << " - " << node_old_end << ", " << endl
+      << "new text: " << new_text.get() << endl << ", "
+      << "old text: " << old_text.get() << endl
       << "\""
       << "tooltip=\"" << this
       << "\"]" << endl;
@@ -817,8 +819,7 @@ bool Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
   Point old_insertion_end = old_splice_start.traverse(old_insertion_extent);
 
   Node *lower_bound = splay_node_ending_before<OldCoordinates>(old_splice_start);
-  Node *upper_bound = splay_node_starting_after<OldCoordinates>(old_splice_start,
-                                                             old_deletion_end);
+  Node *upper_bound = splay_node_starting_after<OldCoordinates>(old_splice_start, old_deletion_end);
 
   if (!lower_bound && !upper_bound) {
     delete_node(&root);
@@ -878,11 +879,35 @@ bool Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
             lower_bound->old_distance_from_left_ancestor;
         upper_bound->new_distance_from_left_ancestor =
             lower_bound->new_distance_from_left_ancestor;
+
         upper_bound->old_extent =
             lower_bound->old_extent.traverse(upper_bound->old_extent);
+        if (lower_bound->old_text && upper_bound->old_text) {
+          lower_bound->old_text->insert(
+            lower_bound->old_text->end(),
+            upper_bound->old_text->begin(),
+            upper_bound->old_text->end()
+          );
+          std::swap(upper_bound->old_text, lower_bound->old_text);
+        } else {
+          upper_bound->old_text = nullptr;
+        }
+
         upper_bound->new_extent =
             lower_bound->new_extent.traverse(upper_bound->new_extent);
+        if (lower_bound->new_text && upper_bound->new_text) {
+          lower_bound->new_text->insert(
+            lower_bound->new_text->end(),
+            upper_bound->new_text->begin(),
+            upper_bound->new_text->end()
+          );
+          std::swap(upper_bound->new_text, lower_bound->new_text);
+        } else {
+          upper_bound->new_text = nullptr;
+        }
+
         upper_bound->left = lower_bound->left;
+        lower_bound->left = nullptr;
         delete_node(&lower_bound);
       }
     } else {
