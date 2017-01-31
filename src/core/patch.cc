@@ -263,16 +263,16 @@ Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
       for (auto iter = hunks.begin(), end = hunks.end(); iter != end; ++iter) {
         splice(iter->new_start, iter->old_end.traversal(iter->old_start),
                iter->new_end.traversal(iter->new_start),
-               iter->old_text ? unique_ptr<Text>{new Text(*iter->old_text)} : nullptr,
-               iter->new_text ? unique_ptr<Text>{new Text(*iter->new_text)} : nullptr);
+               iter->old_text ? *iter->old_text : optional<Text> {},
+               iter->new_text ? *iter->new_text : optional<Text> {});
       }
     } else {
       for (auto iter = hunks.rbegin(), end = hunks.rend(); iter != end;
            ++iter) {
         splice(iter->old_start, iter->old_end.traversal(iter->old_start),
                iter->new_end.traversal(iter->new_start),
-               iter->old_text ? unique_ptr<Text>{new Text(*iter->old_text)} : nullptr,
-               iter->new_text ? unique_ptr<Text>{new Text(*iter->new_text)} : nullptr);
+               iter->old_text ? *iter->old_text : optional<Text> {},
+               iter->new_text ? *iter->new_text : optional<Text> {});
       }
     }
 
@@ -292,9 +292,9 @@ Patch::~Patch() {
 
 Patch::Node *Patch::build_node(Node *left, Node *right,
                        Point old_distance_from_left_ancestor,
-                       Point new_distance_from_left_ancestor, Point old_extent,
-                       Point new_extent, unique_ptr<Text> old_text,
-                       unique_ptr<Text> new_text) {
+                       Point new_distance_from_left_ancestor,
+                       Point old_extent, Point new_extent,
+                       optional<Text> &&old_text, optional<Text> &&new_text) {
   hunk_count++;
   return new Node {
     left,
@@ -303,8 +303,8 @@ Patch::Node *Patch::build_node(Node *left, Node *right,
     new_extent,
     old_distance_from_left_ancestor,
     new_distance_from_left_ancestor,
-    move(old_text),
-    move(new_text)
+    old_text ? unique_ptr<Text>{new Text(*old_text)} : nullptr,
+    new_text ? unique_ptr<Text>{new Text(*new_text)} : nullptr,
   };
 }
 
@@ -585,8 +585,8 @@ optional<Hunk> Patch::hunk_for_position(Point target) {
 }
 
 bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
-                   Point new_insertion_extent, unique_ptr<Text> deleted_text,
-                   unique_ptr<Text> inserted_text) {
+                   Point new_insertion_extent, optional<Text> &&deleted_text,
+                   optional<Text> &&inserted_text) {
   if (is_frozen()) {
     return false;
   }
@@ -606,7 +606,7 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
   Point new_insertion_end = new_splice_start.traverse(new_insertion_extent);
 
   Node *lower_bound = splay_node_starting_before<NewCoordinates>(new_splice_start);
-  unique_ptr<Text> old_text =
+  optional<Text> old_text =
       compute_old_text(move(deleted_text), new_splice_start, new_deletion_end);
   Node *upper_bound =
       splay_node_ending_after<NewCoordinates>(new_splice_start, new_deletion_end);
@@ -664,7 +664,11 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
         upper_bound->new_text = nullptr;
       }
 
-      upper_bound->old_text = move(old_text);
+      if (old_text) {
+        upper_bound->old_text = unique_ptr<Text>{new Text{move(*old_text)}};
+      } else {
+        upper_bound->old_text = nullptr;
+      }
 
       if (lower_bound == upper_bound) {
         if (root->old_extent.is_zero() && root->new_extent.is_zero()) {
@@ -696,7 +700,11 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
         upper_bound->new_text = nullptr;
       }
 
-      upper_bound->old_text = move(old_text);
+      if (old_text) {
+        upper_bound->old_text = unique_ptr<Text> {new Text{move(*old_text)}};
+      } else {
+        upper_bound->old_text = nullptr;
+      }
 
       delete_node(&lower_bound->right);
       if (upper_bound->left != lower_bound) {
@@ -727,7 +735,11 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
         lower_bound->new_text = nullptr;
       }
 
-      lower_bound->old_text = move(old_text);
+      if (old_text) {
+        lower_bound->old_text = unique_ptr<Text>{new Text{move(*old_text)}};
+      } else {
+        lower_bound->old_text = nullptr;
+      }
 
       delete_node(&lower_bound->right);
       rotate_node_right(lower_bound, upper_bound, nullptr);
@@ -804,7 +816,11 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
         lower_bound->new_text = nullptr;
       }
 
-      lower_bound->old_text = move(old_text);
+      if (old_text) {
+        lower_bound->old_text = unique_ptr<Text>{new Text{move(*old_text)}};
+      } else {
+        lower_bound->old_text = nullptr;
+      }
     } else {
       Point old_splice_start = lower_bound_old_end.traverse(
           new_splice_start.traversal(lower_bound_new_end));
@@ -853,7 +869,11 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
         upper_bound->new_text = nullptr;
       }
 
-      upper_bound->old_text = move(old_text);
+      if (old_text) {
+        upper_bound->old_text = unique_ptr<Text>{new Text{move(*old_text)}};
+      } else {
+        upper_bound->old_text = nullptr;
+      }
     } else {
       root =
           build_node(nullptr, upper_bound, new_splice_start, new_splice_start,
@@ -1278,13 +1298,12 @@ optional<Hunk> Patch::hunk_for_new_position(Point target) {
   return hunk_for_position<NewCoordinates>(target);
 }
 
-unique_ptr<Text> Patch::compute_old_text(unique_ptr<Text> deleted_text,
+optional<Text> Patch::compute_old_text(optional<Text> &&deleted_text,
                                        Point new_splice_start,
                                        Point new_deletion_end) {
-  if (!deleted_text.get())
-    return nullptr;
+  if (!deleted_text) return optional<Text> {};
 
-  unique_ptr<Text> result {new Text()};
+  Text result;
   Point range_start = new_splice_start, range_end = new_deletion_end;
 
   auto overlapping_hunks =
@@ -1294,17 +1313,17 @@ unique_ptr<Text> Patch::compute_old_text(unique_ptr<Text> deleted_text,
 
   for (const Hunk &hunk : overlapping_hunks) {
     if (!hunk.old_text)
-      return nullptr;
+      return optional<Text> {};
 
     if (hunk.new_start > deleted_text_slice_start) {
       auto split_result = deleted_text_slice.split(
           hunk.new_start.traversal(deleted_text_slice_start));
       deleted_text_slice_start = hunk.new_start;
       deleted_text_slice = split_result.second;
-      result->append(split_result.first);
+      result.append(split_result.first);
     }
 
-    result->append(*hunk.old_text);
+    result.append(*hunk.old_text);
     deleted_text_slice = deleted_text_slice.suffix(Point::min(
       deleted_text_slice.extent(),
       hunk.new_end.traversal(deleted_text_slice_start)
@@ -1312,7 +1331,7 @@ unique_ptr<Text> Patch::compute_old_text(unique_ptr<Text> deleted_text,
     deleted_text_slice_start = hunk.new_end;
   }
 
-  result->append(deleted_text_slice);
+  result.append(deleted_text_slice);
   return result;
 }
 

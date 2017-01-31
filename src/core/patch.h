@@ -37,7 +37,8 @@ public:
   Patch(Patch &&);
   ~Patch();
   bool splice(Point start, Point deletion_extent, Point insertion_extent,
-              std::unique_ptr<Text> old_text, std::unique_ptr<Text> new_text);
+              optional<Text> &&old_text = optional<Text> {},
+              optional<Text> &&new_text = optional<Text> {});
   bool splice_old(Point start, Point deletion_extent, Point insertion_extent);
   Patch copy();
   Patch invert();
@@ -69,7 +70,7 @@ private:
   template <typename CoordinateSpace>
   optional<Hunk> hunk_for_position(Point position);
 
-  std::unique_ptr<Text> compute_old_text(std::unique_ptr<Text>, Point, Point);
+  optional<Text> compute_old_text(optional<Text> &&, Point, Point);
 
   void splay_node(Node *);
   void rotate_node_right(Node *, Node *, Node *);
@@ -77,7 +78,7 @@ private:
   void delete_root();
   void perform_rebalancing_rotations(uint32_t);
   Node *build_node(Node *, Node *, Point, Point, Point, Point,
-                  std::unique_ptr<Text>, std::unique_ptr<Text>);
+                  optional<Text> &&, optional<Text> &&);
   void delete_node(Node **);
   bool is_frozen() const;
 };

@@ -2,11 +2,13 @@
 
 typedef Patch::Hunk Hunk;
 
+static optional<Text> null_text;
+
 TEST_CASE("Records simple non-overlapping splices") {
   Patch patch;
 
-  patch.splice(Point{0, 5}, Point{0, 3}, Point{0, 4}, nullptr, nullptr);
-  patch.splice(Point{0, 10}, Point{0, 3}, Point{0, 4}, nullptr, nullptr);
+  patch.splice(Point{0, 5}, Point{0, 3}, Point{0, 4});
+  patch.splice(Point{0, 10}, Point{0, 3}, Point{0, 4});
   REQUIRE(patch.get_hunks() == vector<Hunk>({
     Hunk{
       Point{0, 5}, Point{0, 8},
@@ -20,7 +22,7 @@ TEST_CASE("Records simple non-overlapping splices") {
     }
   }));
 
-  patch.splice(Point{0, 2}, Point{0, 2}, Point{0, 1}, nullptr, nullptr);
+  patch.splice(Point{0, 2}, Point{0, 2}, Point{0, 1});
   REQUIRE(patch.get_hunks() == vector<Hunk>({
     Hunk{
       Point{0, 2}, Point{0, 4},
@@ -39,7 +41,7 @@ TEST_CASE("Records simple non-overlapping splices") {
     }
   }));
 
-  patch.splice(Point{0, 0}, Point{0, 0}, Point{0, 10}, nullptr, nullptr);
+  patch.splice(Point{0, 0}, Point{0, 0}, Point{0, 10});
   REQUIRE(patch.get_hunks() == vector<Hunk>({
     Hunk{
       Point{0, 0}, Point{0, 0},
@@ -68,11 +70,11 @@ TEST_CASE("Records overlapping splices with text") {
   Patch patch;
 
   patch.splice(
-    Point{0, 5},
-    Point{0, 3},
-    Point{0, 4},
-    get_text(u"abc"),
-    get_text(u"1234")
+    Point {0, 5},
+    Point {0, 3},
+    Point {0, 4},
+    Text {u"abc"},
+    Text {u"1234"}
   );
   REQUIRE(patch.get_hunks() == vector<Hunk>({
     Hunk{
@@ -85,11 +87,11 @@ TEST_CASE("Records overlapping splices with text") {
 
   // overlaps lower bound, has no upper bound.
   patch.splice(
-    Point{0, 7},
-    Point{0, 3},
-    Point{0, 4},
-    get_text(u"34d"),
-    get_text(u"5678")
+    Point {0, 7},
+    Point {0, 3},
+    Point {0, 4},
+    Text {u"34d"},
+    Text {u"5678"}
   );
   REQUIRE(patch.get_hunks() == vector<Hunk>({
     Hunk{
@@ -102,11 +104,11 @@ TEST_CASE("Records overlapping splices with text") {
 
   // overlaps upper bound, has no lower bound.
   patch.splice(
-    Point{0, 3},
-    Point{0, 3},
-    Point{0, 4},
-    get_text(u"efa"),
-    get_text(u"1234")
+    Point {0, 3},
+    Point {0, 3},
+    Point {0, 4},
+    Text {u"efa"},
+    Text {u"1234"}
   );
   REQUIRE(patch.get_hunks() == vector<Hunk>({
     {
@@ -122,8 +124,8 @@ TEST_CASE("Records overlapping splices with text") {
     Point{0, 15},
     Point{0, 3},
     Point{0, 4},
-    get_text(u"ghi"),
-    get_text(u"5678")
+    Text {u"ghi"},
+    Text {u"5678"}
   );
   REQUIRE(patch.get_hunks() == vector<Hunk>({
     Hunk{
@@ -145,8 +147,8 @@ TEST_CASE("Records overlapping splices with text") {
     Point{0, 1},
     Point{0, 21},
     Point{0, 5},
-    get_text(u"xx123425678yyy5678zzz"),
-    get_text(u"99999")
+    Text {u"xx123425678yyy5678zzz"},
+    Text {u"99999"}
   );
   REQUIRE(patch.get_hunks() == vector<Hunk>({
     Hunk{
@@ -161,10 +163,10 @@ TEST_CASE("Records overlapping splices with text") {
 TEST_CASE("Serializes and deserializes") {
   Patch patch;
 
-  patch.splice(Point{0, 5}, Point{0, 3}, Point{0, 4}, nullptr, nullptr);
-  patch.splice(Point{0, 10}, Point{0, 3}, Point{0, 4}, nullptr, nullptr);
-  patch.splice(Point{0, 2}, Point{0, 2}, Point{0, 1}, nullptr, nullptr);
-  patch.splice(Point{0, 0}, Point{0, 0}, Point{0, 10}, nullptr, nullptr);
+  patch.splice(Point{0, 5}, Point{0, 3}, Point{0, 4});
+  patch.splice(Point{0, 10}, Point{0, 3}, Point{0, 4});
+  patch.splice(Point{0, 2}, Point{0, 2}, Point{0, 1});
+  patch.splice(Point{0, 0}, Point{0, 0}, Point{0, 10});
   patch.hunk_for_old_position(Point{0, 5}); // splay the middle
   REQUIRE(patch.get_hunks() == vector<Hunk>({
     Hunk{
@@ -215,5 +217,5 @@ TEST_CASE("Serializes and deserializes") {
     }
   }));
 
-  REQUIRE(patch_copy.splice(Point{0, 1}, Point{0, 1}, Point{0, 2}, nullptr, nullptr) == false);
+  REQUIRE(patch_copy.splice(Point{0, 1}, Point{0, 1}, Point{0, 2}) == false);
 }

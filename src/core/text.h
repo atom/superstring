@@ -26,7 +26,6 @@ class Text {
   Text(const std::u16string &string);
   Text(std::vector<uint16_t> &&content);
   Text(TextSlice slice);
-  Text(const Text &);
   Text(Serializer &serializer);
 
   static Text build(std::istream &stream, size_t input_size, const char *encoding_name,

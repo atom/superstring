@@ -5,8 +5,8 @@
 #include "point-wrapper.h"
 
 using namespace v8;
+using std::move;
 using std::vector;
-using std::unique_ptr;
 
 static Nan::Persistent<String> new_text_string;
 static Nan::Persistent<String> old_text_string;
@@ -14,16 +14,16 @@ static Nan::Persistent<v8::Function> hunk_wrapper_constructor;
 static Nan::Persistent<v8::FunctionTemplate> patch_wrapper_constructor_template;
 static Nan::Persistent<v8::Function> patch_wrapper_constructor;
 
-static unique_ptr<Text> text_from_js(Nan::MaybeLocal<String> maybe_string) {
+static optional<Text> text_from_js(Nan::MaybeLocal<String> maybe_string) {
   Local<String> string;
   if (!maybe_string.ToLocal(&string)) {
     Nan::ThrowTypeError("Expected a string.");
-    return nullptr;
+    return optional<Text> {};
   }
 
   vector<uint16_t> content(string->Length());
   string->Write(content.data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
-  return unique_ptr<Text> {new Text(move(content))};
+  return optional<Text> {move(content)};
 }
 
 static Local<String> text_to_js(Text *text) {
@@ -177,8 +177,8 @@ void PatchWrapper::splice(const Nan::FunctionCallbackInfo<Value> &info) {
   optional<Point> insertion_extent = PointWrapper::point_from_js(info[2]);
 
   if (start && deletion_extent && insertion_extent) {
-    unique_ptr<Text> deleted_text;
-    unique_ptr<Text> inserted_text;
+    optional<Text> deleted_text;
+    optional<Text> inserted_text;
 
     if (info.Length() >= 4) {
       deleted_text = text_from_js(Nan::To<String>(info[3]));
@@ -190,8 +190,8 @@ void PatchWrapper::splice(const Nan::FunctionCallbackInfo<Value> &info) {
       if (!inserted_text) return;
     }
 
-    if (!patch.splice(*start, *deletion_extent, *insertion_extent, move(deleted_text),
-                      move(inserted_text))) {
+    if (!patch.splice(*start, *deletion_extent, *insertion_extent,
+                      move(deleted_text), move(inserted_text))) {
       Nan::ThrowError("Can't splice into a frozen patch");
     }
   }

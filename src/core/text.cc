@@ -1,18 +1,16 @@
 #include "text.h"
 #include "text-slice.h"
 
-using std::vector;
-using std::ostream;
 using std::function;
+using std::move;
+using std::ostream;
+using std::vector;
 
 static const uint32_t bytes_per_character = (sizeof(uint16_t) / sizeof(char));
 static const uint16_t replacement_character = 0xFFFD;
 static const float buffer_growth_factor = 2;
 
 Text::Text() : line_offsets {0} {}
-
-Text::Text(const Text &other) :
-  content {other.content}, line_offsets {other.line_offsets} {}
 
 Text::Text(vector<uint16_t> &&content) : content {content}, line_offsets {0} {
   uint32_t offset = 0;
