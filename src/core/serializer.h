@@ -23,13 +23,21 @@ class Serializer {
   }
 
   template <typename T>
-  T read() {
+  T peek() const {
     T value = 0;
-    if (static_cast<unsigned>(end_ptr - read_ptr) >= sizeof(T)) {
+    uint8_t *temp_ptr = read_ptr;
+    if (static_cast<unsigned>(end_ptr - temp_ptr) >= sizeof(T)) {
       for (auto i = 0u; i < sizeof(T); i++) {
-        value |= static_cast<T>(*(read_ptr++)) << static_cast<T>(8 * i);
+        value |= static_cast<T>(*(temp_ptr++)) << static_cast<T>(8 * i);
       }
     }
+    return value;
+  }
+
+  template <typename T>
+  T read() {
+    T value = peek<T>();
+    read_ptr += sizeof(T);
     return value;
   }
 

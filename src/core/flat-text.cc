@@ -5,14 +5,16 @@ using std::vector;
 using std::ostream;
 using std::function;
 
-static const uint32_t bytes_per_character = (sizeof(char16_t) / sizeof(char));
-static const char16_t replacement_character = 0xFFFD;
+static const uint32_t bytes_per_character = (sizeof(uint16_t) / sizeof(char));
+static const uint16_t replacement_character = 0xFFFD;
 static const float buffer_growth_factor = 2;
 
 FlatText::FlatText() : line_offsets {0} {}
 
-FlatText::FlatText(const std::u16string &string) :
-  content {string.begin(), string.end()}, line_offsets({ 0 }) {
+FlatText::FlatText(const FlatText &other) :
+  content {other.content}, line_offsets {other.line_offsets} {}
+
+FlatText::FlatText(vector<uint16_t> &&content) : content {content}, line_offsets {0} {
   uint32_t offset = 0;
   while (offset < content.size()) {
     switch (content[offset]) {
@@ -36,6 +38,9 @@ FlatText::FlatText(const std::u16string &string) :
   }
 }
 
+FlatText::FlatText(const std::u16string &string) :
+  FlatText(vector<uint16_t> {string.begin(), string.end()}) {}
+
 FlatText::FlatText(FlatTextSlice slice) :
   content {
     slice.text->content.begin() + slice.start_offset(),
@@ -54,8 +59,44 @@ FlatText::FlatText(FlatTextSlice slice) :
   }
 }
 
-FlatText::FlatText(const vector<char16_t> &content, const vector<uint32_t> &line_offsets) :
+FlatText::FlatText(const vector<uint16_t> &content, const vector<uint32_t> &line_offsets) :
   content {content}, line_offsets {line_offsets} {}
+
+FlatText::FlatText(Serializer &serializer) : line_offsets {0} {
+  uint32_t size = serializer.read<uint32_t>();
+  content.reserve(size);
+  uint32_t offset = 0;
+  while (offset < size) {
+    uint16_t character = serializer.read<uint16_t>();
+    content.push_back(character);
+    switch (character) {
+      case '\n':
+        line_offsets.push_back(offset + 1);
+        offset += 1;
+        break;
+      case '\r':
+        if (offset < size - 1 && serializer.peek<uint16_t>() == '\n') {
+          serializer.read<uint16_t>();
+          line_offsets.push_back(offset + 2);
+          offset += 2;
+        } else {
+          line_offsets.push_back(offset + 1);
+          offset += 1;
+        }
+        break;
+      default:
+        offset += 1;
+        break;
+    }
+  }
+}
+
+void FlatText::serialize(Serializer &serializer) const {
+  serializer.append<uint32_t>(size());
+  for (uint16_t character : content) {
+    serializer.append<uint16_t>(character);
+  }
+}
 
 FlatText FlatText::build(std::istream &stream, size_t input_size, const char *encoding_name,
                       size_t chunk_size, function<void(size_t)> progress_callback) {
@@ -65,7 +106,7 @@ FlatText FlatText::build(std::istream &stream, size_t input_size, const char *en
   }
 
   vector<char> input_vector(chunk_size);
-  vector<char16_t> output_vector(input_size);
+  vector<uint16_t> output_vector(input_size);
   vector<uint32_t> line_offsets({ 0 });
 
   size_t total_bytes_read = 0;
@@ -204,6 +245,14 @@ FlatText::const_iterator FlatText::cend() const {
   return content.cend();
 }
 
+size_t FlatText::size() const {
+  return content.size();
+}
+
+const uint16_t *FlatText::data() const {
+  return content.data();
+}
+
 Point FlatText::extent() const {
   return Point(line_offsets.size() - 1, content.size() - line_offsets.back());
 }
@@ -234,7 +283,7 @@ bool FlatText::operator==(const FlatText &other) const {
 }
 
 ostream &operator<<(ostream &stream, const FlatText &text) {
-  for (char16_t character : text.content) {
+  for (uint16_t character : text.content) {
     if (character < 255) {
       stream << static_cast<char>(character);
     } else {
