@@ -27,6 +27,7 @@
                 "src/core/point.cc",
                 "src/core/serializer.cc",
                 "src/core/text.cc",
+                "src/core/text-buffer.cc",
                 "src/core/text-slice.cc",
             ],
             "conditions": [
@@ -58,6 +59,7 @@
                     "test/native/flat-text-test.cc",
                     "test/native/patch-test.cc",
                     "test/native/tests.cc",
+                    "test/native/text-buffer-test.cc",
                 ],
                 "include_dirs": [
                     "vendor",
