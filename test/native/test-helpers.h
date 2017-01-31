@@ -11,7 +11,7 @@
 using std::vector;
 using std::u16string;
 
-static inline bool text_eq(const FlatText *left, const FlatText *right) {
+static inline bool text_eq(const Text *left, const Text *right) {
   if (left == right)
     return true;
   if (!left && right)
@@ -29,8 +29,8 @@ static inline bool operator==(const Patch::Hunk &left, const Patch::Hunk &right)
          text_eq(left.new_text, right.new_text);
 }
 
-static inline std::unique_ptr<FlatText> get_text(const u16string content) {
-  return std::unique_ptr<FlatText> { new FlatText(content) };
+static inline std::unique_ptr<Text> get_text(const u16string content) {
+  return std::unique_ptr<Text> { new Text(content) };
 }
 
 #endif // SUPERSTRING_TEST_HELPERS_H

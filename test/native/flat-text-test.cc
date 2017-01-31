@@ -1,72 +1,72 @@
 #include "test-helpers.h"
 #include <sstream>
-#include "flat-text.h"
-#include "flat-text-slice.h"
+#include "text.h"
+#include "text-slice.h"
 
 using std::string;
 using std::stringstream;
 
-TEST_CASE("FlatText::build - can build a FlatText from a UTF8 stream") {
+TEST_CASE("Text::build - can build a Text from a UTF8 stream") {
   string input = "abγdefg\nhijklmnop";
   stringstream stream(input, std::ios_base::in);
 
   vector<size_t> progress_reports;
-  FlatText text = FlatText::build(stream, input.size(), "UTF8", 3, [&](size_t percent_done) {
+  Text text = Text::build(stream, input.size(), "UTF8", 3, [&](size_t percent_done) {
     progress_reports.push_back(percent_done);
   });
 
-  REQUIRE(text == FlatText { u"abγdefg\nhijklmnop" });
+  REQUIRE(text == Text { u"abγdefg\nhijklmnop" });
   REQUIRE(progress_reports == vector<size_t>({3, 5, 8, 11, 14, 17, 18}));
 }
 
-TEST_CASE("FlatText::build - replaces invalid byte sequences in the middle of the stream with the Unicode replacement character") {
+TEST_CASE("Text::build - replaces invalid byte sequences in the middle of the stream with the Unicode replacement character") {
   string input = "ab" "\xc0" "\xc1" "de";
   stringstream stream(input, std::ios_base::in);
 
   vector<size_t> progress_reports;
-  FlatText text = FlatText::build(stream, input.size(), "UTF8", 3, [&](size_t percent_done) {
+  Text text = Text::build(stream, input.size(), "UTF8", 3, [&](size_t percent_done) {
     progress_reports.push_back(percent_done);
   });
 
-  REQUIRE(text == FlatText { u"ab" "\ufffd" "\ufffd" "de" });
+  REQUIRE(text == Text { u"ab" "\ufffd" "\ufffd" "de" });
   REQUIRE(progress_reports == vector<size_t>({ 3, 6 }));
 
 }
 
-TEST_CASE("FlatText::build - replaces invalid byte sequences at the end of the stream with the Unicode replacement characters") {
+TEST_CASE("Text::build - replaces invalid byte sequences at the end of the stream with the Unicode replacement characters") {
   string input = "ab" "\xf0\x9f"; // incomplete 4-byte code point for '😁' at the end of the stream
   stringstream stream(input, std::ios_base::in);
 
-  FlatText text = FlatText::build(stream, input.size(), "UTF8", 5, [&](size_t percent_done) {});
-  REQUIRE(text == FlatText { u"ab" "\ufffd" "\ufffd" });
+  Text text = Text::build(stream, input.size(), "UTF8", 5, [&](size_t percent_done) {});
+  REQUIRE(text == Text { u"ab" "\ufffd" "\ufffd" });
 }
 
-TEST_CASE("FlatText::build - handles characters that require two 16-bit code units") {
+TEST_CASE("Text::build - handles characters that require two 16-bit code units") {
   string input = "ab" "\xf0\x9f" "\x98\x81" "cd"; // 'ab😁cd'
   stringstream stream(input, std::ios_base::in);
 
-  FlatText text = FlatText::build(stream, input.size(), "UTF8", 5, [&](size_t percent_done) {});
-  REQUIRE(text == FlatText { u"ab" "\xd83d" "\xde01" "cd" });
+  Text text = Text::build(stream, input.size(), "UTF8", 5, [&](size_t percent_done) {});
+  REQUIRE(text == Text { u"ab" "\xd83d" "\xde01" "cd" });
 }
 
-TEST_CASE("FlatText::build - resizes the buffer if the encoding conversion runs out of room") {
+TEST_CASE("Text::build - resizes the buffer if the encoding conversion runs out of room") {
   string input = "abcdef";
   stringstream stream(input, std::ios_base::in);
 
-  FlatText text = FlatText::build(stream, 3, "UTF8", 5, [&](size_t percent_done) {});
-  REQUIRE(text == FlatText { u"abcdef" });
+  Text text = Text::build(stream, 3, "UTF8", 5, [&](size_t percent_done) {});
+  REQUIRE(text == Text { u"abcdef" });
 }
 
-TEST_CASE("FlatText::build - handles CRLF newlines") {
+TEST_CASE("Text::build - handles CRLF newlines") {
   string input = "abc\r\nde\rf\r\ng\r";
   stringstream stream(input, std::ios_base::in);
 
-  FlatText text = FlatText::build(stream, input.size(), "UTF8", 4, [&](size_t percent_done) {});
-  REQUIRE(text == FlatText { u"abc\r\nde\rf\r\ng\r" });
+  Text text = Text::build(stream, input.size(), "UTF8", 4, [&](size_t percent_done) {});
+  REQUIRE(text == Text { u"abc\r\nde\rf\r\ng\r" });
 }
 
-TEST_CASE("FlatText::line_iterators - returns iterators at the start and end of lines") {
-  FlatText text { u"a\nbc\r\nde\rf\r\ng\r" };
+TEST_CASE("Text::line_iterators - returns iterators at the start and end of lines") {
+  Text text { u"a\nbc\r\nde\rf\r\ng\r" };
 
   auto line0 = text.line_iterators(0);
   REQUIRE(std::string(line0.first, line0.second) == "a");
@@ -82,62 +82,62 @@ TEST_CASE("FlatText::line_iterators - returns iterators at the start and end of 
   REQUIRE(std::string(line5.first, line5.second) == "");
 }
 
-TEST_CASE("FlatText::split") {
-  FlatText text {u"abc\ndef\r\nghi\rjkl"};
-  FlatTextSlice base_slice {text};
+TEST_CASE("Text::split") {
+  Text text {u"abc\ndef\r\nghi\rjkl"};
+  TextSlice base_slice {text};
 
   {
     auto slices = base_slice.split({0, 2});
-    REQUIRE(FlatText(slices.first) == FlatText(u"ab"));
-    REQUIRE(FlatText(slices.second) == FlatText(u"c\ndef\r\nghi\rjkl"));
+    REQUIRE(Text(slices.first) == Text(u"ab"));
+    REQUIRE(Text(slices.second) == Text(u"c\ndef\r\nghi\rjkl"));
   }
 
   {
     auto slices = base_slice.split({1, 2});
-    REQUIRE(FlatText(slices.first) == FlatText(u"abc\nde"));
-    REQUIRE(FlatText(slices.second) == FlatText(u"f\r\nghi\rjkl"));
+    REQUIRE(Text(slices.first) == Text(u"abc\nde"));
+    REQUIRE(Text(slices.second) == Text(u"f\r\nghi\rjkl"));
   }
 
   {
     auto slices = base_slice.split({1, 3});
-    REQUIRE(FlatText(slices.first) == FlatText(u"abc\ndef"));
-    REQUIRE(FlatText(slices.second) == FlatText(u"\r\nghi\rjkl"));
+    REQUIRE(Text(slices.first) == Text(u"abc\ndef"));
+    REQUIRE(Text(slices.second) == Text(u"\r\nghi\rjkl"));
   }
 
   {
     auto slices = base_slice.split({2, 0});
-    REQUIRE(FlatText(slices.first) == FlatText(u"abc\ndef\r\n"));
-    REQUIRE(FlatText(slices.second) == FlatText(u"ghi\rjkl"));
+    REQUIRE(Text(slices.first) == Text(u"abc\ndef\r\n"));
+    REQUIRE(Text(slices.second) == Text(u"ghi\rjkl"));
   }
 
   {
     auto slices = base_slice.split({3, 3});
-    REQUIRE(FlatText(slices.first) == FlatText(u"abc\ndef\r\nghi\rjkl"));
-    REQUIRE(FlatText(slices.second) == FlatText(u""));
+    REQUIRE(Text(slices.first) == Text(u"abc\ndef\r\nghi\rjkl"));
+    REQUIRE(Text(slices.second) == Text(u""));
   }
 }
 
-TEST_CASE("FlatText::concat") {
-  FlatText text {u"abc\ndef\r\nghi\rjkl"};
-  FlatTextSlice base_slice {text};
+TEST_CASE("Text::concat") {
+  Text text {u"abc\ndef\r\nghi\rjkl"};
+  TextSlice base_slice {text};
 
-  REQUIRE(FlatText::concat(base_slice, base_slice) == FlatText(u"abc\ndef\r\nghi\rjklabc\ndef\r\nghi\rjkl"));
+  REQUIRE(Text::concat(base_slice, base_slice) == Text(u"abc\ndef\r\nghi\rjklabc\ndef\r\nghi\rjkl"));
 
   {
     auto prefix = base_slice.prefix({0, 2});
     auto suffix = base_slice.suffix({2, 2});
-    REQUIRE(FlatText::concat(prefix, suffix) == FlatText(u"abi\rjkl"));
+    REQUIRE(Text::concat(prefix, suffix) == Text(u"abi\rjkl"));
   }
 
   {
     auto prefix = base_slice.prefix({1, 3});
     auto suffix = base_slice.suffix({2, 3});
-    REQUIRE(FlatText::concat(prefix, suffix) == FlatText(u"abc\ndef\rjkl"));
+    REQUIRE(Text::concat(prefix, suffix) == Text(u"abc\ndef\rjkl"));
   }
 
   {
     auto prefix = base_slice.prefix({1, 3});
     auto suffix = base_slice.suffix({3, 0});
-    REQUIRE(FlatText::concat(prefix, suffix) == FlatText(u"abc\ndefjkl"));
+    REQUIRE(Text::concat(prefix, suffix) == Text(u"abc\ndefjkl"));
   }
 }

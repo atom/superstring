@@ -1,7 +1,7 @@
 #include "optional.h"
 #include "point.h"
 #include "serializer.h"
-#include "flat-text.h"
+#include "text.h"
 #include <memory>
 #include <vector>
 #include <ostream>
@@ -25,8 +25,8 @@ public:
     Point old_end;
     Point new_start;
     Point new_end;
-    FlatText *old_text;
-    FlatText *new_text;
+    Text *old_text;
+    Text *new_text;
   };
 
   Patch();
@@ -37,7 +37,7 @@ public:
   Patch(Patch &&);
   ~Patch();
   bool splice(Point start, Point deletion_extent, Point insertion_extent,
-              std::unique_ptr<FlatText> old_text, std::unique_ptr<FlatText> new_text);
+              std::unique_ptr<Text> old_text, std::unique_ptr<Text> new_text);
   bool splice_old(Point start, Point deletion_extent, Point insertion_extent);
   Patch copy();
   Patch invert();
@@ -69,7 +69,7 @@ private:
   template <typename CoordinateSpace>
   optional<Hunk> hunk_for_position(Point position);
 
-  std::unique_ptr<FlatText> compute_old_text(std::unique_ptr<FlatText>, Point, Point);
+  std::unique_ptr<Text> compute_old_text(std::unique_ptr<Text>, Point, Point);
 
   void splay_node(Node *);
   void rotate_node_right(Node *, Node *, Node *);
@@ -77,7 +77,7 @@ private:
   void delete_root();
   void perform_rebalancing_rotations(uint32_t);
   Node *build_node(Node *, Node *, Point, Point, Point, Point,
-                  std::unique_ptr<FlatText>, std::unique_ptr<FlatText>);
+                  std::unique_ptr<Text>, std::unique_ptr<Text>);
   void delete_node(Node **);
   bool is_frozen() const;
 };

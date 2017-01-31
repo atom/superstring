@@ -1,62 +1,51 @@
-#ifndef TEXT_H_
-#define TEXT_H_
+#ifndef FLAT_TEXT_H_
+#define FLAT_TEXT_H_
 
-#include <memory>
+#include <istream>
+#include <iconv.h>
+#include <functional>
 #include <vector>
 #include <ostream>
-#include "point.h"
 #include "serializer.h"
 
-enum class LineEnding : uint8_t {
-  NONE,
-  LF,
-  CR,
-  CRLF
-};
+class TextSlice;
 
-struct Line {
-  Line() : ending{LineEnding::NONE} {}
-  Line(const std::u16string &content, LineEnding ending) :
-    content{content}, ending{ending} {}
+struct Point;
 
-  bool operator==(const Line &other) const;
-  std::u16string content;
-  LineEnding ending;
-};
+class Text {
+  friend class TextSlice;
 
-struct TextSlice;
+  std::vector<uint16_t> content;
+  std::vector<uint32_t> line_offsets;
+  Text(const std::vector<uint16_t> &, const std::vector<uint32_t> &);
 
-struct Text {
-  std::vector<Line> lines;
+ public:
+  using const_iterator = std::vector<uint16_t>::const_iterator;
 
   Text();
-  Text(const std::vector<Line> &);
-  Text(Serializer &input);
+  Text(const std::u16string &string);
+  Text(std::vector<uint16_t> &&content);
+  Text(TextSlice slice);
+  Text(const Text &);
+  Text(Serializer &serializer);
 
-  bool operator==(const Text &other) const;
-  Point Extent() const;
-  void append(TextSlice slice);
-  void write(std::vector<uint16_t> &) const;
-  void serialize(Serializer &output) const;
-};
-
-struct TextSlice {
-  Text *text;
-  Point start;
-  Point end;
-
+  static Text build(std::istream &stream, size_t input_size, const char *encoding_name,
+                        size_t chunk_size, std::function<void(size_t)> progress_callback);
   static Text concat(TextSlice a, TextSlice b);
   static Text concat(TextSlice a, TextSlice b, TextSlice c);
 
-  TextSlice(Text &text);
-  TextSlice(Text *text, Point start, Point end);
+  std::pair<const_iterator, const_iterator> line_iterators(uint32_t row) const;
+  const_iterator cbegin() const;
+  const_iterator cend() const;
+  Point extent() const;
+  void append(TextSlice);
+  void serialize(Serializer &) const;
+  size_t size() const;
+  const uint16_t *data() const;
 
-  std::pair<TextSlice, TextSlice> split(Point);
-  TextSlice prefix(Point);
-  TextSlice suffix(Point);
+  bool operator==(const Text &) const;
+
+  friend std::ostream &operator<<(std::ostream &, const Text &);
 };
 
-std::ostream &operator<<(std::ostream &stream, const Text &text);
-std::ostream &operator<<(std::ostream &stream, const TextSlice &text);
-
-#endif  // TEXT_H_
+#endif // FLAT_TEXT_H_
