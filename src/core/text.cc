@@ -219,6 +219,16 @@ Text Text::concat(TextSlice a, TextSlice b, TextSlice c) {
   return result;
 }
 
+// TODO: Implement
+uint16_t Text::at(uint32_t offset) const {
+  return 0;
+}
+
+// TODO: Implement
+uint32_t Text::offset_for_position(Point) const {
+  return 0;
+}
+
 std::pair<Text::const_iterator, Text::const_iterator> Text::line_iterators(uint32_t row) const {
   const_iterator begin = content.cbegin() + line_offsets[row];
 

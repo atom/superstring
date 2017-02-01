@@ -6,6 +6,8 @@
 struct Range {
   Point start;
   Point end;
+
+  Point extent() const;
 };
 
 #endif // RANGE_H_
