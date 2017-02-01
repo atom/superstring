@@ -9,12 +9,6 @@
 #include <sstream>
 #include <vector>
 
-#ifdef _WIN32
-#include <Winsock2.h>
-#else
-#include <arpa/inet.h>
-#endif
-
 using std::move;
 using std::vector;
 using std::unique_ptr;
