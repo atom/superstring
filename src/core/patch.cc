@@ -409,7 +409,7 @@ Patch::Node *Patch::splay_node_starting_before(Point target) {
 }
 
 template <typename CoordinateSpace>
-Patch::Node *Patch::splay_node_ending_after(Point splice_start, Point splice_end) {
+Patch::Node *Patch::splay_node_ending_after(Point target, optional<Point> exclusive_lower_bound) {
   Node *splayed_node = nullptr;
   Point left_ancestor_end = Point();
   Node *node = root;
@@ -420,7 +420,7 @@ Patch::Node *Patch::splay_node_ending_after(Point splice_start, Point splice_end
     Point node_start = left_ancestor_end.traverse(
         CoordinateSpace::distance_from_left_ancestor(node));
     Point node_end = node_start.traverse(CoordinateSpace::extent(node));
-    if (node_end >= splice_end && node_end > splice_start) {
+    if (node_end >= target && (!exclusive_lower_bound || node_end > *exclusive_lower_bound)) {
       splayed_node = node;
       splayed_node_ancestor_count = node_stack.size();
       if (node->left) {
@@ -449,7 +449,7 @@ Patch::Node *Patch::splay_node_ending_after(Point splice_start, Point splice_end
 }
 
 template <typename CoordinateSpace>
-Patch::Node *Patch::splay_node_starting_after(Point splice_start, Point splice_end) {
+Patch::Node *Patch::splay_node_starting_after(Point target, optional<Point> exclusive_lower_bound) {
   Node *splayed_node = nullptr;
   Point left_ancestor_end = Point();
   Node *node = root;
@@ -460,7 +460,7 @@ Patch::Node *Patch::splay_node_starting_after(Point splice_start, Point splice_e
     Point node_start = left_ancestor_end.traverse(
         CoordinateSpace::distance_from_left_ancestor(node));
     Point node_end = node_start.traverse(CoordinateSpace::extent(node));
-    if (node_start >= splice_end && node_start > splice_start) {
+    if (node_start >= target && (!exclusive_lower_bound || node_start > *exclusive_lower_bound)) {
       splayed_node = node;
       splayed_node_ancestor_count = node_stack.size();
       if (node->left) {
@@ -570,18 +570,31 @@ vector<Hunk> Patch::get_hunks_in_range(Point start, Point end, bool inclusive) {
 
 template <typename CoordinateSpace>
 optional<Hunk> Patch::hunk_for_position(Point target) {
-  Node *lower_bound = splay_node_starting_before<CoordinateSpace>(target);
-  if (lower_bound) {
-    Point old_start = lower_bound->old_distance_from_left_ancestor;
-    Point new_start = lower_bound->new_distance_from_left_ancestor;
-    Point old_end = old_start.traverse(lower_bound->old_extent);
-    Point new_end = new_start.traverse(lower_bound->new_extent);
-    Text *old_text = lower_bound->old_text.get();
-    Text *new_text = lower_bound->new_text.get();
-    return Hunk{old_start, old_end, new_start, new_end, old_text, new_text};
+  if (splay_node_starting_before<CoordinateSpace>(target)) {
+    return hunk_for_root_node();
   } else {
     return optional<Hunk>{};
   }
+}
+
+optional<Hunk> Patch::hunk_ending_after_new_position(Point target, bool exclusive) {
+  optional<Point> exclusive_lower_bound;
+  if (exclusive) exclusive_lower_bound = target;
+  if (splay_node_ending_after<NewCoordinates>(target, exclusive_lower_bound)) {
+    return hunk_for_root_node();
+  } else {
+    return optional<Hunk>{};
+  }
+}
+
+Hunk Patch::hunk_for_root_node() {
+  Point old_start = root->old_distance_from_left_ancestor;
+  Point new_start = root->new_distance_from_left_ancestor;
+  Point old_end = old_start.traverse(root->old_extent);
+  Point new_end = new_start.traverse(root->new_extent);
+  Text *old_text = root->old_text.get();
+  Text *new_text = root->new_text.get();
+  return Hunk {old_start, old_end, new_start, new_end, old_text, new_text};
 }
 
 bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
@@ -609,7 +622,7 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
   optional<Text> old_text =
       compute_old_text(move(deleted_text), new_splice_start, new_deletion_end);
   Node *upper_bound =
-      splay_node_ending_after<NewCoordinates>(new_splice_start, new_deletion_end);
+      splay_node_ending_after<NewCoordinates>(new_deletion_end, new_splice_start);
   if (upper_bound && lower_bound && lower_bound != upper_bound) {
     if (lower_bound != upper_bound->left) {
       rotate_node_right(lower_bound, upper_bound->left, upper_bound);
@@ -915,7 +928,7 @@ bool Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
   Point old_insertion_end = old_splice_start.traverse(old_insertion_extent);
 
   Node *lower_bound = splay_node_ending_before<OldCoordinates>(old_splice_start);
-  Node *upper_bound = splay_node_starting_after<OldCoordinates>(old_splice_start, old_deletion_end);
+  Node *upper_bound = splay_node_starting_after<OldCoordinates>(old_deletion_end, old_splice_start);
 
   if (!lower_bound && !upper_bound) {
     delete_node(&root);

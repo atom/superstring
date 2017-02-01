@@ -1,3 +1,6 @@
+#ifndef PATCH_H_
+#define PATCH_H_
+
 #include "optional.h"
 #include "point.h"
 #include "serializer.h"
@@ -48,6 +51,8 @@ public:
   std::vector<Hunk> get_hunks_in_old_range(Point start, Point end);
   optional<Hunk> hunk_for_old_position(Point position);
   optional<Hunk> hunk_for_new_position(Point position);
+  optional<Hunk> hunk_ending_after_new_position(Point position, bool exclusive = false);
+
   void serialize(Serializer &serializer) const;
   std::string get_dot_graph() const;
   std::string get_json() const;
@@ -58,17 +63,22 @@ private:
   template <typename CoordinateSpace>
   std::vector<Hunk> get_hunks_in_range(Point, Point, bool inclusive = false);
 
-  template <typename CoordinateSpace> Node *splay_node_ending_before(Point);
-
-  template <typename CoordinateSpace> Node *splay_node_starting_before(Point);
-
-  template <typename CoordinateSpace> Node *splay_node_ending_after(Point, Point);
+  template <typename CoordinateSpace>
+  Node *splay_node_ending_before(Point target);
 
   template <typename CoordinateSpace>
-  Node *splay_node_starting_after(Point, Point);
+  Node *splay_node_starting_before(Point target);
+
+  template <typename CoordinateSpace>
+  Node *splay_node_ending_after(Point target, optional<Point> exclusive_lower_bound);
+
+  template <typename CoordinateSpace>
+  Node *splay_node_starting_after(Point target, optional<Point> exclusive_lower_bound);
 
   template <typename CoordinateSpace>
   optional<Hunk> hunk_for_position(Point position);
+
+  Hunk hunk_for_root_node();
 
   optional<Text> compute_old_text(optional<Text> &&, Point, Point);
 
@@ -84,3 +94,5 @@ private:
 };
 
 std::ostream &operator<<(std::ostream &, const Patch::Hunk &);
+
+#endif // PATCH_H_
