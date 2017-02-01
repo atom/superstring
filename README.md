@@ -24,7 +24,7 @@ patch.splice({row: 0, column: 5}, {row: 0, column: 3}, {row: 0, column: 4}, 'abc
 patch.splice({row: 0, column: 7}, {row: 0, column: 3}, {row: 0, column: 4}, '34d', '5678')
 
 // Retrieve the consolidated changes:
-assert.deepEqual(patch.getHunks(), [
+assert.deepEqual(patch.getChanges(), [
   {
     oldStart: {row: 0, column: 5},
     oldEnd: {row: 0, column: 9},

@@ -20,7 +20,7 @@ using std::vector;
 using std::unique_ptr;
 using std::ostream;
 using std::endl;
-typedef Patch::Hunk Hunk;
+typedef Patch::Change Change;
 
 struct Patch::Node {
   Node *left;
@@ -220,8 +220,8 @@ struct Patch::OldCoordinates {
     return node->old_distance_from_left_ancestor;
   }
   static Point extent(const Node *node) { return node->old_extent; }
-  static Point start(const Hunk &hunk) { return hunk.old_start; }
-  static Point end(const Hunk &hunk) { return hunk.old_end; }
+  static Point start(const Change &change) { return change.old_start; }
+  static Point end(const Change &change) { return change.old_end; }
 };
 
 struct Patch::NewCoordinates {
@@ -229,45 +229,45 @@ struct Patch::NewCoordinates {
     return node->new_distance_from_left_ancestor;
   }
   static Point extent(const Node *node) { return node->new_extent; }
-  static Point start(const Hunk &hunk) { return hunk.new_start; }
-  static Point end(const Hunk &hunk) { return hunk.new_end; }
+  static Point start(const Change &change) { return change.new_start; }
+  static Point end(const Change &change) { return change.new_end; }
 };
 
 Patch::Patch()
-    : root{nullptr}, frozen_node_array{nullptr}, merges_adjacent_hunks{true},
-      hunk_count{0} {}
+    : root{nullptr}, frozen_node_array{nullptr}, merges_adjacent_changes{true},
+      change_count{0} {}
 
-Patch::Patch(bool merges_adjacent_hunks)
+Patch::Patch(bool merges_adjacent_changes)
     : root{nullptr}, frozen_node_array{nullptr},
-      merges_adjacent_hunks{merges_adjacent_hunks}, hunk_count{0} {}
+      merges_adjacent_changes{merges_adjacent_changes}, change_count{0} {}
 
 Patch::Patch(Patch &&other)
     : root{nullptr}, frozen_node_array{other.frozen_node_array},
-      merges_adjacent_hunks{other.merges_adjacent_hunks},
-      hunk_count{other.hunk_count} {
+      merges_adjacent_changes{other.merges_adjacent_changes},
+      change_count{other.change_count} {
   std::swap(root, other.root);
   std::swap(left_ancestor_stack, other.left_ancestor_stack);
   std::swap(node_stack, other.node_stack);
 }
 
-Patch::Patch(Node *root, uint32_t hunk_count, bool merges_adjacent_hunks)
+Patch::Patch(Node *root, uint32_t change_count, bool merges_adjacent_changes)
     : root{root}, frozen_node_array{nullptr},
-      merges_adjacent_hunks{merges_adjacent_hunks}, hunk_count{hunk_count} {}
+      merges_adjacent_changes{merges_adjacent_changes}, change_count{change_count} {}
 
 Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
   bool left_to_right = true;
   for (const Patch *patch : patches_to_compose) {
-    auto hunks = patch->get_hunks();
+    auto changes = patch->get_changes();
 
     if (left_to_right) {
-      for (auto iter = hunks.begin(), end = hunks.end(); iter != end; ++iter) {
+      for (auto iter = changes.begin(), end = changes.end(); iter != end; ++iter) {
         splice(iter->new_start, iter->old_end.traversal(iter->old_start),
                iter->new_end.traversal(iter->new_start),
                iter->old_text ? *iter->old_text : optional<Text> {},
                iter->new_text ? *iter->new_text : optional<Text> {});
       }
     } else {
-      for (auto iter = hunks.rbegin(), end = hunks.rend(); iter != end;
+      for (auto iter = changes.rbegin(), end = changes.rend(); iter != end;
            ++iter) {
         splice(iter->old_start, iter->old_end.traversal(iter->old_start),
                iter->new_end.traversal(iter->new_start),
@@ -295,7 +295,7 @@ Patch::Node *Patch::build_node(Node *left, Node *right,
                        Point new_distance_from_left_ancestor,
                        Point old_extent, Point new_extent,
                        optional<Text> &&old_text, optional<Text> &&new_text) {
-  hunk_count++;
+  change_count++;
   return new Node {
     left,
     right,
@@ -321,7 +321,7 @@ void Patch::delete_node(Node **node_to_delete) {
       if (node->right)
         node_stack.push_back(node->right);
       delete node;
-      hunk_count--;
+      change_count--;
     }
 
     *node_to_delete = nullptr;
@@ -489,8 +489,8 @@ Patch::Node *Patch::splay_node_starting_after(Point target, optional<Point> excl
 }
 
 template <typename CoordinateSpace>
-vector<Hunk> Patch::get_hunks_in_range(Point start, Point end, bool inclusive) {
-  vector<Hunk> result;
+vector<Change> Patch::get_changes_in_range(Point start, Point end, bool inclusive) {
+  vector<Change> result;
   if (!root)
     return result;
 
@@ -519,23 +519,23 @@ vector<Hunk> Patch::get_hunks_in_range(Point start, Point end, bool inclusive) {
     Point new_end = new_start.traverse(node->new_extent);
     Text *old_text = node->old_text.get();
     Text *new_text = node->new_text.get();
-    Hunk hunk = {old_start, old_end, new_start, new_end, old_text, new_text};
+    Change change = {old_start, old_end, new_start, new_end, old_text, new_text};
 
     if (inclusive) {
-      if (CoordinateSpace::start(hunk) > end) {
+      if (CoordinateSpace::start(change) > end) {
         break;
       }
 
-      if (CoordinateSpace::end(hunk) >= start) {
-        result.push_back(hunk);
+      if (CoordinateSpace::end(change) >= start) {
+        result.push_back(change);
       }
     } else {
-      if (CoordinateSpace::start(hunk) >= end) {
+      if (CoordinateSpace::start(change) >= end) {
         break;
       }
 
-      if (CoordinateSpace::end(hunk) > start) {
-        result.push_back(hunk);
+      if (CoordinateSpace::end(change) > start) {
+        result.push_back(change);
       }
     }
 
@@ -569,32 +569,32 @@ vector<Hunk> Patch::get_hunks_in_range(Point start, Point end, bool inclusive) {
 }
 
 template <typename CoordinateSpace>
-optional<Hunk> Patch::hunk_for_position(Point target) {
+optional<Change> Patch::change_for_position(Point target) {
   if (splay_node_starting_before<CoordinateSpace>(target)) {
-    return hunk_for_root_node();
+    return change_for_root_node();
   } else {
-    return optional<Hunk>{};
+    return optional<Change>{};
   }
 }
 
-optional<Hunk> Patch::hunk_ending_after_new_position(Point target, bool exclusive) {
+optional<Change> Patch::change_ending_after_new_position(Point target, bool exclusive) {
   optional<Point> exclusive_lower_bound;
   if (exclusive) exclusive_lower_bound = target;
   if (splay_node_ending_after<NewCoordinates>(target, exclusive_lower_bound)) {
-    return hunk_for_root_node();
+    return change_for_root_node();
   } else {
-    return optional<Hunk>{};
+    return optional<Change>{};
   }
 }
 
-Hunk Patch::hunk_for_root_node() {
+Change Patch::change_for_root_node() {
   Point old_start = root->old_distance_from_left_ancestor;
   Point new_start = root->new_distance_from_left_ancestor;
   Point old_end = old_start.traverse(root->old_extent);
   Point new_end = new_start.traverse(root->new_extent);
   Text *old_text = root->old_text.get();
   Text *new_text = root->new_text.get();
-  return Hunk {old_start, old_end, new_start, new_end, old_text, new_text};
+  return Change {old_start, old_end, new_start, new_end, old_text, new_text};
 }
 
 bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
@@ -644,7 +644,7 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
         upper_bound_new_start.traverse(upper_bound->new_extent);
 
     bool overlaps_lower_bound, overlaps_upper_bound;
-    if (merges_adjacent_hunks) {
+    if (merges_adjacent_changes) {
       overlaps_lower_bound = new_splice_start <= lower_bound_new_end;
       overlaps_upper_bound = new_deletion_end >= upper_bound_new_start;
     } else {
@@ -760,9 +760,9 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
       // Splice doesn't overlap either bound
     } else {
       // If bounds are the same node, this is an insertion at the beginning of
-      // that node with merges_adjacent_hunks set to false.
+      // that node with merges_adjacent_changes set to false.
       if (lower_bound == upper_bound) {
-        assert(!merges_adjacent_hunks);
+        assert(!merges_adjacent_changes);
         assert(new_deletion_extent.is_zero());
         assert(new_splice_start == upper_bound_new_start);
 
@@ -811,7 +811,7 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
         new_deletion_end.traversal(rightmost_child_new_end));
     bool overlaps_lower_bound =
         new_splice_start < lower_bound_new_end ||
-        (merges_adjacent_hunks && new_splice_start == lower_bound_new_end);
+        (merges_adjacent_changes && new_splice_start == lower_bound_new_end);
 
     delete_node(&lower_bound->right);
 
@@ -850,7 +850,7 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
         upper_bound_new_start.traverse(upper_bound->new_extent);
     bool overlaps_upper_bound =
         new_deletion_end > upper_bound_new_start ||
-        (merges_adjacent_hunks && new_deletion_end == upper_bound_new_start);
+        (merges_adjacent_changes && new_deletion_end == upper_bound_new_start);
 
     Point old_deletion_end;
     if (upper_bound->left) {
@@ -1041,7 +1041,7 @@ Patch Patch::copy() {
     }
   }
 
-  return Patch{new_root, hunk_count, merges_adjacent_hunks};
+  return Patch{new_root, change_count, merges_adjacent_changes};
 }
 
 Patch Patch::invert() {
@@ -1065,7 +1065,7 @@ Patch Patch::invert() {
     }
   }
 
-  return Patch{inverted_root, hunk_count, merges_adjacent_hunks};
+  return Patch{inverted_root, change_count, merges_adjacent_changes};
 }
 
 void Patch::splay_node(Node *node) {
@@ -1194,7 +1194,7 @@ std::string Patch::get_json() const {
   return result.str();
 }
 
-size_t Patch::get_hunk_count() const { return hunk_count; }
+size_t Patch::get_change_count() const { return change_count; }
 
 void Patch::rebalance() {
   if (!root)
@@ -1215,7 +1215,7 @@ void Patch::rebalance() {
   }
 
   // Transform vine to balanced tree
-  uint32_t n = hunk_count;
+  uint32_t n = change_count;
   uint32_t m = std::pow(2, std::floor(std::log2(n + 1))) - 1;
   perform_rebalancing_rotations(n - m);
   while (m > 1) {
@@ -1238,8 +1238,8 @@ void Patch::perform_rebalancing_rotations(uint32_t count) {
   }
 }
 
-vector<Hunk> Patch::get_hunks() const {
-  vector<Hunk> result;
+vector<Change> Patch::get_changes() const {
+  vector<Change> result;
   if (!root) {
     return result;
   }
@@ -1265,7 +1265,7 @@ vector<Hunk> Patch::get_hunks() const {
     Text *old_text = node->old_text.get();
     Text *new_text = node->new_text.get();
     result.push_back(
-        Hunk{old_start, old_end, new_start, new_end, old_text, new_text});
+        Change{old_start, old_end, new_start, new_end, old_text, new_text});
 
     if (node->right) {
       left_ancestor_stack.push_back(PositionStackEntry{old_end, new_end});
@@ -1295,20 +1295,20 @@ vector<Hunk> Patch::get_hunks() const {
   return result;
 }
 
-vector<Hunk> Patch::get_hunks_in_old_range(Point start, Point end) {
-  return get_hunks_in_range<OldCoordinates>(start, end);
+vector<Change> Patch::get_changes_in_old_range(Point start, Point end) {
+  return get_changes_in_range<OldCoordinates>(start, end);
 }
 
-vector<Hunk> Patch::get_hunks_in_new_range(Point start, Point end, bool inclusive) {
-  return get_hunks_in_range<NewCoordinates>(start, end, inclusive);
+vector<Change> Patch::get_changes_in_new_range(Point start, Point end, bool inclusive) {
+  return get_changes_in_range<NewCoordinates>(start, end, inclusive);
 }
 
-optional<Hunk> Patch::hunk_for_old_position(Point target) {
-  return hunk_for_position<OldCoordinates>(target);
+optional<Change> Patch::change_for_old_position(Point target) {
+  return change_for_position<OldCoordinates>(target);
 }
 
-optional<Hunk> Patch::hunk_for_new_position(Point target) {
-  return hunk_for_position<NewCoordinates>(target);
+optional<Change> Patch::change_for_new_position(Point target) {
+  return change_for_position<NewCoordinates>(target);
 }
 
 optional<Text> Patch::compute_old_text(optional<Text> &&deleted_text,
@@ -1319,29 +1319,29 @@ optional<Text> Patch::compute_old_text(optional<Text> &&deleted_text,
   Text result;
   Point range_start = new_splice_start, range_end = new_deletion_end;
 
-  auto overlapping_hunks =
-      get_hunks_in_new_range(range_start, range_end, merges_adjacent_hunks);
+  auto overlapping_changes =
+      get_changes_in_new_range(range_start, range_end, merges_adjacent_changes);
   TextSlice deleted_text_slice = TextSlice(*deleted_text);
   Point deleted_text_slice_start = new_splice_start;
 
-  for (const Hunk &hunk : overlapping_hunks) {
-    if (!hunk.old_text)
+  for (const Change &change : overlapping_changes) {
+    if (!change.old_text)
       return optional<Text> {};
 
-    if (hunk.new_start > deleted_text_slice_start) {
+    if (change.new_start > deleted_text_slice_start) {
       auto split_result = deleted_text_slice.split(
-          hunk.new_start.traversal(deleted_text_slice_start));
-      deleted_text_slice_start = hunk.new_start;
+          change.new_start.traversal(deleted_text_slice_start));
+      deleted_text_slice_start = change.new_start;
       deleted_text_slice = split_result.second;
       result.append(split_result.first);
     }
 
-    result.append(*hunk.old_text);
+    result.append(*change.old_text);
     deleted_text_slice = deleted_text_slice.suffix(Point::min(
       deleted_text_slice.extent(),
-      hunk.new_end.traversal(deleted_text_slice_start)
+      change.new_end.traversal(deleted_text_slice_start)
     ));
-    deleted_text_slice_start = hunk.new_end;
+    deleted_text_slice_start = change.new_end;
   }
 
   result.append(deleted_text_slice);
@@ -1358,7 +1358,7 @@ void Patch::serialize(Serializer &output) const {
 
   output.append(SERIALIZATION_VERSION);
 
-  output.append(hunk_count);
+  output.append(change_count);
 
   root->serialize(output);
 
@@ -1394,25 +1394,25 @@ void Patch::serialize(Serializer &output) const {
 bool Patch::is_frozen() const { return frozen_node_array != nullptr; }
 
 Patch::Patch(Serializer &input)
-    : root{nullptr}, frozen_node_array{nullptr}, merges_adjacent_hunks{true} {
+    : root{nullptr}, frozen_node_array{nullptr}, merges_adjacent_changes{true} {
   uint32_t serialization_version = input.read<uint32_t>();
   if (serialization_version != SERIALIZATION_VERSION) {
     return;
   }
 
-  hunk_count = input.read<uint32_t>();
-  if (hunk_count == 0) {
+  change_count = input.read<uint32_t>();
+  if (change_count == 0) {
     return;
   }
 
-  node_stack.reserve(hunk_count);
-  frozen_node_array = static_cast<Node *>(calloc(hunk_count, sizeof(Node)));
+  node_stack.reserve(change_count);
+  frozen_node_array = static_cast<Node *>(calloc(change_count, sizeof(Node)));
   root = frozen_node_array;
   Node *node = root, *next_node = root + 1;
 
   new(node) Node(input);
 
-  while (next_node < root + hunk_count) {
+  while (next_node < root + change_count) {
     switch (input.read<uint32_t>()) {
     case Left:
       new(next_node) Node(input);
@@ -1439,23 +1439,23 @@ Patch::Patch(Serializer &input)
   }
 }
 
-ostream &operator<<(ostream &stream, const Patch::Hunk &hunk) {
+ostream &operator<<(ostream &stream, const Patch::Change &change) {
   stream
-    << "{Hunk "
-    << "old_range: (" << hunk.old_start << " - " << hunk.old_end << ")"
-    << ", new_range: (" << hunk.new_start << " - " << hunk.new_end << ")"
+    << "{Change "
+    << "old_range: (" << change.old_start << " - " << change.old_end << ")"
+    << ", new_range: (" << change.new_start << " - " << change.new_end << ")"
     << ", old_text: ";
 
-  if (hunk.old_text) {
-    stream << hunk.old_text;
+  if (change.old_text) {
+    stream << change.old_text;
   } else {
     stream << "null";
   }
 
   stream << ", new_text: ";
 
-  if (hunk.new_text) {
-    stream << hunk.new_text;
+  if (change.new_text) {
+    stream << change.new_text;
   } else {
     stream << "null";
   }

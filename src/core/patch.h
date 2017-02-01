@@ -19,11 +19,11 @@ class Patch {
   mutable std::vector<Node *> node_stack;
   Node *root;
   Node *frozen_node_array;
-  bool merges_adjacent_hunks;
-  uint32_t hunk_count;
+  bool merges_adjacent_changes;
+  uint32_t change_count;
 
 public:
-  struct Hunk {
+  struct Change {
     Point old_start;
     Point old_end;
     Point new_start;
@@ -33,10 +33,10 @@ public:
   };
 
   Patch();
-  Patch(bool merges_adjacent_hunks);
+  Patch(bool merges_adjacent_changes);
   Patch(Serializer &input);
   Patch(const std::vector<const Patch *> &);
-  Patch(Node *root, uint32_t hunk_count, bool merges_adjacent_hunks);
+  Patch(Node *root, uint32_t change_count, bool merges_adjacent_changes);
   Patch(Patch &&);
   ~Patch();
   bool splice(Point start, Point deletion_extent, Point insertion_extent,
@@ -45,23 +45,23 @@ public:
   bool splice_old(Point start, Point deletion_extent, Point insertion_extent);
   Patch copy();
   Patch invert();
-  std::vector<Hunk> get_hunks() const;
-  std::vector<Hunk> get_hunks_in_new_range(Point start, Point end,
+  std::vector<Change> get_changes() const;
+  std::vector<Change> get_changes_in_new_range(Point start, Point end,
                                        bool inclusive = false);
-  std::vector<Hunk> get_hunks_in_old_range(Point start, Point end);
-  optional<Hunk> hunk_for_old_position(Point position);
-  optional<Hunk> hunk_for_new_position(Point position);
-  optional<Hunk> hunk_ending_after_new_position(Point position, bool exclusive = false);
+  std::vector<Change> get_changes_in_old_range(Point start, Point end);
+  optional<Change> change_for_old_position(Point position);
+  optional<Change> change_for_new_position(Point position);
+  optional<Change> change_ending_after_new_position(Point position, bool exclusive = false);
 
   void serialize(Serializer &serializer) const;
   std::string get_dot_graph() const;
   std::string get_json() const;
   void rebalance();
-  size_t get_hunk_count() const;
+  size_t get_change_count() const;
 
 private:
   template <typename CoordinateSpace>
-  std::vector<Hunk> get_hunks_in_range(Point, Point, bool inclusive = false);
+  std::vector<Change> get_changes_in_range(Point, Point, bool inclusive = false);
 
   template <typename CoordinateSpace>
   Node *splay_node_ending_before(Point target);
@@ -76,9 +76,9 @@ private:
   Node *splay_node_starting_after(Point target, optional<Point> exclusive_lower_bound);
 
   template <typename CoordinateSpace>
-  optional<Hunk> hunk_for_position(Point position);
+  optional<Change> change_for_position(Point position);
 
-  Hunk hunk_for_root_node();
+  Change change_for_root_node();
 
   optional<Text> compute_old_text(optional<Text> &&, Point, Point);
 
@@ -93,6 +93,6 @@ private:
   bool is_frozen() const;
 };
 
-std::ostream &operator<<(std::ostream &, const Patch::Hunk &);
+std::ostream &operator<<(std::ostream &, const Patch::Change &);
 
 #endif // PATCH_H_

@@ -97,13 +97,13 @@ void Text::serialize(Serializer &serializer) const {
 }
 
 Text Text::build(std::istream &stream, size_t input_size, const char *encoding_name,
-                      size_t chunk_size, function<void(size_t)> progress_callback) {
+                      size_t cchange_size, function<void(size_t)> progress_callback) {
   iconv_t conversion = iconv_open("UTF-16LE", encoding_name);
   if (conversion == reinterpret_cast<iconv_t>(-1)) {
     return Text {{}, {}};
   }
 
-  vector<char> input_vector(chunk_size);
+  vector<char> input_vector(cchange_size);
   vector<uint16_t> output_vector(input_size);
   vector<uint32_t> line_offsets({ 0 });
 
@@ -119,7 +119,7 @@ Text Text::build(std::istream &stream, size_t input_size, const char *encoding_n
   size_t output_bytes_remaining = output_vector.size() * bytes_per_character;
 
   for (;;) {
-    stream.read(input_buffer + input_bytes_remaining, chunk_size - input_bytes_remaining);
+    stream.read(input_buffer + input_bytes_remaining, cchange_size - input_bytes_remaining);
     size_t bytes_read = stream.gcount();
     input_bytes_remaining += bytes_read;
     if (input_bytes_remaining == 0) break;

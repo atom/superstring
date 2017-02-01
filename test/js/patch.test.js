@@ -10,13 +10,13 @@ const {
 const {Patch} = require('../..')
 
 describe('Patch', function () {
-  it('honors the mergeAdjacentHunks option set to false', function () {
-    const patch = new Patch({mergeAdjacentHunks: false})
+  it('honors the mergeAdjacentChanges option set to false', function () {
+    const patch = new Patch({mergeAdjacentChanges: false})
 
     patch.splice({row: 0, column: 10}, {row: 0, column: 0}, {row: 1, column: 5})
     patch.splice({row: 1, column: 5}, {row: 0, column: 2}, {row: 0, column: 8})
 
-    assert.deepEqual(JSON.parse(JSON.stringify(patch.getHunks())), [
+    assert.deepEqual(JSON.parse(JSON.stringify(patch.getChanges())), [
       {
         oldStart: {row: 0, column: 10},
         oldEnd: {row: 0, column: 10},
@@ -32,12 +32,12 @@ describe('Patch', function () {
     ])
   })
 
-  it('honors the mergeAdjacentHunks option set to true', function () {
-    const patch = new Patch({mergeAdjacentHunks: true})
+  it('honors the mergeAdjacentChanges option set to true', function () {
+    const patch = new Patch({mergeAdjacentChanges: true})
 
     patch.splice({row: 0, column: 5}, {row: 0, column: 1}, {row: 0, column: 2})
     patch.splice({row: 0, column: 10}, {row: 0, column: 3}, {row: 0, column: 4})
-    assert.deepEqual(JSON.parse(JSON.stringify(patch.getHunks())), [
+    assert.deepEqual(JSON.parse(JSON.stringify(patch.getChanges())), [
       {
         oldStart: {row: 0, column: 5}, oldEnd: {row: 0, column: 6},
         newStart: {row: 0, column: 5}, newEnd: {row: 0, column: 7}
@@ -49,7 +49,7 @@ describe('Patch', function () {
     ])
 
     patch.spliceOld({row: 0, column: 6}, {row: 0, column: 3}, {row: 0, column: 0})
-    assert.deepEqual(JSON.parse(JSON.stringify(patch.getHunks())), [
+    assert.deepEqual(JSON.parse(JSON.stringify(patch.getChanges())), [
       {
         oldStart: {row: 0, column: 5}, oldEnd: {row: 0, column: 9},
         newStart: {row: 0, column: 5}, newEnd: {row: 0, column: 11}
@@ -66,7 +66,7 @@ describe('Patch', function () {
     patches[2].splice({row: 4, column: 2}, {row: 0, column: 2}, {row: 0, column: 2}, 'so', 'ho')
 
     const composedPatch = Patch.compose(patches)
-    assert.deepEqual(JSON.parse(JSON.stringify(composedPatch.getHunks())), [
+    assert.deepEqual(JSON.parse(JSON.stringify(composedPatch.getChanges())), [
       {
         oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
         newStart: {row: 0, column: 0}, newEnd: {row: 3, column: 0},
@@ -99,7 +99,7 @@ describe('Patch', function () {
     patch.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5}, 'quick', 'world')
 
     const invertedPatch = patch.invert()
-    assert.deepEqual(JSON.parse(JSON.stringify(invertedPatch.getHunks())), [
+    assert.deepEqual(JSON.parse(JSON.stringify(invertedPatch.getChanges())), [
       {
         oldStart: {row: 0, column: 3}, oldEnd: {row: 0, column: 8},
         newStart: {row: 0, column: 3}, newEnd: {row: 0, column: 7},
@@ -117,7 +117,7 @@ describe('Patch', function () {
     const patch2 = new Patch()
     patch2.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5})
     patch2.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5})
-    assert.deepEqual(JSON.parse(JSON.stringify(patch2.invert().getHunks())), [
+    assert.deepEqual(JSON.parse(JSON.stringify(patch2.invert().getChanges())), [
       {
         oldStart: {row: 0, column: 3}, oldEnd: {row: 0, column: 8},
         newStart: {row: 0, column: 3}, newEnd: {row: 0, column: 7}
@@ -133,12 +133,12 @@ describe('Patch', function () {
     const patch = new Patch()
     patch.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, 'ciao', 'hello')
     patch.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5}, 'quick', 'world')
-    assert.deepEqual(patch.copy().getHunks(), patch.getHunks())
+    assert.deepEqual(patch.copy().getChanges(), patch.getChanges())
 
     const patch2 = new Patch()
     patch2.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5})
     patch2.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5})
-    assert.deepEqual(patch2.copy().getHunks(), patch2.getHunks())
+    assert.deepEqual(patch2.copy().getChanges(), patch2.getChanges())
   })
 
   it('can serialize/deserialize patches', () => {
@@ -146,7 +146,7 @@ describe('Patch', function () {
     patch1.splice({row: 0, column: 3}, {row: 0, column: 5}, {row: 0, column: 5}, 'hello', 'world')
 
     const patch2 = Patch.deserialize(Buffer.from(patch1.serialize().toString('base64'), 'base64'))
-    assert.deepEqual(JSON.parse(JSON.stringify(patch2.getHunks())), [{
+    assert.deepEqual(JSON.parse(JSON.stringify(patch2.getChanges())), [{
       oldStart: {row: 0, column: 3},
       newStart: {row: 0, column: 3},
       oldEnd: {row: 0, column: 8},
@@ -156,13 +156,13 @@ describe('Patch', function () {
     }])
   })
 
-  it('removes a hunk when it becomes empty', () => {
+  it('removes a change when it becomes empty', () => {
     const patch = new Patch()
     patch.splice({row: 1, column: 0}, {row: 0, column: 0}, {row: 0, column: 5})
     patch.splice({row: 2, column: 0}, {row: 0, column: 0}, {row: 0, column: 5})
     patch.splice({row: 1, column: 0}, {row: 0, column: 5}, {row: 0, column: 0})
 
-    assert.deepEqual(JSON.parse(JSON.stringify(patch.getHunks())), [{
+    assert.deepEqual(JSON.parse(JSON.stringify(patch.getChanges())), [{
       oldStart: {row: 2, column: 0},
       newStart: {row: 2, column: 0},
       oldEnd: {row: 2, column: 0},
@@ -180,8 +180,8 @@ describe('Patch', function () {
       const random = new Random(seed)
       const originalDocument = new TestDocument(seed)
       const mutatedDocument = originalDocument.clone()
-      const mergeAdjacentHunks = random(2)
-      const patch = new Patch({mergeAdjacentHunks: mergeAdjacentHunks})
+      const mergeAdjacentChanges = random(2)
+      const patch = new Patch({mergeAdjacentChanges: mergeAdjacentChanges})
 
       for (let j = 0; j < 20; j++) {
         if (random(10) < 1) {
@@ -236,20 +236,20 @@ describe('Patch', function () {
         // process.stderr.write(patch.getDotGraph())
 
         const originalDocumentCopy = originalDocument.clone()
-        const hunks = patch.getHunks()
-        assert.equal(patch.getHunkCount(), hunks.length, seedMessage)
+        const changes = patch.getChanges()
+        assert.equal(patch.getChangeCount(), changes.length, seedMessage)
 
-        let previousHunk
-        for (let hunk of patch.getHunks()) {
-          const oldExtent = traversalDistance(hunk.oldEnd, hunk.oldStart)
-          assert.equal(hunk.newText, mutatedDocument.getTextInRange(hunk.newStart, hunk.newEnd), seedMessage)
-          assert.equal(hunk.oldText, originalDocument.getTextInRange(hunk.oldStart, hunk.oldEnd), seedMessage)
-          originalDocumentCopy.splice(hunk.newStart, oldExtent, hunk.newText)
-          if (previousHunk && mergeAdjacentHunks) {
-            assert.notDeepEqual(previousHunk.oldEnd, hunk.oldStart, seedMessage)
-            assert.notDeepEqual(previousHunk.newEnd, hunk.newStart, seedMessage)
+        let previousChange
+        for (let change of patch.getChanges()) {
+          const oldExtent = traversalDistance(change.oldEnd, change.oldStart)
+          assert.equal(change.newText, mutatedDocument.getTextInRange(change.newStart, change.newEnd), seedMessage)
+          assert.equal(change.oldText, originalDocument.getTextInRange(change.oldStart, change.oldEnd), seedMessage)
+          originalDocumentCopy.splice(change.newStart, oldExtent, change.newText)
+          if (previousChange && mergeAdjacentChanges) {
+            assert.notDeepEqual(previousChange.oldEnd, change.oldStart, seedMessage)
+            assert.notDeepEqual(previousChange.newEnd, change.newStart, seedMessage)
           }
-          previousHunk = hunk
+          previousChange = change
         }
 
         assert.deepEqual(originalDocumentCopy.getLines(), mutatedDocument.getLines(), seedMessage)
@@ -257,35 +257,35 @@ describe('Patch', function () {
         for (let k = 0; k < 5; k++) {
           let oldRange = originalDocument.buildRandomRange()
           assert.deepEqual(
-            patch.getHunksInOldRange(oldRange.start, oldRange.end),
-            hunks.filter(hunk =>
-              compare(hunk.oldEnd, oldRange.start) > 0 &&
-              compare(hunk.oldStart, oldRange.end) < 0
+            patch.getChangesInOldRange(oldRange.start, oldRange.end),
+            changes.filter(change =>
+              compare(change.oldEnd, oldRange.start) > 0 &&
+              compare(change.oldStart, oldRange.end) < 0
             ),
             `old range: ${formatPoint(oldRange.start)} - ${formatPoint(oldRange.end)}, seed: ${seed}`
           )
 
           let newRange = mutatedDocument.buildRandomRange()
           assert.deepEqual(
-            patch.getHunksInNewRange(newRange.start, newRange.end),
-            hunks.filter(hunk =>
-              compare(hunk.newEnd, newRange.start) > 0 &&
-              compare(hunk.newStart, newRange.end) < 0
+            patch.getChangesInNewRange(newRange.start, newRange.end),
+            changes.filter(change =>
+              compare(change.newEnd, newRange.start) > 0 &&
+              compare(change.newStart, newRange.end) < 0
             ),
             `new range: ${formatPoint(newRange.start)} - ${formatPoint(newRange.end)}, seed: ${seed}`
           )
 
           let oldPoint = originalDocument.buildRandomPoint()
           assert.deepEqual(
-            patch.hunkForOldPosition(oldPoint),
-            last(hunks.filter(hunk => compare(hunk.oldStart, oldPoint) <= 0)),
+            patch.changeForOldPosition(oldPoint),
+            last(changes.filter(change => compare(change.oldStart, oldPoint) <= 0)),
             seedMessage
           )
 
           let newPoint = mutatedDocument.buildRandomPoint()
           assert.deepEqual(
-            patch.hunkForNewPosition(newPoint),
-            last(hunks.filter(hunk => compare(hunk.newStart, newPoint) <= 0)),
+            patch.changeForNewPosition(newPoint),
+            last(changes.filter(change => compare(change.newStart, newPoint) <= 0)),
             seedMessage
           )
         }
@@ -294,12 +294,12 @@ describe('Patch', function () {
 
         let blob = Buffer.from(patch.serialize().toString('base64'), 'base64')
         const patchCopy1 = Patch.deserialize(blob)
-        assert.deepEqual(patchCopy1.getHunks(), patch.getHunks(), seedMessage)
-        assert.deepEqual(patchCopy1.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint), seedMessage)
+        assert.deepEqual(patchCopy1.getChanges(), patch.getChanges(), seedMessage)
+        assert.deepEqual(patchCopy1.changeForOldPosition(oldPoint), patch.changeForOldPosition(oldPoint), seedMessage)
 
         const patchCopy2 = patch.copy()
-        assert.deepEqual(patchCopy2.getHunks(), patch.getHunks(), seedMessage)
-        assert.deepEqual(patchCopy2.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint), seedMessage)
+        assert.deepEqual(patchCopy2.getChanges(), patch.getChanges(), seedMessage)
+        assert.deepEqual(patchCopy2.changeForOldPosition(oldPoint), patch.changeForOldPosition(oldPoint), seedMessage)
       }
     }
   })
@@ -314,39 +314,39 @@ function translateSpliceFromOriginalDocument (originalDocument, patch, originalS
   const originalInsertionEnd = traverse(originalSplice.start, originalSplice.insertedExtent)
 
   let oldStart, newStart
-  const startHunk = patch.hunkForOldPosition(originalSplice.start)
-  if (startHunk) {
-    if (compare(originalSplice.start, startHunk.oldEnd) < 0) {
-      oldStart = startHunk.oldStart
-      newStart = startHunk.newStart
+  const startChange = patch.changeForOldPosition(originalSplice.start)
+  if (startChange) {
+    if (compare(originalSplice.start, startChange.oldEnd) < 0) {
+      oldStart = startChange.oldStart
+      newStart = startChange.newStart
     } else {
       oldStart = originalSplice.start
-      newStart = traverse(startHunk.newEnd, traversalDistance(originalSplice.start, startHunk.oldEnd))
+      newStart = traverse(startChange.newEnd, traversalDistance(originalSplice.start, startChange.oldEnd))
     }
   } else {
     oldStart = originalSplice.start
     newStart = originalSplice.start
   }
 
-  let endHunk
-  for (const hunk of patch.getHunks()) {
-    const comparison = compare(hunk.oldStart, originalDeletionEnd)
-    if (comparison <= 0) endHunk = hunk
-    if (comparison >= 0 && compare(hunk.oldStart, originalSplice.start) > 0) break
+  let endChange
+  for (const change of patch.getChanges()) {
+    const comparison = compare(change.oldStart, originalDeletionEnd)
+    if (comparison <= 0) endChange = change
+    if (comparison >= 0 && compare(change.oldStart, originalSplice.start) > 0) break
   }
 
   let oldInsertionEnd, newDeletionEnd
-  if (endHunk) {
-    if (compare(originalDeletionEnd, endHunk.oldStart) === 0 &&
-        compare(originalSplice.start, endHunk.oldStart) < 0) {
+  if (endChange) {
+    if (compare(originalDeletionEnd, endChange.oldStart) === 0 &&
+        compare(originalSplice.start, endChange.oldStart) < 0) {
       oldInsertionEnd = originalInsertionEnd
-      newDeletionEnd = endHunk.newStart
-    } else if (compare(originalDeletionEnd, endHunk.oldEnd) < 0) {
-      oldInsertionEnd = traverse(originalInsertionEnd, traversalDistance(endHunk.oldEnd, originalDeletionEnd))
-      newDeletionEnd = endHunk.newEnd
+      newDeletionEnd = endChange.newStart
+    } else if (compare(originalDeletionEnd, endChange.oldEnd) < 0) {
+      oldInsertionEnd = traverse(originalInsertionEnd, traversalDistance(endChange.oldEnd, originalDeletionEnd))
+      newDeletionEnd = endChange.newEnd
     } else {
       oldInsertionEnd = originalInsertionEnd
-      newDeletionEnd = traverse(endHunk.newEnd, traversalDistance(originalDeletionEnd, endHunk.oldEnd))
+      newDeletionEnd = traverse(endChange.newEnd, traversalDistance(originalDeletionEnd, endChange.oldEnd))
     }
   } else {
     oldInsertionEnd = originalInsertionEnd

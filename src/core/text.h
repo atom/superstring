@@ -29,7 +29,7 @@ class Text {
   Text(Serializer &serializer);
 
   static Text build(std::istream &stream, size_t input_size, const char *encoding_name,
-                        size_t chunk_size, std::function<void(size_t)> progress_callback);
+                        size_t cchange_size, std::function<void(size_t)> progress_callback);
   static Text concat(TextSlice a, TextSlice b);
   static Text concat(TextSlice a, TextSlice b, TextSlice c);
 

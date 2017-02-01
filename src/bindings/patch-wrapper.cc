@@ -10,7 +10,7 @@ using std::vector;
 
 static Nan::Persistent<String> new_text_string;
 static Nan::Persistent<String> old_text_string;
-static Nan::Persistent<v8::Function> hunk_wrapper_constructor;
+static Nan::Persistent<v8::Function> change_wrapper_constructor;
 static Nan::Persistent<v8::FunctionTemplate> patch_wrapper_constructor_template;
 static Nan::Persistent<v8::Function> patch_wrapper_constructor;
 
@@ -30,7 +30,7 @@ static Local<String> text_to_js(Text *text) {
   return Nan::New<String>(text->data(), text->size()).ToLocalChecked();
 }
 
-class HunkWrapper : public Nan::ObjectWrap {
+class ChangeWrapper : public Nan::ObjectWrap {
  public:
   static void init() {
     new_text_string.Reset(Nan::New("newText").ToLocalChecked());
@@ -38,7 +38,7 @@ class HunkWrapper : public Nan::ObjectWrap {
     static Nan::Persistent<String> old_text_string;
 
     Local<FunctionTemplate> constructor_template = Nan::New<FunctionTemplate>(construct);
-    constructor_template->SetClassName(Nan::New<String>("Hunk").ToLocalChecked());
+    constructor_template->SetClassName(Nan::New<String>("Change").ToLocalChecked());
     constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
     const auto &instance_template = constructor_template->InstanceTemplate();
     Nan::SetAccessor(instance_template, Nan::New("oldStart").ToLocalChecked(), get_old_start);
@@ -56,18 +56,18 @@ class HunkWrapper : public Nan::ObjectWrap {
 
     const auto &prototype_template = constructor_template->PrototypeTemplate();
     prototype_template->Set(Nan::New<String>("toString").ToLocalChecked(), Nan::New<FunctionTemplate>(to_string));
-    hunk_wrapper_constructor.Reset(constructor_template->GetFunction());
+    change_wrapper_constructor.Reset(constructor_template->GetFunction());
   }
 
-  static Local<Value> FromHunk(Patch::Hunk hunk) {
+  static Local<Value> FromChange(Patch::Change change) {
     Local<Object> result;
-    if (Nan::NewInstance(Nan::New(hunk_wrapper_constructor)).ToLocal(&result)) {
-      (new HunkWrapper(hunk))->Wrap(result);
-      if (hunk.new_text) {
-        result->Set(Nan::New(new_text_string), text_to_js(hunk.new_text));
+    if (Nan::NewInstance(Nan::New(change_wrapper_constructor)).ToLocal(&result)) {
+      (new ChangeWrapper(change))->Wrap(result);
+      if (change.new_text) {
+        result->Set(Nan::New(new_text_string), text_to_js(change.new_text));
       }
-      if (hunk.old_text) {
-        result->Set(Nan::New(old_text_string), text_to_js(hunk.old_text));
+      if (change.old_text) {
+        result->Set(Nan::New(old_text_string), text_to_js(change.old_text));
       }
       return result;
     } else {
@@ -76,52 +76,52 @@ class HunkWrapper : public Nan::ObjectWrap {
   }
 
  private:
-  HunkWrapper(Patch::Hunk hunk) : hunk(hunk) {}
+  ChangeWrapper(Patch::Change change) : change(change) {}
 
   static void construct(const Nan::FunctionCallbackInfo<Value> &info) {}
 
   static void get_old_start(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::from_point(hunk.old_start));
+    Patch::Change &change = Nan::ObjectWrap::Unwrap<ChangeWrapper>(info.This())->change;
+    info.GetReturnValue().Set(PointWrapper::from_point(change.old_start));
   }
 
   static void get_new_start(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::from_point(hunk.new_start));
+    Patch::Change &change = Nan::ObjectWrap::Unwrap<ChangeWrapper>(info.This())->change;
+    info.GetReturnValue().Set(PointWrapper::from_point(change.new_start));
   }
 
   static void get_old_end(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::from_point(hunk.old_end));
+    Patch::Change &change = Nan::ObjectWrap::Unwrap<ChangeWrapper>(info.This())->change;
+    info.GetReturnValue().Set(PointWrapper::from_point(change.old_end));
   }
 
   static void get_new_end(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::from_point(hunk.new_end));
+    Patch::Change &change = Nan::ObjectWrap::Unwrap<ChangeWrapper>(info.This())->change;
+    info.GetReturnValue().Set(PointWrapper::from_point(change.new_end));
   }
 
   static void get_old_extent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::from_point(hunk.old_end.traversal(hunk.old_start)));
+    Patch::Change &change = Nan::ObjectWrap::Unwrap<ChangeWrapper>(info.This())->change;
+    info.GetReturnValue().Set(PointWrapper::from_point(change.old_end.traversal(change.old_start)));
   }
 
   static void get_new_extent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::from_point(hunk.new_end.traversal(hunk.new_start)));
+    Patch::Change &change = Nan::ObjectWrap::Unwrap<ChangeWrapper>(info.This())->change;
+    info.GetReturnValue().Set(PointWrapper::from_point(change.new_end.traversal(change.new_start)));
   }
 
   static void to_string(const Nan::FunctionCallbackInfo<Value> &info) {
-    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
+    Patch::Change &change = Nan::ObjectWrap::Unwrap<ChangeWrapper>(info.This())->change;
     std::stringstream result;
-    result << hunk;
+    result << change;
     info.GetReturnValue().Set(Nan::New<String>(result.str()).ToLocalChecked());
   }
 
-  Patch::Hunk hunk;
+  Patch::Change change;
 };
 
 void PatchWrapper::init(Local<Object> exports) {
-  HunkWrapper::init();
+  ChangeWrapper::init();
 
   Local<FunctionTemplate> constructor_template_local = Nan::New<FunctionTemplate>(construct);
   constructor_template_local->SetClassName(Nan::New<String>("Patch").ToLocalChecked());
@@ -133,20 +133,20 @@ void PatchWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("spliceOld").ToLocalChecked(), Nan::New<FunctionTemplate>(splice_old));
   prototype_template->Set(Nan::New("copy").ToLocalChecked(), Nan::New<FunctionTemplate>(copy));
   prototype_template->Set(Nan::New("invert").ToLocalChecked(), Nan::New<FunctionTemplate>(invert));
-  prototype_template->Set(Nan::New("getHunks").ToLocalChecked(), Nan::New<FunctionTemplate>(get_hunks));
-  prototype_template->Set(Nan::New("getHunksInOldRange").ToLocalChecked(),
-                          Nan::New<FunctionTemplate>(get_hunks_in_old_range));
-  prototype_template->Set(Nan::New("getHunksInNewRange").ToLocalChecked(),
-                          Nan::New<FunctionTemplate>(get_hunks_in_new_range));
-  prototype_template->Set(Nan::New("hunkForOldPosition").ToLocalChecked(),
-                          Nan::New<FunctionTemplate>(hunk_for_old_position));
-  prototype_template->Set(Nan::New("hunkForNewPosition").ToLocalChecked(),
-                          Nan::New<FunctionTemplate>(hunk_for_new_position));
+  prototype_template->Set(Nan::New("getChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(get_changes));
+  prototype_template->Set(Nan::New("getChangesInOldRange").ToLocalChecked(),
+                          Nan::New<FunctionTemplate>(get_changes_in_old_range));
+  prototype_template->Set(Nan::New("getChangesInNewRange").ToLocalChecked(),
+                          Nan::New<FunctionTemplate>(get_changes_in_new_range));
+  prototype_template->Set(Nan::New("changeForOldPosition").ToLocalChecked(),
+                          Nan::New<FunctionTemplate>(change_for_old_position));
+  prototype_template->Set(Nan::New("changeForNewPosition").ToLocalChecked(),
+                          Nan::New<FunctionTemplate>(change_for_new_position));
   prototype_template->Set(Nan::New("serialize").ToLocalChecked(), Nan::New<FunctionTemplate>(serialize));
   prototype_template->Set(Nan::New("getDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(get_dot_graph));
   prototype_template->Set(Nan::New("getJSON").ToLocalChecked(), Nan::New<FunctionTemplate>(get_json));
   prototype_template->Set(Nan::New("rebalance").ToLocalChecked(), Nan::New<FunctionTemplate>(rebalance));
-  prototype_template->Set(Nan::New("getHunkCount").ToLocalChecked(), Nan::New<FunctionTemplate>(get_hunk_count));
+  prototype_template->Set(Nan::New("getChangeCount").ToLocalChecked(), Nan::New<FunctionTemplate>(get_change_count));
   patch_wrapper_constructor_template.Reset(constructor_template_local);
   patch_wrapper_constructor.Reset(constructor_template_local->GetFunction());
   exports->Set(Nan::New("Patch").ToLocalChecked(), Nan::New(patch_wrapper_constructor));
@@ -155,17 +155,17 @@ void PatchWrapper::init(Local<Object> exports) {
 PatchWrapper::PatchWrapper(Patch &&patch) : patch{std::move(patch)} {}
 
 void PatchWrapper::construct(const Nan::FunctionCallbackInfo<Value> &info) {
-  bool merges_adjacent_hunks = true;
+  bool merges_adjacent_changes = true;
   Local<Object> options;
 
   if (info.Length() > 0 && Nan::To<Object>(info[0]).ToLocal(&options)) {
-    Local<Boolean> js_merge_adjacent_hunks;
-    if (Nan::To<Boolean>(options->Get(Nan::New("mergeAdjacentHunks").ToLocalChecked()))
-            .ToLocal(&js_merge_adjacent_hunks)) {
-      merges_adjacent_hunks = js_merge_adjacent_hunks->BooleanValue();
+    Local<Boolean> js_merge_adjacent_changes;
+    if (Nan::To<Boolean>(options->Get(Nan::New("mergeAdjacentChanges").ToLocalChecked()))
+            .ToLocal(&js_merge_adjacent_changes)) {
+      merges_adjacent_changes = js_merge_adjacent_changes->BooleanValue();
     }
   }
-  PatchWrapper *patch = new PatchWrapper(Patch{merges_adjacent_hunks});
+  PatchWrapper *patch = new PatchWrapper(Patch{merges_adjacent_changes});
   patch->Wrap(info.This());
 }
 
@@ -231,20 +231,20 @@ void PatchWrapper::invert(const Nan::FunctionCallbackInfo<Value> &info) {
   }
 }
 
-void PatchWrapper::get_hunks(const Nan::FunctionCallbackInfo<Value> &info) {
+void PatchWrapper::get_changes(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
   Local<Array> js_result = Nan::New<Array>();
 
   size_t i = 0;
-  for (auto hunk : patch.get_hunks()) {
-    js_result->Set(i++, HunkWrapper::FromHunk(hunk));
+  for (auto change : patch.get_changes()) {
+    js_result->Set(i++, ChangeWrapper::FromChange(change));
   }
 
   info.GetReturnValue().Set(js_result);
 }
 
-void PatchWrapper::get_hunks_in_old_range(const Nan::FunctionCallbackInfo<Value> &info) {
+void PatchWrapper::get_changes_in_old_range(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
   optional<Point> start = PointWrapper::point_from_js(info[0]);
@@ -254,15 +254,15 @@ void PatchWrapper::get_hunks_in_old_range(const Nan::FunctionCallbackInfo<Value>
     Local<Array> js_result = Nan::New<Array>();
 
     size_t i = 0;
-    for (auto hunk : patch.get_hunks_in_old_range(*start, *end)) {
-      js_result->Set(i++, HunkWrapper::FromHunk(hunk));
+    for (auto change : patch.get_changes_in_old_range(*start, *end)) {
+      js_result->Set(i++, ChangeWrapper::FromChange(change));
     }
 
     info.GetReturnValue().Set(js_result);
   }
 }
 
-void PatchWrapper::get_hunks_in_new_range(const Nan::FunctionCallbackInfo<Value> &info) {
+void PatchWrapper::get_changes_in_new_range(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
   optional<Point> start = PointWrapper::point_from_js(info[0]);
@@ -272,34 +272,34 @@ void PatchWrapper::get_hunks_in_new_range(const Nan::FunctionCallbackInfo<Value>
     Local<Array> js_result = Nan::New<Array>();
 
     size_t i = 0;
-    for (auto hunk : patch.get_hunks_in_new_range(*start, *end)) {
-      js_result->Set(i++, HunkWrapper::FromHunk(hunk));
+    for (auto change : patch.get_changes_in_new_range(*start, *end)) {
+      js_result->Set(i++, ChangeWrapper::FromChange(change));
     }
 
     info.GetReturnValue().Set(js_result);
   }
 }
 
-void PatchWrapper::hunk_for_old_position(const Nan::FunctionCallbackInfo<Value> &info) {
+void PatchWrapper::change_for_old_position(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
   optional<Point> start = PointWrapper::point_from_js(info[0]);
   if (start) {
-    auto hunk = patch.hunk_for_old_position(*start);
-    if (hunk) {
-      info.GetReturnValue().Set(HunkWrapper::FromHunk(*hunk));
+    auto change = patch.change_for_old_position(*start);
+    if (change) {
+      info.GetReturnValue().Set(ChangeWrapper::FromChange(*change));
     } else {
       info.GetReturnValue().Set(Nan::Undefined());
     }
   }
 }
 
-void PatchWrapper::hunk_for_new_position(const Nan::FunctionCallbackInfo<Value> &info) {
+void PatchWrapper::change_for_new_position(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
   optional<Point> start = PointWrapper::point_from_js(info[0]);
   if (start) {
-    auto hunk = patch.hunk_for_new_position(*start);
-    if (hunk) {
-      info.GetReturnValue().Set(HunkWrapper::FromHunk(*hunk));
+    auto change = patch.change_for_new_position(*start);
+    if (change) {
+      info.GetReturnValue().Set(ChangeWrapper::FromChange(*change));
     } else {
       info.GetReturnValue().Set(Nan::Undefined());
     }
@@ -375,10 +375,10 @@ void PatchWrapper::get_json(const Nan::FunctionCallbackInfo<Value> &info) {
   info.GetReturnValue().Set(Nan::New<String>(graph).ToLocalChecked());
 }
 
-void PatchWrapper::get_hunk_count(const Nan::FunctionCallbackInfo<Value> &info) {
+void PatchWrapper::get_change_count(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
-  uint32_t hunk_count = patch.get_hunk_count();
-  info.GetReturnValue().Set(Nan::New<Number>(hunk_count));
+  uint32_t change_count = patch.get_change_count();
+  info.GetReturnValue().Set(Nan::New<Number>(change_count));
 }
 
 void PatchWrapper::rebalance(const Nan::FunctionCallbackInfo<Value> &info) {

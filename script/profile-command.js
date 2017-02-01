@@ -33,8 +33,8 @@ function profileCommand (command, containingFunctionName, callback) {
     console.log("Wrote stacks to", dtraceOutputFile.path);
 
     const dtraceOutput = fs.createReadStream(dtraceOutputFile.path, 'utf8')
-    dtraceOutput.on('data', (chunk) => {
-      bufferedDtraceContent += chunk.toString('utf8')
+    dtraceOutput.on('data', (cchange) => {
+      bufferedDtraceContent += cchange.toString('utf8')
 
       while (true) {
         const stackEndIndex = bufferedDtraceContent.indexOf('\n\n')
