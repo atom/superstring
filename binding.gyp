@@ -25,6 +25,7 @@
                 "src/core/marker-index.cc",
                 "src/core/patch.cc",
                 "src/core/point.cc",
+                "src/core/range.cc",
                 "src/core/serializer.cc",
                 "src/core/text.cc",
                 "src/core/text-buffer.cc",

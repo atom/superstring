@@ -17,7 +17,7 @@ class Text {
 
   std::vector<uint16_t> content;
   std::vector<uint32_t> line_offsets;
-  Text(const std::vector<uint16_t> &, const std::vector<uint32_t> &);
+  Text(const std::vector<uint16_t> &&, const std::vector<uint32_t> &&);
 
  public:
   using const_iterator = std::vector<uint16_t>::const_iterator;
@@ -27,16 +27,20 @@ class Text {
   Text(std::vector<uint16_t> &&content);
   Text(TextSlice slice);
   Text(Serializer &serializer);
+  template<typename Iter>
+  Text(Iter begin, Iter end) : Text(std::vector<uint16_t>{begin, end}) {}
 
   static Text build(std::istream &stream, size_t input_size, const char *encoding_name,
                         size_t cchange_size, std::function<void(size_t)> progress_callback);
   static Text concat(TextSlice a, TextSlice b);
   static Text concat(TextSlice a, TextSlice b, TextSlice c);
 
+  uint16_t at(uint32_t offset) const;
   std::pair<const_iterator, const_iterator> line_iterators(uint32_t row) const;
   const_iterator cbegin() const;
   const_iterator cend() const;
   Point extent() const;
+  uint32_t offset_for_position(Point) const;
   void append(TextSlice);
   void serialize(Serializer &) const;
   uint32_t size() const;

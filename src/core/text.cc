@@ -57,8 +57,8 @@ Text::Text(TextSlice slice) :
   }
 }
 
-Text::Text(const vector<uint16_t> &content, const vector<uint32_t> &line_offsets) :
-  content {content}, line_offsets {line_offsets} {}
+Text::Text(const vector<uint16_t> &&content, const vector<uint32_t> &&line_offsets) :
+  content {move(content)}, line_offsets {move(line_offsets)} {}
 
 Text::Text(Serializer &serializer) : line_offsets {0} {
   uint32_t size = serializer.read<uint32_t>();
@@ -201,7 +201,7 @@ Text Text::build(std::istream &stream, size_t input_size, const char *encoding_n
   size_t output_characters_remaining = (output_bytes_remaining / bytes_per_character);
   size_t output_characters_written = output_vector.size() - output_characters_remaining;
   output_vector.resize(output_characters_written);
-  return Text {output_vector, line_offsets};
+  return Text {move(output_vector), move(line_offsets)};
 }
 
 Text Text::concat(TextSlice a, TextSlice b) {
@@ -217,6 +217,14 @@ Text Text::concat(TextSlice a, TextSlice b, TextSlice c) {
   result.append(b);
   result.append(c);
   return result;
+}
+
+uint16_t Text::at(uint32_t offset) const {
+  return content[offset];
+}
+
+uint32_t Text::offset_for_position(Point position) const {
+  return line_offsets[position.row] + position.column;
 }
 
 std::pair<Text::const_iterator, Text::const_iterator> Text::line_iterators(uint32_t row) const {
