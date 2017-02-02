@@ -10,6 +10,7 @@ public:
   optional() : value(T()), is_some(false) {}
 
   const T &operator*() const { return value; }
+  const T *operator->() const { return &value; }
   operator bool() const { return is_some; }
 };
 

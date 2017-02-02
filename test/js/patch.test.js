@@ -240,16 +240,22 @@ describe('Patch', function () {
         assert.equal(patch.getChangeCount(), changes.length, seedMessage)
 
         let previousChange
+        let precedingOldTextLength = 0
+        let precedingNewTextLength = 0
         for (let change of patch.getChanges()) {
           const oldExtent = traversalDistance(change.oldEnd, change.oldStart)
           assert.equal(change.newText, mutatedDocument.getTextInRange(change.newStart, change.newEnd), seedMessage)
           assert.equal(change.oldText, originalDocument.getTextInRange(change.oldStart, change.oldEnd), seedMessage)
+          assert.equal(change.precedingOldTextLength, precedingOldTextLength, seedMessage)
+          assert.equal(change.precedingNewTextLength, precedingNewTextLength, seedMessage)
           originalDocumentCopy.splice(change.newStart, oldExtent, change.newText)
           if (previousChange && mergeAdjacentChanges) {
             assert.notDeepEqual(previousChange.oldEnd, change.oldStart, seedMessage)
             assert.notDeepEqual(previousChange.newEnd, change.newStart, seedMessage)
           }
           previousChange = change
+          precedingOldTextLength += change.oldText.length
+          precedingNewTextLength += change.newText.length
         }
 
         assert.deepEqual(originalDocumentCopy.getLines(), mutatedDocument.getLines(), seedMessage)

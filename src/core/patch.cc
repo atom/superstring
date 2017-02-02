@@ -29,6 +29,9 @@ struct Patch::Node {
   unique_ptr<Text> old_text;
   unique_ptr<Text> new_text;
 
+  uint32_t old_subtree_text_size;
+  uint32_t new_subtree_text_size;
+
   Node(
     Node *left,
     Node *right,
@@ -46,7 +49,9 @@ struct Patch::Node {
     old_distance_from_left_ancestor {old_distance_from_left_ancestor},
     new_distance_from_left_ancestor {new_distance_from_left_ancestor},
     old_text {std::move(old_text)},
-    new_text {std::move(new_text)} {}
+    new_text {std::move(new_text)} {
+    compute_subtree_text_sizes();
+  }
 
   Node(Serializer &input) :
     left {nullptr},
@@ -69,6 +74,25 @@ struct Patch::Node {
     }
   }
 
+  void compute_subtree_text_sizes() {
+    old_subtree_text_size =
+      old_text_size() +
+      (left ? left->old_subtree_text_size : 0) +
+      (right ? right->old_subtree_text_size : 0);
+    new_subtree_text_size =
+      new_text_size() +
+      (left ? left->new_subtree_text_size : 0) +
+      (right ? right->new_subtree_text_size : 0);
+  }
+
+  uint32_t old_text_size() {
+    return old_text ? old_text->size() : 0;
+  }
+
+  uint32_t new_text_size() {
+    return new_text ? new_text->size() : 0;
+  }
+
   void get_subtree_end(Point *old_end, Point *new_end) {
     Node *node = this;
     *old_end = Point();
@@ -83,7 +107,7 @@ struct Patch::Node {
   }
 
   Node *copy() {
-    return new Node {
+    auto result = new Node {
       left,
       right,
       old_extent,
@@ -91,12 +115,15 @@ struct Patch::Node {
       old_distance_from_left_ancestor,
       new_distance_from_left_ancestor,
       old_text ? unique_ptr<Text>(new Text(*old_text)) : nullptr,
-      new_text ? unique_ptr<Text>(new Text(*new_text)) : nullptr,
+      new_text ? unique_ptr<Text>(new Text(*new_text)) : nullptr
     };
+    result->old_subtree_text_size = old_subtree_text_size;
+    result->new_subtree_text_size = new_subtree_text_size;
+    return result;
   }
 
   Node *invert() {
-    return new Node {
+    auto result = new Node {
       left,
       right,
       new_extent,
@@ -104,8 +131,27 @@ struct Patch::Node {
       new_distance_from_left_ancestor,
       old_distance_from_left_ancestor,
       new_text ? unique_ptr<Text>(new Text(*new_text)) : nullptr,
-      old_text ? unique_ptr<Text>(new Text(*old_text)) : nullptr,
+      old_text ? unique_ptr<Text>(new Text(*old_text)) : nullptr
     };
+    result->old_subtree_text_size = new_subtree_text_size;
+    result->new_subtree_text_size = old_subtree_text_size;
+    return result;
+  }
+
+  void set_old_text(optional<Text> &&text) {
+    if (text) {
+      old_text = unique_ptr<Text>{new Text{move(*text)}};
+    } else {
+      old_text = nullptr;
+    }
+  }
+
+  void set_new_text(optional<Text> &&text) {
+    if (text) {
+      new_text = unique_ptr<Text>{new Text{move(*text)}};
+    } else {
+      new_text = nullptr;
+    }
   }
 
   void serialize(Serializer &output) const {
@@ -137,7 +183,7 @@ struct Patch::Node {
       << "label=\""
       << "new range: " << node_new_start << " - " << node_new_end << ", " << endl
       << "old range: " << node_old_start << " - " << node_old_end << ", " << endl
-      << "new Text: ";
+      << "new text: ";
 
     if (new_text) {
       result << "\\\"" << *new_text << "\\\"" << endl;
@@ -145,12 +191,15 @@ struct Patch::Node {
       result << "null" << endl;
     }
 
-    result << "old Text: ";
+    result << "old text: ";
     if (old_text) {
       result << "\\\"" << *old_text <<  "\\\""  << endl;
     } else {
       result << "null" << endl;
     }
+
+    result << "old_subtree_text_size: " << old_subtree_text_size << endl;
+    result << "new_subtree_text_size: " << new_subtree_text_size << endl;
 
     result << "\""
       << "tooltip=\"" << this
@@ -207,6 +256,8 @@ struct Patch::Node {
 struct Patch::PositionStackEntry {
   Point old_end;
   Point new_end;
+  uint32_t total_old_text_size;
+  uint32_t total_new_text_size;
 };
 
 struct Patch::OldCoordinates {
@@ -298,7 +349,7 @@ Patch::Node *Patch::build_node(Node *left, Node *right,
     old_distance_from_left_ancestor,
     new_distance_from_left_ancestor,
     old_text ? unique_ptr<Text>{new Text(*old_text)} : nullptr,
-    new_text ? unique_ptr<Text>{new Text(*new_text)} : nullptr,
+    new_text ? unique_ptr<Text>{new Text(*new_text)} : nullptr
   };
 }
 
@@ -483,86 +534,6 @@ Patch::Node *Patch::splay_node_starting_after(Point target, optional<Point> excl
 }
 
 template <typename CoordinateSpace>
-vector<Change> Patch::get_changes_in_range(Point start, Point end, bool inclusive) {
-  vector<Change> result;
-  if (!root)
-    return result;
-
-  Node *lower_bound = splay_node_starting_before<CoordinateSpace>(start);
-
-  node_stack.clear();
-  left_ancestor_stack.clear();
-  left_ancestor_stack.push_back({Point(), Point()});
-
-  Node *node = root;
-  if (!lower_bound) {
-    while (node->left) {
-      node_stack.push_back(node);
-      node = node->left;
-    }
-  }
-
-  while (node) {
-    Patch::PositionStackEntry &left_ancestor_position =
-        left_ancestor_stack.back();
-    Point old_start = left_ancestor_position.old_end.traverse(
-        node->old_distance_from_left_ancestor);
-    Point new_start = left_ancestor_position.new_end.traverse(
-        node->new_distance_from_left_ancestor);
-    Point old_end = old_start.traverse(node->old_extent);
-    Point new_end = new_start.traverse(node->new_extent);
-    Text *old_text = node->old_text.get();
-    Text *new_text = node->new_text.get();
-    Change change = {old_start, old_end, new_start, new_end, old_text, new_text};
-
-    if (inclusive) {
-      if (CoordinateSpace::start(change) > end) {
-        break;
-      }
-
-      if (CoordinateSpace::end(change) >= start) {
-        result.push_back(change);
-      }
-    } else {
-      if (CoordinateSpace::start(change) >= end) {
-        break;
-      }
-
-      if (CoordinateSpace::end(change) > start) {
-        result.push_back(change);
-      }
-    }
-
-    if (node->right) {
-      left_ancestor_stack.push_back(
-          Patch::PositionStackEntry{old_end, new_end});
-      node_stack.push_back(node);
-      node = node->right;
-
-      while (node->left) {
-        node_stack.push_back(node);
-        node = node->left;
-      }
-    } else {
-      while (!node_stack.empty() && node_stack.back()->right == node) {
-        node = node_stack.back();
-        node_stack.pop_back();
-        left_ancestor_stack.pop_back();
-      }
-
-      if (node_stack.empty()) {
-        node = nullptr;
-      } else {
-        node = node_stack.back();
-        node_stack.pop_back();
-      }
-    }
-  }
-
-  return result;
-}
-
-template <typename CoordinateSpace>
 optional<Change> Patch::change_for_position(Point target) {
   if (splay_node_starting_before<CoordinateSpace>(target)) {
     return change_for_root_node();
@@ -588,7 +559,18 @@ Change Patch::change_for_root_node() {
   Point new_end = new_start.traverse(root->new_extent);
   Text *old_text = root->old_text.get();
   Text *new_text = root->new_text.get();
-  return Change {old_start, old_end, new_start, new_end, old_text, new_text};
+  uint32_t preceding_old_text_size = root->left ? root->left->old_subtree_text_size : 0;
+  uint32_t preceding_new_text_size = root->left ? root->left->new_subtree_text_size : 0;
+  return Change {
+    old_start,
+    old_end,
+    new_start,
+    new_end,
+    old_text,
+    new_text,
+    preceding_old_text_size,
+    preceding_new_text_size
+  };
 }
 
 bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
@@ -665,17 +647,14 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
             TextSlice(*lower_bound->new_text).prefix(new_extent_prefix);
         TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).suffix(
             new_deletion_end.traversal(upper_bound_new_start));
-        upper_bound->new_text = unique_ptr<Text>{new Text(Text::concat(
-            new_text_prefix, TextSlice(*inserted_text), new_text_suffix))};
+        upper_bound->set_new_text(
+          Text::concat(new_text_prefix, *inserted_text, new_text_suffix)
+        );
       } else {
-        upper_bound->new_text = nullptr;
+        upper_bound->set_new_text(optional<Text> {});
       }
 
-      if (old_text) {
-        upper_bound->old_text = unique_ptr<Text>{new Text{move(*old_text)}};
-      } else {
-        upper_bound->old_text = nullptr;
-      }
+      upper_bound->set_old_text(move(old_text));
 
       if (lower_bound == upper_bound) {
         if (root->old_extent.is_zero() && root->new_extent.is_zero()) {
@@ -701,17 +680,14 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
       if (inserted_text && upper_bound->new_text) {
         TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).suffix(
             new_deletion_end.traversal(upper_bound_new_start));
-        upper_bound->new_text =
-            unique_ptr<Text>{new Text(Text::concat(TextSlice(*inserted_text), new_text_suffix))};
+        upper_bound->set_new_text(
+          Text::concat(*inserted_text, new_text_suffix)
+        );
       } else {
-        upper_bound->new_text = nullptr;
+        upper_bound->set_new_text(optional<Text> {});
       }
 
-      if (old_text) {
-        upper_bound->old_text = unique_ptr<Text> {new Text{move(*old_text)}};
-      } else {
-        upper_bound->old_text = nullptr;
-      }
+      upper_bound->set_old_text(move(old_text));
 
       delete_node(&lower_bound->right);
       if (upper_bound->left != lower_bound) {
@@ -736,17 +712,12 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
       if (inserted_text && lower_bound->new_text) {
         TextSlice new_text_prefix =
             TextSlice(*lower_bound->new_text).prefix(new_extent_prefix);
-        lower_bound->new_text =
-            unique_ptr<Text>{new Text(Text::concat(new_text_prefix, TextSlice(*inserted_text)))};
+        lower_bound->set_new_text(Text::concat(new_text_prefix, *inserted_text));
       } else {
-        lower_bound->new_text = nullptr;
+        lower_bound->set_new_text(optional<Text> {});
       }
 
-      if (old_text) {
-        lower_bound->old_text = unique_ptr<Text>{new Text{move(*old_text)}};
-      } else {
-        lower_bound->old_text = nullptr;
-      }
+      lower_bound->set_old_text(move(old_text));
 
       delete_node(&lower_bound->right);
       rotate_node_right(lower_bound, upper_bound, nullptr);
@@ -817,17 +788,12 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
       if (inserted_text && lower_bound->new_text) {
         TextSlice new_text_prefix = TextSlice(*lower_bound->new_text).prefix(
             new_splice_start.traversal(lower_bound_new_start));
-        lower_bound->new_text =
-            unique_ptr<Text>{new Text(Text::concat(new_text_prefix, TextSlice(*inserted_text)))};
+        lower_bound->set_new_text(Text::concat(new_text_prefix, *inserted_text));
       } else {
-        lower_bound->new_text = nullptr;
+        lower_bound->set_new_text(optional<Text> {});
       }
 
-      if (old_text) {
-        lower_bound->old_text = unique_ptr<Text>{new Text{move(*old_text)}};
-      } else {
-        lower_bound->old_text = nullptr;
-      }
+      lower_bound->set_old_text(move(old_text));
     } else {
       Point old_splice_start = lower_bound_old_end.traverse(
           new_splice_start.traversal(lower_bound_new_end));
@@ -870,17 +836,12 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
       if (inserted_text && upper_bound->new_text) {
         TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).suffix(
             new_deletion_end.traversal(upper_bound_new_start));
-        upper_bound->new_text =
-            unique_ptr<Text>{new Text(Text::concat(TextSlice(*inserted_text), new_text_suffix))};
+        upper_bound->set_new_text(Text::concat(*inserted_text, new_text_suffix));
       } else {
-        upper_bound->new_text = nullptr;
+        upper_bound->set_new_text(optional<Text> {});
       }
 
-      if (old_text) {
-        upper_bound->old_text = unique_ptr<Text>{new Text{move(*old_text)}};
-      } else {
-        upper_bound->old_text = nullptr;
-      }
+      upper_bound->set_old_text(move(old_text));
     } else {
       root =
           build_node(nullptr, upper_bound, new_splice_start, new_splice_start,
@@ -904,6 +865,9 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
                      old_deletion_end.traversal(new_splice_start),
                      new_insertion_extent, move(old_text), move(inserted_text));
   }
+
+  if (lower_bound) lower_bound->compute_subtree_text_sizes();
+  if (upper_bound) upper_bound->compute_subtree_text_sizes();
 
   return true;
 }
@@ -1010,6 +974,9 @@ bool Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
       delete_node(&upper_bound->left);
     }
   }
+
+  if (lower_bound) lower_bound->compute_subtree_text_sizes();
+  if (upper_bound) upper_bound->compute_subtree_text_sizes();
 
   return true;
 }
@@ -1124,6 +1091,9 @@ void Patch::rotate_node_left(Node *pivot, Node *root, Node *root_parent) {
   pivot->new_distance_from_left_ancestor =
       root->new_distance_from_left_ancestor.traverse(root->new_extent)
           .traverse(pivot->new_distance_from_left_ancestor);
+
+  root->compute_subtree_text_sizes();
+  pivot->compute_subtree_text_sizes();
 }
 
 void Patch::rotate_node_right(Node *pivot, Node *root, Node *root_parent) {
@@ -1146,6 +1116,9 @@ void Patch::rotate_node_right(Node *pivot, Node *root, Node *root_parent) {
   root->new_distance_from_left_ancestor =
       root->new_distance_from_left_ancestor.traversal(
           pivot->new_distance_from_left_ancestor.traverse(pivot->new_extent));
+
+  root->compute_subtree_text_sizes();
+  pivot->compute_subtree_text_sizes();
 }
 
 void Patch::delete_root() {
@@ -1163,7 +1136,7 @@ void Patch::delete_root() {
       if (parent->left == node) {
         delete_node(&parent->left);
         break;
-      } else if (parent->right == node) {
+      } else {
         delete_node(&parent->right);
         break;
       }
@@ -1171,6 +1144,9 @@ void Patch::delete_root() {
       delete_node(&root);
       break;
     }
+
+    parent->old_subtree_text_size -= node->old_text_size();
+    parent->new_subtree_text_size -= node->new_text_size();
   }
 }
 
@@ -1241,7 +1217,7 @@ vector<Change> Patch::get_changes() const {
   Node *node = root;
   node_stack.clear();
   left_ancestor_stack.clear();
-  left_ancestor_stack.push_back({Point(), Point()});
+  left_ancestor_stack.push_back({Point(), Point(), 0, 0});
 
   while (node->left) {
     node_stack.push_back(node);
@@ -1249,20 +1225,140 @@ vector<Change> Patch::get_changes() const {
   }
 
   while (node) {
-    PositionStackEntry &left_ancestor_position = left_ancestor_stack.back();
-    Point old_start = left_ancestor_position.old_end.traverse(
+    PositionStackEntry &left_ancestor_info = left_ancestor_stack.back();
+    Point old_start = left_ancestor_info.old_end.traverse(
         node->old_distance_from_left_ancestor);
-    Point new_start = left_ancestor_position.new_end.traverse(
+    Point new_start = left_ancestor_info.new_end.traverse(
         node->new_distance_from_left_ancestor);
     Point old_end = old_start.traverse(node->old_extent);
     Point new_end = new_start.traverse(node->new_extent);
     Text *old_text = node->old_text.get();
     Text *new_text = node->new_text.get();
-    result.push_back(
-        Change{old_start, old_end, new_start, new_end, old_text, new_text});
+    uint32_t preceding_old_text_size =
+      left_ancestor_info.total_old_text_size +
+      (node->left ? node->left->old_subtree_text_size : 0);
+    uint32_t preceding_new_text_size =
+      left_ancestor_info.total_new_text_size +
+      (node->left ? node->left->new_subtree_text_size : 0);
+    Change change {
+      old_start,
+      old_end,
+      new_start,
+      new_end,
+      old_text,
+      new_text,
+      preceding_old_text_size,
+      preceding_new_text_size
+    };
+    result.push_back(change);
 
     if (node->right) {
-      left_ancestor_stack.push_back(PositionStackEntry{old_end, new_end});
+      left_ancestor_stack.push_back(PositionStackEntry{
+        old_end,
+        new_end,
+        preceding_old_text_size + node->old_text_size(),
+        preceding_new_text_size + node->new_text_size()
+      });
+      node_stack.push_back(node);
+      node = node->right;
+
+      while (node->left) {
+        node_stack.push_back(node);
+        node = node->left;
+      }
+    } else {
+      while (!node_stack.empty() && node_stack.back()->right == node) {
+        node = node_stack.back();
+        node_stack.pop_back();
+        left_ancestor_stack.pop_back();
+      }
+
+      if (node_stack.empty()) {
+        node = nullptr;
+      } else {
+        node = node_stack.back();
+        node_stack.pop_back();
+      }
+    }
+  }
+
+  return result;
+}
+
+template <typename CoordinateSpace>
+vector<Change> Patch::get_changes_in_range(Point start, Point end, bool inclusive) {
+  vector<Change> result;
+  if (!root)
+    return result;
+
+  Node *lower_bound = splay_node_starting_before<CoordinateSpace>(start);
+
+  node_stack.clear();
+  left_ancestor_stack.clear();
+  left_ancestor_stack.push_back({Point(), Point(), 0, 0});
+
+  Node *node = root;
+  if (!lower_bound) {
+    while (node->left) {
+      node_stack.push_back(node);
+      node = node->left;
+    }
+  }
+
+  while (node) {
+    Patch::PositionStackEntry &left_ancestor_info =
+        left_ancestor_stack.back();
+    Point old_start = left_ancestor_info.old_end.traverse(
+        node->old_distance_from_left_ancestor);
+    Point new_start = left_ancestor_info.new_end.traverse(
+        node->new_distance_from_left_ancestor);
+
+    Point old_end = old_start.traverse(node->old_extent);
+    Point new_end = new_start.traverse(node->new_extent);
+    Text *old_text = node->old_text.get();
+    Text *new_text = node->new_text.get();
+    uint32_t preceding_old_text_size =
+      left_ancestor_info.total_old_text_size +
+      (node->left ? node->left->old_subtree_text_size : 0);
+    uint32_t preceding_new_text_size =
+      left_ancestor_info.total_new_text_size +
+      (node->left ? node->left->new_subtree_text_size : 0);
+    Change change {
+      old_start,
+      old_end,
+      new_start,
+      new_end,
+      old_text,
+      new_text,
+      preceding_old_text_size,
+      preceding_new_text_size
+    };
+
+    if (inclusive) {
+      if (CoordinateSpace::start(change) > end) {
+        break;
+      }
+
+      if (CoordinateSpace::end(change) >= start) {
+        result.push_back(change);
+      }
+    } else {
+      if (CoordinateSpace::start(change) >= end) {
+        break;
+      }
+
+      if (CoordinateSpace::end(change) > start) {
+        result.push_back(change);
+      }
+    }
+
+    if (node->right) {
+      left_ancestor_stack.push_back(Patch::PositionStackEntry{
+        old_end,
+        new_end,
+        preceding_old_text_size + node->old_text_size(),
+        preceding_new_text_size + node->new_text_size()
+      });
       node_stack.push_back(node);
       node = node->right;
 
@@ -1423,6 +1519,7 @@ Patch::Patch(Serializer &input)
       next_node++;
       break;
     case Up:
+      node->compute_subtree_text_sizes();
       node = node_stack.back();
       node_stack.pop_back();
       break;
@@ -1430,6 +1527,11 @@ Patch::Patch(Serializer &input)
       delete[] root;
       return;
     }
+  }
+
+  node->compute_subtree_text_sizes();
+  for (auto iter = node_stack.rbegin(); iter != node_stack.rend(); ++iter) {
+    (*iter)->compute_subtree_text_sizes();
   }
 }
 
@@ -1441,7 +1543,7 @@ ostream &operator<<(ostream &stream, const Patch::Change &change) {
     << ", old_text: ";
 
   if (change.old_text) {
-    stream << change.old_text;
+    stream << *change.old_text;
   } else {
     stream << "null";
   }
@@ -1449,10 +1551,13 @@ ostream &operator<<(ostream &stream, const Patch::Change &change) {
   stream << ", new_text: ";
 
   if (change.new_text) {
-    stream << change.new_text;
+    stream << *change.new_text;
   } else {
     stream << "null";
   }
+
+  stream << ", preceding_old_text_size: " << change.preceding_old_text_size;
+  stream << ", preceding_new_text_size: " << change.preceding_new_text_size;
 
   stream << "}";
 

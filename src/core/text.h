@@ -39,7 +39,7 @@ class Text {
   Point extent() const;
   void append(TextSlice);
   void serialize(Serializer &) const;
-  size_t size() const;
+  uint32_t size() const;
   const uint16_t *data() const;
 
   bool operator==(const Text &) const;

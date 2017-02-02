@@ -45,6 +45,8 @@ class ChangeWrapper : public Nan::ObjectWrap {
     Nan::SetAccessor(instance_template, Nan::New("newStart").ToLocalChecked(), get_new_start);
     Nan::SetAccessor(instance_template, Nan::New("oldEnd").ToLocalChecked(), get_old_end);
     Nan::SetAccessor(instance_template, Nan::New("newEnd").ToLocalChecked(), get_new_end);
+    Nan::SetAccessor(instance_template, Nan::New("precedingOldTextLength").ToLocalChecked(), get_preceding_old_text_length);
+    Nan::SetAccessor(instance_template, Nan::New("precedingNewTextLength").ToLocalChecked(), get_preceding_new_text_length);
 
     // Non-enumerable legacy properties for backward compatibility
     Nan::SetAccessor(instance_template, Nan::New("start").ToLocalChecked(), get_new_start, nullptr, Handle<Value>(),
@@ -108,6 +110,16 @@ class ChangeWrapper : public Nan::ObjectWrap {
   static void get_new_extent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
     Patch::Change &change = Nan::ObjectWrap::Unwrap<ChangeWrapper>(info.This())->change;
     info.GetReturnValue().Set(PointWrapper::from_point(change.new_end.traversal(change.new_start)));
+  }
+
+  static void get_preceding_old_text_length(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
+    Patch::Change &change = Nan::ObjectWrap::Unwrap<ChangeWrapper>(info.This())->change;
+    info.GetReturnValue().Set(Nan::New<Number>(change.preceding_old_text_size));
+  }
+
+  static void get_preceding_new_text_length(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
+    Patch::Change &change = Nan::ObjectWrap::Unwrap<ChangeWrapper>(info.This())->change;
+    info.GetReturnValue().Set(Nan::New<Number>(change.preceding_new_text_size));
   }
 
   static void to_string(const Nan::FunctionCallbackInfo<Value> &info) {

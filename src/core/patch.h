@@ -30,6 +30,8 @@ public:
     Point new_end;
     Text *old_text;
     Text *new_text;
+    uint32_t preceding_old_text_size;
+    uint32_t preceding_new_text_size;
   };
 
   Patch();

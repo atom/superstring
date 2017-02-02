@@ -243,7 +243,7 @@ Text::const_iterator Text::cend() const {
   return content.cend();
 }
 
-size_t Text::size() const {
+uint32_t Text::size() const {
   return content.size();
 }
 
@@ -288,12 +288,6 @@ ostream &operator<<(ostream &stream, const Text &text) {
       stream << "\\u";
       stream << character;
     }
-  }
-
-  stream << "\n";
-
-  for (uint32_t line_offset : text.line_offsets) {
-    stream << line_offset << " ";
   }
 
   return stream;
