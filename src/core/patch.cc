@@ -28,6 +28,7 @@ struct Patch::Node {
 
   unique_ptr<Text> old_text;
   unique_ptr<Text> new_text;
+  uint32_t old_text_size_;
 
   uint32_t old_subtree_text_size;
   uint32_t new_subtree_text_size;
@@ -40,7 +41,8 @@ struct Patch::Node {
     Point old_distance_from_left_ancestor,
     Point new_distance_from_left_ancestor,
     unique_ptr<Text> &&old_text,
-    unique_ptr<Text> &&new_text
+    unique_ptr<Text> &&new_text,
+    uint32_t old_text_size
   ) :
     left {left},
     right {right},
@@ -49,7 +51,8 @@ struct Patch::Node {
     old_distance_from_left_ancestor {old_distance_from_left_ancestor},
     new_distance_from_left_ancestor {new_distance_from_left_ancestor},
     old_text {std::move(old_text)},
-    new_text {std::move(new_text)} {
+    new_text {std::move(new_text)},
+    old_text_size_ {old_text_size} {
     compute_subtree_text_sizes();
   }
 
@@ -63,8 +66,10 @@ struct Patch::Node {
 
     if (input.read<uint32_t>()) {
       old_text = unique_ptr<Text> {new Text {input}};
+      old_text_size_ = 0;
     } else {
       old_text = nullptr;
+      old_text_size_ = input.read<uint32_t>();
     }
 
     if (input.read<uint32_t>()) {
@@ -85,8 +90,26 @@ struct Patch::Node {
       (right ? right->new_subtree_text_size : 0);
   }
 
+  void set_old_text(optional<Text> &&text, uint32_t old_text_size) {
+    if (text) {
+      old_text = unique_ptr<Text>{new Text{move(*text)}};
+      old_text_size_ = 0;
+    } else {
+      old_text = nullptr;
+      old_text_size_ = old_text_size;
+    }
+  }
+
   uint32_t old_text_size() {
-    return old_text ? old_text->size() : 0;
+    return old_text ? old_text->size() : old_text_size_;
+  }
+
+  void set_new_text(optional<Text> &&text) {
+    if (text) {
+      new_text = unique_ptr<Text>{new Text{move(*text)}};
+    } else {
+      new_text = nullptr;
+    }
   }
 
   uint32_t new_text_size() {
@@ -115,7 +138,8 @@ struct Patch::Node {
       old_distance_from_left_ancestor,
       new_distance_from_left_ancestor,
       old_text ? unique_ptr<Text>(new Text(*old_text)) : nullptr,
-      new_text ? unique_ptr<Text>(new Text(*new_text)) : nullptr
+      new_text ? unique_ptr<Text>(new Text(*new_text)) : nullptr,
+      old_text_size_,
     };
     result->old_subtree_text_size = old_subtree_text_size;
     result->new_subtree_text_size = new_subtree_text_size;
@@ -131,27 +155,12 @@ struct Patch::Node {
       new_distance_from_left_ancestor,
       old_distance_from_left_ancestor,
       new_text ? unique_ptr<Text>(new Text(*new_text)) : nullptr,
-      old_text ? unique_ptr<Text>(new Text(*old_text)) : nullptr
+      old_text ? unique_ptr<Text>(new Text(*old_text)) : nullptr,
+      new_text ? new_text->size() : 0
     };
     result->old_subtree_text_size = new_subtree_text_size;
     result->new_subtree_text_size = old_subtree_text_size;
     return result;
-  }
-
-  void set_old_text(optional<Text> &&text) {
-    if (text) {
-      old_text = unique_ptr<Text>{new Text{move(*text)}};
-    } else {
-      old_text = nullptr;
-    }
-  }
-
-  void set_new_text(optional<Text> &&text) {
-    if (text) {
-      new_text = unique_ptr<Text>{new Text{move(*text)}};
-    } else {
-      new_text = nullptr;
-    }
   }
 
   void serialize(Serializer &output) const {
@@ -164,6 +173,7 @@ struct Patch::Node {
       old_text->serialize(output);
     } else {
       output.append<uint32_t>(0);
+      output.append<uint32_t>(old_text_size_);
     }
     if (new_text) {
       output.append<uint32_t>(1);
@@ -309,7 +319,8 @@ Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
         splice(iter->new_start, iter->old_end.traversal(iter->old_start),
                iter->new_end.traversal(iter->new_start),
                iter->old_text ? *iter->old_text : optional<Text> {},
-               iter->new_text ? *iter->new_text : optional<Text> {});
+               iter->new_text ? *iter->new_text : optional<Text> {},
+               iter->old_text_size);
       }
     } else {
       for (auto iter = changes.rbegin(), end = changes.rend(); iter != end;
@@ -317,7 +328,8 @@ Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
         splice(iter->old_start, iter->old_end.traversal(iter->old_start),
                iter->new_end.traversal(iter->new_start),
                iter->old_text ? *iter->old_text : optional<Text> {},
-               iter->new_text ? *iter->new_text : optional<Text> {});
+               iter->new_text ? *iter->new_text : optional<Text> {},
+               iter->old_text_size);
       }
     }
 
@@ -339,7 +351,8 @@ Patch::Node *Patch::build_node(Node *left, Node *right,
                        Point old_distance_from_left_ancestor,
                        Point new_distance_from_left_ancestor,
                        Point old_extent, Point new_extent,
-                       optional<Text> &&old_text, optional<Text> &&new_text) {
+                       optional<Text> &&old_text, optional<Text> &&new_text,
+                       uint32_t old_text_size) {
   change_count++;
   return new Node {
     left,
@@ -349,7 +362,8 @@ Patch::Node *Patch::build_node(Node *left, Node *right,
     old_distance_from_left_ancestor,
     new_distance_from_left_ancestor,
     old_text ? unique_ptr<Text>{new Text(*old_text)} : nullptr,
-    new_text ? unique_ptr<Text>{new Text(*new_text)} : nullptr
+    new_text ? unique_ptr<Text>{new Text(*new_text)} : nullptr,
+    old_text_size
   };
 }
 
@@ -559,6 +573,7 @@ Change Patch::change_for_root_node() {
   Point new_end = new_start.traverse(root->new_extent);
   Text *old_text = root->old_text.get();
   Text *new_text = root->new_text.get();
+  uint32_t old_text_size = root->old_text_size();
   uint32_t preceding_old_text_size = root->left ? root->left->old_subtree_text_size : 0;
   uint32_t preceding_new_text_size = root->left ? root->left->new_subtree_text_size : 0;
   return Change {
@@ -569,13 +584,15 @@ Change Patch::change_for_root_node() {
     old_text,
     new_text,
     preceding_old_text_size,
-    preceding_new_text_size
+    preceding_new_text_size,
+    old_text_size,
   };
 }
 
-bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
-                   Point new_insertion_extent, optional<Text> &&deleted_text,
-                   optional<Text> &&inserted_text) {
+bool Patch::splice(Point new_splice_start,
+                   Point new_deletion_extent, Point new_insertion_extent,
+                   optional<Text> &&deleted_text, optional<Text> &&inserted_text,
+                   uint32_t deleted_text_size) {
   if (is_frozen()) {
     return false;
   }
@@ -587,7 +604,8 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
   if (!root) {
     root = build_node(nullptr, nullptr, new_splice_start, new_splice_start,
                      new_deletion_extent, new_insertion_extent,
-                     move(deleted_text), move(inserted_text));
+                     move(deleted_text), move(inserted_text),
+                     deleted_text_size);
     return true;
   }
 
@@ -597,6 +615,12 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
   Node *lower_bound = splay_node_starting_before<NewCoordinates>(new_splice_start);
   optional<Text> old_text =
       compute_old_text(move(deleted_text), new_splice_start, new_deletion_end);
+
+  uint32_t old_text_size = 0;
+  if (!old_text) {
+    old_text_size = compute_old_text_size(deleted_text_size, new_splice_start, new_deletion_end);
+  }
+
   Node *upper_bound =
       splay_node_ending_after<NewCoordinates>(new_deletion_end, new_splice_start);
   if (upper_bound && lower_bound && lower_bound != upper_bound) {
@@ -654,7 +678,7 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
         upper_bound->set_new_text(optional<Text> {});
       }
 
-      upper_bound->set_old_text(move(old_text));
+      upper_bound->set_old_text(move(old_text), old_text_size);
 
       if (lower_bound == upper_bound) {
         if (root->old_extent.is_zero() && root->new_extent.is_zero()) {
@@ -687,7 +711,7 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
         upper_bound->set_new_text(optional<Text> {});
       }
 
-      upper_bound->set_old_text(move(old_text));
+      upper_bound->set_old_text(move(old_text), old_text_size);
 
       delete_node(&lower_bound->right);
       if (upper_bound->left != lower_bound) {
@@ -717,7 +741,7 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
         lower_bound->set_new_text(optional<Text> {});
       }
 
-      lower_bound->set_old_text(move(old_text));
+      lower_bound->set_old_text(move(old_text), old_text_size);
 
       delete_node(&lower_bound->right);
       rotate_node_right(lower_bound, upper_bound, nullptr);
@@ -734,7 +758,7 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
         root = build_node(upper_bound->left, upper_bound, upper_bound_old_start,
                          upper_bound_new_start, Point(),
                          new_insertion_extent, move(old_text),
-                         move(inserted_text));
+                         move(inserted_text), old_text_size);
 
         upper_bound->left = nullptr;
         upper_bound->old_distance_from_left_ancestor = Point();
@@ -751,7 +775,7 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
         root = build_node(
             lower_bound, upper_bound, old_splice_start, new_splice_start,
             old_deletion_end.traversal(old_splice_start), new_insertion_extent,
-            move(old_text), move(inserted_text));
+            move(old_text), move(inserted_text), old_text_size);
 
         delete_node(&lower_bound->right);
         upper_bound->left = nullptr;
@@ -793,14 +817,15 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
         lower_bound->set_new_text(optional<Text> {});
       }
 
-      lower_bound->set_old_text(move(old_text));
+      lower_bound->set_old_text(move(old_text), old_text_size);
     } else {
       Point old_splice_start = lower_bound_old_end.traverse(
           new_splice_start.traversal(lower_bound_new_end));
       root =
           build_node(lower_bound, nullptr, old_splice_start, new_splice_start,
                     old_deletion_end.traversal(old_splice_start),
-                    new_insertion_extent, move(old_text), move(inserted_text));
+                    new_insertion_extent, move(old_text), move(inserted_text),
+                    old_text_size);
     }
 
   } else if (upper_bound) {
@@ -841,12 +866,13 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
         upper_bound->set_new_text(optional<Text> {});
       }
 
-      upper_bound->set_old_text(move(old_text));
+      upper_bound->set_old_text(move(old_text), old_text_size);
     } else {
       root =
           build_node(nullptr, upper_bound, new_splice_start, new_splice_start,
                     old_deletion_end.traversal(new_splice_start),
-                    new_insertion_extent, move(old_text), move(inserted_text));
+                    new_insertion_extent, move(old_text), move(inserted_text),
+                    old_text_size);
       Point distance_from_end_of_root_to_start_of_upper_bound =
           upper_bound_new_start.traversal(new_deletion_end);
       upper_bound->old_distance_from_left_ancestor =
@@ -863,7 +889,8 @@ bool Patch::splice(Point new_splice_start, Point new_deletion_extent,
     delete_node(&root);
     root = build_node(nullptr, nullptr, new_splice_start, new_splice_start,
                      old_deletion_end.traversal(new_splice_start),
-                     new_insertion_extent, move(old_text), move(inserted_text));
+                     new_insertion_extent, move(old_text), move(inserted_text),
+                     old_text_size);
   }
 
   if (lower_bound) lower_bound->compute_subtree_text_sizes();
@@ -954,6 +981,7 @@ bool Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
           std::swap(upper_bound->old_text, lower_bound->old_text);
         } else {
           upper_bound->old_text = nullptr;
+          upper_bound->old_text_size_ += lower_bound->old_text_size_;
         }
 
         upper_bound->new_extent =
@@ -1234,6 +1262,7 @@ vector<Change> Patch::get_changes() const {
     Point new_end = new_start.traverse(node->new_extent);
     Text *old_text = node->old_text.get();
     Text *new_text = node->new_text.get();
+    uint32_t old_text_size = node->old_text_size();
     uint32_t preceding_old_text_size =
       left_ancestor_info.total_old_text_size +
       (node->left ? node->left->old_subtree_text_size : 0);
@@ -1248,7 +1277,8 @@ vector<Change> Patch::get_changes() const {
       old_text,
       new_text,
       preceding_old_text_size,
-      preceding_new_text_size
+      preceding_new_text_size,
+      old_text_size,
     };
     result.push_back(change);
 
@@ -1317,6 +1347,7 @@ vector<Change> Patch::get_changes_in_range(Point start, Point end, bool inclusiv
     Point new_end = new_start.traverse(node->new_extent);
     Text *old_text = node->old_text.get();
     Text *new_text = node->new_text.get();
+    uint32_t old_text_size = node->old_text_size();
     uint32_t preceding_old_text_size =
       left_ancestor_info.total_old_text_size +
       (node->left ? node->left->old_subtree_text_size : 0);
@@ -1331,7 +1362,8 @@ vector<Change> Patch::get_changes_in_range(Point start, Point end, bool inclusiv
       old_text,
       new_text,
       preceding_old_text_size,
-      preceding_new_text_size
+      preceding_new_text_size,
+      old_text_size,
     };
 
     if (inclusive) {
@@ -1407,10 +1439,9 @@ optional<Text> Patch::compute_old_text(optional<Text> &&deleted_text,
   if (!deleted_text) return optional<Text> {};
 
   Text result;
-  Point range_start = new_splice_start, range_end = new_deletion_end;
 
   auto overlapping_changes =
-      get_changes_in_new_range(range_start, range_end, merges_adjacent_changes);
+      get_changes_in_new_range(new_splice_start, new_deletion_end, merges_adjacent_changes);
   TextSlice deleted_text_slice = TextSlice(*deleted_text);
   Point deleted_text_slice_start = new_splice_start;
 
@@ -1436,6 +1467,31 @@ optional<Text> Patch::compute_old_text(optional<Text> &&deleted_text,
 
   result.append(deleted_text_slice);
   return result;
+}
+
+uint32_t Patch::compute_old_text_size(uint32_t deleted_text_size,
+                                      Point new_splice_start,
+                                      Point new_deletion_end) {
+  uint32_t old_text_size = deleted_text_size;
+  auto overlapping_changes =
+      get_changes_in_new_range(new_splice_start, new_deletion_end, merges_adjacent_changes);
+
+  for (const Change &change : overlapping_changes) {
+    if (!change.new_text) return 0;
+
+    TextSlice overlapping_new_text = TextSlice(*change.new_text);
+    if (new_deletion_end < change.new_end) {
+      overlapping_new_text = overlapping_new_text.prefix(new_deletion_end.traversal(change.new_start));
+    }
+    if (new_splice_start > change.new_start) {
+      overlapping_new_text = overlapping_new_text.suffix(new_splice_start.traversal(change.new_start));
+    }
+
+    old_text_size -= overlapping_new_text.size();
+    old_text_size += change.old_text_size;
+  }
+
+  return old_text_size;
 }
 
 static const uint32_t SERIALIZATION_VERSION = 1;

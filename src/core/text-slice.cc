@@ -38,6 +38,10 @@ Point TextSlice::extent() const {
   return end_position.traversal(start_position);
 }
 
+uint32_t TextSlice::size() const {
+  return end_offset() - start_offset();
+}
+
 Text::const_iterator TextSlice::cbegin() const {
   return text->cbegin() + start_offset();
 }

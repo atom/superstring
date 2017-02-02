@@ -175,6 +175,26 @@ TEST_CASE("Patch::splice – overlapping with text") {
   }));
 }
 
+TEST_CASE("Patch::splice - deleted_text_size") {
+  Patch patch;
+
+  patch.splice(Point {0, 2}, Point {0, 3}, Point {0, 5}, optional<Text> {}, Text {u"xxxxx"}, 3);
+  patch.splice(Point {1, 0}, Point {0, 0}, Point {0, 1}, optional<Text> {}, Text {u"x"}, 0);
+  REQUIRE(patch.get_changes().back().preceding_old_text_size == 3);
+
+  patch.splice(Point {0, 1}, Point {0, 2}, Point {0, 5}, optional<Text> {}, Text {u"xxxxx"}, 2);
+  REQUIRE(patch.get_changes().back().preceding_old_text_size == 4);
+
+  patch.splice(Point {0, 8}, Point {0, 4}, Point {0, 5}, optional<Text> {}, Text {u"xxxxx"}, 4);
+  REQUIRE(patch.get_changes().back().preceding_old_text_size == 6);
+
+  patch.splice(Point {0, 5}, Point {0, 3}, Point {0, 5}, optional<Text> {}, Text {u"xxxxx"}, 3);
+  REQUIRE(patch.get_changes().back().preceding_old_text_size == 6);
+
+  patch.splice(Point {0, 0}, Point {0, 16}, Point {0, 5}, optional<Text> {}, Text {u"xxxxx"}, 16);
+  REQUIRE(patch.get_changes().back().preceding_old_text_size == 8);
+}
+
 TEST_CASE("Patch::serialize") {
   Patch patch;
 

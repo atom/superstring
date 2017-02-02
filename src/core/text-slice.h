@@ -24,6 +24,7 @@ class TextSlice {
   TextSlice suffix(Point) const;
 
   Point extent() const;
+  uint32_t size() const;
 
   Text::const_iterator cbegin() const;
   Text::const_iterator cend() const;
