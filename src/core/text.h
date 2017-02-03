@@ -34,6 +34,7 @@ class Text {
                         size_t cchange_size, std::function<void(size_t)> progress_callback);
   static Text concat(TextSlice a, TextSlice b);
   static Text concat(TextSlice a, TextSlice b, TextSlice c);
+  void splice(Point start, Point deletion_extent, TextSlice inserted_slice);
 
   uint16_t at(uint32_t offset) const;
   std::pair<const_iterator, const_iterator> line_iterators(uint32_t row) const;

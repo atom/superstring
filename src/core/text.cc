@@ -219,6 +219,80 @@ Text Text::concat(TextSlice a, TextSlice b, TextSlice c) {
   return result;
 }
 
+template<typename T>
+void splice_vector(
+  std::vector<T> &vector, uint32_t splice_start, uint32_t deletion_size,
+  typename std::vector<T>::const_iterator inserted_begin,
+  typename std::vector<T>::const_iterator inserted_end
+) {
+  uint32_t original_size = vector.size();
+  uint32_t insertion_size = inserted_end - inserted_begin;
+  uint32_t insertion_end = splice_start + insertion_size;
+  uint32_t deletion_end = splice_start + deletion_size;
+  int64_t size_delta = static_cast<int64_t>(insertion_size) - deletion_size;
+
+  if (size_delta > 0) {
+    vector.resize(vector.size() + size_delta);
+  }
+
+  if (insertion_end >= deletion_end && insertion_end < original_size) {
+    std::copy_backward(
+      vector.cbegin() + deletion_end,
+      vector.cbegin() + original_size,
+      vector.end()
+    );
+  } else {
+    std::copy(
+      vector.cbegin() + deletion_end,
+      vector.cbegin() + original_size,
+      vector.begin() + insertion_end
+    );
+  }
+
+  std::copy(
+    inserted_begin,
+    inserted_end,
+    vector.begin() + splice_start
+  );
+
+  if (size_delta < 0) {
+    vector.resize(vector.size() + size_delta);
+  }
+}
+
+void Text::splice(Point start, Point deletion_extent, TextSlice inserted_slice) {
+  uint32_t content_splice_start = offset_for_position(start);
+  uint32_t original_content_size = content.size();
+  splice_vector(
+    content,
+    content_splice_start,
+    offset_for_position(start.traverse(deletion_extent)) - content_splice_start,
+    inserted_slice.cbegin(),
+    inserted_slice.cend()
+  );
+
+  splice_vector(
+    line_offsets,
+    start.row + 1,
+    deletion_extent.row,
+    inserted_slice.text->line_offsets.begin() + inserted_slice.start_position.row + 1,
+    inserted_slice.text->line_offsets.begin() + inserted_slice.end_position.row + 1
+  );
+
+  uint32_t inserted_newlines_start = start.row + 1;
+  uint32_t inserted_newlines_end = start.row + inserted_slice.extent().row + 1;
+  int64_t inserted_line_offsets_delta = content_splice_start - static_cast<int64_t>(inserted_slice.start_offset());
+  for (size_t i = inserted_newlines_start; i < inserted_newlines_end; i++) {
+    line_offsets[i] += inserted_line_offsets_delta;
+  }
+
+  uint32_t content_size = content.size();
+  int64_t trailing_line_offsets_delta = static_cast<int64_t>(content_size) - original_content_size;
+  for (auto iter = line_offsets.begin() + inserted_newlines_end; iter != line_offsets.end(); ++iter) {
+    *iter += trailing_line_offsets_delta;
+  }
+}
+
 uint16_t Text::at(uint32_t offset) const {
   return content[offset];
 }

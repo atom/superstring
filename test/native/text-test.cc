@@ -141,3 +141,17 @@ TEST_CASE("Text::concat") {
     REQUIRE(Text::concat(prefix, suffix) == Text(u"abc\ndefjkl"));
   }
 }
+
+TEST_CASE("Text::splice") {
+  Text text {u"abc\ndef\r\nghi\rjkl"};
+  text.splice({1, 2}, {1, 1}, Text {u"mno\npq\r\nst"});
+  REQUIRE(text == Text {u"abc\ndemno\npq\r\nsthi\rjkl"});
+  text.splice({2, 1}, {2, 1}, Text {u""});
+  REQUIRE(text == Text {u"abc\ndemno\npkl"});
+  text.splice({1, 1}, {0, 0}, Text {u"uvw"});
+  REQUIRE(text == Text {u"abc\nduvwemno\npkl"});
+  text.splice(text.extent(), {0, 0}, Text {u"\nxyz\r\nabc"});
+  REQUIRE(text == Text {u"abc\nduvwemno\npkl\nxyz\r\nabc"});
+  text.splice({0, 0}, {0, 0}, Text {u"def\nghi"});
+  REQUIRE(text == Text {u"def\nghiabc\nduvwemno\npkl\nxyz\r\nabc"});
+}
