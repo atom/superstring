@@ -298,7 +298,17 @@ uint16_t Text::at(uint32_t offset) const {
 }
 
 uint32_t Text::offset_for_position(Point position) const {
-  return line_offsets[position.row] + position.column;
+  uint32_t result = line_offsets[position.row] + position.column;
+  uint32_t line_end_offset;
+  if (position.row < line_offsets.size() - 1) {
+    line_end_offset = line_offsets[position.row + 1] - 1;
+    if (content[line_end_offset] == '\n' && content[line_end_offset - 1] == '\r') {
+      line_end_offset--;
+    }
+  } else {
+    line_end_offset = size();
+  }
+  return std::min(result, line_end_offset);
 }
 
 std::pair<Text::const_iterator, Text::const_iterator> Text::line_iterators(uint32_t row) const {

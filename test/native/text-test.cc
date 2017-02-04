@@ -155,3 +155,24 @@ TEST_CASE("Text::splice") {
   text.splice({0, 0}, {0, 0}, Text {u"def\nghi"});
   REQUIRE(text == Text {u"def\nghiabc\nduvwemno\npkl\nxyz\r\nabc"});
 }
+
+TEST_CASE("Text::offset_for_position") {
+  Text text {u"abc\ndefg\rhijkl\r\nmno"};
+
+  REQUIRE(text.offset_for_position({0, 2}) == 2);
+  REQUIRE(text.offset_for_position({0, 3}) == 3);
+  REQUIRE(text.offset_for_position({0, 4}) == 3);
+  REQUIRE(text.offset_for_position({0, 8}) == 3);
+
+  REQUIRE(text.offset_for_position({1, 1}) == 5);
+  REQUIRE(text.offset_for_position({1, 4}) == 8);
+  REQUIRE(text.offset_for_position({1, 5}) == 8);
+
+  REQUIRE(text.offset_for_position({2, 0}) == 9);
+  REQUIRE(text.offset_for_position({2, 5}) == 14);
+  REQUIRE(text.offset_for_position({2, 6}) == 14);
+  REQUIRE(text.offset_for_position({2, 7}) == 14);
+
+  REQUIRE(text.offset_for_position({3, 0}) == 16);
+  REQUIRE(text.offset_for_position({3, 20}) == 19);
+}
