@@ -39,9 +39,12 @@ public:
   static TextBuffer build(std::istream &stream, size_t input_size, const char *encoding_name,
                           size_t cchange_size, std::function<void(size_t)> progress_callback);
 
+  TextBuffer() = default;
   TextBuffer(std::u16string text);
 
   Point extent() const;
+  uint32_t line_length_for_row(uint32_t row);
+  Point clip_position(Point);
   Text text();
   Text text_in_range(Range range);
   void set_text_in_range(Range old_range, Text &&new_text);

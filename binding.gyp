@@ -57,8 +57,9 @@
                     "CATCH_CONFIG_CPP11_NO_IS_ENUM"
                 ],
                 "sources": [
-                    "test/native/patch-test.cc",
+                    "test/native/test-helpers.cc",
                     "test/native/tests.cc",
+                    "test/native/patch-test.cc",
                     "test/native/text-buffer-test.cc",
                     "test/native/text-test.cc",
                 ],

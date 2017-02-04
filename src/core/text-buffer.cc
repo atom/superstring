@@ -1,4 +1,7 @@
 #include "text-buffer.h"
+#include "text-slice.h"
+
+using std::move;
 
 TextBuffer::TextBuffer(Text &&text) :
   base_text {std::move(text)},
@@ -15,6 +18,23 @@ Point TextBuffer::extent() const {
   return extent_;
 }
 
+uint32_t TextBuffer::line_length_for_row(uint32_t row) {
+  return begin().traverse(Point {row, UINT32_MAX}) - begin().traverse(Point {row, 0});
+}
+
+Point TextBuffer::clip_position(Point position) {
+  if (position > extent()) {
+    return extent();
+  } else {
+    uint32_t max_column = line_length_for_row(position.row);
+    if (position.column > max_column) {
+      return Point {position.row, max_column};
+    } else {
+      return position;
+    }
+  }
+}
+
 Text TextBuffer::text() {
   return Text {begin(), end()};
 }
@@ -29,7 +49,7 @@ Text TextBuffer::text_in_range(Range range) {
 void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
   Point new_range_end = old_range.start.traverse(new_text.extent());
   uint32_t deleted_text_size = begin().traverse(old_range.end) - begin().traverse(old_range.start);
-  patch.splice(old_range.start, old_range.extent(), new_text.extent(), optional<Text> {}, new_text, deleted_text_size);
+  patch.splice(old_range.start, old_range.extent(), new_text.extent(), optional<Text> {}, move(new_text), deleted_text_size);
   extent_ = new_range_end.traverse(extent_.traversal(old_range.end));
 }
 
