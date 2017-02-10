@@ -435,6 +435,10 @@ void MarkerIndex::delete_marker(MarkerId id) {
   end_nodes_by_id.erase(id);
 }
 
+bool MarkerIndex::has(MarkerId id) {
+  return start_nodes_by_id.count(id) > 0;
+}
+
 MarkerIndex::SpliceResult MarkerIndex::splice(Point start, Point old_extent, Point new_extent) {
   node_position_cache.clear();
 

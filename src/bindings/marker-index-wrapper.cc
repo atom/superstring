@@ -28,6 +28,7 @@ void MarkerIndexWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New<String>("insert").ToLocalChecked(), Nan::New<FunctionTemplate>(insert));
   prototype_template->Set(Nan::New<String>("setExclusive").ToLocalChecked(), Nan::New<FunctionTemplate>(set_exclusive));
   prototype_template->Set(Nan::New<String>("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(delete_marker));
+  prototype_template->Set(Nan::New<String>("has").ToLocalChecked(), Nan::New<FunctionTemplate>(has));
   prototype_template->Set(Nan::New<String>("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(splice));
   prototype_template->Set(Nan::New<String>("getStart").ToLocalChecked(), Nan::New<FunctionTemplate>(get_start));
   prototype_template->Set(Nan::New<String>("getEnd").ToLocalChecked(), Nan::New<FunctionTemplate>(get_end));
@@ -151,6 +152,16 @@ void MarkerIndexWrapper::delete_marker(const Nan::FunctionCallbackInfo<Value> &i
   optional<MarkerIndex::MarkerId> id = marker_id_from_js(info[0]);
   if (id) {
     wrapper->marker_index.delete_marker(*id);
+  }
+}
+
+void MarkerIndexWrapper::has(const Nan::FunctionCallbackInfo<Value> &info) {
+  MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
+
+  optional<MarkerIndex::MarkerId> id = marker_id_from_js(info[0]);
+  if (id) {
+    bool result = wrapper->marker_index.has(*id);
+    info.GetReturnValue().Set(Nan::New(result));
   }
 }
 

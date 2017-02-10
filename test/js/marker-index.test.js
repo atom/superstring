@@ -285,9 +285,11 @@ describe('MarkerIndex', () => {
       let [start, end] = getRange()
       let exclusive = !!random(2)
       write(() => `insert ${id}, ${formatPoint(start)}, ${formatPoint(end)}, exclusive: ${exclusive}`)
+      assert(!markerIndex.has(id), `Expected marker index to not have ${id}. ` + seedMessage)
       markerIndex.insert(id, start, end)
       if (exclusive) markerIndex.setExclusive(id, true)
       markers.push({id, start, end, exclusive})
+      assert(markerIndex.has(id), `Expected marker index to have ${id}. ` + seedMessage)
     }
 
     function performSplice () {
@@ -301,7 +303,9 @@ describe('MarkerIndex', () => {
     function performDelete () {
       let [{id}] = markers.splice(random(markers.length), 1)
       write(() => `delete ${id}`)
+      assert(markerIndex.has(id), `Expected marker index to have ${id}. ` + seedMessage)
       markerIndex.delete(id)
+      assert(!markerIndex.has(id), `Expected marker index to not have ${id}. ` + seedMessage)
     }
 
     function getRange () {

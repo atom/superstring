@@ -19,6 +19,7 @@ private:
   static void insert(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void set_exclusive(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void delete_marker(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void has(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void splice(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void get_start(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void get_end(const Nan::FunctionCallbackInfo<v8::Value> &info);
