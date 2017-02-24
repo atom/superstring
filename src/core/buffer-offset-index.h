@@ -11,7 +11,7 @@ class BufferOffsetIndex {
  public:
   BufferOffsetIndex();
   ~BufferOffsetIndex();
-  void splice(unsigned, unsigned, std::vector<unsigned>&);
+  void splice(unsigned, unsigned, std::vector<unsigned> const&);
   unsigned character_index_for_position(Point) const;
   Point position_for_character_index(unsigned) const;
 
@@ -20,7 +20,7 @@ class BufferOffsetIndex {
   void bubble_node_down(LineNode *, LineNode *);
   void rotate_node_left(LineNode *, LineNode *, LineNode *);
   void rotate_node_right(LineNode *, LineNode *, LineNode *);
-  LineNode *build_node_tree_from_line_lengths(std::vector<unsigned>&, unsigned, unsigned, unsigned);
+  LineNode *build_node_tree_from_line_lengths(std::vector<unsigned> const&, unsigned, unsigned, unsigned);
 
   LineNode *root;
   std::default_random_engine rng_engine;

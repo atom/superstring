@@ -10,7 +10,7 @@ describe('MarkerIndex', () => {
     let seed, seedMessage, random, markerIndex, markers, idCounter
 
     for (let i = 0; i < 1000; i++) {
-      seed = Date.now()
+      seed = 42;//Date.now()
       seedMessage = `Random Seed: ${seed}`
       random = new Random(seed)
       markerIndex = new MarkerIndex(seed)
@@ -54,8 +54,8 @@ describe('MarkerIndex', () => {
     function verifyRanges () {
       for (let marker of markers) {
         let range = markerIndex.getRange(marker.id)
-        assert.deepEqual(range[0], marker.start, `Marker ${marker.id} start. ` + seedMessage)
-        assert.deepEqual(range[1], marker.end, `Marker ${marker.id} end. ` + seedMessage)
+        assert.deepEqual(range.start, marker.start, `Marker ${marker.id} start. ` + seedMessage)
+        assert.deepEqual(range.end, marker.end, `Marker ${marker.id} end. ` + seedMessage)
       }
     }
 

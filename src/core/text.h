@@ -6,7 +6,12 @@
 #include <ostream>
 #include "point.h"
 
-using Text = std::vector<uint16_t>;
+struct Text : public std::vector<uint16_t> {
+  using std::vector<uint16_t>::vector;
+  Text(void) : vector() {}
+  Text(std::vector<uint16_t> const & vec) : vector(vec) {}
+  Text(std::vector<uint16_t> && vec) : vector(std::move(vec)) {}
+};
 
 struct TextSlice {
   Text *text;
