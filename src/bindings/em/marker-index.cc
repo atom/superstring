@@ -17,6 +17,7 @@ EMSCRIPTEN_BINDINGS(MarkerIndex) {
         .function("delete", WRAP(&MarkerIndex::delete_marker))
         .function("splice", WRAP(&MarkerIndex::splice))
 
+        .function("has", WRAP(&MarkerIndex::has))
         .function("getStart", WRAP(&MarkerIndex::get_start))
         .function("getEnd", WRAP(&MarkerIndex::get_end))
         .function("getRange", WRAP(&MarkerIndex::get_range))
