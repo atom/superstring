@@ -304,7 +304,7 @@ describe('MarkerIndex', () => {
       let [{id}] = markers.splice(random(markers.length), 1)
       write(() => `delete ${id}`)
       assert(markerIndex.has(id), `Expected marker index to have ${id}. ` + seedMessage)
-      markerIndex.delete(id)
+      markerIndex.remove(id)
       assert(!markerIndex.has(id), `Expected marker index to not have ${id}. ` + seedMessage)
     }
 

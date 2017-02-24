@@ -14,7 +14,7 @@ EMSCRIPTEN_BINDINGS(MarkerIndex) {
 
         .function("insert", WRAP(&MarkerIndex::insert))
         .function("setExclusive", WRAP(&MarkerIndex::set_exclusive))
-        .function("delete", WRAP(&MarkerIndex::delete_marker))
+        .function("remove", WRAP(&MarkerIndex::remove))
         .function("splice", WRAP(&MarkerIndex::splice))
 
         .function("has", WRAP(&MarkerIndex::has))
