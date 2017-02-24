@@ -47,14 +47,6 @@ class HunkWrapper : public Nan::ObjectWrap {
     Nan::SetAccessor(instance_template, Nan::New("oldEnd").ToLocalChecked(), get_old_end);
     Nan::SetAccessor(instance_template, Nan::New("newEnd").ToLocalChecked(), get_new_end);
 
-    // Non-enumerable legacy properties for backward compatibility
-    Nan::SetAccessor(instance_template, Nan::New("start").ToLocalChecked(), get_new_start, nullptr, Handle<Value>(),
-                     AccessControl::DEFAULT, PropertyAttribute::DontEnum);
-    Nan::SetAccessor(instance_template, Nan::New("oldExtent").ToLocalChecked(), get_old_extent, nullptr, Handle<Value>(),
-                     AccessControl::DEFAULT, PropertyAttribute::DontEnum);
-    Nan::SetAccessor(instance_template, Nan::New("newExtent").ToLocalChecked(), get_new_extent, nullptr, Handle<Value>(),
-                     AccessControl::DEFAULT, PropertyAttribute::DontEnum);
-
     const auto &prototype_template = constructor_template->PrototypeTemplate();
     prototype_template->Set(Nan::New<String>("toString").ToLocalChecked(), Nan::New<FunctionTemplate>(to_string));
     hunk_wrapper_constructor.Reset(constructor_template->GetFunction());
@@ -99,16 +91,6 @@ class HunkWrapper : public Nan::ObjectWrap {
   static void get_new_end(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
     Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     info.GetReturnValue().Set(PointWrapper::from_point(hunk.new_end));
-  }
-
-  static void get_old_extent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::from_point(hunk.old_end.traversal(hunk.old_start)));
-  }
-
-  static void get_new_extent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::from_point(hunk.new_end.traversal(hunk.new_start)));
   }
 
   static void to_string(const Nan::FunctionCallbackInfo<Value> &info) {

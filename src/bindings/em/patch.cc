@@ -96,13 +96,6 @@ EMSCRIPTEN_BINDINGS(Patch) {
         .field("oldText", WRAP_FIELD(Patch::Hunk, old_text))
         .field("newText", WRAP_FIELD(Patch::Hunk, new_text))
 
-        // The following fields are legacy only (most notably, TextBuffer doesn't work without them)
-
-        .field("start", WRAP_FIELD(Patch::Hunk, new_start))
-
-        .field("oldExtent", WRAP(&get_old_extent), WRAP(&hunk_set_noop<Point>))
-        .field("newExtent", WRAP(&get_new_extent), WRAP(&hunk_set_noop<Point>))
-
         ;
 
 }
