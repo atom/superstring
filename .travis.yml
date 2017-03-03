@@ -26,3 +26,8 @@ env:
 cache:
   directories:
     - emsdk_portable
+
+addons:
+  apt:
+    packages:
+    - cmake
