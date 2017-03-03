@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 EMSCRIPTEN_DOWNLOAD_URL='https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz'
 EMSDK_PATH="./emsdk_portable/emsdk"
 
