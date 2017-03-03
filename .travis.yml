@@ -22,3 +22,7 @@ sudo: false
 
 env:
   - CXX=clang++
+
+cache:
+  directories:
+    - emsdk_portable

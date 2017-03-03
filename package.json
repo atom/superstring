@@ -6,19 +6,16 @@
   "browser": "./browser",
   "scripts": {
     "build:node": "node-gyp configure build",
-    "build:browser": "em++ --bind -o browser.js -O3 -std=c++14 -I src/bindings/em -I src/core --pre-js src/bindings/em/prologue.js --post-js src/bindings/em/epilogue.js src/core/*.cc src/bindings/em/*.cc -s TOTAL_MEMORY=134217728 --memory-init-file 0",
-    "build:browser:maybe": "test -f browser.js || test -n \"$CI\" || ! command -v em++ 2>&1 > /dev/null || npm run build:browser",
-    "build:all": "npm run build:node && npm run build:browser",
-    "install": "npm run build:node && npm run build:browser:maybe",
-    "test-native": "script/test-native.js",
+    "build:browser": "script/build-browser-version.sh",
+    "build": "npm run build:node && npm run build:browser",
+    "test:native": "script/test-native.js",
     "test:node": "mocha test/js/*.js",
     "test:browser": "FORCE_BROWSER_FALLBACK=1 mocha test/js/*.js",
-    "test:all": "npm run test:node && npm run test:browser",
-    "test": "npm run test:all",
+    "test": "npm run test:node && npm run test:browser",
     "benchmark": "node benchmark/marker-index.benchmark.js",
-    "prepublish": "npm run standard",
+    "prepublish": "not-in-install && npm run build:browser || in-install",
     "standard": "standard --recursive src test",
-    "ci": "npm run standard && node-gyp rebuild --debug --tests && npm run test"
+    "ci": "script/install-emscripten.sh && script/build-browser-version.sh && npm run standard && node-gyp rebuild --debug --tests && npm run test"
   },
   "repository": {
     "type": "git",
@@ -39,6 +36,7 @@
   },
   "devDependencies": {
     "chai": "^2.0.0",
+    "in-publish": "^2.0.0",
     "mocha": "^2.3.4",
     "random-seed": "^0.2.0",
     "segfault-handler": "^1.0.0",
