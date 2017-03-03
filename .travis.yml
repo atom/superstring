@@ -33,4 +33,4 @@ cache:
 addons:
   apt:
     packages:
-      - libstdc++-4.8-dev
+      - libstdc++6-4.8-dev
