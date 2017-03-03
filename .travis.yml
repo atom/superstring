@@ -1,4 +1,6 @@
 language: node_js
+dist: trusty
+sudo: false
 
 notifications:
   email:
@@ -18,19 +20,9 @@ branches:
   only:
     - master
 
-sudo: false
-
 env:
   - CXX=clang++
 
 cache:
   directories:
     - emsdk_portable
-
-addons:
-  apt:
-    sources:
-      - george-edison55-precise-backports # cmake 3.2.3
-    packages:
-      - cmake
-      - cmake-data
