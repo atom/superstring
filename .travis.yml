@@ -29,3 +29,8 @@ env:
 cache:
   directories:
     - emsdk_portable
+
+addons:
+  apt:
+    packages:
+      - libstdc++-4.8-dev
