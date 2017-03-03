@@ -32,5 +32,8 @@ cache:
 
 addons:
   apt:
+    sources:
+    - ubuntu-toolchain-r-test
     packages:
-      - libstdc++6-4.8-dev
+    - gcc-4.8
+    - g++-4.8
