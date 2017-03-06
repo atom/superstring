@@ -11,7 +11,7 @@ const {Patch} = require('../..')
 
 describe('Patch', function () {
   it('honors the mergeAdjacentHunks option set to false', function () {
-    const patch = new Patch({mergeAdjacentHunks: false})
+    const patch = new Patch({ mergeAdjacentHunks: false })
 
     patch.splice({row: 0, column: 10}, {row: 0, column: 0}, {row: 1, column: 5})
     patch.splice({row: 1, column: 5}, {row: 0, column: 2}, {row: 0, column: 8})
@@ -30,10 +30,12 @@ describe('Patch', function () {
         newEnd: {row: 1, column: 13}
       }
     ])
+
+    patch.delete();
   })
 
   it('honors the mergeAdjacentHunks option set to true', function () {
-    const patch = new Patch({mergeAdjacentHunks: true})
+    const patch = new Patch({ mergeAdjacentHunks: true })
 
     patch.splice({row: 0, column: 5}, {row: 0, column: 1}, {row: 0, column: 2})
     patch.splice({row: 0, column: 10}, {row: 0, column: 3}, {row: 0, column: 4})
@@ -55,6 +57,8 @@ describe('Patch', function () {
         newStart: {row: 0, column: 5}, newEnd: {row: 0, column: 11}
       }
     ])
+
+    patch.delete();
   })
 
   it('can compose multiple patches together', function () {
@@ -91,6 +95,11 @@ describe('Patch', function () {
 
     assert.throws(() => Patch.compose([{}, {}]))
     assert.throws(() => Patch.compose([1, 'a']))
+
+    for (let patch of patches)
+      patch.delete();
+
+    composedPatch.delete();
   })
 
   it('can invert patches', function () {
@@ -127,6 +136,10 @@ describe('Patch', function () {
         newStart: {row: 0, column: 9}, newEnd: {row: 0, column: 14}
       }
     ])
+
+    patch.delete();
+    invertedPatch.delete();
+    patch2.delete();
   })
 
   it('can copy patches', function () {
@@ -139,13 +152,16 @@ describe('Patch', function () {
     patch2.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5})
     patch2.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5})
     assert.deepEqual(patch2.copy().getHunks(), patch2.getHunks())
+
+    patch.delete();
+    patch2.delete();
   })
 
   it('can serialize/deserialize patches', () => {
     const patch1 = new Patch()
     patch1.splice({row: 0, column: 3}, {row: 0, column: 5}, {row: 0, column: 5}, 'hello', 'world')
 
-    const patch2 = Patch.deserialize(Buffer.from(patch1.serialize().toString('base64'), 'base64'))
+    const patch2 = Patch.deserialize(patch1.serialize())
     assert.deepEqual(JSON.parse(JSON.stringify(patch2.getHunks())), [{
       oldStart: {row: 0, column: 3},
       newStart: {row: 0, column: 3},
@@ -154,6 +170,9 @@ describe('Patch', function () {
       oldText: 'hello',
       newText: 'world'
     }])
+
+    patch1.delete();
+    patch2.delete();
   })
 
   it('removes a hunk when it becomes empty', () => {
@@ -181,7 +200,7 @@ describe('Patch', function () {
       const originalDocument = new TestDocument(seed)
       const mutatedDocument = originalDocument.clone()
       const mergeAdjacentHunks = random(2)
-      const patch = new Patch({mergeAdjacentHunks: mergeAdjacentHunks})
+      const patch = new Patch({ mergeAdjacentHunks })
 
       for (let j = 0; j < 20; j++) {
         if (random(10) < 1) {
@@ -292,7 +311,7 @@ describe('Patch', function () {
 
         let oldPoint = originalDocument.buildRandomPoint()
 
-        let blob = Buffer.from(patch.serialize().toString('base64'), 'base64')
+        let blob = patch.serialize()
         const patchCopy1 = Patch.deserialize(blob)
         assert.deepEqual(patchCopy1.getHunks(), patch.getHunks(), seedMessage)
         assert.deepEqual(patchCopy1.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint), seedMessage)
@@ -301,6 +320,8 @@ describe('Patch', function () {
         assert.deepEqual(patchCopy2.getHunks(), patch.getHunks(), seedMessage)
         assert.deepEqual(patchCopy2.hunkForOldPosition(oldPoint), patch.hunkForOldPosition(oldPoint), seedMessage)
       }
+
+      patch.delete();
     }
   })
 })

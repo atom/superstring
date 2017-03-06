@@ -1,3 +1,4 @@
+#include "noop.h"
 #include "patch-wrapper.h"
 #include <memory>
 #include <sstream>
@@ -46,14 +47,6 @@ class HunkWrapper : public Nan::ObjectWrap {
     Nan::SetAccessor(instance_template, Nan::New("oldEnd").ToLocalChecked(), get_old_end);
     Nan::SetAccessor(instance_template, Nan::New("newEnd").ToLocalChecked(), get_new_end);
 
-    // Non-enumerable legacy properties for backward compatibility
-    Nan::SetAccessor(instance_template, Nan::New("start").ToLocalChecked(), get_new_start, nullptr, Handle<Value>(),
-                     AccessControl::DEFAULT, PropertyAttribute::DontEnum);
-    Nan::SetAccessor(instance_template, Nan::New("oldExtent").ToLocalChecked(), get_old_extent, nullptr, Handle<Value>(),
-                     AccessControl::DEFAULT, PropertyAttribute::DontEnum);
-    Nan::SetAccessor(instance_template, Nan::New("newExtent").ToLocalChecked(), get_new_extent, nullptr, Handle<Value>(),
-                     AccessControl::DEFAULT, PropertyAttribute::DontEnum);
-
     const auto &prototype_template = constructor_template->PrototypeTemplate();
     prototype_template->Set(Nan::New<String>("toString").ToLocalChecked(), Nan::New<FunctionTemplate>(to_string));
     hunk_wrapper_constructor.Reset(constructor_template->GetFunction());
@@ -100,16 +93,6 @@ class HunkWrapper : public Nan::ObjectWrap {
     info.GetReturnValue().Set(PointWrapper::from_point(hunk.new_end));
   }
 
-  static void get_old_extent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::from_point(hunk.old_end.traversal(hunk.old_start)));
-  }
-
-  static void get_new_extent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
-    info.GetReturnValue().Set(PointWrapper::from_point(hunk.new_end.traversal(hunk.new_start)));
-  }
-
   static void to_string(const Nan::FunctionCallbackInfo<Value> &info) {
     Patch::Hunk &hunk = Nan::ObjectWrap::Unwrap<HunkWrapper>(info.This())->hunk;
     std::stringstream result;
@@ -129,6 +112,7 @@ void PatchWrapper::init(Local<Object> exports) {
   constructor_template_local->Set(Nan::New("compose").ToLocalChecked(), Nan::New<FunctionTemplate>(compose));
   constructor_template_local->InstanceTemplate()->SetInternalFieldCount(1);
   const auto &prototype_template = constructor_template_local->PrototypeTemplate();
+  prototype_template->Set(Nan::New("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(noop));
   prototype_template->Set(Nan::New("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(splice));
   prototype_template->Set(Nan::New("spliceOld").ToLocalChecked(), Nan::New<FunctionTemplate>(splice_old));
   prototype_template->Set(Nan::New("copy").ToLocalChecked(), Nan::New<FunctionTemplate>(copy));

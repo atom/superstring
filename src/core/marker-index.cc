@@ -404,7 +404,7 @@ void MarkerIndex::set_exclusive(MarkerId id, bool exclusive) {
   }
 }
 
-void MarkerIndex::delete_marker(MarkerId id) {
+void MarkerIndex::remove(MarkerId id) {
   Node *start_node = start_nodes_by_id.find(id)->second;
   Node *end_node = end_nodes_by_id.find(id)->second;
 

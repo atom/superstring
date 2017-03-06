@@ -19,12 +19,12 @@ public:
     flat_set<MarkerId> surround;
   };
 
-  MarkerIndex(unsigned seed);
+  MarkerIndex(unsigned seed = 0u);
   ~MarkerIndex();
   int generate_random_number();
   void insert(MarkerId id, Point start, Point end);
   void set_exclusive(MarkerId id, bool exclusive);
-  void delete_marker(MarkerId id);
+  void remove(MarkerId id);
   bool has(MarkerId id);
   SpliceResult splice(Point start, Point old_extent, Point new_extent);
   Point get_start(MarkerId id) const;
