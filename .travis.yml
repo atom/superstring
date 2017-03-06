@@ -16,7 +16,11 @@ before_install:
   - script/install-emscripten.sh
 
 script:
-  - npm run ci
+  - npm run standard
+  - npm run build:browser
+  - npm run test:browser
+  - npm run build:node
+  - npm run test:node
 
 git:
   depth: 10
