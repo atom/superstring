@@ -13,5 +13,5 @@ fi
 echo 'Installing emscripten SDK...'
 
 $EMSDK_PATH update
-$EMSDK_PATH install -j2 latest
+$EMSDK_PATH install -j4 latest
 $EMSDK_PATH activate latest

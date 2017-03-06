@@ -15,7 +15,7 @@
     "benchmark": "node benchmark/marker-index.benchmark.js",
     "prepublish": "not-in-install && npm run build:browser || in-install",
     "standard": "standard --recursive src test",
-    "ci": "script/install-emscripten.sh && script/build-browser-version.sh && npm run standard && node-gyp rebuild --debug --tests && npm run test"
+    "ci": "script/build-browser-version.sh && npm run standard && node-gyp rebuild --debug --tests && npm run test"
   },
   "repository": {
     "type": "git",
