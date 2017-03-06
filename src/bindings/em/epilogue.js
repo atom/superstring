@@ -1,4 +1,2 @@
-
-    return Module;
-
+  return Module;
 }));
