@@ -28,6 +28,7 @@ branches:
 cache:
   directories:
     - emsdk_portable
+    - $HOME/.emscripten_cache
 
 addons:
   apt:
