@@ -1,4 +1,11 @@
-test
-build
-.gitignore
-emsdk_portable
+*
+
+!README.md
+!LICENSE
+!index.js
+!browser.js
+!src/core/*
+!src/bindings/*.h
+!src/bindings/*.cc
+!package.json
+!binding.gyp
