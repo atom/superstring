@@ -19,7 +19,6 @@ script:
   - npm run standard
   - npm run build:browser
   - npm run test:browser
-  - npm run build:node
   - npm run test:node
 
 git:
