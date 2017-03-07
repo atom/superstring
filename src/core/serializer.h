@@ -43,7 +43,7 @@ class Serializer {
   }
 
   uint8_t *data();
-  size_t size();
+  std::size_t size();
 };
 
 #endif // SERIALIZER_H_

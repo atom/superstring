@@ -16,6 +16,6 @@ uint8_t *Serializer::data() {
   return byte_vector.data();
 }
 
-size_t Serializer::size() {
+std::size_t Serializer::size() {
   return byte_vector.size();
 }
