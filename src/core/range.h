@@ -1,6 +1,7 @@
 #ifndef RANGE_H_
 #define RANGE_H_
 
+#include <ostream>
 #include "point.h"
 
 struct Range {
@@ -9,5 +10,9 @@ struct Range {
 
   Point extent() const;
 };
+
+inline std::ostream &operator<<(std::ostream &stream, const Range &range) {
+  return stream << "(" << range.start << ", " << range.end << ")";
+}
 
 #endif // RANGE_H_

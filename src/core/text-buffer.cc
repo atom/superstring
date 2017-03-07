@@ -35,6 +35,10 @@ Point TextBuffer::clip_position(Point position) {
   }
 }
 
+Range TextBuffer::clip_range(Range range) {
+  return Range {clip_position(range.start), clip_position(range.end)};
+}
+
 Text TextBuffer::text() {
   return Text {begin(), end()};
 }
@@ -47,6 +51,7 @@ Text TextBuffer::text_in_range(Range range) {
 }
 
 void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
+  old_range = clip_range(old_range);
   Point new_range_end = old_range.start.traverse(new_text.extent());
   uint32_t deleted_text_size = begin().traverse(old_range.end) - begin().traverse(old_range.start);
   patch.splice(old_range.start, old_range.extent(), new_text.extent(), optional<Text> {}, move(new_text), deleted_text_size);
