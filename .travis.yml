@@ -7,7 +7,7 @@ notifications:
     on_failure: change
 
 node_js:
-  - "node"
+  - node
 
 before_install:
   - export CXX="g++-4.8" CC="gcc-4.8"
@@ -20,6 +20,7 @@ script:
   - npm run build:browser
   - npm run test:browser
   - npm run test:node
+  - npm run test:native
 
 git:
   depth: 10
