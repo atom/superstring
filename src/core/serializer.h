@@ -2,6 +2,7 @@
 #define SERIALIZER_H_
 
 #include <vector>
+#include <cstdint>
 
 class Serializer {
   std::vector<uint8_t> byte_vector;
