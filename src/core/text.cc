@@ -302,7 +302,7 @@ uint32_t Text::offset_for_position(Point position) const {
   uint32_t line_end_offset;
   if (position.row < line_offsets.size() - 1) {
     line_end_offset = line_offsets[position.row + 1] - 1;
-    if (content[line_end_offset] == '\n' && content[line_end_offset - 1] == '\r') {
+    if (content[line_end_offset] == '\n' && line_end_offset > 0 && content[line_end_offset - 1] == '\r') {
       line_end_offset--;
     }
   } else {
