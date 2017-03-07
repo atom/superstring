@@ -1,4 +1,5 @@
 #include "text.h"
+#include <algorithm>
 #include "text-slice.h"
 
 using std::function;
@@ -167,7 +168,7 @@ Text Text::build(std::istream &stream, size_t input_size, const char *encoding_n
           break;
       }
 
-      memcpy(input_buffer, input_pointer, input_bytes_remaining);
+      std::copy(input_pointer, input_pointer + input_bytes_remaining, input_buffer);
     }
 
     while (indexed_character_count < output_characters_written) {
