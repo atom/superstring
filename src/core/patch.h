@@ -63,6 +63,7 @@ public:
   Patch(Node *root, uint32_t change_count, bool merges_adjacent_changes);
   Patch(Patch &&);
   ~Patch();
+
   bool splice(Point new_splice_start,
               Point new_deletion_extent, Point new_insertion_extent,
               optional<Text> &&deleted_text = optional<Text> {},

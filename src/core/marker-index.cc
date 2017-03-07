@@ -404,7 +404,7 @@ void MarkerIndex::set_exclusive(MarkerId id, bool exclusive) {
   }
 }
 
-void MarkerIndex::delete_marker(MarkerId id) {
+void MarkerIndex::remove(MarkerId id) {
   Node *start_node = start_nodes_by_id.find(id)->second;
   Node *end_node = end_nodes_by_id.find(id)->second;
 
@@ -433,6 +433,10 @@ void MarkerIndex::delete_marker(MarkerId id) {
 
   start_nodes_by_id.erase(id);
   end_nodes_by_id.erase(id);
+}
+
+bool MarkerIndex::has(MarkerId id) {
+  return start_nodes_by_id.count(id) > 0;
 }
 
 MarkerIndex::SpliceResult MarkerIndex::splice(Point start, Point old_extent, Point new_extent) {

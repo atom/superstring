@@ -1498,6 +1498,37 @@ static const uint32_t SERIALIZATION_VERSION = 1;
 
 enum Transition : uint32_t { None, Left, Right, Up };
 
+template <typename T>
+void append_to_buffer(vector<uint8_t> *output, T value) {
+  for (auto t = 0u; t < sizeof(T); ++t) {
+    output->push_back(value & 0xFF);
+    value >>= 8;
+  }
+}
+
+template <typename T>
+T get_from_buffer(const uint8_t **data, const uint8_t *end) {
+
+  // Note: We can't optimize this function by casting the data argument into a T*,
+  // because it would only work on architectures that support reading from unaligned
+  // memory. It would work on X86, but not on asm.js and possibly other architectures.
+
+  T value = 0;
+
+  if (static_cast<unsigned>(end - *data) >= sizeof(T))
+    for (auto t = 0u; t < sizeof(T); ++t)
+      value |= static_cast<T>(*((*data)++)) << static_cast<T>(8 * t);
+
+  return value;
+
+}
+
+void get_point_from_buffer(const uint8_t **data, const uint8_t *end,
+                           Point *point) {
+  point->row = get_from_buffer<uint32_t>(data, end);
+  point->column = get_from_buffer<uint32_t>(data, end);
+}
+
 void Patch::serialize(Serializer &output) const {
   if (!root)
     return;

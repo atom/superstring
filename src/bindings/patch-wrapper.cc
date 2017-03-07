@@ -1,3 +1,4 @@
+#include "noop.h"
 #include "patch-wrapper.h"
 #include <memory>
 #include <sstream>
@@ -48,14 +49,6 @@ class ChangeWrapper : public Nan::ObjectWrap {
     Nan::SetAccessor(instance_template, Nan::New("precedingOldTextLength").ToLocalChecked(), get_preceding_old_text_length);
     Nan::SetAccessor(instance_template, Nan::New("precedingNewTextLength").ToLocalChecked(), get_preceding_new_text_length);
 
-    // Non-enumerable legacy properties for backward compatibility
-    Nan::SetAccessor(instance_template, Nan::New("start").ToLocalChecked(), get_new_start, nullptr, Handle<Value>(),
-                     AccessControl::DEFAULT, PropertyAttribute::DontEnum);
-    Nan::SetAccessor(instance_template, Nan::New("oldExtent").ToLocalChecked(), get_old_extent, nullptr, Handle<Value>(),
-                     AccessControl::DEFAULT, PropertyAttribute::DontEnum);
-    Nan::SetAccessor(instance_template, Nan::New("newExtent").ToLocalChecked(), get_new_extent, nullptr, Handle<Value>(),
-                     AccessControl::DEFAULT, PropertyAttribute::DontEnum);
-
     const auto &prototype_template = constructor_template->PrototypeTemplate();
     prototype_template->Set(Nan::New<String>("toString").ToLocalChecked(), Nan::New<FunctionTemplate>(to_string));
     change_wrapper_constructor.Reset(constructor_template->GetFunction());
@@ -102,16 +95,6 @@ class ChangeWrapper : public Nan::ObjectWrap {
     info.GetReturnValue().Set(PointWrapper::from_point(change.new_end));
   }
 
-  static void get_old_extent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Patch::Change &change = Nan::ObjectWrap::Unwrap<ChangeWrapper>(info.This())->change;
-    info.GetReturnValue().Set(PointWrapper::from_point(change.old_end.traversal(change.old_start)));
-  }
-
-  static void get_new_extent(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    Patch::Change &change = Nan::ObjectWrap::Unwrap<ChangeWrapper>(info.This())->change;
-    info.GetReturnValue().Set(PointWrapper::from_point(change.new_end.traversal(change.new_start)));
-  }
-
   static void get_preceding_old_text_length(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
     Patch::Change &change = Nan::ObjectWrap::Unwrap<ChangeWrapper>(info.This())->change;
     info.GetReturnValue().Set(Nan::New<Number>(change.preceding_old_text_size));
@@ -141,6 +124,7 @@ void PatchWrapper::init(Local<Object> exports) {
   constructor_template_local->Set(Nan::New("compose").ToLocalChecked(), Nan::New<FunctionTemplate>(compose));
   constructor_template_local->InstanceTemplate()->SetInternalFieldCount(1);
   const auto &prototype_template = constructor_template_local->PrototypeTemplate();
+  prototype_template->Set(Nan::New("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(noop));
   prototype_template->Set(Nan::New("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(splice));
   prototype_template->Set(Nan::New("spliceOld").ToLocalChecked(), Nan::New<FunctionTemplate>(splice_old));
   prototype_template->Set(Nan::New("copy").ToLocalChecked(), Nan::New<FunctionTemplate>(copy));

@@ -30,6 +30,8 @@ describe('Patch', function () {
         newEnd: {row: 1, column: 13}
       }
     ])
+
+    patch.delete();
   })
 
   it('honors the mergeAdjacentChanges option set to true', function () {
@@ -55,6 +57,8 @@ describe('Patch', function () {
         newStart: {row: 0, column: 5}, newEnd: {row: 0, column: 11}
       }
     ])
+
+    patch.delete();
   })
 
   it('can compose multiple patches together', function () {
@@ -91,6 +95,11 @@ describe('Patch', function () {
 
     assert.throws(() => Patch.compose([{}, {}]))
     assert.throws(() => Patch.compose([1, 'a']))
+
+    for (let patch of patches)
+      patch.delete();
+
+    composedPatch.delete();
   })
 
   it('can invert patches', function () {
@@ -127,6 +136,10 @@ describe('Patch', function () {
         newStart: {row: 0, column: 9}, newEnd: {row: 0, column: 14}
       }
     ])
+
+    patch.delete();
+    invertedPatch.delete();
+    patch2.delete();
   })
 
   it('can copy patches', function () {
@@ -138,14 +151,17 @@ describe('Patch', function () {
     const patch2 = new Patch()
     patch2.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5})
     patch2.splice({row: 0, column: 10}, {row: 0, column: 5}, {row: 0, column: 5})
+
     assert.deepEqual(patch2.copy().getChanges(), patch2.getChanges())
+    patch.delete();
+    patch2.delete();
   })
 
   it('can serialize/deserialize patches', () => {
     const patch1 = new Patch()
     patch1.splice({row: 0, column: 3}, {row: 0, column: 5}, {row: 0, column: 5}, 'hello', 'world')
 
-    const patch2 = Patch.deserialize(Buffer.from(patch1.serialize().toString('base64'), 'base64'))
+    const patch2 = Patch.deserialize(patch1.serialize())
     assert.deepEqual(JSON.parse(JSON.stringify(patch2.getChanges())), [{
       oldStart: {row: 0, column: 3},
       newStart: {row: 0, column: 3},
@@ -154,6 +170,9 @@ describe('Patch', function () {
       oldText: 'hello',
       newText: 'world'
     }])
+
+    patch1.delete();
+    patch2.delete();
   })
 
   it('removes a change when it becomes empty', () => {
@@ -181,7 +200,7 @@ describe('Patch', function () {
       const originalDocument = new TestDocument(seed)
       const mutatedDocument = originalDocument.clone()
       const mergeAdjacentChanges = random(2)
-      const patch = new Patch({mergeAdjacentChanges: mergeAdjacentChanges})
+      const patch = new Patch({mergeAdjacentChanges})
 
       for (let j = 0; j < 20; j++) {
         if (random(10) < 1) {
@@ -298,7 +317,7 @@ describe('Patch', function () {
 
         let oldPoint = originalDocument.buildRandomPoint()
 
-        let blob = Buffer.from(patch.serialize().toString('base64'), 'base64')
+        let blob = patch.serialize()
         const patchCopy1 = Patch.deserialize(blob)
         assert.deepEqual(patchCopy1.getChanges(), patch.getChanges(), seedMessage)
         assert.deepEqual(patchCopy1.changeForOldPosition(oldPoint), patch.changeForOldPosition(oldPoint), seedMessage)
@@ -307,6 +326,8 @@ describe('Patch', function () {
         assert.deepEqual(patchCopy2.getChanges(), patch.getChanges(), seedMessage)
         assert.deepEqual(patchCopy2.changeForOldPosition(oldPoint), patch.changeForOldPosition(oldPoint), seedMessage)
       }
+
+      patch.delete();
     }
   })
 })

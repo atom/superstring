@@ -9,7 +9,6 @@
 #include "serializer.h"
 
 class TextSlice;
-
 struct Point;
 
 class Text {
