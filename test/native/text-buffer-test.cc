@@ -28,6 +28,12 @@ TEST_CASE("TextBuffer::set_text_in_range - basic") {
   REQUIRE(buffer.text_in_range(Range {{0, 1}, {1, 4}}) == Text {u"bjkl\nmnoh"});
 }
 
+TEST_CASE("TextBuffer::line_length_for_row - basic") {
+  TextBuffer buffer {u"a\n\nb\r\rc\r\n\r\n"};
+  REQUIRE(buffer.line_length_for_row(0) == 1);
+  REQUIRE(buffer.line_length_for_row(1) == 0);
+}
+
 TEST_CASE("TextBuffer::set_text_in_range, random edits") {
   auto t = time(nullptr);
   for (uint i = 0; i < 100; i++) {
