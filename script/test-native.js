@@ -2,15 +2,26 @@
 
 const fs = require('fs')
 const path = require('path')
-const childProcess = require('child_process')
+const {spawnSync} = require('child_process')
 
 const testsPath = path.resolve(__dirname, '..', 'build', 'Debug', 'tests')
 
 if (fs.existsSync(testsPath)) {
-  childProcess.spawnSync('node-gyp', ['build'], {stdio: 'inherit'})
+  run('node-gyp', ['build'])
 } else {
-  console.log('Building tests binary in debug configuration...')
-  childProcess.spawnSync('node-gyp', ['rebuild', '--debug', '--tests'], {stdio: 'inherit'})
+  run('node-gyp', ['rebuild', '--debug', '--tests'])
 }
 
-childProcess.spawnSync(testsPath, {stdio: 'inherit'})
+const args = process.argv.slice(2)
+
+if (args[0] == '-d') {
+  args.shift()
+  run('lldb', [testsPath, ...args])
+} else {
+  run(testsPath, args)
+}
+
+function run(command, args = []) {
+  const {status} = spawnSync(command, args, {stdio: 'inherit'})
+  if (status !== 0) process.exit(status)
+}
