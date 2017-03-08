@@ -66,86 +66,84 @@ TEST_CASE("Text::build - handles CRLF newlines") {
 }
 
 TEST_CASE("Text::line_iterators - returns iterators at the start and end of lines") {
-  Text text { u"a\nbc\r\nde\rf\r\ng\r" };
+  Text text { u"a\nbc\r\n\r\nd\n" };
 
   auto line0 = text.line_iterators(0);
   REQUIRE(std::string(line0.first, line0.second) == "a");
   auto line1 = text.line_iterators(1);
   REQUIRE(std::string(line1.first, line1.second) == "bc");
   auto line2 = text.line_iterators(2);
-  REQUIRE(std::string(line2.first, line2.second) == "de");
+  REQUIRE(std::string(line2.first, line2.second) == "");
   auto line3 = text.line_iterators(3);
-  REQUIRE(std::string(line3.first, line3.second) == "f");
+  REQUIRE(std::string(line3.first, line3.second) == "d");
   auto line4 = text.line_iterators(4);
-  REQUIRE(std::string(line4.first, line4.second) == "g");
-  auto line5 = text.line_iterators(5);
-  REQUIRE(std::string(line5.first, line5.second) == "");
+  REQUIRE(std::string(line4.first, line4.second) == "");
 }
 
 TEST_CASE("Text::split") {
-  Text text {u"abc\ndef\r\nghi\rjkl"};
+  Text text {u"abc\ndef\r\nghi"};
   TextSlice base_slice {text};
 
   {
     auto slices = base_slice.split({0, 2});
     REQUIRE(Text(slices.first) == Text(u"ab"));
-    REQUIRE(Text(slices.second) == Text(u"c\ndef\r\nghi\rjkl"));
+    REQUIRE(Text(slices.second) == Text(u"c\ndef\r\nghi"));
   }
 
   {
     auto slices = base_slice.split({1, 2});
     REQUIRE(Text(slices.first) == Text(u"abc\nde"));
-    REQUIRE(Text(slices.second) == Text(u"f\r\nghi\rjkl"));
+    REQUIRE(Text(slices.second) == Text(u"f\r\nghi"));
   }
 
   {
     auto slices = base_slice.split({1, 3});
     REQUIRE(Text(slices.first) == Text(u"abc\ndef"));
-    REQUIRE(Text(slices.second) == Text(u"\r\nghi\rjkl"));
+    REQUIRE(Text(slices.second) == Text(u"\r\nghi"));
   }
 
   {
     auto slices = base_slice.split({2, 0});
     REQUIRE(Text(slices.first) == Text(u"abc\ndef\r\n"));
-    REQUIRE(Text(slices.second) == Text(u"ghi\rjkl"));
+    REQUIRE(Text(slices.second) == Text(u"ghi"));
   }
 
   {
-    auto slices = base_slice.split({3, 3});
-    REQUIRE(Text(slices.first) == Text(u"abc\ndef\r\nghi\rjkl"));
+    auto slices = base_slice.split({2, 3});
+    REQUIRE(Text(slices.first) == Text(u"abc\ndef\r\nghi"));
     REQUIRE(Text(slices.second) == Text(u""));
   }
 }
 
 TEST_CASE("Text::concat") {
-  Text text {u"abc\ndef\r\nghi\rjkl"};
+  Text text {u"abc\ndef\r\nghi"};
   TextSlice base_slice {text};
 
-  REQUIRE(Text::concat(base_slice, base_slice) == Text(u"abc\ndef\r\nghi\rjklabc\ndef\r\nghi\rjkl"));
+  REQUIRE(Text::concat(base_slice, base_slice) == Text(u"abc\ndef\r\nghiabc\ndef\r\nghi"));
 
   {
     auto prefix = base_slice.prefix({0, 2});
     auto suffix = base_slice.suffix({2, 2});
-    REQUIRE(Text::concat(prefix, suffix) == Text(u"abi\rjkl"));
+    REQUIRE(Text::concat(prefix, suffix) == Text(u"abi"));
+  }
+
+  {
+    auto prefix = base_slice.prefix({1, 3});
+    auto suffix = base_slice.suffix({2, 2});
+    REQUIRE(Text::concat(prefix, suffix) == Text(u"abc\ndefi"));
   }
 
   {
     auto prefix = base_slice.prefix({1, 3});
     auto suffix = base_slice.suffix({2, 3});
-    REQUIRE(Text::concat(prefix, suffix) == Text(u"abc\ndef\rjkl"));
-  }
-
-  {
-    auto prefix = base_slice.prefix({1, 3});
-    auto suffix = base_slice.suffix({3, 0});
-    REQUIRE(Text::concat(prefix, suffix) == Text(u"abc\ndefjkl"));
+    REQUIRE(Text::concat(prefix, suffix) == Text(u"abc\ndef"));
   }
 }
 
 TEST_CASE("Text::splice") {
-  Text text {u"abc\ndef\r\nghi\rjkl"};
+  Text text {u"abc\ndef\r\nghi\njkl"};
   text.splice({1, 2}, {1, 1}, Text {u"mno\npq\r\nst"});
-  REQUIRE(text == Text {u"abc\ndemno\npq\r\nsthi\rjkl"});
+  REQUIRE(text == Text {u"abc\ndemno\npq\r\nsthi\njkl"});
   text.splice({2, 1}, {2, 1}, Text {u""});
   REQUIRE(text == Text {u"abc\ndemno\npkl"});
   text.splice({1, 1}, {0, 0}, Text {u"uvw"});
@@ -157,7 +155,7 @@ TEST_CASE("Text::splice") {
 }
 
 TEST_CASE("Text::offset_for_position - basic") {
-  Text text {u"abc\ndefg\rhijkl\r\nmno"};
+  Text text {u"abc\ndefg\r\nhijkl"};
 
   REQUIRE(text.offset_for_position({0, 2}) == 2);
   REQUIRE(text.offset_for_position({0, 3}) == 3);
@@ -167,14 +165,12 @@ TEST_CASE("Text::offset_for_position - basic") {
   REQUIRE(text.offset_for_position({1, 1}) == 5);
   REQUIRE(text.offset_for_position({1, 4}) == 8);
   REQUIRE(text.offset_for_position({1, 5}) == 8);
+  REQUIRE(text.offset_for_position({1, 8}) == 8);
 
-  REQUIRE(text.offset_for_position({2, 0}) == 9);
-  REQUIRE(text.offset_for_position({2, 5}) == 14);
-  REQUIRE(text.offset_for_position({2, 6}) == 14);
-  REQUIRE(text.offset_for_position({2, 7}) == 14);
-
-  REQUIRE(text.offset_for_position({3, 0}) == 16);
-  REQUIRE(text.offset_for_position({3, 20}) == 19);
+  REQUIRE(text.offset_for_position({2, 0}) == 10);
+  REQUIRE(text.offset_for_position({2, 1}) == 11);
+  REQUIRE(text.offset_for_position({2, 5}) == 15);
+  REQUIRE(text.offset_for_position({2, 6}) == 15);
 }
 
 TEST_CASE("Text::offset_for_position - empty lines") {

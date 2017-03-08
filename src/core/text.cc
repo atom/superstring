@@ -14,25 +14,9 @@ static const float buffer_growth_factor = 2;
 Text::Text() : line_offsets {0} {}
 
 Text::Text(vector<uint16_t> &&content) : content {content}, line_offsets {0} {
-  uint32_t offset = 0;
-  while (offset < content.size()) {
-    switch (content[offset]) {
-      case '\n':
-        line_offsets.push_back(offset + 1);
-        offset += 1;
-        break;
-      case '\r':
-        if (offset < content.size() - 1 && content[offset + 1] == '\n') {
-          line_offsets.push_back(offset + 2);
-          offset += 2;
-        } else {
-          line_offsets.push_back(offset + 1);
-          offset += 1;
-        }
-        break;
-      default:
-        offset += 1;
-        break;
+  for (uint32_t offset = 0, size = content.size(); offset < size; offset++) {
+    if (content[offset] == '\n') {
+      line_offsets.push_back(offset + 1);
     }
   }
 }
@@ -64,29 +48,10 @@ Text::Text(const vector<uint16_t> &&content, const vector<uint32_t> &&line_offse
 Text::Text(Serializer &serializer) : line_offsets {0} {
   uint32_t size = serializer.read<uint32_t>();
   content.reserve(size);
-  uint32_t offset = 0;
-  while (offset < size) {
+  for (uint32_t offset = 0; offset < size; offset++) {
     uint16_t character = serializer.read<uint16_t>();
     content.push_back(character);
-    switch (character) {
-      case '\n':
-        line_offsets.push_back(offset + 1);
-        offset += 1;
-        break;
-      case '\r':
-        if (offset < size - 1 && serializer.peek<uint16_t>() == '\n') {
-          serializer.read<uint16_t>();
-          line_offsets.push_back(offset + 2);
-          offset += 2;
-        } else {
-          line_offsets.push_back(offset + 1);
-          offset += 1;
-        }
-        break;
-      default:
-        offset += 1;
-        break;
-    }
+    if (character == '\n') line_offsets.push_back(offset + 1);
   }
 }
 
@@ -110,7 +75,6 @@ Text Text::build(std::istream &stream, size_t input_size, const char *encoding_n
 
   size_t total_bytes_read = 0;
   size_t indexed_character_count = 0;
-  bool pending_carriage_return = false;
 
   char *input_buffer = input_vector.data();
   size_t input_bytes_remaining = 0;
@@ -172,31 +136,11 @@ Text Text::build(std::istream &stream, size_t input_size, const char *encoding_n
     }
 
     while (indexed_character_count < output_characters_written) {
-      switch (output_vector[indexed_character_count]) {
-        case '\n':
-          pending_carriage_return = false;
-          line_offsets.push_back(indexed_character_count + 1);
-          break;
-        case '\r':
-          if (pending_carriage_return) {
-            line_offsets.push_back(indexed_character_count);
-          }
-          pending_carriage_return = true;
-          break;
-        default:
-          if (pending_carriage_return) {
-            line_offsets.push_back(indexed_character_count);
-            pending_carriage_return = false;
-          }
-          break;
+      if (output_vector[indexed_character_count] == '\n') {
+        line_offsets.push_back(indexed_character_count + 1);
       }
-
       indexed_character_count++;
     }
-  }
-
-  if (pending_carriage_return) {
-    line_offsets.push_back(indexed_character_count);
   }
 
   size_t output_characters_remaining = (output_bytes_remaining / bytes_per_character);
@@ -303,7 +247,7 @@ uint32_t Text::offset_for_position(Point position) const {
   uint64_t line_end_offset;
   if (position.row < line_offsets.size() - 1) {
     line_end_offset = line_offsets[position.row + 1] - 1;
-    if (content[line_end_offset] == '\n' && line_end_offset > 0 && content[line_end_offset - 1] == '\r') {
+    if (line_end_offset > 0 && content[line_end_offset - 1] == '\r') {
       line_end_offset--;
     }
   } else {
