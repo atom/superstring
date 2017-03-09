@@ -29,11 +29,18 @@ bool Point::is_zero() const {
   return row == 0 && column == 0;
 }
 
+static uint32_t checked_add(uint32_t a, uint32_t b) {
+  return std::min<uint64_t>(
+    UINT32_MAX,
+    static_cast<uint64_t>(a) + static_cast<uint64_t>(b)
+  );
+}
+
 Point Point::traverse(const Point &traversal) const {
   if (traversal.row == 0) {
-    return Point(row , column + traversal.column);
+    return Point(row, checked_add(column, traversal.column));
   } else {
-    return Point(row + traversal.row, traversal.column);
+    return Point(checked_add(row, traversal.row), traversal.column);
   }
 }
 
