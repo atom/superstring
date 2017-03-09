@@ -41,9 +41,9 @@ TEST_CASE("TextBuffer::set_text_in_range, random edits") {
     srand(seed);
     printf("Seed: %ld\n", seed);
 
-    TextBuffer buffer;
+    TextBuffer buffer {get_random_string()};
 
-    for (uint j = 0; j < 2; j++) {
+    for (uint j = 0; j < 10; j++) {
       Text original_text = buffer.text();
       Range deleted_range = get_random_range(buffer);
       Text inserted_text = get_random_text();
@@ -51,6 +51,7 @@ TEST_CASE("TextBuffer::set_text_in_range, random edits") {
       buffer.set_text_in_range(deleted_range, TextSlice {inserted_text});
       original_text.splice(deleted_range.start, deleted_range.extent(), TextSlice {inserted_text});
 
+      REQUIRE(buffer.extent() == original_text.extent());
       REQUIRE(buffer.text() == original_text);
     }
   }

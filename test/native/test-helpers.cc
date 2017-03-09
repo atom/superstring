@@ -35,9 +35,9 @@ std::unique_ptr<Text> get_text(const u16string content) {
   return std::unique_ptr<Text> { new Text(content) };
 }
 
-Text get_random_text() {
+std::u16string get_random_string() {
   uint count = rand() % 20;
-  vector<uint16_t> content;
+  u16string content;
   content.reserve(count);
   for (uint i = 0; i < count; i++) {
     if (rand() % 20 < 1) {
@@ -53,7 +53,11 @@ Text get_random_text() {
       content.push_back(character);
     }
   }
-  return Text {move(content)};
+  return content;
+}
+
+Text get_random_text() {
+  return Text {get_random_string()};
 }
 
 Range get_random_range(TextBuffer &buffer) {
@@ -63,8 +67,8 @@ Range get_random_range(TextBuffer &buffer) {
   if (max_column > 0) start_column = rand() % max_column;
   Point start {start_row, start_column};
   Point end {start};
-  while (rand() % 10 < 2) {
-    end = buffer.clip_position(end.traverse(Point(rand() % 3, rand() % 10)));
+  while (rand() % 10 < 3) {
+    end = buffer.clip_position(end.traverse(Point(rand() % 2, rand() % 10)));
   }
   return {start, end};
 }
