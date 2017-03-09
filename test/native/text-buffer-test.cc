@@ -34,7 +34,7 @@ TEST_CASE("TextBuffer::line_length_for_row - basic") {
   REQUIRE(buffer.line_length_for_row(1) == 0);
 }
 
-TEST_CASE("TextBuffer::set_text_in_range, random edits") {
+TEST_CASE("TextBuffer::set_text_in_range - random edits") {
   auto t = time(nullptr);
   for (uint i = 0; i < 100; i++) {
     auto seed = t + i;
