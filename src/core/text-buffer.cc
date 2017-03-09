@@ -101,25 +101,27 @@ TextBuffer::Iterator::difference_type TextBuffer::Iterator::operator-(const Iter
 }
 
 void TextBuffer::Iterator::fetch_next_change() {
-  int64_t preceding_text_delta;
-  if (next_change) {
-    preceding_text_delta =
-      static_cast<int64_t>(next_change->preceding_new_text_size) + next_change->new_text->size() -
-      next_change->preceding_old_text_size - next_change->old_text_size;
-    next_change = buffer.patch.change_ending_after_new_position(next_change->new_end, true);
-  } else {
-    preceding_text_delta = 0;
-    next_change = buffer.patch.change_ending_after_new_position(Point {0, 0});
-  }
+  do {
+    int64_t preceding_text_delta;
+    if (next_change) {
+      preceding_text_delta =
+        static_cast<int64_t>(next_change->preceding_new_text_size) + next_change->new_text->size() -
+        next_change->preceding_old_text_size - next_change->old_text_size;
+      next_change = buffer.patch.change_ending_after_new_position(next_change->new_end, true);
+    } else {
+      preceding_text_delta = 0;
+      next_change = buffer.patch.change_ending_after_new_position(Point {0, 0});
+    }
 
-  if (next_change) {
-    next_change_base_offset = buffer.base_text.offset_for_position(next_change->old_start);
-  } else {
-    next_change_base_offset = buffer.base_text.size();
-  }
+    if (next_change) {
+      next_change_base_offset = buffer.base_text.offset_for_position(next_change->old_start);
+    } else {
+      next_change_base_offset = buffer.base_text.size();
+    }
 
-  uint32_t next_change_current_offset = next_change_base_offset + preceding_text_delta;
-  offset_from_next_change_start = static_cast<int64_t>(current_offset) - next_change_current_offset;
+    uint32_t next_change_current_offset = next_change_base_offset + preceding_text_delta;
+    offset_from_next_change_start = static_cast<int64_t>(current_offset) - next_change_current_offset;
+  } while (next_change && next_change->new_end.is_zero());
 }
 
 TextBuffer::Iterator TextBuffer::Iterator::traverse(Point position) const {
