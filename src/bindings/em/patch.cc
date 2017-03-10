@@ -1,10 +1,25 @@
 #include <memory>
 #include <vector>
-#include "as.h"
 #include "auto-wrap.h"
 #include "patch.h"
 #include <emscripten/bind.h>
 #include <emscripten/val.h>
+
+template <>
+inline Patch const *emscripten::val::as<Patch const *>(void) const {
+  using namespace emscripten;
+  using namespace internal;
+
+  EM_DESTRUCTORS destructors;
+  EM_GENERIC_WIRE_TYPE result = _emval_as(
+    handle,
+    TypeID<AllowedRawPointer<Patch const>>::get(),
+    &destructors
+  );
+  DestructorsRunner destructors_runner(destructors);
+
+  return fromGenericWireType<Patch *>(result);
+}
 
 Patch *constructor(emscripten::val value) {
   bool merge_adjacent_hunks = false;
@@ -24,16 +39,8 @@ Patch *compose(std::vector<Patch const *> const &patches) {
   return new Patch(patches);
 }
 
-Patch * deserialize(std::vector<uint8_t> const &bytes) {
+Patch *deserialize(std::vector<uint8_t> const &bytes) {
   return new Patch(bytes);
-}
-
-Point get_old_extent(Patch::Hunk const &hunk) {
-  return hunk.old_end.traversal(hunk.old_start);
-}
-
-Point get_new_extent(Patch::Hunk const &hunk) {
-  return hunk.new_end.traversal(hunk.new_start);
 }
 
 template <typename T>

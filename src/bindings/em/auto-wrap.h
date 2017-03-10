@@ -4,10 +4,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
-
 #include <emscripten/val.h>
-
-#include "as.h"
 #include "flat_set.h"
 #include "marker-index.h"
 #include "optional.h"
