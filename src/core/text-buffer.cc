@@ -5,7 +5,8 @@ using std::move;
 
 TextBuffer::TextBuffer(Text &&text) :
   base_text {std::move(text)},
-  extent_ {base_text.extent()} {}
+  extent_ {base_text.extent()},
+  size_ {base_text.size()} {}
 
 TextBuffer::TextBuffer(std::u16string text) : TextBuffer {Text {text}} {}
 
@@ -16,6 +17,10 @@ TextBuffer TextBuffer::build(std::istream &stream, size_t input_size, const char
 
 Point TextBuffer::extent() const {
   return extent_;
+}
+
+uint32_t TextBuffer::size() const {
+  return size_;
 }
 
 uint32_t TextBuffer::line_length_for_row(uint32_t row) {
@@ -54,25 +59,31 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
   old_range = clip_range(old_range);
   Point new_range_end = old_range.start.traverse(new_text.extent());
   uint32_t deleted_text_size = begin().traverse(old_range.end) - begin().traverse(old_range.start);
-  patch.splice(old_range.start, old_range.extent(), new_text.extent(), optional<Text> {}, move(new_text), deleted_text_size);
   extent_ = new_range_end.traverse(extent_.traversal(old_range.end));
+  size_ += new_text.size() - deleted_text_size;
+  patch.splice(old_range.start, old_range.extent(), new_text.extent(), optional<Text> {}, move(new_text), deleted_text_size);
 }
 
 TextBuffer::Iterator TextBuffer::begin() {
-  return Iterator {*this};
+  return Iterator {*this, false};
 }
 
 TextBuffer::Iterator TextBuffer::end() {
-  return Iterator {*this}.traverse(extent());
+  return Iterator {*this, true};
 }
 
-TextBuffer::Iterator::Iterator(TextBuffer &buffer) :
+TextBuffer::Iterator::Iterator(TextBuffer &buffer, bool end) :
   buffer {buffer},
   next_change {optional<Patch::Change> {}},
-  offset_from_next_change_start {0},
-  next_change_base_offset {0},
-  current_offset {0} {
-  fetch_next_change();
+  offset_from_next_change_start {0} {
+  if (end) {
+    next_change_base_offset = buffer.base_text.size();
+    current_offset = buffer.size();
+  } else {
+    next_change_base_offset = 0;
+    current_offset = 0;
+    fetch_next_change();
+  }
 }
 
 uint16_t TextBuffer::Iterator::operator*() const {

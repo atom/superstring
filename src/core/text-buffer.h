@@ -7,6 +7,7 @@ class TextBuffer {
   Text base_text;
   Patch patch;
   Point extent_;
+  uint32_t size_;
   TextBuffer(Text &&base_text);
 
 public:
@@ -18,7 +19,7 @@ public:
     int64_t offset_from_next_change_start;
     uint32_t next_change_base_offset;
     uint32_t current_offset;
-    Iterator(TextBuffer &buffer);
+    Iterator(TextBuffer &buffer, bool end);
 
     void fetch_next_change();
 
@@ -42,6 +43,7 @@ public:
   TextBuffer() = default;
   TextBuffer(std::u16string text);
 
+  uint32_t size() const;
   Point extent() const;
   uint32_t line_length_for_row(uint32_t row);
   Point clip_position(Point);
