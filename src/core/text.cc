@@ -271,11 +271,11 @@ std::pair<Text::const_iterator, Text::const_iterator> Text::line_iterators(uint3
   return std::pair<const_iterator, const_iterator>(begin, end);
 }
 
-Text::const_iterator Text::cbegin() const {
+Text::const_iterator Text::begin() const {
   return content.cbegin();
 }
 
-Text::const_iterator Text::cend() const {
+Text::const_iterator Text::end() const {
   return content.cend();
 }
 

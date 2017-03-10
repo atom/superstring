@@ -37,8 +37,10 @@ class Text {
 
   uint16_t at(uint32_t offset) const;
   std::pair<const_iterator, const_iterator> line_iterators(uint32_t row) const;
-  const_iterator cbegin() const;
-  const_iterator cend() const;
+  const_iterator begin() const;
+  const_iterator end() const;
+  inline const_iterator cbegin() const { return begin(); }
+  inline const_iterator cend() const { return end(); }
   Point extent() const;
   uint32_t offset_for_position(Point) const;
   uint32_t line_length_for_row(uint32_t row) const;
