@@ -14,11 +14,11 @@ struct Point;
 class Text {
   friend class TextSlice;
 
+ public:
   std::vector<uint16_t> content;
   std::vector<uint32_t> line_offsets;
   Text(const std::vector<uint16_t> &&, const std::vector<uint32_t> &&);
 
- public:
   using const_iterator = std::vector<uint16_t>::const_iterator;
 
   Text();

@@ -148,30 +148,48 @@ TextBuffer::Iterator TextBuffer::Iterator::traverse(Point position) const {
     uint32_t preceding_change_current_offset =
       preceding_change_base_offset + preceding_text_delta;
 
-    uint32_t offset_from_preceding_change_start;
-    if (position <= preceding_change->new_end) {
+    int64_t offset_from_preceding_change_start;
+    if (position < preceding_change->new_end) {
       offset_from_preceding_change_start =
         preceding_change->new_text->offset_for_position(
           position.traversal(preceding_change->new_start)
         );
+
+      if (offset_from_preceding_change_start == 0 &&
+          preceding_change_base_offset > 0 &&
+          preceding_change->new_text->size() > 0 &&
+          preceding_change->new_text->content.front() == '\n') {
+        if (buffer.base_text.at(preceding_change_base_offset - 1) == '\r') {
+          offset_from_preceding_change_start--;
+        }
+      }
     } else {
-      Point base_text_position =
+      Point base_position =
         preceding_change->old_end.traverse(
           position.traversal(preceding_change->new_end)
         );
+
+      uint32_t base_offset =
+        buffer.base_text.offset_for_position(base_position);
+      uint32_t preceding_change_end_base_offset =
+        buffer.base_text.offset_for_position(preceding_change->old_end);
       offset_from_preceding_change_start =
-        preceding_change->new_text->size() +
-        (
-          buffer.base_text.offset_for_position(base_text_position) -
-          buffer.base_text.offset_for_position(preceding_change->old_end)
-        );
+        preceding_change->new_text->size() + base_offset - preceding_change_end_base_offset;
+
+      if (base_offset == preceding_change_end_base_offset &&
+          offset_from_preceding_change_start > 0 &&
+          preceding_change_end_base_offset < buffer.base_text.size() &&
+          preceding_change->new_text->content.back() == '\r' &&
+          buffer.base_text.at(preceding_change_end_base_offset) == '\n') {
+        offset_from_preceding_change_start--;
+      }
     }
 
     result.next_change = preceding_change;
     result.next_change_base_offset = preceding_change_base_offset;
     result.offset_from_next_change_start = offset_from_preceding_change_start;
     result.current_offset = preceding_change_current_offset + offset_from_preceding_change_start;
-    result.fetch_next_change();
+    if (offset_from_preceding_change_start >= 0) result.fetch_next_change();
   } else {
     result.current_offset = buffer.base_text.offset_for_position(position);
     result.offset_from_next_change_start = static_cast<int64_t>(result.current_offset) - result.next_change_base_offset;
