@@ -149,19 +149,16 @@ TextBuffer::Iterator TextBuffer::Iterator::traverse(Point position) const {
       preceding_change_base_offset + preceding_text_delta;
 
     int64_t offset_from_preceding_change_start;
+    uint16_t character_preceding_boundary = 0, character_following_boundary = 0;
     if (position < preceding_change->new_end) {
       offset_from_preceding_change_start =
         preceding_change->new_text->offset_for_position(
           position.traversal(preceding_change->new_start)
         );
 
-      if (offset_from_preceding_change_start == 0 &&
-          preceding_change_base_offset > 0 &&
-          preceding_change->new_text->size() > 0 &&
-          preceding_change->new_text->content.front() == '\n') {
-        if (buffer.base_text.at(preceding_change_base_offset - 1) == '\r') {
-          offset_from_preceding_change_start--;
-        }
+      if (offset_from_preceding_change_start == 0 && preceding_change_base_offset > 0) {
+        character_preceding_boundary = buffer.base_text.at(preceding_change_base_offset - 1);
+        character_following_boundary = preceding_change->new_text->content.front();
       }
     } else {
       Point base_position =
@@ -177,12 +174,19 @@ TextBuffer::Iterator TextBuffer::Iterator::traverse(Point position) const {
         preceding_change->new_text->size() + base_offset - preceding_change_end_base_offset;
 
       if (base_offset == preceding_change_end_base_offset &&
-          offset_from_preceding_change_start > 0 &&
-          preceding_change_end_base_offset < buffer.base_text.size() &&
-          preceding_change->new_text->content.back() == '\r' &&
-          buffer.base_text.at(preceding_change_end_base_offset) == '\n') {
-        offset_from_preceding_change_start--;
+          base_offset < buffer.base_text.size()) {
+        if (offset_from_preceding_change_start > 0) {
+          character_preceding_boundary = preceding_change->new_text->content.back();
+        } else if (preceding_change_base_offset > 0) {
+          character_preceding_boundary = buffer.base_text.at(preceding_change_base_offset - 1);
+        }
+
+        character_following_boundary = buffer.base_text.at(base_offset);
       }
+    }
+
+    if (character_preceding_boundary == '\r' && character_following_boundary == '\n') {
+      offset_from_preceding_change_start--;
     }
 
     result.next_change = preceding_change;
