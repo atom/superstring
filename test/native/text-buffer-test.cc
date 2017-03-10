@@ -53,6 +53,12 @@ TEST_CASE("TextBuffer::set_text_in_range - random edits") {
 
       REQUIRE(buffer.extent() == original_text.extent());
       REQUIRE(buffer.text() == original_text);
+      for (uint32_t row = 0; row < original_text.extent().row; row++) {
+        REQUIRE(
+          Point(row, buffer.line_length_for_row(row)) ==
+          Point(row, original_text.line_length_for_row(row))
+        );
+      }
     }
   }
 }

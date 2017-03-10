@@ -207,11 +207,12 @@ void splice_vector(
 
 void Text::splice(Point start, Point deletion_extent, TextSlice inserted_slice) {
   uint32_t content_splice_start = offset_for_position(start);
+  uint32_t content_splice_end = offset_for_position(start.traverse(deletion_extent));
   uint32_t original_content_size = content.size();
   splice_vector(
     content,
     content_splice_start,
-    offset_for_position(start.traverse(deletion_extent)) - content_splice_start,
+    content_splice_end - content_splice_start,
     inserted_slice.cbegin(),
     inserted_slice.cend()
   );
@@ -243,19 +244,15 @@ uint16_t Text::at(uint32_t offset) const {
 }
 
 uint32_t Text::offset_for_position(Point position) const {
-  uint64_t result = static_cast<uint64_t>(line_offsets[position.row]) + position.column;
-  uint64_t line_end_offset;
-  if (position.row < line_offsets.size() - 1) {
-    line_end_offset = line_offsets[position.row + 1] - 1;
-    if (line_end_offset > 0 && content[line_end_offset - 1] == '\r') {
-      line_end_offset--;
-    }
-  } else {
-    line_end_offset = size();
-  }
-  if (result > line_end_offset) result = line_end_offset;
-  if (result > UINT32_MAX) result = UINT16_MAX;
-  return result;
+  auto iterators = line_iterators(position.row);
+  auto position_iterator = iterators.first + position.column;
+  if (position_iterator > iterators.second) position_iterator = iterators.second;
+  return position_iterator - cbegin();
+}
+
+uint32_t Text::line_length_for_row(uint32_t row) const {
+  auto iterators = line_iterators(row);
+  return iterators.second - iterators.first;
 }
 
 std::pair<Text::const_iterator, Text::const_iterator> Text::line_iterators(uint32_t row) const {
@@ -264,7 +261,7 @@ std::pair<Text::const_iterator, Text::const_iterator> Text::line_iterators(uint3
   const_iterator end;
   if (row < line_offsets.size() - 1) {
     end = content.cbegin() + line_offsets[row + 1] - 1;
-    if (*(end - 1) == '\r') {
+    if (end > begin && *(end - 1) == '\r') {
       --end;
     }
   } else {

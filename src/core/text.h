@@ -41,6 +41,7 @@ class Text {
   const_iterator cend() const;
   Point extent() const;
   uint32_t offset_for_position(Point) const;
+  uint32_t line_length_for_row(uint32_t row) const;
   void append(TextSlice);
   void serialize(Serializer &) const;
   uint32_t size() const;
