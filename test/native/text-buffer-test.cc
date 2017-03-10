@@ -36,14 +36,16 @@ TEST_CASE("TextBuffer::line_length_for_row - basic") {
 
 TEST_CASE("TextBuffer::set_text_in_range - random edits") {
   auto t = time(nullptr);
-  for (uint i = 0; i < 100; i++) {
-    auto seed = t + i;
+  for (uint i = 0; i < 1000; i++) {
+    auto seed = t * 1000 + i;
     srand(seed);
     printf("Seed: %ld\n", seed);
 
     TextBuffer buffer {get_random_string()};
 
     for (uint j = 0; j < 10; j++) {
+      // printf("j: %u\n", j);
+
       Text original_text = buffer.text();
       Range deleted_range = get_random_range(buffer);
       Text inserted_text = get_random_text();
@@ -53,6 +55,7 @@ TEST_CASE("TextBuffer::set_text_in_range - random edits") {
 
       REQUIRE(buffer.extent() == original_text.extent());
       REQUIRE(buffer.text() == original_text);
+
       for (uint32_t row = 0; row < original_text.extent().row; row++) {
         REQUIRE(
           Point(row, buffer.line_length_for_row(row)) ==
