@@ -49,7 +49,7 @@ Patch *deserialize(const vector<uint8_t> &bytes) {
   return new Patch(deserializer);
 }
 
-void splice(Patch &patch, PointWrapper start, PointWrapper deleted_extent, PointWrapper inserted_extent) {
+void splice(Patch &patch, Point start, Point deleted_extent, Point inserted_extent) {
   bool result = patch.splice(
     start,
     deleted_extent,
@@ -58,7 +58,7 @@ void splice(Patch &patch, PointWrapper start, PointWrapper deleted_extent, Point
   if (!result) throw runtime_error("Can't splice into a frozen patch");
 }
 
-void splice_with_text(Patch &patch, PointWrapper start, PointWrapper deleted_extent, PointWrapper inserted_extent,
+void splice_with_text(Patch &patch, Point start, Point deleted_extent, Point inserted_extent,
                       const string &deleted_text, const string &inserted_text) {
   bool result = patch.splice(
     start,

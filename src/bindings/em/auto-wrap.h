@@ -8,7 +8,6 @@
 #include "flat_set.h"
 #include "marker-index.h"
 #include "optional.h"
-#include "point-wrapper.h"
 #include "point.h"
 #include "text.h"
 
@@ -47,9 +46,6 @@ typename em_wrap_type<typename std::decay<LocalType>::type>::WireType em_transmi
 
 template <>
 struct em_wrap_type<void> : public em_wrap_type_base<void, void> {};
-
-template <>
-struct em_wrap_type<Point> : public em_wrap_type_simple<Point, PointWrapper> {};
 
 template <typename ValueType>
 struct em_wrap_type<std::vector<ValueType>> : public em_wrap_type_base<std::vector<ValueType>, emscripten::val> {
