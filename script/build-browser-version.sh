@@ -16,3 +16,4 @@ ${EM_COMPILER_PATH}                     \
   src/bindings/em/*.cc                  \
   -s TOTAL_MEMORY=134217728             \
   --memory-init-file 0                  \
+  "$@"
