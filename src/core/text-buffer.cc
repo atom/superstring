@@ -149,7 +149,6 @@ TextBuffer::Iterator TextBuffer::Iterator::traverse(Point position) const {
       preceding_change_base_offset + preceding_text_delta;
 
     int64_t offset_from_preceding_change_start;
-    uint16_t character_preceding_boundary = 0, character_following_boundary = 0;
     if (position < preceding_change->new_end) {
       offset_from_preceding_change_start =
         preceding_change->new_text->offset_for_position(
@@ -157,8 +156,9 @@ TextBuffer::Iterator TextBuffer::Iterator::traverse(Point position) const {
         );
 
       if (offset_from_preceding_change_start == 0 && preceding_change_base_offset > 0) {
-        character_preceding_boundary = buffer.base_text.at(preceding_change_base_offset - 1);
-        character_following_boundary = preceding_change->new_text->content.front();
+        if (buffer.base_text.at(preceding_change_base_offset - 1) == '\r' &&
+            preceding_change->new_text->content.front() == '\n')
+        offset_from_preceding_change_start--;
       }
     } else {
       Point base_position =
@@ -175,18 +175,17 @@ TextBuffer::Iterator TextBuffer::Iterator::traverse(Point position) const {
 
       if (base_offset == preceding_change_end_base_offset &&
           base_offset < buffer.base_text.size()) {
+        uint16_t previous_character = 0;
         if (offset_from_preceding_change_start > 0) {
-          character_preceding_boundary = preceding_change->new_text->content.back();
+          previous_character = preceding_change->new_text->content.back();
         } else if (preceding_change_base_offset > 0) {
-          character_preceding_boundary = buffer.base_text.at(preceding_change_base_offset - 1);
+          previous_character = buffer.base_text.at(preceding_change_base_offset - 1);
         }
 
-        character_following_boundary = buffer.base_text.at(base_offset);
+        if (previous_character == '\r' && buffer.base_text.at(base_offset) == '\n') {
+          offset_from_preceding_change_start--;
+        }
       }
-    }
-
-    if (character_preceding_boundary == '\r' && character_following_boundary == '\n') {
-      offset_from_preceding_change_start--;
     }
 
     result.next_change = preceding_change;
