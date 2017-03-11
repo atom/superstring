@@ -305,10 +305,10 @@ void PatchWrapper::change_for_new_position(const Nan::FunctionCallbackInfo<Value
 void PatchWrapper::serialize(const Nan::FunctionCallbackInfo<Value> &info) {
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
 
-  static Serializer output;
-
+  static vector<uint8_t> output;
   output.clear();
-  patch.serialize(output);
+  Serializer serializer(output);
+  patch.serialize(serializer);
   Local<Object> result;
   auto maybe_result =
       Nan::CopyBuffer(reinterpret_cast<char *>(output.data()), output.size());
@@ -323,9 +323,10 @@ void PatchWrapper::deserialize(const Nan::FunctionCallbackInfo<Value> &info) {
     if (info[0]->IsUint8Array()) {
       auto *data = node::Buffer::Data(info[0]);
 
-      static Serializer input;
+      static vector<uint8_t> input;
       input.assign(data, data + node::Buffer::Length(info[0]));
-      PatchWrapper *wrapper = new PatchWrapper(Patch{input});
+      Deserializer deserializer(input);
+      PatchWrapper *wrapper = new PatchWrapper(Patch{deserializer});
       wrapper->Wrap(result);
       info.GetReturnValue().Set(result);
     }

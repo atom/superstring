@@ -58,7 +58,7 @@ public:
 
   Patch();
   Patch(bool merges_adjacent_changes);
-  Patch(Serializer &input);
+  Patch(Deserializer &input);
   Patch(const std::vector<const Patch *> &);
   Patch(Node *root, uint32_t change_count, bool merges_adjacent_changes);
   Patch(Patch &&);

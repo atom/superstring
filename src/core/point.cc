@@ -13,7 +13,7 @@ Point::Point() : Point(0, 0) {}
 
 Point::Point(unsigned row, unsigned column) : row {row}, column {column} {}
 
-Point::Point(Serializer &input) :
+Point::Point(Deserializer &input) :
   row {input.read<uint32_t>()},
   column {input.read<uint32_t>()} {}
 

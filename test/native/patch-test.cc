@@ -230,9 +230,12 @@ TEST_CASE("Patch::serialize") {
     }
   }));
 
-  Serializer serializer;
+  vector<uint8_t> bytes;
+  Serializer serializer(bytes);
   patch.serialize(serializer);
-  Patch patch_copy(serializer);
+
+  Deserializer deserializer(bytes);
+  Patch patch_copy(deserializer);
   REQUIRE(patch_copy.get_changes() == vector<Change>({
     Change {
       Point {0, 0}, Point {0, 0},

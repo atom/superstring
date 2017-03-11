@@ -56,7 +56,7 @@ struct Patch::Node {
     compute_subtree_text_sizes();
   }
 
-  Node(Serializer &input) :
+  Node(Deserializer &input) :
     left {nullptr},
     right {nullptr},
     old_extent {input},
@@ -1570,7 +1570,7 @@ void Patch::serialize(Serializer &output) const {
 
 bool Patch::is_frozen() const { return frozen_node_array != nullptr; }
 
-Patch::Patch(Serializer &input)
+Patch::Patch(Deserializer &input)
     : root{nullptr}, frozen_node_array{nullptr}, merges_adjacent_changes{true} {
   uint32_t serialization_version = input.read<uint32_t>();
   if (serialization_version != SERIALIZATION_VERSION) {

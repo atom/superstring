@@ -5,6 +5,8 @@
 #include <emscripten/bind.h>
 #include <emscripten/val.h>
 
+using std::vector;
+
 template <>
 inline Patch const *emscripten::val::as<Patch const *>(void) const {
   using namespace emscripten;
@@ -29,18 +31,20 @@ Patch *constructor(emscripten::val value) {
   return new Patch(merge_adjacent_hunks);
 }
 
-std::vector<uint8_t> serialize(Patch const &patch) {
-  std::vector<uint8_t> result;
-  patch.serialize(&result);
-  return result;
+vector<uint8_t> serialize(Patch const &patch) {
+  vector<uint8_t> output;
+  Serializer serializer(output);
+  patch.serialize(serializer);
+  return output;
 }
 
-Patch *compose(std::vector<Patch const *> const &patches) {
+Patch *compose(vector<Patch const *> const &patches) {
   return new Patch(patches);
 }
 
-Patch *deserialize(std::vector<uint8_t> const &bytes) {
-  return new Patch(bytes);
+Patch *deserialize(const vector<uint8_t> &bytes) {
+  Deserializer deserializer(bytes);
+  return new Patch(deserializer);
 }
 
 template <typename T>

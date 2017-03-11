@@ -13,7 +13,7 @@ struct Point {
 
   Point();
   Point(unsigned row, unsigned column);
-  Point(Serializer &input);
+  Point(Deserializer &input);
 
   int compare(const Point &other) const;
   bool is_zero() const;

@@ -25,7 +25,7 @@ class Text {
   Text(const std::u16string &string);
   Text(std::vector<uint16_t> &&content);
   Text(TextSlice slice);
-  Text(Serializer &serializer);
+  Text(Deserializer &deserializer);
   template<typename Iter>
   Text(Iter begin, Iter end) : Text(std::vector<uint16_t>{begin, end}) {}
 

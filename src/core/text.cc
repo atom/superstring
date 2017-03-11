@@ -45,11 +45,11 @@ Text::Text(TextSlice slice) :
 Text::Text(const vector<uint16_t> &&content, const vector<uint32_t> &&line_offsets) :
   content {move(content)}, line_offsets {move(line_offsets)} {}
 
-Text::Text(Serializer &serializer) : line_offsets {0} {
-  uint32_t size = serializer.read<uint32_t>();
+Text::Text(Deserializer &deserializer) : line_offsets {0} {
+  uint32_t size = deserializer.read<uint32_t>();
   content.reserve(size);
   for (uint32_t offset = 0; offset < size; offset++) {
-    uint16_t character = serializer.read<uint16_t>();
+    uint16_t character = deserializer.read<uint16_t>();
     content.push_back(character);
     if (character == '\n') line_offsets.push_back(offset + 1);
   }
