@@ -46,8 +46,6 @@ class ChangeWrapper : public Nan::ObjectWrap {
     Nan::SetAccessor(instance_template, Nan::New("newStart").ToLocalChecked(), get_new_start);
     Nan::SetAccessor(instance_template, Nan::New("oldEnd").ToLocalChecked(), get_old_end);
     Nan::SetAccessor(instance_template, Nan::New("newEnd").ToLocalChecked(), get_new_end);
-    Nan::SetAccessor(instance_template, Nan::New("precedingOldTextLength").ToLocalChecked(), get_preceding_old_text_length);
-    Nan::SetAccessor(instance_template, Nan::New("precedingNewTextLength").ToLocalChecked(), get_preceding_new_text_length);
 
     const auto &prototype_template = constructor_template->PrototypeTemplate();
     prototype_template->Set(Nan::New<String>("toString").ToLocalChecked(), Nan::New<FunctionTemplate>(to_string));
