@@ -4,6 +4,7 @@
 #include <sstream>
 #include <vector>
 #include "point-wrapper.h"
+#include "text-wrapper.h"
 
 using namespace v8;
 using std::move;
@@ -14,22 +15,6 @@ static Nan::Persistent<String> old_text_string;
 static Nan::Persistent<v8::Function> change_wrapper_constructor;
 static Nan::Persistent<v8::FunctionTemplate> patch_wrapper_constructor_template;
 static Nan::Persistent<v8::Function> patch_wrapper_constructor;
-
-static optional<Text> text_from_js(Nan::MaybeLocal<String> maybe_string) {
-  Local<String> string;
-  if (!maybe_string.ToLocal(&string)) {
-    Nan::ThrowTypeError("Expected a string.");
-    return optional<Text> {};
-  }
-
-  vector<uint16_t> content(string->Length());
-  string->Write(content.data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
-  return optional<Text> {move(content)};
-}
-
-static Local<String> text_to_js(Text *text) {
-  return Nan::New<String>(text->data(), text->size()).ToLocalChecked();
-}
 
 class ChangeWrapper : public Nan::ObjectWrap {
  public:
@@ -57,10 +42,10 @@ class ChangeWrapper : public Nan::ObjectWrap {
     if (Nan::NewInstance(Nan::New(change_wrapper_constructor)).ToLocal(&result)) {
       (new ChangeWrapper(change))->Wrap(result);
       if (change.new_text) {
-        result->Set(Nan::New(new_text_string), text_to_js(change.new_text));
+        result->Set(Nan::New(new_text_string), TextWrapper::text_to_js(*change.new_text));
       }
       if (change.old_text) {
-        result->Set(Nan::New(old_text_string), text_to_js(change.old_text));
+        result->Set(Nan::New(old_text_string), TextWrapper::text_to_js(*change.old_text));
       }
       return result;
     } else {
@@ -175,12 +160,12 @@ void PatchWrapper::splice(const Nan::FunctionCallbackInfo<Value> &info) {
     optional<Text> inserted_text;
 
     if (info.Length() >= 4) {
-      deleted_text = text_from_js(Nan::To<String>(info[3]));
+      deleted_text = TextWrapper::text_from_js(info[3]);
       if (!deleted_text) return;
     }
 
     if (info.Length() >= 5) {
-      inserted_text = text_from_js(Nan::To<String>(info[4]));
+      inserted_text = TextWrapper::text_from_js(info[4]);
       if (!inserted_text) return;
     }
 

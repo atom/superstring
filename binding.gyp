@@ -10,7 +10,10 @@
                 "src/bindings/marker-index-wrapper.cc",
                 "src/bindings/patch-wrapper.cc",
                 "src/bindings/point-wrapper.cc",
+                "src/bindings/range-wrapper.cc",
                 "src/bindings/buffer-offset-index-wrapper.cc",
+                "src/bindings/text-buffer-wrapper.cc",
+                "src/bindings/text-wrapper.cc",
             ],
             "include_dirs": [
               "src/core",
