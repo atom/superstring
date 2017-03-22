@@ -66,6 +66,25 @@ struct em_wrap_type<std::vector<ValueType>> : public em_wrap_type_base<std::vect
   }
 };
 
+template <>
+struct em_wrap_type<std::vector<uint8_t>> : public em_wrap_type_base<std::vector<uint8_t>, emscripten::val> {
+  static std::vector<uint8_t> receive(emscripten::val const &value) {
+    std::vector<uint8_t> result;
+    for (auto i = 0u, length = value["length"].as<unsigned>(); i < length; ++i) {
+      result.push_back(value[i].as<uint8_t>());
+    }
+    return result;
+  }
+
+  static emscripten::val transmit(std::vector<uint8_t> const &input) {
+    auto result = emscripten::val::global("Uint8Array").new_(input.size());
+    for (uint32_t i = 0, n = input.size(); i < n; i++) {
+      result.set(i, input[i]);
+    }
+    return result;
+  }
+};
+
 template <typename ValueType>
 struct em_wrap_type<optional<ValueType>> : public em_wrap_type_base<optional<ValueType>, emscripten::val> {
   static optional<ValueType> receive(emscripten::val const &value) {
