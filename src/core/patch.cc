@@ -1421,8 +1421,8 @@ vector<Change> Patch::get_changes_in_old_range(Point start, Point end) {
   return get_changes_in_range<OldCoordinates>(start, end);
 }
 
-vector<Change> Patch::get_changes_in_new_range(Point start, Point end, bool inclusive) {
-  return get_changes_in_range<NewCoordinates>(start, end, inclusive);
+vector<Change> Patch::get_changes_in_new_range(Point start, Point end) {
+  return get_changes_in_range<NewCoordinates>(start, end);
 }
 
 optional<Change> Patch::change_for_old_position(Point target) {
@@ -1440,8 +1440,12 @@ optional<Text> Patch::compute_old_text(optional<Text> &&deleted_text,
 
   Text result;
 
-  auto overlapping_changes =
-      get_changes_in_new_range(new_splice_start, new_deletion_end, merges_adjacent_changes);
+  auto overlapping_changes = get_changes_in_range<NewCoordinates>(
+    new_splice_start,
+    new_deletion_end,
+    merges_adjacent_changes
+  );
+
   TextSlice deleted_text_slice = TextSlice(*deleted_text);
   Point deleted_text_slice_start = new_splice_start;
 
@@ -1473,8 +1477,11 @@ uint32_t Patch::compute_old_text_size(uint32_t deleted_text_size,
                                       Point new_splice_start,
                                       Point new_deletion_end) {
   uint32_t old_text_size = deleted_text_size;
-  auto overlapping_changes =
-      get_changes_in_new_range(new_splice_start, new_deletion_end, merges_adjacent_changes);
+  auto overlapping_changes = get_changes_in_range<NewCoordinates>(
+    new_splice_start,
+    new_deletion_end,
+    merges_adjacent_changes
+  );
 
   for (const Change &change : overlapping_changes) {
     if (!change.new_text) return 0;

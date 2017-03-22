@@ -73,8 +73,7 @@ public:
   Patch copy();
   Patch invert();
   std::vector<Change> get_changes() const;
-  std::vector<Change> get_changes_in_new_range(Point start, Point end,
-                                       bool inclusive = false);
+  std::vector<Change> get_changes_in_new_range(Point start, Point end);
   std::vector<Change> get_changes_in_old_range(Point start, Point end);
   optional<Change> change_for_old_position(Point position);
   optional<Change> change_for_new_position(Point position);

@@ -83,7 +83,7 @@ EMSCRIPTEN_BINDINGS(Patch) {
     .function("copy", WRAP(&Patch::copy))
     .function("invert", WRAP(&Patch::invert))
     .function("getChanges", WRAP(&Patch::get_changes))
-    .function("getChangesInNewRange", WRAP_OVERLOAD(&Patch::get_changes_in_new_range, std::vector<Patch::Change> (Patch::*)(Point, Point, bool)))
+    .function("getChangesInNewRange", WRAP(&Patch::get_changes_in_new_range))
     .function("getChangesInOldRange", WRAP(&Patch::get_changes_in_old_range))
     .function("getChangeCount", WRAP(&Patch::get_change_count))
     .function("changeForOldPosition", WRAP(&Patch::change_for_old_position))
