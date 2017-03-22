@@ -133,22 +133,6 @@ struct em_wrap_type<flat_set<ValueType>> : public em_wrap_type_base<flat_set<Val
 };
 
 template <>
-struct em_wrap_type<MarkerIndex::SpliceResult> : public em_wrap_type_base<MarkerIndex::SpliceResult, emscripten::val> {
-  static MarkerIndex::SpliceResult receive(emscripten::val const &value) {
-    throw std::runtime_error("Unimplemented");
-  }
-
-  static emscripten::val transmit(MarkerIndex::SpliceResult const &splice_result) {
-    auto result = emscripten::val::object();
-    result.set("touch", em_transmit(splice_result.touch));
-    result.set("inside", em_transmit(splice_result.inside));
-    result.set("overlap", em_transmit(splice_result.overlap));
-    result.set("surround", em_transmit(splice_result.surround));
-    return result;
-  }
-};
-
-template <>
 struct em_wrap_type<Text> : public em_wrap_type_base<Text, std::string> {
   static Text receive(std::string const &str) {
     return Text(str.begin(), str.end());
@@ -156,18 +140,6 @@ struct em_wrap_type<Text> : public em_wrap_type_base<Text, std::string> {
 
   static std::string transmit(Text const &text) {
     return std::string(text.begin(), text.end());
-  }
-};
-
-template <>
-struct em_wrap_type<std::unique_ptr<Text>> : public em_wrap_type_base<std::unique_ptr<Text>, emscripten::val> {
-  static std::unique_ptr<Text> receive(emscripten::val const &value) {
-    return std::make_unique<Text>(em_wrap_type<Text>::receive(value.as<std::string>()));
-  }
-
-  static emscripten::val transmit(std::unique_ptr<Text> const &text) {
-    if (!text) return emscripten::val::undefined();
-    return emscripten::val(em_wrap_type<Text>::transmit(*text));
   }
 };
 

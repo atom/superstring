@@ -26,8 +26,8 @@ EMSCRIPTEN_BINDINGS(MarkerIndex) {
     .function("dump", WRAP(&MarkerIndex::dump));
 
   emscripten::value_object<MarkerIndex::SpliceResult>("SpliceResult")
-    .field("touch", &MarkerIndex::SpliceResult::touch)
-    .field("inside", &MarkerIndex::SpliceResult::inside)
-    .field("overlap", &MarkerIndex::SpliceResult::overlap)
-    .field("surround", &MarkerIndex::SpliceResult::surround);
+    .field("touch", WRAP_FIELD(MarkerIndex::SpliceResult, touch))
+    .field("inside", WRAP_FIELD(MarkerIndex::SpliceResult, inside))
+    .field("overlap", WRAP_FIELD(MarkerIndex::SpliceResult, overlap))
+    .field("surround", WRAP_FIELD(MarkerIndex::SpliceResult, surround));
 }
