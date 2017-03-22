@@ -30,7 +30,7 @@ class Text {
   Text(Iter begin, Iter end) : Text(std::vector<uint16_t>{begin, end}) {}
 
   static Text build(std::istream &stream, size_t input_size, const char *encoding_name,
-                        size_t cchange_size, std::function<void(size_t)> progress_callback);
+                    size_t chunk_size, std::function<void(size_t)> progress_callback);
   static Text concat(TextSlice a, TextSlice b);
   static Text concat(TextSlice a, TextSlice b, TextSlice c);
   void splice(Point start, Point deletion_extent, TextSlice inserted_slice);
