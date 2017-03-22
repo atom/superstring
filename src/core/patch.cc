@@ -1194,6 +1194,10 @@ std::string Patch::get_json() const {
 
 size_t Patch::get_change_count() const { return change_count; }
 
+void Patch::clear() {
+  delete_node(&root);
+}
+
 void Patch::rebalance() {
   if (!root)
     return;

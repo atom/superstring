@@ -37,11 +37,11 @@ public:
     Iterator traverse(Point point) const;
   };
 
-  static TextBuffer build(std::istream &stream, size_t input_size, const char *encoding_name,
-                          size_t cchange_size, std::function<void(size_t)> progress_callback);
-
   TextBuffer() = default;
   TextBuffer(std::u16string text);
+
+  void load(std::istream &stream, size_t input_size, const char *encoding_name,
+            size_t cchange_size, std::function<void(size_t)> progress_callback);
 
   uint32_t size() const;
   Point extent() const;

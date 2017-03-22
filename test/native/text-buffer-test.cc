@@ -12,7 +12,9 @@ TEST_CASE("TextBuffer::build - can build a TextBuffer from a UTF8 stream") {
   stringstream stream(input, std::ios_base::in);
 
   vector<size_t> progress_reports;
-  TextBuffer buffer = TextBuffer::build(stream, input.size(), "UTF8", 3, [&](size_t percent_done) {
+  TextBuffer buffer;
+
+  buffer.load(stream, input.size(), "UTF8", 3, [&](size_t percent_done) {
     progress_reports.push_back(percent_done);
   });
 

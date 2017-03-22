@@ -84,6 +84,7 @@ public:
   std::string get_json() const;
   void rebalance();
   size_t get_change_count() const;
+  void clear();
 
 private:
   template <typename CoordinateSpace>

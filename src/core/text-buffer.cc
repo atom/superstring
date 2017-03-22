@@ -10,9 +10,12 @@ TextBuffer::TextBuffer(Text &&text) :
 
 TextBuffer::TextBuffer(std::u16string text) : TextBuffer {Text {text}} {}
 
-TextBuffer TextBuffer::build(std::istream &stream, size_t input_size, const char *encoding_name,
-                             size_t cchange_size, std::function<void(size_t)> progress_callback) {
-  return TextBuffer {Text::build(stream, input_size, encoding_name, cchange_size, progress_callback)};
+void TextBuffer::load(std::istream &stream, size_t input_size, const char *encoding_name,
+                      size_t cchange_size, std::function<void(size_t)> progress_callback) {
+  patch.clear();
+  base_text = Text::build(stream, input_size, encoding_name, cchange_size, progress_callback);
+  extent_ = base_text.extent();
+  size_ = base_text.size();
 }
 
 Point TextBuffer::extent() const {
