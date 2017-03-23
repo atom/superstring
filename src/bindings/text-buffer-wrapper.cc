@@ -16,6 +16,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   const auto &prototype_template = constructor_template->PrototypeTemplate();
   prototype_template->Set(Nan::New("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(noop));
   prototype_template->Set(Nan::New("getTextInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text_in_range));
+  prototype_template->Set(Nan::New("setTextInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(set_text_in_range));
   prototype_template->Set(Nan::New("getText").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text));
   prototype_template->Set(Nan::New("load").ToLocalChecked(), Nan::New<FunctionTemplate>(load));
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());

@@ -48,4 +48,27 @@ describe('TextBuffer', () => {
         .then(() => assert.equal(rejection.message, 'Invalid encoding name: GARBAGE-16'))
     })
   })
+
+  describe('setTextInRange', () => {
+    it('mutates the buffer', () => {
+      const buffer = new TextBuffer()
+
+      buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), 'abc\ndef\nghi')
+      assert.equal(buffer.getText(), 'abc\ndef\nghi')
+
+      buffer.setTextInRange(Range(Point(0, 2), Point(1, 1)), 'Y')
+      assert.equal(buffer.getText(), 'abYef\nghi')
+
+      buffer.setTextInRange(Range(Point(0, 1), Point(5, 5)), 'O')
+      assert.equal(buffer.getText(), 'aO')
+    })
+  })
 })
+
+function Range(start, end) {
+  return {start, end}
+}
+
+function Point(row, column) {
+  return {row, column}
+}
