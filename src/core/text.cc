@@ -247,7 +247,10 @@ uint16_t Text::at(uint32_t offset) const {
 uint32_t Text::offset_for_position(Point position) const {
   auto iterators = line_iterators(position.row);
   auto position_iterator = iterators.first + position.column;
-  if (position_iterator > iterators.second) position_iterator = iterators.second;
+  if (position_iterator > iterators.second ||
+      position_iterator < iterators.first) {
+    position_iterator = iterators.second;
+  }
   return position_iterator - cbegin();
 }
 
