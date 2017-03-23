@@ -5,6 +5,8 @@ const fs = require('fs')
 
 describe('TextBuffer', () => {
   describe('load()', () => {
+    if (!TextBuffer.prototype.load) return;
+
     it('loads the contents of the given filePath in the background', () => {
       const buffer = new TextBuffer()
 

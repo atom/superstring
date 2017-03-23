@@ -6,29 +6,29 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   } catch (e) {
     module.exports = require('./build/Debug/superstring.node')
   }
-}
 
-const {load} = module.exports.TextBuffer.prototype
-module.exports.TextBuffer.prototype.load =
-function (filePath, encoding, progressCallback) {
-  if (typeof encoding === 'function') {
-    progressCallback = encoding
-    encoding = 'UTF8'
-  }
+  const {load} = module.exports.TextBuffer.prototype
+  module.exports.TextBuffer.prototype.load =
+  function (filePath, encoding, progressCallback) {
+    if (typeof encoding === 'function') {
+      progressCallback = encoding
+      encoding = 'UTF8'
+    }
 
-  return new Promise((resolve, reject) =>
-    load.call(
-      this,
-      filePath,
-      encoding,
-      (result) => {
-        if (result) {
-          resolve()
-        } else {
-          reject(new Error(`Invalid encoding name: ${encoding}`))
-        }
-      },
-      progressCallback
+    return new Promise((resolve, reject) =>
+      load.call(
+        this,
+        filePath,
+        encoding,
+        (result) => {
+          if (result) {
+            resolve()
+          } else {
+            reject(new Error(`Invalid encoding name: ${encoding}`))
+          }
+        },
+        progressCallback
+      )
     )
-  )
+  }
 }
