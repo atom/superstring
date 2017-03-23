@@ -683,6 +683,7 @@ bool Patch::splice(Point new_splice_start,
       if (lower_bound == upper_bound) {
         if (root->old_extent.is_zero() && root->new_extent.is_zero()) {
           delete_root();
+          lower_bound = upper_bound = nullptr;
         }
       } else {
         upper_bound->left = lower_bound->left;
