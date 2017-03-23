@@ -64,6 +64,14 @@ TEST_CASE("TextBuffer::set_text_in_range - random edits") {
           Point(row, original_text.line_length_for_row(row))
         );
       }
+
+      for (uint32_t k = 0; k < 5; k++) {
+        Range range = get_random_range(buffer);
+        REQUIRE(
+          buffer.text_in_range(range) ==
+          Text{TextSlice{original_text}.suffix(range.start).prefix(range.extent())}
+        );
+      }
     }
   }
 }

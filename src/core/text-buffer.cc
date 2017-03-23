@@ -201,7 +201,9 @@ TextBuffer::Iterator TextBuffer::Iterator::traverse(Point position) const {
     result.next_change_base_offset = preceding_change_base_offset;
     result.offset_from_next_change_start = offset_from_preceding_change_start;
     result.current_offset = preceding_change_current_offset + offset_from_preceding_change_start;
-    if (offset_from_preceding_change_start >= 0) result.fetch_next_change();
+    if (offset_from_preceding_change_start >= preceding_change->new_text->size()) {
+      result.fetch_next_change();
+    }
   } else {
     result.current_offset = buffer.base_text.offset_for_position(position);
     result.offset_from_next_change_start = static_cast<int64_t>(result.current_offset) - result.next_change_base_offset;
