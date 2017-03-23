@@ -11,11 +11,11 @@ TEST_CASE("Text::build - can build a Text from a UTF8 stream") {
   stringstream stream(input, std::ios_base::in);
 
   vector<size_t> progress_reports;
-  Text text = Text::build(stream, input.size(), "UTF8", 3, [&](size_t percent_done) {
+  auto text = Text::build(stream, input.size(), "UTF8", 3, [&](size_t percent_done) {
     progress_reports.push_back(percent_done);
   });
 
-  REQUIRE(text == Text { u"abγdefg\nhijklmnop" });
+  REQUIRE(*text == Text { u"abγdefg\nhijklmnop" });
   REQUIRE(progress_reports == vector<size_t>({3, 5, 8, 11, 14, 17, 18}));
 }
 
@@ -24,11 +24,11 @@ TEST_CASE("Text::build - replaces invalid byte sequences in the middle of the st
   stringstream stream(input, std::ios_base::in);
 
   vector<size_t> progress_reports;
-  Text text = Text::build(stream, input.size(), "UTF8", 3, [&](size_t percent_done) {
+  auto text = Text::build(stream, input.size(), "UTF8", 3, [&](size_t percent_done) {
     progress_reports.push_back(percent_done);
   });
 
-  REQUIRE(text == Text { u"ab" "\ufffd" "\ufffd" "de" });
+  REQUIRE(*text == Text { u"ab" "\ufffd" "\ufffd" "de" });
   REQUIRE(progress_reports == vector<size_t>({ 3, 6 }));
 
 }
@@ -37,32 +37,32 @@ TEST_CASE("Text::build - replaces invalid byte sequences at the end of the strea
   string input = "ab" "\xf0\x9f"; // incomplete 4-byte code point for '😁' at the end of the stream
   stringstream stream(input, std::ios_base::in);
 
-  Text text = Text::build(stream, input.size(), "UTF8", 5, [&](size_t percent_done) {});
-  REQUIRE(text == Text { u"ab" "\ufffd" "\ufffd" });
+  auto text = Text::build(stream, input.size(), "UTF8", 5, [&](size_t percent_done) {});
+  REQUIRE(*text == Text { u"ab" "\ufffd" "\ufffd" });
 }
 
 TEST_CASE("Text::build - handles characters that require two 16-bit code units") {
   string input = "ab" "\xf0\x9f" "\x98\x81" "cd"; // 'ab😁cd'
   stringstream stream(input, std::ios_base::in);
 
-  Text text = Text::build(stream, input.size(), "UTF8", 5, [&](size_t percent_done) {});
-  REQUIRE(text == Text { u"ab" "\xd83d" "\xde01" "cd" });
+  auto text = Text::build(stream, input.size(), "UTF8", 5, [&](size_t percent_done) {});
+  REQUIRE(*text == Text { u"ab" "\xd83d" "\xde01" "cd" });
 }
 
 TEST_CASE("Text::build - resizes the buffer if the encoding conversion runs out of room") {
   string input = "abcdef";
   stringstream stream(input, std::ios_base::in);
 
-  Text text = Text::build(stream, 3, "UTF8", 5, [&](size_t percent_done) {});
-  REQUIRE(text == Text { u"abcdef" });
+  auto text = Text::build(stream, 3, "UTF8", 5, [&](size_t percent_done) {});
+  REQUIRE(*text == Text { u"abcdef" });
 }
 
 TEST_CASE("Text::build - handles CRLF newlines") {
   string input = "abc\r\nde\rf\r\ng\r";
   stringstream stream(input, std::ios_base::in);
 
-  Text text = Text::build(stream, input.size(), "UTF8", 4, [&](size_t percent_done) {});
-  REQUIRE(text == Text { u"abc\r\nde\rf\r\ng\r" });
+  auto text = Text::build(stream, input.size(), "UTF8", 4, [&](size_t percent_done) {});
+  REQUIRE(*text == Text { u"abc\r\nde\rf\r\ng\r" });
 }
 
 TEST_CASE("Text::line_iterators - returns iterators at the start and end of lines") {

@@ -9,8 +9,26 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
 }
 
 const {load} = module.exports.TextBuffer.prototype
-module.exports.TextBuffer.prototype.load = function (filePath, progressCallback) {
-  return new Promise(resolve => {
-    load.call(this, filePath, resolve, progressCallback || function() {})
-  });
+module.exports.TextBuffer.prototype.load =
+function (filePath, encoding, progressCallback) {
+  if (typeof encoding === 'function') {
+    progressCallback = encoding
+    encoding = 'UTF8'
+  }
+
+  return new Promise((resolve, reject) =>
+    load.call(
+      this,
+      filePath,
+      encoding,
+      (result) => {
+        if (result) {
+          resolve()
+        } else {
+          reject(new Error(`Invalid encoding name: ${encoding}`))
+        }
+      },
+      progressCallback
+    )
+  )
 }

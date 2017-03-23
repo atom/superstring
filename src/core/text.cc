@@ -62,11 +62,12 @@ void Text::serialize(Serializer &serializer) const {
   }
 }
 
-Text Text::build(std::istream &stream, size_t input_size, const char *encoding_name,
-                 size_t chunk_size, function<void(size_t)> progress_callback) {
+optional<Text> Text::build(std::istream &stream, size_t input_size,
+                           const char *encoding_name, size_t chunk_size,
+                           function<void(size_t)> progress_callback) {
   iconv_t conversion = iconv_open("UTF-16LE", encoding_name);
   if (conversion == reinterpret_cast<iconv_t>(-1)) {
-    return Text {{}, {}};
+    return optional<Text>{};
   }
 
   vector<char> input_vector(chunk_size);

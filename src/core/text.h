@@ -7,6 +7,7 @@
 #include <vector>
 #include <ostream>
 #include "serializer.h"
+#include "optional.h"
 
 class TextSlice;
 struct Point;
@@ -29,8 +30,9 @@ class Text {
   template<typename Iter>
   Text(Iter begin, Iter end) : Text(std::vector<uint16_t>{begin, end}) {}
 
-  static Text build(std::istream &stream, size_t input_size, const char *encoding_name,
-                    size_t chunk_size, std::function<void(size_t)> progress_callback);
+  static optional<Text> build(std::istream &stream, size_t input_size,
+                              const char *encoding_name, size_t chunk_size,
+                              std::function<void(size_t)> progress_callback);
   static Text concat(TextSlice a, TextSlice b);
   static Text concat(TextSlice a, TextSlice b, TextSlice c);
   void splice(Point start, Point deletion_extent, TextSlice inserted_slice);

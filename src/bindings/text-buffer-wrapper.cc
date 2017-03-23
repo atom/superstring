@@ -59,17 +59,22 @@ void TextBufferWrapper::set_text_in_range(const Nan::FunctionCallbackInfo<Value>
 }
 
 class TextBufferLoader : public Nan::AsyncProgressWorkerBase<size_t> {
-  Nan::Callback *progress;
+  Nan::Callback *progress_callback;
   TextBuffer *buffer;
   std::string file_name;
+  std::string encoding_name;
+  bool result;
 
 public:
-  TextBufferLoader(Nan::Callback *completion, Nan::Callback *progress,
-                   TextBuffer *buffer, std::string file_name) :
+  TextBufferLoader(Nan::Callback *completion, Nan::Callback *progress_callback,
+                   TextBuffer *buffer, std::string &&file_name,
+                   std::string &&encoding_name) :
     AsyncProgressWorkerBase(completion),
-    progress{progress},
+    progress_callback{progress_callback},
     buffer{buffer},
-    file_name{file_name} {}
+    file_name{file_name},
+    encoding_name(encoding_name),
+    result{false} {}
 
   void Execute(const Nan::AsyncProgressWorkerBase<size_t>::ExecutionProgress &progress) {
     static size_t CHUNK_SIZE = 10 * 1024;
@@ -78,19 +83,25 @@ public:
     file.seekg(0, std::ios::end);
     auto end = file.tellg();
     file.seekg(0);
-    buffer->load(file, end - beginning, "UTF8", CHUNK_SIZE, [&progress](size_t percent_done) {
-      progress.Send(&percent_done, 1);
-    });
+    result = buffer->load(
+      file,
+      end - beginning,
+      encoding_name.c_str(),
+      CHUNK_SIZE,
+      [&progress](size_t percent_done) { progress.Send(&percent_done, 1); }
+    );
   }
 
   void HandleProgressCallback(const size_t *percent_done, size_t count) {
+    if (!progress_callback) return;
     Nan::HandleScope scope;
     v8::Local<v8::Value> argv[] = {Nan::New<Number>(static_cast<uint32_t>(*percent_done))};
-    progress->Call(1, argv);
+    progress_callback->Call(1, argv);
   }
 
   void HandleOKCallback() {
-    callback->Call(0, nullptr);
+    v8::Local<v8::Value> argv[] = {Nan::New<Boolean>(result)};
+    callback->Call(1, argv);
   }
 };
 
@@ -98,16 +109,25 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
 
   Local<String> js_file_path;
-  if (Nan::To<String>(info[0]).ToLocal(&js_file_path)) {
-    String::Utf8Value file_path(js_file_path);
-    Nan::Callback *completion = new Nan::Callback(info[1].As<Function>());
-    Nan::Callback *progress = new Nan::Callback(info[2].As<Function>());
+  if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
+  std::string file_path = *String::Utf8Value(js_file_path);
 
-    Nan::AsyncQueueWorker(new TextBufferLoader(
-      completion,
-      progress,
-      &text_buffer,
-      *file_path
-    ));
+  Local<String> js_encoding_name;
+  if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
+  std::string encoding_name = *String::Utf8Value(info[1].As<String>());
+
+  Nan::Callback *completion_callback = new Nan::Callback(info[2].As<Function>());
+
+  Nan::Callback *progress_callback = nullptr;
+  if (info[3]->IsFunction()) {
+    progress_callback = new Nan::Callback(info[3].As<Function>());
   }
+
+  Nan::AsyncQueueWorker(new TextBufferLoader(
+    completion_callback,
+    progress_callback,
+    &text_buffer,
+    move(file_path),
+    move(encoding_name)
+  ));
 }
