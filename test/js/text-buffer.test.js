@@ -4,7 +4,7 @@ const {TextBuffer} = require('../..')
 const fs = require('fs')
 
 describe('TextBuffer', () => {
-  describe('load()', () => {
+  describe('.load', () => {
     if (!TextBuffer.prototype.load) return;
 
     it('loads the contents of the given filePath in the background', () => {
@@ -51,11 +51,11 @@ describe('TextBuffer', () => {
     })
   })
 
-  describe('setTextInRange', () => {
+  describe('.setTextInRange', () => {
     it('mutates the buffer', () => {
       const buffer = new TextBuffer()
 
-      buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), 'abc\ndef\nghi')
+      buffer.setText('abc\ndef\nghi')
       assert.equal(buffer.getText(), 'abc\ndef\nghi')
 
       buffer.setTextInRange(Range(Point(0, 2), Point(1, 1)), 'Y')
@@ -66,11 +66,11 @@ describe('TextBuffer', () => {
     })
   })
 
-  describe('getTextInRange', () => {
+  describe('.getTextInRange', () => {
     it('mutates the buffer', () => {
       const buffer = new TextBuffer()
 
-      buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), 'abc\ndef\nghi')
+      buffer.setText('abc\ndef\nghi')
       assert.equal(buffer.getTextInRange(Range(Point(0, 1), Point(0, 2))), 'b')
       assert.equal(buffer.getTextInRange(Range(Point(0, 1), Point(1, 2))), 'bc\nde')
       assert.equal(buffer.getTextInRange(Range(Point(0, 1), Point(2, 8))), 'bc\ndef\nghi')

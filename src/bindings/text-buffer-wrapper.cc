@@ -18,6 +18,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("getTextInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text_in_range));
   prototype_template->Set(Nan::New("setTextInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(set_text_in_range));
   prototype_template->Set(Nan::New("getText").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text));
+  prototype_template->Set(Nan::New("setText").ToLocalChecked(), Nan::New<FunctionTemplate>(set_text));
   prototype_template->Set(Nan::New("load").ToLocalChecked(), Nan::New<FunctionTemplate>(load));
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
 }
@@ -56,6 +57,14 @@ void TextBufferWrapper::set_text_in_range(const Nan::FunctionCallbackInfo<Value>
   auto text = TextWrapper::text_from_js(info[1]);
   if (range && text) {
     text_buffer.set_text_in_range(*range, move(*text));
+  }
+}
+
+void TextBufferWrapper::set_text(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  auto text = TextWrapper::text_from_js(info[0]);
+  if (text) {
+    text_buffer.set_text(move(*text));
   }
 }
 

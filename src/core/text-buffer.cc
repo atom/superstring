@@ -64,6 +64,10 @@ Text TextBuffer::text_in_range(Range range) {
   };
 }
 
+void TextBuffer::set_text(Text &&new_text) {
+  set_text_in_range(Range {Point(0, 0), extent()}, move(new_text));
+}
+
 void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
   old_range = clip_range(old_range);
   Point new_range_end = old_range.start.traverse(new_text.extent());
