@@ -21,6 +21,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("setText").ToLocalChecked(), Nan::New<FunctionTemplate>(set_text));
   prototype_template->Set(Nan::New("lineLengthForRow").ToLocalChecked(), Nan::New<FunctionTemplate>(line_length_for_row));
   prototype_template->Set(Nan::New("load").ToLocalChecked(), Nan::New<FunctionTemplate>(load));
+  prototype_template->Set(Nan::New("save").ToLocalChecked(), Nan::New<FunctionTemplate>(save));
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
 }
 
@@ -85,10 +86,10 @@ class TextBufferLoader : public Nan::AsyncProgressWorkerBase<size_t> {
   bool result;
 
 public:
-  TextBufferLoader(Nan::Callback *completion, Nan::Callback *progress_callback,
+  TextBufferLoader(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
                    TextBuffer *buffer, std::string &&file_name,
                    std::string &&encoding_name) :
-    AsyncProgressWorkerBase(completion),
+    AsyncProgressWorkerBase(completion_callback),
     progress_callback{progress_callback},
     buffer{buffer},
     file_name{file_name},
@@ -124,6 +125,37 @@ public:
   }
 };
 
+class TextBufferSaver : public Nan::AsyncWorker {
+  TextBuffer *buffer;
+  std::string file_name;
+  std::string encoding_name;
+  bool result;
+
+public:
+  TextBufferSaver(Nan::Callback *completion_callback, TextBuffer *buffer,
+                  std::string &&file_name, std::string &&encoding_name) :
+    AsyncWorker(completion_callback),
+    buffer{buffer},
+    file_name{file_name},
+    encoding_name(encoding_name),
+    result{false} {}
+
+  void Execute() {
+    static size_t CHUNK_SIZE = 10 * 1024;
+    std::ofstream file{file_name};
+    result = buffer->save(
+      file,
+      encoding_name.c_str(),
+      CHUNK_SIZE
+    );
+  }
+
+  void HandleOKCallback() {
+    v8::Local<v8::Value> argv[] = {Nan::New<Boolean>(result)};
+    callback->Call(1, argv);
+  }
+};
+
 void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
 
@@ -145,6 +177,26 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
   Nan::AsyncQueueWorker(new TextBufferLoader(
     completion_callback,
     progress_callback,
+    &text_buffer,
+    move(file_path),
+    move(encoding_name)
+  ));
+}
+
+void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+
+  Local<String> js_file_path;
+  if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
+  std::string file_path = *String::Utf8Value(js_file_path);
+
+  Local<String> js_encoding_name;
+  if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
+  std::string encoding_name = *String::Utf8Value(info[1].As<String>());
+
+  Nan::Callback *completion_callback = new Nan::Callback(info[2].As<Function>());
+  Nan::AsyncQueueWorker(new TextBufferSaver(
+    completion_callback,
     &text_buffer,
     move(file_path),
     move(encoding_name)

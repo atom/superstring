@@ -24,6 +24,10 @@ bool TextBuffer::load(std::istream &stream, size_t input_size, const char *encod
   }
 }
 
+bool TextBuffer::save(std::ostream &stream, const char *encoding_name, size_t chunk_size) {
+  return true;
+}
+
 Point TextBuffer::extent() const {
   return extent_;
 }
