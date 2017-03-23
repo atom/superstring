@@ -69,11 +69,22 @@ describe('TextBuffer', () => {
   describe('.getTextInRange', () => {
     it('mutates the buffer', () => {
       const buffer = new TextBuffer()
-
       buffer.setText('abc\ndef\nghi')
       assert.equal(buffer.getTextInRange(Range(Point(0, 1), Point(0, 2))), 'b')
       assert.equal(buffer.getTextInRange(Range(Point(0, 1), Point(1, 2))), 'bc\nde')
       assert.equal(buffer.getTextInRange(Range(Point(0, 1), Point(2, 8))), 'bc\ndef\nghi')
+    })
+  })
+
+  describe('.lineLengthForRow', () => {
+    it('returns the length of the line at the given index', () => {
+      const buffer = new TextBuffer()
+      buffer.setText('abc\r\ndefg\n\r\nhijkl')
+
+      assert.equal(buffer.lineLengthForRow(0), 3)
+      assert.equal(buffer.lineLengthForRow(1), 4)
+      assert.equal(buffer.lineLengthForRow(2), 0)
+      assert.equal(buffer.lineLengthForRow(3), 5)
     })
   })
 })

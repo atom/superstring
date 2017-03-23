@@ -19,6 +19,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("setTextInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(set_text_in_range));
   prototype_template->Set(Nan::New("getText").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text));
   prototype_template->Set(Nan::New("setText").ToLocalChecked(), Nan::New<FunctionTemplate>(set_text));
+  prototype_template->Set(Nan::New("lineLengthForRow").ToLocalChecked(), Nan::New<FunctionTemplate>(line_length_for_row));
   prototype_template->Set(Nan::New("load").ToLocalChecked(), Nan::New<FunctionTemplate>(load));
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
 }
@@ -65,6 +66,14 @@ void TextBufferWrapper::set_text(const Nan::FunctionCallbackInfo<Value> &info) {
   auto text = TextWrapper::text_from_js(info[0]);
   if (text) {
     text_buffer.set_text(move(*text));
+  }
+}
+
+void TextBufferWrapper::line_length_for_row(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  auto row = Nan::To<uint32_t>(info[0]);
+  if (row.IsJust()) {
+    info.GetReturnValue().Set(Nan::New<Number>(text_buffer.line_length_for_row(row.FromJust())));
   }
 }
 
