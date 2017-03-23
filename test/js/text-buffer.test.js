@@ -65,6 +65,17 @@ describe('TextBuffer', () => {
       assert.equal(buffer.getText(), 'aO')
     })
   })
+
+  describe('getTextInRange', () => {
+    it('mutates the buffer', () => {
+      const buffer = new TextBuffer()
+
+      buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), 'abc\ndef\nghi')
+      assert.equal(buffer.getTextInRange(Range(Point(0, 1), Point(0, 2))), 'b')
+      assert.equal(buffer.getTextInRange(Range(Point(0, 1), Point(1, 2))), 'bc\nde')
+      assert.equal(buffer.getTextInRange(Range(Point(0, 1), Point(2, 8))), 'bc\ndef\nghi')
+    })
+  })
 })
 
 function Range(start, end) {
