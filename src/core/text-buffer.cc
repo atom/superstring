@@ -195,19 +195,13 @@ TextBuffer::TextBuffer() {
 
 TextBuffer::TextBuffer(std::u16string text) : TextBuffer {Text {text}} {}
 
-bool TextBuffer::load(std::istream &stream, size_t input_size, const char *encoding_name,
-                      size_t chunk_size, std::function<void(size_t)> progress_callback) {
+bool TextBuffer::reset(Text &&new_base_text) {
   if (derived_layers.size() > 1) return false;
-  derived_layers[0].patch.clear();
-  auto text = Text::build(stream, input_size, encoding_name, chunk_size, progress_callback);
-  if (text) {
-    derived_layers[0].extent_ = text->extent();
-    derived_layers[0].size_ = text->size();
-    base_layer.text = move(*text);
-    return true;
-  } else {
-    return false;
-  }
+  if (derived_layers[0].patch.get_change_count() > 0) return false;
+  derived_layers[0].extent_ = new_base_text.extent();
+  derived_layers[0].size_ = new_base_text.size();
+  base_layer.text = move(new_base_text);
+  return true;
 }
 
 bool TextBuffer::save(std::ostream &stream, const char *encoding_name, size_t chunk_size) {

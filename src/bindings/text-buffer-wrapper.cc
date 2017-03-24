@@ -81,7 +81,7 @@ class TextBufferLoader : public Nan::AsyncProgressWorkerBase<size_t> {
   TextBuffer *buffer;
   std::string file_name;
   std::string encoding_name;
-  bool result;
+  optional<Text> loaded_text;
 
 public:
   TextBufferLoader(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
@@ -91,8 +91,7 @@ public:
     progress_callback{progress_callback},
     buffer{buffer},
     file_name{file_name},
-    encoding_name(encoding_name),
-    result{false} {}
+    encoding_name(encoding_name) {}
 
   void Execute(const Nan::AsyncProgressWorkerBase<size_t>::ExecutionProgress &progress) {
     static size_t CHUNK_SIZE = 10 * 1024;
@@ -101,7 +100,7 @@ public:
     file.seekg(0, std::ios::end);
     auto end = file.tellg();
     file.seekg(0);
-    result = buffer->load(
+    loaded_text = Text::build(
       file,
       end - beginning,
       encoding_name.c_str(),
@@ -118,6 +117,7 @@ public:
   }
 
   void HandleOKCallback() {
+    bool result = loaded_text && buffer->reset(move(*loaded_text));
     v8::Local<v8::Value> argv[] = {Nan::New<Boolean>(result)};
     callback->Call(1, argv);
   }

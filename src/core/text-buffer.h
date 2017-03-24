@@ -52,8 +52,7 @@ public:
   TextBuffer();
   TextBuffer(std::u16string text);
 
-  bool load(std::istream &stream, size_t input_size, const char *encoding_name,
-            size_t chunk_size, std::function<void(size_t)> progress_callback);
+  bool reset(Text &&);
   bool save(std::ostream &stream, const char *encoding_name, size_t chunk_size);
 
   uint32_t size() const;
