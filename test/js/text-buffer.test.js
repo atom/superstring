@@ -54,7 +54,7 @@ describe('TextBuffer', () => {
   describe('.save', () => {
     if (!TextBuffer.prototype.save) return;
 
-    it.only('writes the buffer\'s content to the given file', () => {
+    it('writes the buffer\'s content to the given file', () => {
       const {path: filePath} = temp.openSync()
       fs.writeFileSync(filePath, 'abcdefghijklmnopqrstuvwxyz')
 

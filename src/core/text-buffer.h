@@ -1,43 +1,55 @@
+#include <vector>
 #include "patch.h"
 #include "point.h"
 #include "range.h"
 #include "text.h"
 
 class TextBuffer {
-  Text base_text;
-  Patch patch;
-  Point extent_;
-  uint32_t size_;
+  struct TextChunkCallback {
+    virtual void operator()(TextSlice chunk) = 0;
+  };
+
+  struct Layer {
+    virtual uint32_t size() const = 0;
+    virtual uint16_t character_at(Point) = 0;
+    virtual ClipResult clip_position(Point position) = 0;
+    virtual void add_chunks_in_range(TextChunkCallback *, Point start, Point end) = 0;
+    virtual Point extent() const = 0;
+  };
+
+  struct BaseLayer : public Layer {
+    Text text;
+    BaseLayer(Text &&text);
+    BaseLayer() = default;
+    virtual uint32_t size() const;
+    virtual uint16_t character_at(Point);
+    virtual ClipResult clip_position(Point position);
+    virtual void add_chunks_in_range(TextChunkCallback *callback, Point start, Point end);
+    virtual Point extent() const;
+  };
+
+  struct DerivedLayer : public Layer {
+    Layer *previous_layer;
+    Patch patch;
+    Point extent_;
+    uint32_t size_;
+
+    DerivedLayer(Layer *);
+    virtual uint32_t size() const;
+    virtual uint16_t character_at(Point);
+    virtual ClipResult clip_position(Point position);
+    virtual void add_chunks_in_range(TextChunkCallback *callback, Point start, Point end);
+    virtual Point extent() const;
+
+    void set_text_in_range(Range old_range, Text &&new_text);
+  };
+
+  BaseLayer base_layer;
+  std::vector<DerivedLayer> derived_layers;
   TextBuffer(Text &&base_text);
 
 public:
-  class Iterator {
-    friend class TextBuffer;
-
-    TextBuffer &buffer;
-    optional<Patch::Change> next_change;
-    int64_t offset_from_next_change_start;
-    uint32_t next_change_base_offset;
-    uint32_t current_offset;
-    Iterator(TextBuffer &buffer, bool end);
-
-    void fetch_next_change();
-
-  public:
-    using value_type = uint16_t;
-    using difference_type = uint32_t;
-    using iterator_category = std::random_access_iterator_tag;
-    using pointer = uint16_t *;
-    using reference = uint16_t &;
-
-    uint16_t operator*() const;
-    Iterator &operator++();
-    bool operator!=(const Iterator &other) const;
-    difference_type operator-(const Iterator &other) const;
-    Iterator traverse(Point point) const;
-  };
-
-  TextBuffer() = default;
+  TextBuffer();
   TextBuffer(std::u16string text);
 
   bool load(std::istream &stream, size_t input_size, const char *encoding_name,
@@ -53,6 +65,4 @@ public:
   Text text_in_range(Range range);
   void set_text(Text &&new_text);
   void set_text_in_range(Range old_range, Text &&new_text);
-  Iterator begin();
-  Iterator end();
 };

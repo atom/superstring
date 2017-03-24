@@ -9,8 +9,6 @@ public:
   static void init(v8::Local<v8::Object> exports);
 
 private:
-  TextBufferWrapper(TextBuffer &&text_buffer);
-
   static void construct(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void get_text(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void get_text_in_range(const Nan::FunctionCallbackInfo<v8::Value> &info);

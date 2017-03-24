@@ -18,8 +18,11 @@ size_t TextSlice::end_offset() const {
 }
 
 std::pair<TextSlice, TextSlice> TextSlice::split(Point split_point) const {
-  Point absolute_split_point = start_position.traverse(split_point);
-  assert(absolute_split_point <= text->extent());
+  Point absolute_split_point = Point::min(
+    text->extent(),
+    start_position.traverse(split_point)
+  );
+
   return std::pair<TextSlice, TextSlice> {
     TextSlice {text, start_position, absolute_split_point},
     TextSlice {text, absolute_split_point, end_position}

@@ -28,6 +28,10 @@ TEST_CASE("TextBuffer::set_text_in_range - basic") {
   buffer.set_text_in_range(Range {{0, 2}, {2, 1}}, Text {u"jkl\nmno"});
   REQUIRE(buffer.text() == Text {u"abjkl\nmnohi"});
   REQUIRE(buffer.text_in_range(Range {{0, 1}, {1, 4}}) == Text {u"bjkl\nmnoh"});
+
+  buffer.set_text_in_range(Range {{0, 0}, {10, 1}}, Text {u"yz"});
+  REQUIRE(buffer.text() == Text {u"yz"});
+  REQUIRE(buffer.text_in_range(Range {{0, 1}, {10, 1}}) == Text {u"z"});
 }
 
 TEST_CASE("TextBuffer::line_length_for_row - basic") {
@@ -66,6 +70,8 @@ TEST_CASE("TextBuffer::set_text_in_range - random edits") {
       }
 
       for (uint32_t k = 0; k < 5; k++) {
+        // printf("k: %u\n", k);
+
         Range range = get_random_range(buffer);
         REQUIRE(
           buffer.text_in_range(range) ==

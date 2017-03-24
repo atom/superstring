@@ -25,10 +25,8 @@ void TextBufferWrapper::init(Local<Object> exports) {
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
 }
 
-TextBufferWrapper::TextBufferWrapper(TextBuffer &&text_buffer) : text_buffer{std::move(text_buffer)} {}
-
 void TextBufferWrapper::construct(const Nan::FunctionCallbackInfo<Value> &info) {
-  TextBufferWrapper *wrapper = new TextBufferWrapper(TextBuffer{});
+  TextBufferWrapper *wrapper = new TextBufferWrapper();
   wrapper->Wrap(info.This());
 }
 

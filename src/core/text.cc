@@ -244,14 +244,27 @@ uint16_t Text::at(uint32_t offset) const {
   return content[offset];
 }
 
-uint32_t Text::offset_for_position(Point position) const {
-  auto iterators = line_iterators(position.row);
+uint16_t Text::at(Point position) const {
+  return at(offset_for_position(position));
+}
+
+ClipResult Text::clip_position(Point position) const {
+  uint32_t row = position.row;
+  if (row >= line_offsets.size()) row = line_offsets.size() - 1;
+  auto iterators = line_iterators(row);
   auto position_iterator = iterators.first + position.column;
   if (position_iterator > iterators.second ||
       position_iterator < iterators.first) {
     position_iterator = iterators.second;
   }
-  return position_iterator - cbegin();
+  return ClipResult {
+    Point(row, position_iterator - iterators.first),
+    static_cast<uint32_t>(position_iterator - begin())
+  };
+}
+
+uint32_t Text::offset_for_position(Point position) const {
+  return clip_position(position).offset;
 }
 
 uint32_t Text::line_length_for_row(uint32_t row) const {
