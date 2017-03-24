@@ -31,16 +31,18 @@ static inline Point previous_column(Point position) {
   return Point(position.row, position.column - 1);
 }
 
-TextBuffer::DerivedLayer::DerivedLayer(TextBuffer::Layer *previous_layer) :
-  previous_layer{previous_layer},
-  extent_{previous_layer->extent()},
-  size_{previous_layer->size()} {}
+TextBuffer::DerivedLayer::DerivedLayer(TextBuffer &buffer, uint32_t index) :
+  buffer{buffer},
+  index{index},
+  size_{previous_layer()->size()},
+  extent_{previous_layer()->extent()} {}
 
 uint32_t TextBuffer::DerivedLayer::size() const {
   return size_;
 }
 
 uint16_t TextBuffer::DerivedLayer::character_at(Point position) {
+  Layer *previous_layer = this->previous_layer();
   auto change = patch.change_for_new_position(position);
   if (!change) return previous_layer->character_at(position);
 
@@ -54,6 +56,7 @@ uint16_t TextBuffer::DerivedLayer::character_at(Point position) {
 }
 
 ClipResult TextBuffer::DerivedLayer::clip_position(Point position) {
+  Layer *previous_layer = this->previous_layer();
   auto preceding_change = patch.change_for_new_position(position);
   if (!preceding_change) return previous_layer->clip_position(position);
 
@@ -122,7 +125,16 @@ ClipResult TextBuffer::DerivedLayer::clip_position(Point position) {
   }
 }
 
+TextBuffer::Layer *TextBuffer::DerivedLayer::previous_layer() {
+  if (index == 0) {
+    return &buffer.base_layer;
+  } else {
+    return &buffer.derived_layers[index - 1];
+  }
+}
+
 void TextBuffer::DerivedLayer::add_chunks_in_range(TextChunkCallback *callback, Point start, Point end) {
+  Layer *previous_layer = this->previous_layer();
   Point goal_position = clip_position(end).position;
   Point current_position = clip_position(start).position;
   Point base_position = current_position;
@@ -186,11 +198,11 @@ Point TextBuffer::DerivedLayer::extent() const {
 
 TextBuffer::TextBuffer(Text &&text) :
   base_layer{std::move(text)} {
-  derived_layers.emplace_back(&base_layer);
+  derived_layers.emplace_back(*this, 0);
 }
 
 TextBuffer::TextBuffer() {
-  derived_layers.emplace_back(&base_layer);
+  derived_layers.emplace_back(*this, 0);
 }
 
 TextBuffer::TextBuffer(std::u16string text) : TextBuffer {Text {text}} {}

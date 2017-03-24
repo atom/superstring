@@ -29,12 +29,13 @@ class TextBuffer {
   };
 
   struct DerivedLayer : public Layer {
-    Layer *previous_layer;
+    TextBuffer &buffer;
     Patch patch;
-    Point extent_;
+    uint32_t index;
     uint32_t size_;
+    Point extent_;
 
-    DerivedLayer(Layer *);
+    DerivedLayer(TextBuffer &, uint32_t index);
     virtual uint32_t size() const;
     virtual uint16_t character_at(Point);
     virtual ClipResult clip_position(Point position);
@@ -42,6 +43,7 @@ class TextBuffer {
     virtual Point extent() const;
 
     void set_text_in_range(Range old_range, Text &&new_text);
+    Layer *previous_layer();
   };
 
   BaseLayer base_layer;
