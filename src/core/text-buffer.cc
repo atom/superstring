@@ -31,37 +31,26 @@ static inline Point previous_column(Point position) {
   return Point(position.row, position.column - 1);
 }
 
-TextBuffer::DerivedLayer::DerivedLayer(TextBuffer &buffer, uint32_t index) :
-  buffer{buffer},
-  index{index},
-  size_{previous_layer()->size()},
-  extent_{previous_layer()->extent()} {}
-
-uint32_t TextBuffer::DerivedLayer::size() const {
-  return size_;
-}
-
-uint16_t TextBuffer::DerivedLayer::character_at(Point position) {
-  Layer *previous_layer = this->previous_layer();
+template <typename T>
+uint16_t TextBuffer::DerivedLayer::character_at_(T &previous_layer, Point position) {
   auto change = patch.change_for_new_position(position);
-  if (!change) return previous_layer->character_at(position);
-
+  if (!change) return previous_layer.character_at(position);
   if (position < change->new_end) {
     return change->new_text->at(position);
   } else {
-    return previous_layer->character_at(
+    return previous_layer.character_at(
       change->old_end.traverse(position.traversal(change->new_end))
     );
   }
 }
 
-ClipResult TextBuffer::DerivedLayer::clip_position(Point position) {
-  Layer *previous_layer = this->previous_layer();
+template <typename T>
+ClipResult TextBuffer::DerivedLayer::clip_position_(T &previous_layer, Point position) {
   auto preceding_change = patch.change_for_new_position(position);
-  if (!preceding_change) return previous_layer->clip_position(position);
+  if (!preceding_change) return previous_layer.clip_position(position);
 
   ClipResult preceding_change_base_location =
-    previous_layer->clip_position(preceding_change->old_start);
+    previous_layer.clip_position(preceding_change->old_start);
   Point preceding_change_base_position = preceding_change_base_location.position;
   uint32_t preceding_change_base_offset = preceding_change_base_location.offset;
 
@@ -77,7 +66,7 @@ ClipResult TextBuffer::DerivedLayer::clip_position(Point position) {
       );
 
     if (position_within_preceding_change.offset == 0 && preceding_change_base_position.column > 0) {
-      if (previous_layer->character_at(previous_column(preceding_change_base_position)) == '\r' &&
+      if (previous_layer.character_at(previous_column(preceding_change_base_position)) == '\r' &&
           preceding_change->new_text->content.front() == '\n') {
         Point result = preceding_change->new_start;
         result.column--;
@@ -90,7 +79,7 @@ ClipResult TextBuffer::DerivedLayer::clip_position(Point position) {
       preceding_change_current_offset + position_within_preceding_change.offset
     };
   } else {
-    ClipResult base_location = previous_layer->clip_position(
+    ClipResult base_location = previous_layer.clip_position(
       preceding_change->old_end.traverse(position.traversal(preceding_change->new_end))
     );
     Point base_position = base_location.position;
@@ -107,15 +96,15 @@ ClipResult TextBuffer::DerivedLayer::clip_position(Point position) {
     };
 
     if (distance_past_preceding_change.offset == 0 &&
-        base_offset < previous_layer->size()) {
+        base_offset < previous_layer.size()) {
       uint16_t previous_character = 0;
       if (preceding_change->new_text->size() > 0) {
         previous_character = preceding_change->new_text->content.back();
       } else if (preceding_change_base_offset > 0) {
-        previous_character = previous_layer->character_at(previous_column(preceding_change_base_position));
+        previous_character = previous_layer.character_at(previous_column(preceding_change_base_position));
       }
 
-      if (previous_character == '\r' && previous_layer->character_at(base_position) == '\n') {
+      if (previous_character == '\r' && previous_layer.character_at(base_position) == '\n') {
         result.offset--;
         result.position.column--;
       }
@@ -125,16 +114,8 @@ ClipResult TextBuffer::DerivedLayer::clip_position(Point position) {
   }
 }
 
-TextBuffer::Layer *TextBuffer::DerivedLayer::previous_layer() {
-  if (index == 0) {
-    return &buffer.base_layer;
-  } else {
-    return &buffer.derived_layers[index - 1];
-  }
-}
-
-void TextBuffer::DerivedLayer::add_chunks_in_range(TextChunkCallback *callback, Point start, Point end) {
-  Layer *previous_layer = this->previous_layer();
+template <typename T>
+void TextBuffer::DerivedLayer::add_chunks_in_range_(T &previous_layer, TextChunkCallback *callback, Point start, Point end) {
   Point goal_position = clip_position(end).position;
   Point current_position = clip_position(start).position;
   Point base_position = current_position;
@@ -169,9 +150,53 @@ void TextBuffer::DerivedLayer::add_chunks_in_range(TextChunkCallback *callback, 
       next_base_position = base_position.traverse(goal_position.traversal(current_position));
     }
 
-    previous_layer->add_chunks_in_range(callback, base_position, next_base_position);
+    previous_layer.add_chunks_in_range(callback, base_position, next_base_position);
     base_position = next_base_position;
     current_position = next_position;
+  }
+}
+
+TextBuffer::DerivedLayer::DerivedLayer(TextBuffer &buffer, uint32_t index)
+  : buffer{buffer},
+    index{index} {
+  if (index > 0) {
+    extent_ = buffer.derived_layers[index - 1].extent();
+    size_ = buffer.derived_layers[index - 1].size();
+  } else {
+    extent_ = buffer.base_layer.extent();
+    size_ = buffer.base_layer.size();
+  }
+}
+
+uint32_t TextBuffer::DerivedLayer::size() const {
+  return size_;
+}
+
+Point TextBuffer::DerivedLayer::extent() const {
+  return extent_;
+}
+
+uint16_t TextBuffer::DerivedLayer::character_at(Point position) {
+  if (index > 0) {
+    return character_at_(buffer.derived_layers[index - 1], position);
+  } else {
+    return character_at_(buffer.base_layer, position);
+  }
+}
+
+ClipResult TextBuffer::DerivedLayer::clip_position(Point position) {
+  if (index > 0) {
+    return clip_position_(buffer.derived_layers[index - 1], position);
+  } else {
+    return clip_position_(buffer.base_layer, position);
+  }
+}
+
+void TextBuffer::DerivedLayer::add_chunks_in_range(TextChunkCallback *callback, Point start, Point end) {
+  if (index > 0) {
+    return add_chunks_in_range_(buffer.derived_layers[index - 1], callback, start, end);
+  } else {
+    return add_chunks_in_range_(buffer.base_layer, callback, start, end);
   }
 }
 
@@ -190,10 +215,6 @@ void TextBuffer::DerivedLayer::set_text_in_range(Range old_range, Text &&new_tex
     move(new_text),
     deleted_text_size
   );
-}
-
-Point TextBuffer::DerivedLayer::extent() const {
-  return extent_;
 }
 
 TextBuffer::TextBuffer(Text &&text) :

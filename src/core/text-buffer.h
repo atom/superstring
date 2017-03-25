@@ -9,41 +9,41 @@ class TextBuffer {
     virtual void operator()(TextSlice chunk) = 0;
   };
 
-  struct Layer {
-    virtual uint32_t size() const = 0;
-    virtual uint16_t character_at(Point) = 0;
-    virtual ClipResult clip_position(Point position) = 0;
-    virtual void add_chunks_in_range(TextChunkCallback *, Point start, Point end) = 0;
-    virtual Point extent() const = 0;
-  };
-
-  struct BaseLayer : public Layer {
+  struct BaseLayer {
     Text text;
+
     BaseLayer(Text &&text);
     BaseLayer() = default;
-    virtual uint32_t size() const;
-    virtual uint16_t character_at(Point);
-    virtual ClipResult clip_position(Point position);
-    virtual void add_chunks_in_range(TextChunkCallback *callback, Point start, Point end);
-    virtual Point extent() const;
+    Point extent() const;
+    uint32_t size() const;
+    uint16_t character_at(Point);
+    ClipResult clip_position(Point position);
+    void add_chunks_in_range(TextChunkCallback *callback, Point start, Point end);
   };
 
-  struct DerivedLayer : public Layer {
+  struct DerivedLayer {
     TextBuffer &buffer;
     Patch patch;
     uint32_t index;
     uint32_t size_;
     Point extent_;
 
-    DerivedLayer(TextBuffer &, uint32_t index);
-    virtual uint32_t size() const;
-    virtual uint16_t character_at(Point);
-    virtual ClipResult clip_position(Point position);
-    virtual void add_chunks_in_range(TextChunkCallback *callback, Point start, Point end);
-    virtual Point extent() const;
+    DerivedLayer(TextBuffer &, uint32_t);
+
+    template <typename T>
+    inline uint16_t character_at_(T &, Point);
+    template <typename T>
+    inline ClipResult clip_position_(T &, Point position);
+    template <typename T>
+    inline void add_chunks_in_range_(T &, TextChunkCallback *callback, Point start, Point end);
+
+    Point extent() const;
+    uint32_t size() const;
+    uint16_t character_at(Point);
+    ClipResult clip_position(Point position);
+    void add_chunks_in_range(TextChunkCallback *callback, Point start, Point end);
 
     void set_text_in_range(Range old_range, Text &&new_text);
-    Layer *previous_layer();
   };
 
   BaseLayer base_layer;
