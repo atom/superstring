@@ -38,6 +38,7 @@ TEST_CASE("TextBuffer::create_snapshot") {
   REQUIRE(snapshot1->line_length_for_row(0) == 3);
 
   auto snapshot2 = buffer.create_snapshot();
+  auto snapshot3 = buffer.create_snapshot();
   buffer.set_text_in_range({{0, 6}, {0, 6}}, Text {u"456"});
   REQUIRE(buffer.text() == Text {u"abc123456\ndef"});
   REQUIRE(buffer.line_length_for_row(0) == 9);
@@ -48,6 +49,7 @@ TEST_CASE("TextBuffer::create_snapshot") {
 
   SECTION("deleting the latest snapshot") {
     delete snapshot2;
+    delete snapshot3;
     REQUIRE(buffer.text() == Text {u"abc123456\ndef"});
     REQUIRE(buffer.line_length_for_row(0) == 9);
     REQUIRE(snapshot1->text() == Text {u"abc\ndef"});
@@ -62,6 +64,7 @@ TEST_CASE("TextBuffer::create_snapshot") {
     REQUIRE(snapshot2->text() == Text {u"abc123\ndef"});
     REQUIRE(snapshot2->line_length_for_row(0) == 6);
     delete snapshot2;
+    delete snapshot3;
   }
 }
 

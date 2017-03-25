@@ -162,7 +162,7 @@ void TextBuffer::DerivedLayer::add_chunks_in_range_(T &previous_layer, TextChunk
 TextBuffer::DerivedLayer::DerivedLayer(TextBuffer &buffer, uint32_t index)
   : buffer{buffer},
     index{index},
-    reference_count{0} {
+    snapshot_count{0} {
   if (index > 0) {
     extent_ = buffer.derived_layers[index - 1].extent();
     size_ = buffer.derived_layers[index - 1].size();
@@ -308,7 +308,7 @@ string TextBuffer::get_dot_graph() const {
   uint32_t i = -1;
   for (auto &layer : derived_layers) {
     result << "graph { label=\"layer " << std::to_string(++i) <<
-      " (reference count " << std::to_string(layer.reference_count) << "):\" }\n";
+      " (reference count " << std::to_string(layer.snapshot_count) << "):\" }\n";
     result << layer.patch.get_dot_graph();
   }
   return result.str();
@@ -316,8 +316,12 @@ string TextBuffer::get_dot_graph() const {
 
 const TextBuffer::Snapshot *TextBuffer::create_snapshot() {
   uint32_t index = derived_layers.size() - 1;
-  derived_layers.emplace_back(*this, index + 1);
-  derived_layers[index].reference_count++;
+  if (index > 0 && derived_layers.back().patch.get_change_count() == 0) {
+    index--;
+  } else {
+    derived_layers.emplace_back(*this, index + 1);
+  }
+  derived_layers[index].snapshot_count++;
   return new Snapshot(*this, index);
 }
 
@@ -342,13 +346,13 @@ TextBuffer::Snapshot::Snapshot(TextBuffer &buffer, uint32_t index)
 
 TextBuffer::Snapshot::~Snapshot() {
   auto &snapshot_layer = buffer.derived_layers[index];
-  assert(snapshot_layer.reference_count > 0);
-  snapshot_layer.reference_count--;
-  if (snapshot_layer.reference_count > 0) return;
+  assert(snapshot_layer.snapshot_count > 0);
+  snapshot_layer.snapshot_count--;
+  if (snapshot_layer.snapshot_count > 0) return;
 
   // Find the top-most layer that has no snapshots pointing to it.
   uint32_t top_index = buffer.derived_layers.size();
-  while (top_index > 0 && buffer.derived_layers[top_index - 1].reference_count == 0) {
+  while (top_index > 0 && buffer.derived_layers[top_index - 1].snapshot_count == 0) {
     top_index--;
   }
   auto &top_layer = buffer.derived_layers[top_index];

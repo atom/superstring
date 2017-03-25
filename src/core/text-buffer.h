@@ -28,7 +28,7 @@ class TextBuffer {
     uint32_t index;
     uint32_t size_;
     Point extent_;
-    uint32_t reference_count;
+    uint32_t snapshot_count;
 
     DerivedLayer(TextBuffer &, uint32_t);
 
