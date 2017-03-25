@@ -1,3 +1,4 @@
+#include <string>
 #include <vector>
 #include "patch.h"
 #include "point.h"
@@ -27,6 +28,7 @@ class TextBuffer {
     uint32_t index;
     uint32_t size_;
     Point extent_;
+    uint32_t reference_count;
 
     DerivedLayer(TextBuffer &, uint32_t);
 
@@ -44,6 +46,7 @@ class TextBuffer {
     void add_chunks_in_range(TextChunkCallback *callback, Point start, Point end);
 
     void set_text_in_range(Range old_range, Text &&new_text);
+    Text text_in_range(Range);
   };
 
   BaseLayer base_layer;
@@ -66,4 +69,27 @@ public:
   Text text_in_range(Range range);
   void set_text(Text &&new_text);
   void set_text_in_range(Range old_range, Text &&new_text);
+
+  std::string get_dot_graph() const;
+
+  class Snapshot {
+    friend class TextBuffer;
+    TextBuffer &buffer;
+    uint32_t index;
+
+    Snapshot(TextBuffer &, uint32_t);
+
+  public:
+    ~Snapshot();
+    uint32_t size() const;
+    Point extent() const;
+    uint32_t line_length_for_row(uint32_t) const;
+    std::vector<TextSlice> chunks() const;
+    std::vector<TextSlice> chunks_in_range(Range) const;
+    Text text() const;
+    Text text_in_range(Range) const;
+  };
+
+  friend class Snapshot;
+  const Snapshot *create_snapshot();
 };
