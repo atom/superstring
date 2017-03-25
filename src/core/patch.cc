@@ -312,29 +312,35 @@ Patch::Patch(Node *root, uint32_t change_count, bool merges_adjacent_changes)
 Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
   bool left_to_right = true;
   for (const Patch *patch : patches_to_compose) {
-    auto changes = patch->get_changes();
-
-    if (left_to_right) {
-      for (auto iter = changes.begin(), end = changes.end(); iter != end; ++iter) {
-        splice(iter->new_start, iter->old_end.traversal(iter->old_start),
-               iter->new_end.traversal(iter->new_start),
-               iter->old_text ? *iter->old_text : optional<Text> {},
-               iter->new_text ? *iter->new_text : optional<Text> {},
-               iter->old_text_size);
-      }
-    } else {
-      for (auto iter = changes.rbegin(), end = changes.rend(); iter != end;
-           ++iter) {
-        splice(iter->old_start, iter->old_end.traversal(iter->old_start),
-               iter->new_end.traversal(iter->new_start),
-               iter->old_text ? *iter->old_text : optional<Text> {},
-               iter->new_text ? *iter->new_text : optional<Text> {},
-               iter->old_text_size);
-      }
-    }
-
+    combine(*patch, left_to_right);
     left_to_right = !left_to_right;
   }
+}
+
+bool Patch::combine(const Patch &other, bool left_to_right) {
+  if (is_frozen()) return false;
+
+  auto changes = other.get_changes();
+  if (left_to_right) {
+    for (auto iter = changes.begin(), end = changes.end(); iter != end; ++iter) {
+      splice(iter->new_start, iter->old_end.traversal(iter->old_start),
+             iter->new_end.traversal(iter->new_start),
+             iter->old_text ? *iter->old_text : optional<Text> {},
+             iter->new_text ? *iter->new_text : optional<Text> {},
+             iter->old_text_size);
+    }
+  } else {
+    for (auto iter = changes.rbegin(), end = changes.rend(); iter != end;
+         ++iter) {
+      splice(iter->old_start, iter->old_end.traversal(iter->old_start),
+             iter->new_end.traversal(iter->new_start),
+             iter->old_text ? *iter->old_text : optional<Text> {},
+             iter->new_text ? *iter->new_text : optional<Text> {},
+             iter->old_text_size);
+    }
+  }
+
+  return true;
 }
 
 Patch::~Patch() {

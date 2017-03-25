@@ -78,6 +78,7 @@ public:
   optional<Change> change_for_old_position(Point position);
   optional<Change> change_for_new_position(Point position);
   optional<Change> change_ending_after_new_position(Point position, bool exclusive = false);
+  bool combine(const Patch &other, bool left_to_right = true);
 
   void serialize(Serializer &serializer) const;
   std::string get_dot_graph() const;
