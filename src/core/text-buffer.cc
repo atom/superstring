@@ -269,16 +269,7 @@ uint32_t TextBuffer::line_length_for_row(uint32_t row) {
 }
 
 Point TextBuffer::clip_position(Point position) {
-  if (position > extent()) {
-    return extent();
-  } else {
-    uint32_t max_column = line_length_for_row(position.row);
-    if (position.column > max_column) {
-      return Point {position.row, max_column};
-    } else {
-      return position;
-    }
-  }
+  return derived_layers.back().clip_position(position).position;
 }
 
 Range TextBuffer::clip_range(Range range) {

@@ -250,7 +250,7 @@ uint16_t Text::at(Point position) const {
 
 ClipResult Text::clip_position(Point position) const {
   uint32_t row = position.row;
-  if (row >= line_offsets.size()) row = line_offsets.size() - 1;
+  if (row >= line_offsets.size()) return {extent(), size()};
   auto iterators = line_iterators(row);
   auto position_iterator = iterators.first + position.column;
   if (position_iterator > iterators.second ||
