@@ -37,6 +37,10 @@ TextSlice TextSlice::suffix(Point suffix_start) const {
   return split(suffix_start).second;
 }
 
+TextSlice TextSlice::slice(Range range) const {
+  return suffix(range.start).prefix(range.extent());
+}
+
 Point TextSlice::extent() const {
   return end_position.traversal(start_position);
 }

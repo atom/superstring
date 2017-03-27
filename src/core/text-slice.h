@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "point.h"
+#include "range.h"
 #include "text.h"
 
 class TextSlice {
@@ -22,6 +23,7 @@ class TextSlice {
   std::pair<TextSlice, TextSlice> split(Point) const;
   TextSlice prefix(Point) const;
   TextSlice suffix(Point) const;
+  TextSlice slice(Range range) const;
 
   Point extent() const;
   uint32_t size() const;
