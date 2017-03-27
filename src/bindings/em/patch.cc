@@ -33,7 +33,7 @@ Patch *constructor(emscripten::val value) {
   return new Patch(merge_adjacent_changes);
 }
 
-vector<uint8_t> serialize(Patch const &patch) {
+vector<uint8_t> serialize(Patch &patch) {
   vector<uint8_t> output;
   Serializer serializer(output);
   patch.serialize(serializer);

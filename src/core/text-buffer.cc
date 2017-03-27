@@ -36,7 +36,7 @@ static inline Point previous_column(Point position) {
 
 template <typename T>
 uint16_t TextBuffer::DerivedLayer::character_at_(T &previous_layer, Point position) {
-  auto change = patch.change_for_new_position(position);
+  auto change = patch.find_change_for_new_position(position);
   if (!change) return previous_layer.character_at(position);
   if (position < change->new_end) {
     return change->new_text->at(position.traversal(change->new_start));
@@ -49,7 +49,7 @@ uint16_t TextBuffer::DerivedLayer::character_at_(T &previous_layer, Point positi
 
 template <typename T>
 ClipResult TextBuffer::DerivedLayer::clip_position_(T &previous_layer, Point position) {
-  auto preceding_change = patch.change_for_new_position(position);
+  auto preceding_change = patch.find_change_for_new_position(position);
   if (!preceding_change) return previous_layer.clip_position(position);
 
   uint32_t preceding_change_base_offset =
@@ -117,7 +117,7 @@ void TextBuffer::DerivedLayer::add_chunks_in_range_(T &previous_layer, TextChunk
   Point goal_position = clip_position(end).position;
   Point current_position = clip_position(start).position;
   Point base_position = current_position;
-  auto change = patch.change_for_new_position(current_position);
+  auto change = patch.find_change_for_new_position(current_position);
 
   while (current_position < goal_position) {
     if (change) {
@@ -137,7 +137,7 @@ void TextBuffer::DerivedLayer::add_chunks_in_range_(T &previous_layer, TextChunk
       base_position = change->old_end.traverse(current_position.traversal(change->new_end));
     }
 
-    change = patch.change_ending_after_new_position(current_position, true);
+    change = patch.find_change_ending_after_new_position(current_position);
 
     Point next_base_position, next_position;
     if (change) {
@@ -305,6 +305,7 @@ const TextBuffer::Snapshot *TextBuffer::create_snapshot() {
   if (index > 0 && derived_layers.back().patch.get_change_count() == 0) {
     index--;
   } else {
+    derived_layers.back().patch.rebalance();
     derived_layers.emplace_back(*this, index + 1);
   }
   derived_layers[index].snapshot_count++;

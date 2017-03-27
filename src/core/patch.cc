@@ -277,6 +277,7 @@ struct Patch::OldCoordinates {
   static Point extent(const Node *node) { return node->old_extent; }
   static Point start(const Change &change) { return change.old_start; }
   static Point end(const Change &change) { return change.old_end; }
+  static Point choose(Point old, Point new_) { return old; }
 };
 
 struct Patch::NewCoordinates {
@@ -286,6 +287,7 @@ struct Patch::NewCoordinates {
   static Point extent(const Node *node) { return node->new_extent; }
   static Point start(const Change &change) { return change.new_start; }
   static Point end(const Change &change) { return change.new_end; }
+  static Point choose(Point old, Point new_) { return new_; }
 };
 
 Patch::Patch()
@@ -474,6 +476,53 @@ Patch::Node *Patch::splay_node_starting_before(Point target) {
 }
 
 template <typename CoordinateSpace>
+optional<Patch::Change> Patch::find_change_starting_before(Point target) const {
+  Node *splayed_node = nullptr;
+  Node *node = root;
+  Point splayed_node_old_start = Point();
+  Point splayed_node_new_start = Point();
+  Point left_ancestor_old_end = Point();
+  Point left_ancestor_new_end = Point();
+
+  while (node) {
+    Point node_old_start = left_ancestor_old_end.traverse(node->old_distance_from_left_ancestor);
+    Point node_new_start = left_ancestor_new_end.traverse(node->new_distance_from_left_ancestor);
+    if (CoordinateSpace::choose(node_old_start, node_new_start) <= target) {
+      splayed_node = node;
+      splayed_node_old_start = node_old_start;
+      splayed_node_new_start = node_new_start;
+      if (node->right) {
+        left_ancestor_old_end = node_old_start.traverse(node->old_extent);
+        left_ancestor_new_end = node_new_start.traverse(node->new_extent);
+        node = node->right;
+      } else {
+        break;
+      }
+    } else {
+      if (node->left) {
+        node = node->left;
+      } else {
+        break;
+      }
+    }
+  }
+
+  if (splayed_node) {
+    return Change{
+      splayed_node_old_start, splayed_node_old_start.traverse(splayed_node->old_extent),
+      splayed_node_new_start, splayed_node_new_start.traverse(splayed_node->new_extent),
+      splayed_node->old_text.get(),
+      splayed_node->new_text.get(),
+      splayed_node->left ? splayed_node->left->old_subtree_text_size : 0,
+      splayed_node->right ? splayed_node->right->new_subtree_text_size : 0,
+      splayed_node->old_text_size()
+    };
+  } else {
+    return optional<Change>{};
+  }
+}
+
+template <typename CoordinateSpace>
 Patch::Node *Patch::splay_node_ending_after(Point target, optional<Point> exclusive_lower_bound) {
   Node *splayed_node = nullptr;
   Point left_ancestor_end = Point();
@@ -511,6 +560,55 @@ Patch::Node *Patch::splay_node_ending_after(Point target, optional<Point> exclus
   }
 
   return splayed_node;
+}
+
+template <typename CoordinateSpace>
+optional<Patch::Change> Patch::find_change_ending_after(Point target) const {
+  Node *splayed_node = nullptr;
+  Node *node = root;
+  Point splayed_node_old_start = Point();
+  Point splayed_node_new_start = Point();
+  Point left_ancestor_old_end = Point();
+  Point left_ancestor_new_end = Point();
+
+  while (node) {
+    Point node_old_start = left_ancestor_old_end.traverse(node->old_distance_from_left_ancestor);
+    Point node_new_start = left_ancestor_new_end.traverse(node->new_distance_from_left_ancestor);
+    Point node_old_end = node_old_start.traverse(node->old_extent);
+    Point node_new_end = node_new_start.traverse(node->new_extent);
+    if (CoordinateSpace::choose(node_old_end, node_new_end) > target) {
+      splayed_node = node;
+      splayed_node_old_start = node_old_start;
+      splayed_node_new_start = node_new_start;
+      if (node->left) {
+        node = node->left;
+      } else {
+        break;
+      }
+    } else {
+      if (node->right) {
+        left_ancestor_old_end = node_old_end;
+        left_ancestor_new_end = node_new_end;
+        node = node->right;
+      } else {
+        break;
+      }
+    }
+  }
+
+  if (splayed_node) {
+    return Change{
+      splayed_node_old_start, splayed_node_old_start.traverse(splayed_node->old_extent),
+      splayed_node_new_start, splayed_node_new_start.traverse(splayed_node->new_extent),
+      splayed_node->old_text.get(),
+      splayed_node->new_text.get(),
+      splayed_node->left ? splayed_node->left->old_subtree_text_size : 0,
+      splayed_node->right ? splayed_node->right->new_subtree_text_size : 0,
+      splayed_node->old_text_size()
+    };
+  } else {
+    return optional<Change>{};
+  }
 }
 
 template <typename CoordinateSpace>
@@ -570,6 +668,10 @@ optional<Change> Patch::change_ending_after_new_position(Point target, bool excl
   } else {
     return optional<Change>{};
   }
+}
+
+optional<Change> Patch::find_change_ending_after_new_position(Point target) const {
+  return find_change_ending_after<NewCoordinates>(target);
 }
 
 Change Patch::change_for_root_node() {
@@ -1254,8 +1356,8 @@ vector<Change> Patch::get_changes() const {
   }
 
   Node *node = root;
-  node_stack.clear();
-  left_ancestor_stack.clear();
+  vector<Node *> node_stack;
+  vector<PositionStackEntry> left_ancestor_stack;
   left_ancestor_stack.push_back({Point(), Point(), 0, 0});
 
   while (node->left) {
@@ -1440,6 +1542,14 @@ optional<Change> Patch::change_for_old_position(Point target) {
   return change_for_position<OldCoordinates>(target);
 }
 
+optional<Change> Patch::find_change_for_old_position(Point target) const {
+  return find_change_starting_before<OldCoordinates>(target);
+}
+
+optional<Change> Patch::find_change_for_new_position(Point target) const {
+  return find_change_starting_before<NewCoordinates>(target);
+}
+
 optional<Change> Patch::change_for_new_position(Point target) {
   return change_for_position<NewCoordinates>(target);
 }
@@ -1547,7 +1657,7 @@ void get_point_from_buffer(const uint8_t **data, const uint8_t *end,
   point->column = get_from_buffer<uint32_t>(data, end);
 }
 
-void Patch::serialize(Serializer &output) const {
+void Patch::serialize(Serializer &output) {
   if (!root)
     return;
 

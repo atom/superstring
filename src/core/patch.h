@@ -15,8 +15,8 @@ class Patch {
   struct NewCoordinates;
   struct PositionStackEntry;
 
-  mutable std::vector<PositionStackEntry> left_ancestor_stack;
-  mutable std::vector<Node *> node_stack;
+  std::vector<PositionStackEntry> left_ancestor_stack;
+  std::vector<Node *> node_stack;
   Node *root;
   Node *frozen_node_array;
   bool merges_adjacent_changes;
@@ -77,10 +77,13 @@ public:
   std::vector<Change> get_changes_in_old_range(Point start, Point end);
   optional<Change> change_for_old_position(Point position);
   optional<Change> change_for_new_position(Point position);
+  optional<Change> find_change_for_old_position(Point position) const;
+  optional<Change> find_change_for_new_position(Point position) const;
   optional<Change> change_ending_after_new_position(Point position, bool exclusive = false);
+  optional<Change> find_change_ending_after_new_position(Point position) const;
   bool combine(const Patch &other, bool left_to_right = true);
 
-  void serialize(Serializer &serializer) const;
+  void serialize(Serializer &serializer);
   std::string get_dot_graph() const;
   std::string get_json() const;
   void rebalance();
@@ -98,7 +101,13 @@ private:
   Node *splay_node_starting_before(Point target);
 
   template <typename CoordinateSpace>
+  optional<Change> find_change_starting_before(Point target) const;
+
+  template <typename CoordinateSpace>
   Node *splay_node_ending_after(Point target, optional<Point> exclusive_lower_bound);
+
+  template <typename CoordinateSpace>
+  optional<Change> find_change_ending_after(Point target) const;
 
   template <typename CoordinateSpace>
   Node *splay_node_starting_after(Point target, optional<Point> exclusive_lower_bound);
