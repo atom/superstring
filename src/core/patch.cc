@@ -81,13 +81,9 @@ struct Patch::Node {
 
   void compute_subtree_text_sizes() {
     old_subtree_text_size =
-      old_text_size() +
-      (left ? left->old_subtree_text_size : 0) +
-      (right ? right->old_subtree_text_size : 0);
+      old_text_size() + left_subtree_old_text_size() + right_subtree_old_text_size();
     new_subtree_text_size =
-      new_text_size() +
-      (left ? left->new_subtree_text_size : 0) +
-      (right ? right->new_subtree_text_size : 0);
+      new_text_size() + left_subtree_new_text_size() + right_subtree_new_text_size();
   }
 
   void set_old_text(optional<Text> &&text, uint32_t old_text_size) {
@@ -100,8 +96,16 @@ struct Patch::Node {
     }
   }
 
-  uint32_t old_text_size() {
+  uint32_t old_text_size() const {
     return old_text ? old_text->size() : old_text_size_;
+  }
+
+  uint32_t left_subtree_old_text_size() const {
+    return left ? left->old_subtree_text_size : 0;
+  }
+
+  uint32_t right_subtree_old_text_size() const {
+    return right ? right->old_subtree_text_size : 0;
   }
 
   void set_new_text(optional<Text> &&text) {
@@ -112,8 +116,16 @@ struct Patch::Node {
     }
   }
 
-  uint32_t new_text_size() {
+  uint32_t new_text_size() const {
     return new_text ? new_text->size() : 0;
+  }
+
+  uint32_t left_subtree_new_text_size() const {
+    return left ? left->new_subtree_text_size : 0;
+  }
+
+  uint32_t right_subtree_new_text_size() const {
+    return right ? right->new_subtree_text_size : 0;
   }
 
   void get_subtree_end(Point *old_end, Point *new_end) {
@@ -206,6 +218,7 @@ struct Patch::Node {
       result << "\\\"" << *old_text <<  "\\\""  << endl;
     } else {
       result << "null" << endl;
+      result << "old text size:" << old_text_size_ << endl;
     }
 
     result << "old_subtree_text_size: " << old_subtree_text_size << endl;
@@ -268,6 +281,13 @@ struct Patch::PositionStackEntry {
   Point new_end;
   uint32_t total_old_text_size;
   uint32_t total_new_text_size;
+
+  PositionStackEntry() : total_old_text_size{0}, total_new_text_size{0} {}
+  PositionStackEntry(Point old_end, Point new_end, uint32_t total_old_text_size, uint32_t total_new_text_size) :
+    old_end{old_end},
+    new_end{new_end},
+    total_old_text_size{total_old_text_size},
+    total_new_text_size{total_new_text_size} {}
 };
 
 struct Patch::OldCoordinates {
@@ -477,23 +497,22 @@ Patch::Node *Patch::splay_node_starting_before(Point target) {
 
 template <typename CoordinateSpace>
 optional<Patch::Change> Patch::find_change_starting_before(Point target) const {
-  Node *splayed_node = nullptr;
-  Node *node = root;
-  Point splayed_node_old_start = Point();
-  Point splayed_node_new_start = Point();
-  Point left_ancestor_old_end = Point();
-  Point left_ancestor_new_end = Point();
+  const Node *found_node = nullptr;
+  const Node *node = root;
+  Patch::PositionStackEntry left_ancestor_info;
+  Patch::PositionStackEntry found_node_left_ancestor_info;
 
   while (node) {
-    Point node_old_start = left_ancestor_old_end.traverse(node->old_distance_from_left_ancestor);
-    Point node_new_start = left_ancestor_new_end.traverse(node->new_distance_from_left_ancestor);
+    Point node_old_start = left_ancestor_info.old_end.traverse(node->old_distance_from_left_ancestor);
+    Point node_new_start = left_ancestor_info.new_end.traverse(node->new_distance_from_left_ancestor);
     if (CoordinateSpace::choose(node_old_start, node_new_start) <= target) {
-      splayed_node = node;
-      splayed_node_old_start = node_old_start;
-      splayed_node_new_start = node_new_start;
+      found_node = node;
+      found_node_left_ancestor_info = left_ancestor_info;
       if (node->right) {
-        left_ancestor_old_end = node_old_start.traverse(node->old_extent);
-        left_ancestor_new_end = node_new_start.traverse(node->new_extent);
+        left_ancestor_info.old_end = node_old_start.traverse(node->old_extent);
+        left_ancestor_info.new_end = node_new_start.traverse(node->new_extent);
+        left_ancestor_info.total_old_text_size += node->left_subtree_old_text_size() + node->old_text_size();
+        left_ancestor_info.total_new_text_size += node->left_subtree_new_text_size() + node->new_text_size();
         node = node->right;
       } else {
         break;
@@ -507,15 +526,18 @@ optional<Patch::Change> Patch::find_change_starting_before(Point target) const {
     }
   }
 
-  if (splayed_node) {
+  if (found_node) {
+    Point old_start = found_node_left_ancestor_info.old_end.traverse(found_node->old_distance_from_left_ancestor);
+    Point new_start = found_node_left_ancestor_info.new_end.traverse(found_node->new_distance_from_left_ancestor);
+
     return Change{
-      splayed_node_old_start, splayed_node_old_start.traverse(splayed_node->old_extent),
-      splayed_node_new_start, splayed_node_new_start.traverse(splayed_node->new_extent),
-      splayed_node->old_text.get(),
-      splayed_node->new_text.get(),
-      splayed_node->left ? splayed_node->left->old_subtree_text_size : 0,
-      splayed_node->right ? splayed_node->right->new_subtree_text_size : 0,
-      splayed_node->old_text_size()
+      old_start, old_start.traverse(found_node->old_extent),
+      new_start, new_start.traverse(found_node->new_extent),
+      found_node->old_text.get(),
+      found_node->new_text.get(),
+      found_node_left_ancestor_info.total_old_text_size + found_node->left_subtree_old_text_size(),
+      found_node_left_ancestor_info.total_new_text_size + found_node->left_subtree_new_text_size(),
+      found_node->old_text_size()
     };
   } else {
     return optional<Change>{};
@@ -564,22 +586,18 @@ Patch::Node *Patch::splay_node_ending_after(Point target, optional<Point> exclus
 
 template <typename CoordinateSpace>
 optional<Patch::Change> Patch::find_change_ending_after(Point target) const {
-  Node *splayed_node = nullptr;
+  Node *found_node = nullptr;
   Node *node = root;
-  Point splayed_node_old_start = Point();
-  Point splayed_node_new_start = Point();
-  Point left_ancestor_old_end = Point();
-  Point left_ancestor_new_end = Point();
+  Patch::PositionStackEntry left_ancestor_info, found_node_left_ancestor_info;
 
   while (node) {
-    Point node_old_start = left_ancestor_old_end.traverse(node->old_distance_from_left_ancestor);
-    Point node_new_start = left_ancestor_new_end.traverse(node->new_distance_from_left_ancestor);
+    Point node_old_start = left_ancestor_info.old_end.traverse(node->old_distance_from_left_ancestor);
+    Point node_new_start = left_ancestor_info.new_end.traverse(node->new_distance_from_left_ancestor);
     Point node_old_end = node_old_start.traverse(node->old_extent);
     Point node_new_end = node_new_start.traverse(node->new_extent);
     if (CoordinateSpace::choose(node_old_end, node_new_end) > target) {
-      splayed_node = node;
-      splayed_node_old_start = node_old_start;
-      splayed_node_new_start = node_new_start;
+      found_node = node;
+      found_node_left_ancestor_info = left_ancestor_info;
       if (node->left) {
         node = node->left;
       } else {
@@ -587,8 +605,10 @@ optional<Patch::Change> Patch::find_change_ending_after(Point target) const {
       }
     } else {
       if (node->right) {
-        left_ancestor_old_end = node_old_end;
-        left_ancestor_new_end = node_new_end;
+        left_ancestor_info.old_end = node_old_end;
+        left_ancestor_info.new_end = node_new_end;
+        left_ancestor_info.total_old_text_size += node->left_subtree_old_text_size() + node->old_text_size();
+        left_ancestor_info.total_new_text_size += node->left_subtree_new_text_size() + node->new_text_size();
         node = node->right;
       } else {
         break;
@@ -596,15 +616,18 @@ optional<Patch::Change> Patch::find_change_ending_after(Point target) const {
     }
   }
 
-  if (splayed_node) {
+  if (found_node) {
+    Point old_start = found_node_left_ancestor_info.old_end.traverse(found_node->old_distance_from_left_ancestor);
+    Point new_start = found_node_left_ancestor_info.new_end.traverse(found_node->new_distance_from_left_ancestor);
+
     return Change{
-      splayed_node_old_start, splayed_node_old_start.traverse(splayed_node->old_extent),
-      splayed_node_new_start, splayed_node_new_start.traverse(splayed_node->new_extent),
-      splayed_node->old_text.get(),
-      splayed_node->new_text.get(),
-      splayed_node->left ? splayed_node->left->old_subtree_text_size : 0,
-      splayed_node->right ? splayed_node->right->new_subtree_text_size : 0,
-      splayed_node->old_text_size()
+      old_start, old_start.traverse(found_node->old_extent),
+      new_start, new_start.traverse(found_node->new_extent),
+      found_node->old_text.get(),
+      found_node->new_text.get(),
+      found_node_left_ancestor_info.total_old_text_size + found_node->left_subtree_old_text_size(),
+      found_node_left_ancestor_info.total_new_text_size + found_node->left_subtree_new_text_size(),
+      found_node->old_text_size()
     };
   } else {
     return optional<Change>{};
@@ -682,8 +705,8 @@ Change Patch::change_for_root_node() {
   Text *old_text = root->old_text.get();
   Text *new_text = root->new_text.get();
   uint32_t old_text_size = root->old_text_size();
-  uint32_t preceding_old_text_size = root->left ? root->left->old_subtree_text_size : 0;
-  uint32_t preceding_new_text_size = root->left ? root->left->new_subtree_text_size : 0;
+  uint32_t preceding_old_text_size = root->left_subtree_old_text_size();
+  uint32_t preceding_new_text_size = root->left_subtree_new_text_size();
   return Change {
     old_start,
     old_end,
@@ -1358,7 +1381,7 @@ vector<Change> Patch::get_changes() const {
   Node *node = root;
   vector<Node *> node_stack;
   vector<PositionStackEntry> left_ancestor_stack;
-  left_ancestor_stack.push_back({Point(), Point(), 0, 0});
+  left_ancestor_stack.push_back({});
 
   while (node->left) {
     node_stack.push_back(node);
@@ -1377,11 +1400,9 @@ vector<Change> Patch::get_changes() const {
     Text *new_text = node->new_text.get();
     uint32_t old_text_size = node->old_text_size();
     uint32_t preceding_old_text_size =
-      left_ancestor_info.total_old_text_size +
-      (node->left ? node->left->old_subtree_text_size : 0);
+      left_ancestor_info.total_old_text_size + node->left_subtree_old_text_size();
     uint32_t preceding_new_text_size =
-      left_ancestor_info.total_new_text_size +
-      (node->left ? node->left->new_subtree_text_size : 0);
+      left_ancestor_info.total_new_text_size + node->left_subtree_new_text_size();
     Change change {
       old_start,
       old_end,
@@ -1462,11 +1483,9 @@ vector<Change> Patch::get_changes_in_range(Point start, Point end, bool inclusiv
     Text *new_text = node->new_text.get();
     uint32_t old_text_size = node->old_text_size();
     uint32_t preceding_old_text_size =
-      left_ancestor_info.total_old_text_size +
-      (node->left ? node->left->old_subtree_text_size : 0);
+      left_ancestor_info.total_old_text_size + node->left_subtree_old_text_size();
     uint32_t preceding_new_text_size =
-      left_ancestor_info.total_new_text_size +
-      (node->left ? node->left->new_subtree_text_size : 0);
+      left_ancestor_info.total_new_text_size + node->left_subtree_new_text_size();
     Change change {
       old_start,
       old_end,
