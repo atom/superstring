@@ -299,7 +299,7 @@ string TextBuffer::get_dot_graph() const {
   uint32_t i = -1;
   for (auto &layer : derived_layers) {
     result << "graph { label=\"layer " << std::to_string(++i) <<
-      " (reference count " << std::to_string(layer.snapshot_count) << "):\" }\n";
+      " (snapshot count " << std::to_string(layer.snapshot_count) << "):\" }\n";
     result << layer.patch.get_dot_graph();
   }
   return result.str();
@@ -326,6 +326,10 @@ Point TextBuffer::Snapshot::extent() const {
 
 uint32_t TextBuffer::Snapshot::line_length_for_row(uint32_t row) const {
   return buffer.derived_layers[index].clip_position(Point{row, UINT32_MAX}).offset;
+}
+
+Text TextBuffer::Snapshot::text_in_range(Range range) const {
+  return buffer.derived_layers[index].text_in_range(range);
 }
 
 Text TextBuffer::Snapshot::text() const {

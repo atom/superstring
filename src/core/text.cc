@@ -335,7 +335,9 @@ bool Text::operator==(const Text &other) const {
 
 ostream &operator<<(ostream &stream, const Text &text) {
   for (uint16_t character : text.content) {
-    if (character < 255) {
+    if (character == '\r') {
+      stream << "\\\\r";
+    } else if (character < 255) {
       stream << static_cast<char>(character);
     } else {
       stream << "\\u";

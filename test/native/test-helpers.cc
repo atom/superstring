@@ -60,17 +60,21 @@ Text get_random_text() {
   return Text {get_random_string()};
 }
 
-Range get_random_range(TextBuffer &buffer) {
-  uint32_t start_row = rand() % (buffer.extent().row + 1);
-  uint32_t max_column = buffer.line_length_for_row(start_row);
+Range get_random_range(const Text &text) {
+  uint32_t start_row = rand() % (text.extent().row + 1);
+  uint32_t max_column = text.line_length_for_row(start_row);
   uint32_t start_column = 0;
   if (max_column > 0) start_column = rand() % max_column;
   Point start {start_row, start_column};
   Point end {start};
   while (rand() % 10 < 3) {
-    end = buffer.clip_position(end.traverse(Point(rand() % 2, rand() % 10)));
+    end = text.clip_position(end.traverse(Point(rand() % 2, rand() % 10))).position;
   }
   return {start, end};
+}
+
+Range get_random_range(TextBuffer &buffer) {
+  return get_random_range(buffer.text());
 }
 
 #endif // SUPERSTRING_TEST_HELPERS_H
