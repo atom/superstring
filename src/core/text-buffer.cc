@@ -39,7 +39,7 @@ uint16_t TextBuffer::DerivedLayer::character_at_(T &previous_layer, Point positi
   auto change = patch.change_for_new_position(position);
   if (!change) return previous_layer.character_at(position);
   if (position < change->new_end) {
-    return change->new_text->at(position);
+    return change->new_text->at(position.traversal(change->new_start));
   } else {
     return previous_layer.character_at(
       change->old_end.traverse(position.traversal(change->new_end))
@@ -103,7 +103,7 @@ ClipResult TextBuffer::DerivedLayer::clip_position_(T &previous_layer, Point pos
       uint16_t previous_character = 0;
       if (preceding_change->new_text->size() > 0) {
         previous_character = preceding_change->new_text->content.back();
-      } else if (preceding_change_base_offset > 0) {
+      } else if (preceding_change_base_offset > 0 && preceding_change_base_position.column > 0) {
         previous_character = previous_layer.character_at(previous_column(preceding_change_base_position));
       }
 
