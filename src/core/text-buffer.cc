@@ -52,11 +52,8 @@ ClipResult TextBuffer::DerivedLayer::clip_position_(T &previous_layer, Point pos
   auto preceding_change = patch.change_for_new_position(position);
   if (!preceding_change) return previous_layer.clip_position(position);
 
-  ClipResult preceding_change_base_location =
-    previous_layer.clip_position(preceding_change->old_start);
-  Point preceding_change_base_position = preceding_change_base_location.position;
-  uint32_t preceding_change_base_offset = preceding_change_base_location.offset;
-
+  uint32_t preceding_change_base_offset =
+    previous_layer.clip_position(preceding_change->old_start).offset;
   uint32_t preceding_change_current_offset =
     preceding_change_base_offset +
     preceding_change->preceding_new_text_size -
@@ -68,12 +65,13 @@ ClipResult TextBuffer::DerivedLayer::clip_position_(T &previous_layer, Point pos
         position.traversal(preceding_change->new_start)
       );
 
-    if (position_within_preceding_change.offset == 0 && preceding_change_base_position.column > 0) {
-      if (previous_layer.character_at(previous_column(preceding_change_base_position)) == '\r' &&
-          preceding_change->new_text->content.front() == '\n') {
-        Point result = preceding_change->new_start;
-        result.column--;
-        return {result, preceding_change_current_offset - 1};
+    if (position_within_preceding_change.offset == 0 && preceding_change->old_start.column > 0) {
+      if (preceding_change->new_text->content.front() == '\n' &&
+          previous_layer.character_at(previous_column(preceding_change->old_start)) == '\r') {
+        return {
+          previous_column(preceding_change->new_start),
+          preceding_change_current_offset - 1
+        };
       }
     }
 
@@ -85,35 +83,32 @@ ClipResult TextBuffer::DerivedLayer::clip_position_(T &previous_layer, Point pos
     ClipResult base_location = previous_layer.clip_position(
       preceding_change->old_end.traverse(position.traversal(preceding_change->new_end))
     );
-    Point base_position = base_location.position;
-    uint32_t base_offset = base_location.offset;
 
     ClipResult distance_past_preceding_change = {
-      base_position.traversal(preceding_change->old_end),
-      base_offset - preceding_change_base_offset - preceding_change->old_text_size
+      base_location.position.traversal(preceding_change->old_end),
+      base_location.offset - preceding_change_base_offset - preceding_change->old_text_size
     };
 
-    ClipResult result = {
-      preceding_change->new_end.traverse(distance_past_preceding_change.position),
-      preceding_change_current_offset + preceding_change->new_text->size() + distance_past_preceding_change.offset
-    };
-
-    if (distance_past_preceding_change.offset == 0 &&
-        base_offset < previous_layer.size()) {
+    if (distance_past_preceding_change.offset == 0 && base_location.offset < previous_layer.size()) {
       uint16_t previous_character = 0;
       if (preceding_change->new_text->size() > 0) {
         previous_character = preceding_change->new_text->content.back();
-      } else if (preceding_change_base_offset > 0 && preceding_change_base_position.column > 0) {
-        previous_character = previous_layer.character_at(previous_column(preceding_change_base_position));
+      } else if (preceding_change->old_start.column > 0) {
+        previous_character = previous_layer.character_at(previous_column(preceding_change->old_start));
       }
 
-      if (previous_character == '\r' && previous_layer.character_at(base_position) == '\n') {
-        result.offset--;
-        result.position.column--;
+      if (previous_character == '\r' && previous_layer.character_at(base_location.position) == '\n') {
+        return {
+          previous_column(preceding_change->new_end),
+          preceding_change_current_offset + preceding_change->new_text->size() - 1
+        };
       }
     }
 
-    return result;
+    return {
+      preceding_change->new_end.traverse(distance_past_preceding_change.position),
+      preceding_change_current_offset + preceding_change->new_text->size() + distance_past_preceding_change.offset
+    };
   }
 }
 
