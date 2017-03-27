@@ -86,7 +86,7 @@ ClipResult TextBuffer::DerivedLayer::clip_position_(T &previous_layer, Point pos
 
     ClipResult distance_past_preceding_change = {
       base_location.position.traversal(preceding_change->old_end),
-      base_location.offset - preceding_change_base_offset - preceding_change->old_text_size
+      base_location.offset - (preceding_change_base_offset + preceding_change->old_text_size)
     };
 
     if (distance_past_preceding_change.offset == 0 && base_location.offset < previous_layer.size()) {
