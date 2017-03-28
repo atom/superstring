@@ -2,6 +2,9 @@
 #include <sstream>
 #include "text-buffer.h"
 #include "text-slice.h"
+#include <future>
+#include <unistd.h>
+#include <iostream>
 
 using std::move;
 using std::pair;
@@ -70,15 +73,21 @@ TEST_CASE("TextBuffer::create_snapshot") {
   }
 }
 
+struct SnapshotTask {
+  const TextBuffer::Snapshot *snapshot;
+  Text original_text;
+  std::future<vector<Text>> future;
+};
+
 TEST_CASE("TextBuffer::set_text_in_range - random edits") {
   auto t = time(nullptr);
   for (uint i = 0; i < 1000; i++) {
-    auto seed = t * 1000 + i;
-    srand(seed);
-    printf("Seed: %ld\n", seed);
+    uint32_t seed = t * 1000 + i;
+    Generator rand(seed);
+    printf("seed: %u\n", seed);
 
     TextBuffer buffer {get_random_string()};
-    vector<pair<const TextBuffer::Snapshot *, Text>> snapshots;
+    vector<SnapshotTask> snapshot_tasks;
 
     for (uint j = 0; j < 10; j++) {
       // printf("iteration %u\n", j);
@@ -88,13 +97,26 @@ TEST_CASE("TextBuffer::set_text_in_range - random edits") {
       Text inserted_text = get_random_text();
 
       if (rand() % 2) {
-        // printf("create snapshot %lu\n", snapshots.size());
+        // printf("create snapshot %lu\n", snapshot_tasks.size());
 
-        snapshots.push_back({buffer.create_snapshot(), original_text});
+        auto snapshot = buffer.create_snapshot();
+        snapshot_tasks.push_back({
+          snapshot,
+          original_text,
+          std::async([seed, snapshot, original_text]() {
+            Generator rand(seed);
+            vector<Text> results;
+            for (uint32_t k = 0; k < 5; k++) {
+              usleep(rand() % 1000);
+              results.push_back(snapshot->text());
+            }
+            return results;
+          })
+        });
       }
 
-      buffer.set_text_in_range(deleted_range, TextSlice {inserted_text});
-      original_text.splice(deleted_range.start, deleted_range.extent(), TextSlice {inserted_text});
+      original_text.splice(deleted_range.start, deleted_range.extent(), TextSlice{inserted_text});
+      buffer.set_text_in_range(deleted_range, move(inserted_text));
 
       REQUIRE(buffer.extent() == original_text.extent());
       REQUIRE(buffer.text() == original_text);
@@ -113,25 +135,22 @@ TEST_CASE("TextBuffer::set_text_in_range - random edits") {
         REQUIRE(buffer.text_in_range(range) == Text(TextSlice(original_text).slice(range)));
       }
 
-      for (uint32_t k = 0; k < snapshots.size(); k++) {
-        // printf("check snapshot %u of %lu\n", k, snapshots.size());
+      if (rand() % 3 == 0 && !snapshot_tasks.empty()) {
+        uint32_t snapshot_index = rand() % snapshot_tasks.size();
+        // printf("delete snapshot %u of %lu\n", snapshot_index, snapshot_tasks.size());
 
-        auto &entry = snapshots[k];
-        Range range = get_random_range(entry.second);
-        REQUIRE(entry.first->text() == entry.second);
-        REQUIRE(
-          entry.first->text_in_range(range) ==
-          Text{TextSlice{entry.second}.suffix(range.start).prefix(range.extent())}
-        );
+        snapshot_tasks[snapshot_index].future.wait();
+        delete snapshot_tasks[snapshot_index].snapshot;
+        for (auto text : snapshot_tasks[snapshot_index].future.get()) {
+          REQUIRE(text == snapshot_tasks[snapshot_index].original_text);
+        }
+        snapshot_tasks.erase(snapshot_tasks.begin() + snapshot_index);
       }
+    }
 
-      if (rand() % 3 == 0 && !snapshots.empty()) {
-        uint32_t snapshot_index = rand() % snapshots.size();
-        // printf("delete snapshot %u of %lu\n", snapshot_index, snapshots.size());
-
-        delete snapshots[snapshot_index].first;
-        snapshots.erase(snapshots.begin() + snapshot_index);
-      }
+    for (auto &task : snapshot_tasks) {
+      task.future.wait();
+      delete task.snapshot;
     }
   }
 }

@@ -230,10 +230,12 @@ Text TextBuffer::DerivedLayer::text_in_range(Range range) {
 TextBuffer::TextBuffer(Text &&text) :
   base_layer{std::move(text)} {
   derived_layers.emplace_back(*this, 0);
+  derived_layers.reserve(20);
 }
 
 TextBuffer::TextBuffer() {
   derived_layers.emplace_back(*this, 0);
+  derived_layers.reserve(20);
 }
 
 TextBuffer::TextBuffer(std::u16string text) : TextBuffer {Text {text}} {}
