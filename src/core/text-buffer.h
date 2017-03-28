@@ -6,51 +6,10 @@
 #include "text.h"
 
 class TextBuffer {
-  struct TextChunkCallback {
-    virtual void operator()(TextSlice chunk) = 0;
-  };
+  struct Layer;
+  Text base_text;
+  Layer *top_layer;
 
-  struct BaseLayer {
-    Text text;
-
-    BaseLayer(Text &&text);
-    BaseLayer() = default;
-    Point extent() const;
-    uint32_t size() const;
-    uint16_t character_at(Point);
-    ClipResult clip_position(Point position);
-    void add_chunks_in_range(TextChunkCallback *callback, Point start, Point end);
-  };
-
-  struct DerivedLayer {
-    TextBuffer &buffer;
-    Patch patch;
-    uint32_t index;
-    uint32_t size_;
-    Point extent_;
-    uint32_t snapshot_count;
-
-    DerivedLayer(TextBuffer &, uint32_t);
-
-    template <typename T>
-    inline uint16_t character_at_(T &, Point);
-    template <typename T>
-    inline ClipResult clip_position_(T &, Point position);
-    template <typename T>
-    inline void add_chunks_in_range_(T &, TextChunkCallback *callback, Point start, Point end);
-
-    Point extent() const;
-    uint32_t size() const;
-    uint16_t character_at(Point);
-    ClipResult clip_position(Point position);
-    void add_chunks_in_range(TextChunkCallback *callback, Point start, Point end);
-
-    void set_text_in_range(Range old_range, Text &&new_text);
-    Text text_in_range(Range);
-  };
-
-  BaseLayer base_layer;
-  std::vector<DerivedLayer> derived_layers;
   TextBuffer(Text &&base_text);
 
 public:
@@ -75,9 +34,9 @@ public:
   class Snapshot {
     friend class TextBuffer;
     TextBuffer &buffer;
-    uint32_t index;
+    Layer &layer;
 
-    Snapshot(TextBuffer &, uint32_t);
+    Snapshot(TextBuffer &, Layer &);
 
   public:
     ~Snapshot();
