@@ -334,7 +334,7 @@ Point TextBuffer::Snapshot::extent() const {
 }
 
 uint32_t TextBuffer::Snapshot::line_length_for_row(uint32_t row) const {
-  return layer.clip_position(Point{row, UINT32_MAX}).offset;
+  return layer.clip_position(Point{row, UINT32_MAX}).position.column;
 }
 
 Text TextBuffer::Snapshot::text_in_range(Range range) const {

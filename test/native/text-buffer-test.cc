@@ -41,6 +41,7 @@ TEST_CASE("TextBuffer::create_snapshot") {
   REQUIRE(buffer.line_length_for_row(0) == 6);
   REQUIRE(snapshot1->text() == Text {u"abc\ndef"});
   REQUIRE(snapshot1->line_length_for_row(0) == 3);
+  REQUIRE(snapshot1->line_length_for_row(1) == 3);
 
   auto snapshot2 = buffer.create_snapshot();
   auto snapshot3 = buffer.create_snapshot();
@@ -49,8 +50,10 @@ TEST_CASE("TextBuffer::create_snapshot") {
   REQUIRE(buffer.line_length_for_row(0) == 9);
   REQUIRE(snapshot2->text() == Text {u"abc123\ndef"});
   REQUIRE(snapshot2->line_length_for_row(0) == 6);
+  REQUIRE(snapshot2->line_length_for_row(1) == 3);
   REQUIRE(snapshot1->text() == Text {u"abc\ndef"});
   REQUIRE(snapshot1->line_length_for_row(0) == 3);
+  REQUIRE(snapshot1->line_length_for_row(1) == 3);
 
   SECTION("deleting the latest snapshot") {
     delete snapshot2;
@@ -73,10 +76,16 @@ TEST_CASE("TextBuffer::create_snapshot") {
   }
 }
 
+struct SnapshotData {
+  Text text;
+  Point extent;
+  vector<Point> line_end_positions;
+};
+
 struct SnapshotTask {
   const TextBuffer::Snapshot *snapshot;
   Text original_text;
-  std::future<vector<Text>> future;
+  std::future<vector<SnapshotData>> future;
 };
 
 TEST_CASE("TextBuffer::set_text_in_range - random edits") {
@@ -103,12 +112,20 @@ TEST_CASE("TextBuffer::set_text_in_range - random edits") {
         snapshot_tasks.push_back({
           snapshot,
           original_text,
-          std::async([seed, snapshot, original_text]() {
+          std::async([seed, snapshot]() {
             Generator rand(seed);
-            vector<Text> results;
+            vector<SnapshotData> results;
             for (uint32_t k = 0; k < 5; k++) {
               usleep(rand() % 1000);
-              results.push_back(snapshot->text());
+              vector<Point> line_ending_positions;
+              for (uint32_t row = 0; row < snapshot->extent().row; row++) {
+                line_ending_positions.push_back({row, snapshot->line_length_for_row(row)});
+              }
+              results.push_back({
+                snapshot->text(),
+                snapshot->extent(),
+                line_ending_positions
+              });
             }
             return results;
           })
@@ -140,9 +157,14 @@ TEST_CASE("TextBuffer::set_text_in_range - random edits") {
         // printf("delete snapshot %u of %lu\n", snapshot_index, snapshot_tasks.size());
 
         snapshot_tasks[snapshot_index].future.wait();
+        auto original_text = snapshot_tasks[snapshot_index].original_text;
         delete snapshot_tasks[snapshot_index].snapshot;
-        for (auto text : snapshot_tasks[snapshot_index].future.get()) {
-          REQUIRE(text == snapshot_tasks[snapshot_index].original_text);
+        for (auto data : snapshot_tasks[snapshot_index].future.get()) {
+          REQUIRE(data.text == original_text);
+          REQUIRE(data.extent == original_text.extent());
+          for (auto position : data.line_end_positions) {
+            REQUIRE(position == Point(position.row, original_text.line_length_for_row(position.row)));
+          }
         }
         snapshot_tasks.erase(snapshot_tasks.begin() + snapshot_index);
       }
