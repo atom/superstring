@@ -15,6 +15,7 @@ class TextBuffer {
 public:
   TextBuffer();
   TextBuffer(std::u16string text);
+  ~TextBuffer();
 
   bool reset(Text &&);
   bool save(std::ostream &stream, const char *encoding_name, size_t chunk_size);

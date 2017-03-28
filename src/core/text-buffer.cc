@@ -32,21 +32,28 @@ struct TextBuffer::Layer {
     Layer *previous_layer;
   };
 
-  bool is_first;
   Patch patch;
-  uint32_t size_;
   Point extent_;
+  uint32_t size_;
   uint32_t snapshot_count;
+  bool is_first;
+  bool is_last;
 
-  Layer(Text *base_text) : base_text{base_text}, is_first{true}, snapshot_count{0} {
-    extent_ = base_text->extent();
-    size_ = base_text->size();
-  }
+  Layer(Text *base_text) :
+    base_text{base_text},
+    extent_{base_text->extent()},
+    size_{base_text->size()},
+    snapshot_count{0},
+    is_first{true},
+    is_last{true} {}
 
-  Layer(Layer *previous_layer) : previous_layer{previous_layer}, is_first{false}, snapshot_count{0} {
-    extent_ = previous_layer->extent();
-    size_ = previous_layer->size();
-  }
+  Layer(Layer *previous_layer) :
+    previous_layer{previous_layer},
+    extent_{previous_layer->extent()},
+    size_{previous_layer->size()},
+    snapshot_count{0},
+    is_first{false},
+    is_last{true} {}
 
   static inline Point previous_column(Point position) {
     return Point(position.row, position.column - 1);
@@ -67,7 +74,9 @@ struct TextBuffer::Layer {
 
   template <typename T>
   inline ClipResult clip_position_(T &previous_layer, Point position) {
-    auto preceding_change = patch.find_change_for_new_position(position);
+    auto preceding_change = is_last ?
+      patch.change_for_new_position(position) :
+      patch.find_change_for_new_position(position);
     if (!preceding_change) return previous_layer.clip_position(position);
 
     uint32_t preceding_change_base_offset =
@@ -135,7 +144,9 @@ struct TextBuffer::Layer {
     Point goal_position = clip_position(end).position;
     Point current_position = clip_position(start).position;
     Point base_position = current_position;
-    auto change = patch.find_change_for_new_position(current_position);
+    auto change = is_last ?
+      patch.change_for_new_position(current_position) :
+      patch.find_change_for_new_position(current_position);
 
     while (current_position < goal_position) {
       if (change) {
@@ -155,7 +166,9 @@ struct TextBuffer::Layer {
         base_position = change->old_end.traverse(current_position.traversal(change->new_end));
       }
 
-      change = patch.find_change_ending_after_new_position(current_position);
+      change = is_last ?
+        patch.change_ending_after_new_position(current_position, true) :
+        patch.find_change_ending_after_new_position(current_position);
 
       Point next_base_position, next_position;
       if (change) {
@@ -239,6 +252,8 @@ TextBuffer::TextBuffer(Text &&text) :
 TextBuffer::TextBuffer() :
   top_layer{new TextBuffer::Layer(&this->base_text)} {}
 
+TextBuffer::~TextBuffer() { delete top_layer; }
+
 TextBuffer::TextBuffer(std::u16string text) : TextBuffer {Text {text}} {}
 
 bool TextBuffer::reset(Text &&new_base_text) {
@@ -319,6 +334,7 @@ const TextBuffer::Snapshot *TextBuffer::create_snapshot() {
     layer = top_layer->previous_layer;
   } else {
     layer = top_layer;
+    layer->is_last = false;
     top_layer = new Layer(top_layer);
   }
   layer->snapshot_count++;
@@ -376,4 +392,5 @@ TextBuffer::Snapshot::~Snapshot() {
   }
 
   buffer.top_layer = top_layer;
+  buffer.top_layer->is_last = true;
 }
