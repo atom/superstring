@@ -29,6 +29,22 @@ TEST_CASE("TextBuffer::line_length_for_row - basic") {
   REQUIRE(buffer.line_length_for_row(1) == 0);
 }
 
+TEST_CASE("TextBuffer::position_for_offset") {
+  TextBuffer buffer {u"ab\ndef\r\nhijk"};
+  buffer.set_text_in_range({{0, 2}, {0, 2}}, Text{u"c"});
+  buffer.set_text_in_range({{1, 3}, {1, 3}}, Text{u"g"});
+  REQUIRE(buffer.position_for_offset(0) == Point(0, 0));
+  REQUIRE(buffer.position_for_offset(1) == Point(0, 1));
+  REQUIRE(buffer.position_for_offset(2) == Point(0, 2));
+  REQUIRE(buffer.position_for_offset(3) == Point(0, 3));
+  REQUIRE(buffer.position_for_offset(4) == Point(1, 0));
+  REQUIRE(buffer.position_for_offset(5) == Point(1, 1));
+  REQUIRE(buffer.position_for_offset(7) == Point(1, 3));
+  REQUIRE(buffer.position_for_offset(8) == Point(1, 4));
+  REQUIRE(buffer.position_for_offset(9) == Point(1, 4));
+  REQUIRE(buffer.position_for_offset(10) == Point(2, 0));
+}
+
 TEST_CASE("TextBuffer::create_snapshot") {
   TextBuffer buffer {u"ab\ndef"};
   buffer.set_text_in_range({{0, 2}, {0, 2}}, Text {u"c"});
@@ -150,6 +166,8 @@ TEST_CASE("TextBuffer::set_text_in_range - random edits") {
 
         Range range = get_random_range(buffer);
         REQUIRE(buffer.text_in_range(range) == Text(TextSlice(original_text).slice(range)));
+        REQUIRE(buffer.position_for_offset(buffer.clip_position(range.start).offset) == range.start);
+        REQUIRE(buffer.position_for_offset(buffer.clip_position(range.end).offset) == range.end);
       }
 
       if (rand() % 3 == 0 && !snapshot_tasks.empty()) {

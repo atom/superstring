@@ -9,7 +9,7 @@ using std::string;
 using std::vector;
 
 struct TextChunkCallback {
-  virtual void operator()(TextSlice chunk) = 0;
+  virtual bool operator()(TextSlice chunk) = 0;
 };
 
 class BaseLayer {
@@ -21,8 +21,8 @@ public:
   Point extent() const { return text.extent(); }
   uint16_t character_at(Point position) { return text.at(position); }
   ClipResult clip_position(Point position) { return text.clip_position(position); }
-  void add_chunks_in_range(TextChunkCallback *callback, Point start, Point end) {
-    (*callback)(TextSlice(text).slice({start, end}));
+  bool add_chunks_in_range(TextChunkCallback *callback, Point start, Point end) {
+    return (*callback)(TextSlice(text).slice({start, end}));
   }
 };
 
@@ -140,7 +140,8 @@ struct TextBuffer::Layer {
   }
 
   template <typename T>
-  inline void add_chunks_in_range_(T &previous_layer, TextChunkCallback *callback, Point start, Point end) {
+  inline bool add_chunks_in_range_(T &previous_layer, TextChunkCallback *callback,
+                                   Point start, Point end) {
     Point goal_position = clip_position(end).position;
     Point current_position = clip_position(start).position;
     Point base_position = current_position;
@@ -157,7 +158,7 @@ struct TextBuffer::Layer {
               change->new_end.traversal(change->new_start)
             ))
             .suffix(current_position.traversal(change->new_start));
-          (*callback)(slice);
+          if ((*callback)(slice)) return true;
           base_position = change->old_end;
           current_position = change->new_end;
           if (current_position > goal_position) break;
@@ -179,10 +180,14 @@ struct TextBuffer::Layer {
         next_base_position = base_position.traverse(goal_position.traversal(current_position));
       }
 
-      previous_layer.add_chunks_in_range(callback, base_position, next_base_position);
+      if (previous_layer.add_chunks_in_range(callback, base_position, next_base_position)) {
+        return true;
+      }
       base_position = next_base_position;
       current_position = next_position;
     }
+
+    return false;
   }
 
   uint16_t character_at(Point position) {
@@ -203,7 +208,32 @@ struct TextBuffer::Layer {
     }
   }
 
-  void add_chunks_in_range(TextChunkCallback *callback, Point start, Point end) {
+  Point position_for_offset(uint32_t offset) {
+    struct Callback : public TextChunkCallback {
+      Point position;
+      uint32_t offset;
+      uint32_t goal_offset;
+
+      Callback(uint32_t goal_offset) : offset{0}, goal_offset{goal_offset} {}
+
+      bool operator()(TextSlice slice) {
+        uint32_t size = slice.size();
+        if (offset + size >= goal_offset) {
+          position = position.traverse(slice.position_for_offset(goal_offset - offset));
+          return true;
+        }
+        position = position.traverse(slice.extent());
+        offset += size;
+        return false;
+      }
+    };
+
+    Callback callback{offset};
+    add_chunks_in_range(&callback, Point(0, 0), extent());
+    return callback.position;
+  }
+
+  bool add_chunks_in_range(TextChunkCallback *callback, Point start, Point end) {
     if (is_first) {
       BaseLayer base_layer(*base_text);
       return add_chunks_in_range_(base_layer, callback, start, end);
@@ -236,7 +266,10 @@ struct TextBuffer::Layer {
   Text text_in_range(Range range) {
     struct Callback : public TextChunkCallback {
       Text text;
-      void operator()(TextSlice chunk) { text.append(chunk); }
+      bool operator()(TextSlice chunk) {
+        text.append(chunk);
+        return false;
+      }
     };
 
     Callback callback;
@@ -247,7 +280,10 @@ struct TextBuffer::Layer {
   vector<TextSlice> chunks_in_range(Range range) {
     struct Callback : public TextChunkCallback {
       vector<TextSlice> slices;
-      void operator()(TextSlice chunk) { slices.push_back(chunk); }
+      bool operator()(TextSlice chunk) {
+        slices.push_back(chunk);
+        return false;
+      }
     };
 
     Callback callback;
@@ -290,12 +326,12 @@ uint32_t TextBuffer::line_length_for_row(uint32_t row) {
   return top_layer->clip_position(Point{row, UINT32_MAX}).position.column;
 }
 
-Point TextBuffer::clip_position(Point position) {
-  return top_layer->clip_position(position).position;
+ClipResult TextBuffer::clip_position(Point position) {
+  return top_layer->clip_position(position);
 }
 
-Range TextBuffer::clip_range(Range range) {
-  return Range {clip_position(range.start), clip_position(range.end)};
+Point TextBuffer::position_for_offset(uint32_t offset) {
+  return top_layer->position_for_offset(offset);
 }
 
 Text TextBuffer::text() {

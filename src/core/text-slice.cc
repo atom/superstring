@@ -29,6 +29,10 @@ std::pair<TextSlice, TextSlice> TextSlice::split(Point split_point) const {
   };
 }
 
+Point TextSlice::position_for_offset(uint32_t offset) const {
+  return text->position_for_offset(offset + start_offset()).traversal(start_position);
+}
+
 TextSlice TextSlice::prefix(Point prefix_end) const {
   return split(prefix_end).first;
 }

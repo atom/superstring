@@ -116,6 +116,25 @@ describe('TextBuffer', () => {
       assert.equal(buffer.lineLengthForRow(3), 5)
     })
   })
+
+  describe('.characterIndexForPosition', () => {
+    it('returns the character index for the given position', () => {
+      const buffer = new TextBuffer()
+      buffer.setText('abc\r\ndefg\n\r\nhijkl')
+
+      assert.equal(buffer.characterIndexForPosition(Point(0, 2)), 2)
+      assert.deepEqual(buffer.positionForCharacterIndex(2), Point(0, 2))
+      assert.equal(buffer.characterIndexForPosition(Point(0, 3)), 3)
+      assert.deepEqual(buffer.positionForCharacterIndex(3), Point(0, 3))
+      assert.equal(buffer.characterIndexForPosition(Point(0, 4)), 3)
+      assert.equal(buffer.characterIndexForPosition(Point(0, Infinity)), 3)
+      assert.deepEqual(buffer.positionForCharacterIndex(4), Point(0, 3))
+      assert.equal(buffer.characterIndexForPosition(Point(1, 0)), 5)
+      assert.deepEqual(buffer.positionForCharacterIndex(5), Point(1, 0))
+      assert.equal(buffer.characterIndexForPosition(Point(1, 1)), 6)
+      assert.deepEqual(buffer.positionForCharacterIndex(6), Point(1, 1))
+    })
+  })
 })
 
 function Range(start, end) {

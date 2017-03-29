@@ -21,6 +21,8 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("getText").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text));
   prototype_template->Set(Nan::New("setText").ToLocalChecked(), Nan::New<FunctionTemplate>(set_text));
   prototype_template->Set(Nan::New("lineLengthForRow").ToLocalChecked(), Nan::New<FunctionTemplate>(line_length_for_row));
+  prototype_template->Set(Nan::New("characterIndexForPosition").ToLocalChecked(), Nan::New<FunctionTemplate>(character_index_for_position));
+  prototype_template->Set(Nan::New("positionForCharacterIndex").ToLocalChecked(), Nan::New<FunctionTemplate>(position_for_character_index));
   prototype_template->Set(Nan::New("load").ToLocalChecked(), Nan::New<FunctionTemplate>(load));
   prototype_template->Set(Nan::New("save").ToLocalChecked(), Nan::New<FunctionTemplate>(save));
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
@@ -74,6 +76,26 @@ void TextBufferWrapper::line_length_for_row(const Nan::FunctionCallbackInfo<Valu
   auto row = Nan::To<uint32_t>(info[0]);
   if (row.IsJust()) {
     info.GetReturnValue().Set(Nan::New<Number>(text_buffer.line_length_for_row(row.FromJust())));
+  }
+}
+
+void TextBufferWrapper::character_index_for_position(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  auto position = PointWrapper::point_from_js(info[0]);
+  if (position) {
+    info.GetReturnValue().Set(
+      Nan::New<Number>(text_buffer.clip_position(*position).offset)
+    );
+  }
+}
+
+void TextBufferWrapper::position_for_character_index(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  auto offset = Nan::To<uint32_t>(info[0]);
+  if (offset.IsJust()) {
+    info.GetReturnValue().Set(
+      PointWrapper::from_point(text_buffer.position_for_offset(offset.FromJust()))
+    );
   }
 }
 

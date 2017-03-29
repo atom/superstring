@@ -175,11 +175,14 @@ TEST_CASE("Text::offset_for_position - basic") {
 
 TEST_CASE("Text::offset_for_position - empty lines") {
   Text text {u"a\n\nb\r\rc"};
+  TextSlice slice(text);
 
   REQUIRE(text.offset_for_position({0, 1}) == 1);
   REQUIRE(text.offset_for_position({0, 2}) == 1);
   REQUIRE(text.offset_for_position({0, UINT32_MAX}) == 1);
   REQUIRE(text.offset_for_position({1, 0}) == 2);
+  REQUIRE(slice.position_for_offset(1) == Point(0, 1));
   REQUIRE(text.offset_for_position({1, 1}) == 2);
   REQUIRE(text.offset_for_position({1, UINT32_MAX}) == 2);
+  REQUIRE(slice.position_for_offset(2) == Point(1, 0));
 }

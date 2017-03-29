@@ -307,6 +307,17 @@ uint32_t Text::offset_for_position(Point position) const {
   return clip_position(position).offset;
 }
 
+Point Text::position_for_offset(uint32_t offset) const {
+  if (offset > size()) offset = size();
+  auto line_offsets_begin = line_offsets.begin();
+  auto line_offset = std::upper_bound(line_offsets_begin, line_offsets.end(), offset);
+  if (line_offset != line_offsets_begin) line_offset--;
+  uint32_t row = line_offset - line_offsets_begin;
+  uint32_t column = offset - *line_offset;
+  if (offset > 0 && offset < size() && at(offset) == '\n' && at(offset - 1) == '\r') column--;
+  return Point(row, column);
+}
+
 uint32_t Text::line_length_for_row(uint32_t row) const {
   auto iterators = line_iterators(row);
   return iterators.second - iterators.first;

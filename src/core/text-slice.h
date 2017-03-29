@@ -23,6 +23,7 @@ class TextSlice {
   TextSlice prefix(Point) const;
   TextSlice suffix(Point) const;
   TextSlice slice(Range range) const;
+  Point position_for_offset(uint32_t offset) const;
 
   Point extent() const;
   uint32_t size() const;

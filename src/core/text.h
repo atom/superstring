@@ -55,6 +55,7 @@ class Text {
   ClipResult clip_position(Point) const;
   Point extent() const;
   uint32_t offset_for_position(Point) const;
+  Point position_for_offset(uint32_t) const;
   uint32_t line_length_for_row(uint32_t row) const;
   void append(TextSlice);
   void serialize(Serializer &) const;
