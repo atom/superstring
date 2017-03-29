@@ -53,10 +53,10 @@ uint32_t TextSlice::size() const {
   return end_offset() - start_offset();
 }
 
-Text::const_iterator TextSlice::cbegin() const {
+Text::const_iterator TextSlice::begin() const {
   return text->cbegin() + start_offset();
 }
 
-Text::const_iterator TextSlice::cend() const {
+Text::const_iterator TextSlice::end() const {
   return text->cbegin() + end_offset();
 }

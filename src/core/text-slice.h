@@ -28,8 +28,8 @@ class TextSlice {
   Point extent() const;
   uint32_t size() const;
 
-  Text::const_iterator cbegin() const;
-  Text::const_iterator cend() const;
+  Text::const_iterator begin() const;
+  Text::const_iterator end() const;
 };
 
 #endif // FLAT_TEXT_SLICE_H_

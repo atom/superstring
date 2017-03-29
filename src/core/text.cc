@@ -254,8 +254,8 @@ void Text::splice(Point start, Point deletion_extent, TextSlice inserted_slice) 
     content,
     content_splice_start,
     content_splice_end - content_splice_start,
-    inserted_slice.cbegin(),
-    inserted_slice.cend()
+    inserted_slice.begin(),
+    inserted_slice.end()
   );
 
   splice_vector(
@@ -364,8 +364,8 @@ void Text::append(TextSlice slice) {
 
   content.insert(
     content.end(),
-    slice.cbegin(),
-    slice.cend()
+    slice.begin(),
+    slice.end()
   );
 
   size_t original_size = line_offsets.size();

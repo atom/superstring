@@ -117,6 +117,18 @@ describe('TextBuffer', () => {
     })
   })
 
+  describe('.lineEndingForRow', () => {
+    it('returns the line ending for the given row', () => {
+      const buffer = new TextBuffer()
+      buffer.setText('abc\r\ndefg\n\r\nhijkl')
+
+      assert.equal(buffer.lineEndingForRow(0), '\r\n')
+      assert.equal(buffer.lineEndingForRow(1), '\n')
+      assert.equal(buffer.lineEndingForRow(2), '\r\n')
+      assert.equal(buffer.lineEndingForRow(3), '')
+    })
+  })
+
   describe('.characterIndexForPosition', () => {
     it('returns the character index for the given position', () => {
       const buffer = new TextBuffer()

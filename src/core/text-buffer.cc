@@ -306,6 +306,25 @@ uint32_t TextBuffer::line_length_for_row(uint32_t row) {
   return top_layer->clip_position(Point{row, UINT32_MAX}).position.column;
 }
 
+
+const uint16_t *TextBuffer::line_ending_for_row(uint32_t row) {
+  static uint16_t LF[] = {'\n', 0};
+  static uint16_t CRLF[] = {'\r', '\n', 0};
+  static uint16_t NONE[] = {0};
+
+  const uint16_t *result = NONE;
+  top_layer->for_each_chunk_in_range(
+    Point(row, UINT32_MAX),
+    Point(row + 1, 0),
+    [&result](TextSlice slice) {
+      auto begin = slice.begin();
+      if (begin == slice.end()) return false;
+      result = (*begin == '\r') ? CRLF : LF;
+      return true;
+    });
+  return result;
+}
+
 ClipResult TextBuffer::clip_position(Point position) {
   return top_layer->clip_position(position);
 }
