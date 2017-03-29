@@ -136,7 +136,7 @@ describe('TextBuffer', () => {
     })
   })
 
-  describe('.characterIndexForPosition', () => {
+  describe('.characterIndexForPosition and .positionForCharacterIndex', () => {
     it('returns the character index for the given position', () => {
       const buffer = new TextBuffer()
       buffer.setText('abc\r\ndefg\n\r\nhijkl')
@@ -152,6 +152,9 @@ describe('TextBuffer', () => {
       assert.deepEqual(buffer.positionForCharacterIndex(5), Point(1, 0))
       assert.equal(buffer.characterIndexForPosition(Point(1, 1)), 6)
       assert.deepEqual(buffer.positionForCharacterIndex(6), Point(1, 1))
+
+      assert.equal(buffer.characterIndexForPosition(Point(-1, -1)), 0)
+      assert.deepEqual(buffer.positionForCharacterIndex(-1), Point(0, 0))
     })
   })
 })

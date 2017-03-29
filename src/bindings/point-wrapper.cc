@@ -33,8 +33,8 @@ optional<Point> PointWrapper::point_from_js(Local<Value> value) {
   double row = js_row->NumberValue();
   double column = js_column->NumberValue();
   return Point(
-    std::isfinite(row) ? row : UINT32_MAX,
-    std::isfinite(column) ? column : UINT32_MAX
+    std::isfinite(row) ? std::max(0.0, row) : UINT32_MAX,
+    std::isfinite(column) ? std::max(0.0, column) : UINT32_MAX
   );
 }
 

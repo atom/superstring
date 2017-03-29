@@ -127,10 +127,13 @@ void TextBufferWrapper::character_index_for_position(const Nan::FunctionCallback
 
 void TextBufferWrapper::position_for_character_index(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
-  auto offset = Nan::To<uint32_t>(info[0]);
-  if (offset.IsJust()) {
+  auto maybe_offset = Nan::To<int64_t>(info[0]);
+  if (maybe_offset.IsJust()) {
+    int64_t offset = maybe_offset.FromJust();
     info.GetReturnValue().Set(
-      PointWrapper::from_point(text_buffer.position_for_offset(offset.FromJust()))
+      PointWrapper::from_point(text_buffer.position_for_offset(
+        std::max<int64_t>(0, offset)
+      ))
     );
   }
 }
