@@ -2,7 +2,6 @@
 #define FLAT_TEXT_SLICE_H_
 
 #include <vector>
-
 #include "point.h"
 #include "range.h"
 #include "text.h"

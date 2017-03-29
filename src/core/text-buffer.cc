@@ -1,5 +1,5 @@
-#include "text-buffer.h"
 #include "text-slice.h"
+#include "text-buffer.h"
 #include <cassert>
 #include <vector>
 #include <sstream>
@@ -234,14 +234,25 @@ struct TextBuffer::Layer {
   }
 
   Text text_in_range(Range range) {
-    struct Appender : public TextChunkCallback {
+    struct Callback : public TextChunkCallback {
       Text text;
       void operator()(TextSlice chunk) { text.append(chunk); }
     };
 
-    Appender appender;
-    add_chunks_in_range(&appender, range.start, range.end);
-    return appender.text;
+    Callback callback;
+    add_chunks_in_range(&callback, range.start, range.end);
+    return callback.text;
+  }
+
+  vector<TextSlice> chunks_in_range(Range range) {
+    struct Callback : public TextChunkCallback {
+      vector<TextSlice> slices;
+      void operator()(TextSlice chunk) { slices.push_back(chunk); }
+    };
+
+    Callback callback;
+    add_chunks_in_range(&callback, range.start, range.end);
+    return callback.slices;
   }
 };
 
@@ -264,10 +275,6 @@ bool TextBuffer::reset(Text &&new_base_text) {
   top_layer->extent_ = new_base_text.extent();
   top_layer->size_ = new_base_text.size();
   base_text = move(new_base_text);
-  return true;
-}
-
-bool TextBuffer::save(std::ostream &stream, const char *encoding_name, size_t chunk_size) {
   return true;
 }
 
@@ -359,6 +366,14 @@ Text TextBuffer::Snapshot::text_in_range(Range range) const {
 
 Text TextBuffer::Snapshot::text() const {
   return layer.text_in_range({{0, 0}, extent()});
+}
+
+vector<TextSlice> TextBuffer::Snapshot::chunks_in_range(Range range) const {
+  return layer.chunks_in_range(range);
+}
+
+vector<TextSlice> TextBuffer::Snapshot::chunks() const {
+  return layer.chunks_in_range({{0, 0}, extent()});
 }
 
 TextBuffer::Snapshot::Snapshot(TextBuffer &buffer, TextBuffer::Layer &layer)

@@ -18,7 +18,6 @@ public:
   ~TextBuffer();
 
   bool reset(Text &&);
-  bool save(std::ostream &stream, const char *encoding_name, size_t chunk_size);
 
   uint32_t size() const;
   Point extent() const;

@@ -3,6 +3,7 @@
 #include "point-wrapper.h"
 #include "range-wrapper.h"
 #include "text-wrapper.h"
+#include "text-slice.h"
 #include "noop.h"
 
 using namespace v8;
@@ -124,31 +125,33 @@ public:
 };
 
 class TextBufferSaver : public Nan::AsyncWorker {
-  TextBuffer *buffer;
+  const TextBuffer::Snapshot *snapshot;
   std::string file_name;
   std::string encoding_name;
   bool result;
 
 public:
-  TextBufferSaver(Nan::Callback *completion_callback, TextBuffer *buffer,
+  TextBufferSaver(Nan::Callback *completion_callback, const TextBuffer::Snapshot *snapshot,
                   std::string &&file_name, std::string &&encoding_name) :
     AsyncWorker(completion_callback),
-    buffer{buffer},
+    snapshot{snapshot},
     file_name{file_name},
     encoding_name(encoding_name),
-    result{false} {}
+    result{true} {}
 
   void Execute() {
     static size_t CHUNK_SIZE = 10 * 1024;
     std::ofstream file{file_name};
-    result = buffer->save(
-      file,
-      encoding_name.c_str(),
-      CHUNK_SIZE
-    );
+    for (TextSlice &chunk : snapshot->chunks()) {
+      if (!Text::write(file, encoding_name.c_str(), CHUNK_SIZE, chunk)) {
+        result = false;
+        return;
+      }
+    }
   }
 
   void HandleOKCallback() {
+    delete snapshot;
     v8::Local<v8::Value> argv[] = {Nan::New<Boolean>(result)};
     callback->Call(1, argv);
   }
@@ -195,7 +198,7 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
   Nan::Callback *completion_callback = new Nan::Callback(info[2].As<Function>());
   Nan::AsyncQueueWorker(new TextBufferSaver(
     completion_callback,
-    &text_buffer,
+    text_buffer.create_snapshot(),
     move(file_path),
     move(encoding_name)
   ));

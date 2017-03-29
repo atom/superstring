@@ -38,6 +38,9 @@ class Text {
   static optional<Text> build(std::istream &stream, size_t input_size,
                               const char *encoding_name, size_t chunk_size,
                               std::function<void(size_t)> progress_callback);
+  static bool write(std::ostream &stream, const char *encoding_name,
+                    size_t chunk_size, TextSlice slice);
+
   static Text concat(TextSlice a, TextSlice b);
   static Text concat(TextSlice a, TextSlice b, TextSlice c);
   void splice(Point start, Point deletion_extent, TextSlice inserted_slice);

@@ -62,6 +62,46 @@ void Text::serialize(Serializer &serializer) const {
   }
 }
 
+bool Text::write(std::ostream &stream, const char *encoding_name,
+                 size_t chunk_size, TextSlice slice) {
+  iconv_t conversion = iconv_open(encoding_name, "UTF-16LE");
+  if (conversion == reinterpret_cast<iconv_t>(-1)) {
+    return false;
+  }
+
+  size_t start_offset = slice.start_offset();
+  size_t end_offset = slice.end_offset();
+  const vector<uint16_t> &input_vector = slice.text->content;
+  const char *input_buffer = reinterpret_cast<const char *>(input_vector.data() + start_offset);
+  char *input_pointer = const_cast<char *>(input_buffer);
+  size_t input_bytes_remaining = (end_offset - start_offset) * bytes_per_character;
+
+  vector<char> output_vector(chunk_size);
+  char *output_buffer = output_vector.data();
+
+  while (input_bytes_remaining) {
+    char *output_pointer = output_buffer;
+    size_t output_bytes_remaining = output_vector.size();
+    size_t conversion_result = iconv(
+      conversion,
+      &input_pointer,
+      &input_bytes_remaining,
+      &output_pointer,
+      &output_bytes_remaining
+    );
+
+    if (conversion_result == static_cast<size_t>(-1)) {
+      // TODO implement
+      return true;
+    }
+
+    size_t output_bytes_written = output_vector.size() - output_bytes_remaining;
+    stream.write(output_buffer, output_bytes_written);
+  }
+
+  return true;
+}
+
 optional<Text> Text::build(std::istream &stream, size_t input_size,
                            const char *encoding_name, size_t chunk_size,
                            function<void(size_t)> progress_callback) {
