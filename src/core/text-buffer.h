@@ -17,6 +17,7 @@ public:
   TextBuffer(std::u16string text);
   ~TextBuffer();
 
+  bool flatten();
   bool reset(Text &&);
 
   uint32_t size() const;
@@ -30,6 +31,7 @@ public:
   void set_text(Text &&new_text);
   void set_text_in_range(Range old_range, Text &&new_text);
   bool is_modified() const;
+  std::vector<TextSlice> chunks() const;
 
   std::string get_dot_graph() const;
 

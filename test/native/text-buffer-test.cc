@@ -104,10 +104,16 @@ TEST_CASE("TextBuffer::is_modified") {
 
   auto snapshot2 = buffer.create_snapshot();
   REQUIRE(buffer.is_modified());
+  REQUIRE(!buffer.flatten());
 
   delete snapshot1;
+  REQUIRE(!buffer.flatten());
   delete snapshot2;
   REQUIRE(buffer.is_modified());
+
+  REQUIRE(buffer.flatten());
+  REQUIRE(!buffer.is_modified());
+  REQUIRE(buffer.text() == Text{u"a"});
 }
 
 struct SnapshotData {

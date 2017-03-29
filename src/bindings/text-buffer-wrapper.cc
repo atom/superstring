@@ -30,6 +30,8 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("isModified").ToLocalChecked(), Nan::New<FunctionTemplate>(is_modified));
   prototype_template->Set(Nan::New("load").ToLocalChecked(), Nan::New<FunctionTemplate>(load));
   prototype_template->Set(Nan::New("save").ToLocalChecked(), Nan::New<FunctionTemplate>(save));
+  prototype_template->Set(Nan::New("loadSync").ToLocalChecked(), Nan::New<FunctionTemplate>(load_sync));
+  prototype_template->Set(Nan::New("saveSync").ToLocalChecked(), Nan::New<FunctionTemplate>(save_sync));
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
 }
 
@@ -143,6 +145,39 @@ void TextBufferWrapper::is_modified(const Nan::FunctionCallbackInfo<Value> &info
   info.GetReturnValue().Set(Nan::New<Boolean>(text_buffer.is_modified()));
 }
 
+void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+
+  Local<String> js_file_path;
+  if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
+  std::string file_path = *String::Utf8Value(js_file_path);
+
+  Local<String> js_encoding_name;
+  if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
+  std::string encoding_name = *String::Utf8Value(info[1].As<String>());
+
+  static size_t CHUNK_SIZE = 10 * 1024;
+  std::ifstream file{file_path};
+  auto beginning = file.tellg();
+  file.seekg(0, std::ios::end);
+  auto end = file.tellg();
+  file.seekg(0);
+  auto text = Text::build(
+    file,
+    end - beginning,
+    encoding_name.c_str(),
+    CHUNK_SIZE,
+    [](size_t percent_done) {}
+  );
+
+  if (text) {
+    text_buffer.reset(move(*text));
+    info.GetReturnValue().Set(Nan::True());
+  } else {
+    info.GetReturnValue().Set(Nan::False());
+  }
+}
+
 class TextBufferLoader : public Nan::AsyncProgressWorkerBase<size_t> {
   Nan::Callback *progress_callback;
   TextBuffer *buffer;
@@ -190,6 +225,60 @@ public:
   }
 };
 
+void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+
+  Local<String> js_file_path;
+  if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
+  std::string file_path = *String::Utf8Value(js_file_path);
+
+  Local<String> js_encoding_name;
+  if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
+  std::string encoding_name = *String::Utf8Value(info[1].As<String>());
+
+  Nan::Callback *completion_callback = new Nan::Callback(info[2].As<Function>());
+
+  Nan::Callback *progress_callback = nullptr;
+  if (info[3]->IsFunction()) {
+    progress_callback = new Nan::Callback(info[3].As<Function>());
+  }
+
+  Nan::AsyncQueueWorker(new TextBufferLoader(
+    completion_callback,
+    progress_callback,
+    &text_buffer,
+    move(file_path),
+    move(encoding_name)
+  ));
+}
+
+void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+
+  Local<String> js_file_path;
+  if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
+  std::string file_path = *String::Utf8Value(js_file_path);
+
+  Local<String> js_encoding_name;
+  if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
+  std::string encoding_name = *String::Utf8Value(info[1].As<String>());
+
+  static size_t CHUNK_SIZE = 10 * 1024;
+  std::ofstream file{file_path};
+  for (TextSlice &chunk : text_buffer.chunks()) {
+    if (!Text::write(file, encoding_name.c_str(), CHUNK_SIZE, chunk)) {
+      info.GetReturnValue().Set(Nan::False());
+      return;
+    }
+  }
+
+  if (text_buffer.flatten()) {
+    info.GetReturnValue().Set(Nan::True());
+  } else {
+    info.GetReturnValue().Set(Nan::False());
+  }
+}
+
 class TextBufferSaver : public Nan::AsyncWorker {
   const TextBuffer::Snapshot *snapshot;
   std::string file_name;
@@ -222,33 +311,6 @@ public:
     callback->Call(1, argv);
   }
 };
-
-void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
-  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
-
-  Local<String> js_file_path;
-  if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
-  std::string file_path = *String::Utf8Value(js_file_path);
-
-  Local<String> js_encoding_name;
-  if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
-  std::string encoding_name = *String::Utf8Value(info[1].As<String>());
-
-  Nan::Callback *completion_callback = new Nan::Callback(info[2].As<Function>());
-
-  Nan::Callback *progress_callback = nullptr;
-  if (info[3]->IsFunction()) {
-    progress_callback = new Nan::Callback(info[3].As<Function>());
-  }
-
-  Nan::AsyncQueueWorker(new TextBufferLoader(
-    completion_callback,
-    progress_callback,
-    &text_buffer,
-    move(file_path),
-    move(encoding_name)
-  ));
-}
 
 void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;

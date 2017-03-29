@@ -294,6 +294,21 @@ bool TextBuffer::reset(Text &&new_base_text) {
   return true;
 }
 
+bool TextBuffer::flatten() {
+  if (!top_layer->is_first) return false;
+
+  for (auto change : top_layer->patch.get_changes()) {
+    base_text.splice(
+      change.new_start,
+      change.old_end.traversal(change.old_start),
+      *change.new_text
+    );
+  }
+
+  top_layer->patch.clear();
+  return true;
+}
+
 Point TextBuffer::extent() const {
   return top_layer->extent();
 }
@@ -338,6 +353,10 @@ Text TextBuffer::text() {
 
 Text TextBuffer::text_in_range(Range range) {
   return top_layer->text_in_range(range);
+}
+
+vector<TextSlice> TextBuffer::chunks() const {
+  return top_layer->chunks_in_range({{0, 0}, extent()});
 }
 
 void TextBuffer::set_text(Text &&new_text) {
