@@ -27,6 +27,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("lineEndingForRow").ToLocalChecked(), Nan::New<FunctionTemplate>(line_ending_for_row));
   prototype_template->Set(Nan::New("characterIndexForPosition").ToLocalChecked(), Nan::New<FunctionTemplate>(character_index_for_position));
   prototype_template->Set(Nan::New("positionForCharacterIndex").ToLocalChecked(), Nan::New<FunctionTemplate>(position_for_character_index));
+  prototype_template->Set(Nan::New("isModified").ToLocalChecked(), Nan::New<FunctionTemplate>(is_modified));
   prototype_template->Set(Nan::New("load").ToLocalChecked(), Nan::New<FunctionTemplate>(load));
   prototype_template->Set(Nan::New("save").ToLocalChecked(), Nan::New<FunctionTemplate>(save));
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
@@ -132,6 +133,11 @@ void TextBufferWrapper::position_for_character_index(const Nan::FunctionCallback
       PointWrapper::from_point(text_buffer.position_for_offset(offset.FromJust()))
     );
   }
+}
+
+void TextBufferWrapper::is_modified(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  info.GetReturnValue().Set(Nan::New<Boolean>(text_buffer.is_modified()));
 }
 
 class TextBufferLoader : public Nan::AsyncProgressWorkerBase<size_t> {

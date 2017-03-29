@@ -348,6 +348,13 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
   top_layer->set_text_in_range(old_range, move(new_text));
 }
 
+bool TextBuffer::is_modified() const {
+  return (
+    top_layer->patch.get_change_count() > 0 ||
+    (!top_layer->is_first && top_layer->previous_layer->patch.get_change_count() > 0)
+  );
+}
+
 string TextBuffer::get_dot_graph() const {
   Layer *layer = top_layer;
   vector<TextBuffer::Layer *> layers;

@@ -29,6 +29,7 @@ public:
   Text text_in_range(Range range);
   void set_text(Text &&new_text);
   void set_text_in_range(Range old_range, Text &&new_text);
+  bool is_modified() const;
 
   std::string get_dot_graph() const;
 

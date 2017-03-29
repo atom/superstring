@@ -92,6 +92,24 @@ TEST_CASE("TextBuffer::create_snapshot") {
   }
 }
 
+TEST_CASE("TextBuffer::is_modified") {
+  TextBuffer buffer;
+  REQUIRE(!buffer.is_modified());
+
+  auto snapshot1 = buffer.create_snapshot();
+  REQUIRE(!buffer.is_modified());
+
+  buffer.set_text_in_range({{0, 0}, {0, 0}}, Text{u"a"});
+  REQUIRE(buffer.is_modified());
+
+  auto snapshot2 = buffer.create_snapshot();
+  REQUIRE(buffer.is_modified());
+
+  delete snapshot1;
+  delete snapshot2;
+  REQUIRE(buffer.is_modified());
+}
+
 struct SnapshotData {
   Text text;
   Point extent;
