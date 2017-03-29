@@ -8,10 +8,9 @@ using std::move;
 using std::string;
 using std::vector;
 
-class BaseLayer {
+struct BaseLayer {
   const Text &text;
 
-public:
   BaseLayer(Text &text) : text{text} {}
   uint32_t size() const { return text.size(); }
   Point extent() const { return text.extent(); }
