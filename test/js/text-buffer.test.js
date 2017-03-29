@@ -105,22 +105,20 @@ describe('TextBuffer', () => {
     })
   })
 
-  describe('.lineLengthForRow', () => {
-    it('returns the length of the line at the given index', () => {
+  describe('.lineForRow, .lineLengthForRow, and .lineEndingForRow', () => {
+    it('returns the properties of the given line of text', () => {
       const buffer = new TextBuffer()
       buffer.setText('abc\r\ndefg\n\r\nhijkl')
+
+      assert.equal(buffer.lineForRow(0), 'abc')
+      assert.equal(buffer.lineForRow(1), 'defg')
+      assert.equal(buffer.lineForRow(2), '')
+      assert.equal(buffer.lineForRow(3), 'hijkl')
 
       assert.equal(buffer.lineLengthForRow(0), 3)
       assert.equal(buffer.lineLengthForRow(1), 4)
       assert.equal(buffer.lineLengthForRow(2), 0)
       assert.equal(buffer.lineLengthForRow(3), 5)
-    })
-  })
-
-  describe('.lineEndingForRow', () => {
-    it('returns the line ending for the given row', () => {
-      const buffer = new TextBuffer()
-      buffer.setText('abc\r\ndefg\n\r\nhijkl')
 
       assert.equal(buffer.lineEndingForRow(0), '\r\n')
       assert.equal(buffer.lineEndingForRow(1), '\n')

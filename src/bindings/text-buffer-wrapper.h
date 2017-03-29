@@ -16,6 +16,7 @@ private:
   static void get_text_in_range(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void set_text(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void set_text_in_range(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void line_for_row(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void line_length_for_row(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void line_ending_for_row(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void character_index_for_position(const Nan::FunctionCallbackInfo<v8::Value> &info);

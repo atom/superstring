@@ -306,7 +306,6 @@ uint32_t TextBuffer::line_length_for_row(uint32_t row) {
   return top_layer->clip_position(Point{row, UINT32_MAX}).position.column;
 }
 
-
 const uint16_t *TextBuffer::line_ending_for_row(uint32_t row) {
   static uint16_t LF[] = {'\n', 0};
   static uint16_t CRLF[] = {'\r', '\n', 0};
