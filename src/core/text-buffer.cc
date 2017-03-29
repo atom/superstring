@@ -8,10 +8,6 @@ using std::move;
 using std::string;
 using std::vector;
 
-struct TextChunkCallback {
-  virtual bool operator()(TextSlice chunk) = 0;
-};
-
 class BaseLayer {
   const Text &text;
 
@@ -21,8 +17,10 @@ public:
   Point extent() const { return text.extent(); }
   uint16_t character_at(Point position) { return text.at(position); }
   ClipResult clip_position(Point position) { return text.clip_position(position); }
-  bool for_each_chunk_in_range(TextChunkCallback *callback, Point start, Point end) {
-    return (*callback)(TextSlice(text).slice({start, end}));
+
+  template <typename Callback>
+  bool for_each_chunk_in_range(Point start, Point end, const Callback &callback) {
+    return callback(TextSlice(text).slice({start, end}));
   }
 };
 
@@ -139,9 +137,8 @@ struct TextBuffer::Layer {
     }
   }
 
-  template <typename T>
-  bool for_each_chunk_in_range_(T &previous_layer, TextChunkCallback *callback,
-                                Point start, Point end) {
+  template <typename T, typename Callback>
+  bool for_each_chunk_in_range_(T &previous_layer, Point start, Point end, const Callback &callback) {
     Point goal_position = clip_position(end).position;
     Point current_position = clip_position(start).position;
     Point base_position = current_position;
@@ -158,7 +155,7 @@ struct TextBuffer::Layer {
               change->new_end.traversal(change->new_start)
             ))
             .suffix(current_position.traversal(change->new_start));
-          if ((*callback)(slice)) return true;
+          if (callback(slice)) return true;
           base_position = change->old_end;
           current_position = change->new_end;
           if (current_position > goal_position) break;
@@ -180,7 +177,7 @@ struct TextBuffer::Layer {
         next_base_position = base_position.traverse(goal_position.traversal(current_position));
       }
 
-      if (previous_layer.for_each_chunk_in_range(callback, base_position, next_base_position)) {
+      if (previous_layer.for_each_chunk_in_range(base_position, next_base_position, callback)) {
         return true;
       }
       base_position = next_base_position;
@@ -208,37 +205,31 @@ struct TextBuffer::Layer {
     }
   }
 
-  Point position_for_offset(uint32_t offset) {
-    struct Callback : public TextChunkCallback {
-      Point position;
-      uint32_t offset;
-      uint32_t goal_offset;
+  Point position_for_offset(uint32_t goal_offset) {
+    Point position;
+    uint32_t offset = 0;
 
-      Callback(uint32_t goal_offset) : offset{0}, goal_offset{goal_offset} {}
-
-      bool operator()(TextSlice slice) {
-        uint32_t size = slice.size();
-        if (offset + size >= goal_offset) {
-          position = position.traverse(slice.position_for_offset(goal_offset - offset));
-          return true;
-        }
-        position = position.traverse(slice.extent());
-        offset += size;
-        return false;
+    for_each_chunk_in_range(Point(0, 0), extent(), [&position, &offset, goal_offset](TextSlice slice) {
+      uint32_t size = slice.size();
+      if (offset + size >= goal_offset) {
+        position = position.traverse(slice.position_for_offset(goal_offset - offset));
+        return true;
       }
-    };
+      position = position.traverse(slice.extent());
+      offset += size;
+      return false;
+    });
 
-    Callback callback{offset};
-    for_each_chunk_in_range(&callback, Point(0, 0), extent());
-    return callback.position;
+    return position;
   }
 
-  bool for_each_chunk_in_range(TextChunkCallback *callback, Point start, Point end) {
+  template <typename Callback>
+  bool for_each_chunk_in_range(Point start, Point end, const Callback &callback) {
     if (is_first) {
       BaseLayer base_layer(*base_text);
-      return for_each_chunk_in_range_(base_layer, callback, start, end);
+      return for_each_chunk_in_range_(base_layer, start, end, callback);
     } else {
-      return for_each_chunk_in_range_(*previous_layer, callback, start, end);
+      return for_each_chunk_in_range_(*previous_layer, start, end, callback);
     }
   }
 
@@ -264,31 +255,21 @@ struct TextBuffer::Layer {
   }
 
   Text text_in_range(Range range) {
-    struct Callback : public TextChunkCallback {
-      Text text;
-      bool operator()(TextSlice chunk) {
-        text.append(chunk);
-        return false;
-      }
-    };
-
-    Callback callback;
-    for_each_chunk_in_range(&callback, range.start, range.end);
-    return callback.text;
+    Text result;
+    for_each_chunk_in_range(range.start, range.end, [&result](TextSlice slice) {
+      result.append(slice);
+      return false;
+    });
+    return result;
   }
 
   vector<TextSlice> chunks_in_range(Range range) {
-    struct Callback : public TextChunkCallback {
-      vector<TextSlice> slices;
-      bool operator()(TextSlice chunk) {
-        slices.push_back(chunk);
-        return false;
-      }
-    };
-
-    Callback callback;
-    for_each_chunk_in_range(&callback, range.start, range.end);
-    return callback.slices;
+    vector<TextSlice> result;
+    for_each_chunk_in_range(range.start, range.end, [&result](TextSlice slice) {
+      result.push_back(slice);
+      return false;
+    });
+    return result;
   }
 };
 
