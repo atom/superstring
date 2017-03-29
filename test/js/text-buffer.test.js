@@ -129,6 +129,15 @@ describe('TextBuffer', () => {
     })
   })
 
+  describe('.getLength and .getExtent', () => {
+    it('returns the total length and total extent of the text', () => {
+      const buffer = new TextBuffer()
+      buffer.setText('abc\r\ndefg\n\r\nhijkl')
+      assert.equal(buffer.getLength(), buffer.getText().length)
+      assert.deepEqual(buffer.getExtent(), Point(3, 5))
+    })
+  })
+
   describe('.characterIndexForPosition', () => {
     it('returns the character index for the given position', () => {
       const buffer = new TextBuffer()

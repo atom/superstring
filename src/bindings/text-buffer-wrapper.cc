@@ -16,6 +16,8 @@ void TextBufferWrapper::init(Local<Object> exports) {
   constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
   const auto &prototype_template = constructor_template->PrototypeTemplate();
   prototype_template->Set(Nan::New("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(noop));
+  prototype_template->Set(Nan::New("getLength").ToLocalChecked(), Nan::New<FunctionTemplate>(get_length));
+  prototype_template->Set(Nan::New("getExtent").ToLocalChecked(), Nan::New<FunctionTemplate>(get_extent));
   prototype_template->Set(Nan::New("getTextInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text_in_range));
   prototype_template->Set(Nan::New("setTextInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(set_text_in_range));
   prototype_template->Set(Nan::New("getText").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text));
@@ -32,6 +34,16 @@ void TextBufferWrapper::init(Local<Object> exports) {
 void TextBufferWrapper::construct(const Nan::FunctionCallbackInfo<Value> &info) {
   TextBufferWrapper *wrapper = new TextBufferWrapper();
   wrapper->Wrap(info.This());
+}
+
+void TextBufferWrapper::get_length(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  info.GetReturnValue().Set(Nan::New<Number>(text_buffer.size()));
+}
+
+void TextBufferWrapper::get_extent(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  info.GetReturnValue().Set(PointWrapper::from_point(text_buffer.extent()));
 }
 
 void TextBufferWrapper::get_text_in_range(const Nan::FunctionCallbackInfo<Value> &info) {
