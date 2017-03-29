@@ -106,7 +106,7 @@ struct SnapshotTask {
 
 TEST_CASE("TextBuffer::set_text_in_range - random edits") {
   auto t = time(nullptr);
-  for (uint i = 0; i < 1000; i++) {
+  for (uint i = 0; i < 100; i++) {
     uint32_t seed = t * 1000 + i;
     Generator rand(seed);
     printf("seed: %u\n", seed);
