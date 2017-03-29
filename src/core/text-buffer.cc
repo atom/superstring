@@ -21,7 +21,7 @@ public:
   Point extent() const { return text.extent(); }
   uint16_t character_at(Point position) { return text.at(position); }
   ClipResult clip_position(Point position) { return text.clip_position(position); }
-  bool add_chunks_in_range(TextChunkCallback *callback, Point start, Point end) {
+  bool for_each_chunk_in_range(TextChunkCallback *callback, Point start, Point end) {
     return (*callback)(TextSlice(text).slice({start, end}));
   }
 };
@@ -60,7 +60,7 @@ struct TextBuffer::Layer {
   }
 
   template <typename T>
-  inline uint16_t character_at_(T &previous_layer, Point position) {
+  uint16_t character_at_(T &previous_layer, Point position) {
     auto change = patch.find_change_for_new_position(position);
     if (!change) return previous_layer.character_at(position);
     if (position < change->new_end) {
@@ -73,7 +73,7 @@ struct TextBuffer::Layer {
   }
 
   template <typename T>
-  inline ClipResult clip_position_(T &previous_layer, Point position) {
+  ClipResult clip_position_(T &previous_layer, Point position) {
     auto preceding_change = is_last ?
       patch.change_for_new_position(position) :
       patch.find_change_for_new_position(position);
@@ -140,8 +140,8 @@ struct TextBuffer::Layer {
   }
 
   template <typename T>
-  inline bool add_chunks_in_range_(T &previous_layer, TextChunkCallback *callback,
-                                   Point start, Point end) {
+  bool for_each_chunk_in_range_(T &previous_layer, TextChunkCallback *callback,
+                                Point start, Point end) {
     Point goal_position = clip_position(end).position;
     Point current_position = clip_position(start).position;
     Point base_position = current_position;
@@ -180,7 +180,7 @@ struct TextBuffer::Layer {
         next_base_position = base_position.traverse(goal_position.traversal(current_position));
       }
 
-      if (previous_layer.add_chunks_in_range(callback, base_position, next_base_position)) {
+      if (previous_layer.for_each_chunk_in_range(callback, base_position, next_base_position)) {
         return true;
       }
       base_position = next_base_position;
@@ -229,16 +229,16 @@ struct TextBuffer::Layer {
     };
 
     Callback callback{offset};
-    add_chunks_in_range(&callback, Point(0, 0), extent());
+    for_each_chunk_in_range(&callback, Point(0, 0), extent());
     return callback.position;
   }
 
-  bool add_chunks_in_range(TextChunkCallback *callback, Point start, Point end) {
+  bool for_each_chunk_in_range(TextChunkCallback *callback, Point start, Point end) {
     if (is_first) {
       BaseLayer base_layer(*base_text);
-      return add_chunks_in_range_(base_layer, callback, start, end);
+      return for_each_chunk_in_range_(base_layer, callback, start, end);
     } else {
-      return add_chunks_in_range_(*previous_layer, callback, start, end);
+      return for_each_chunk_in_range_(*previous_layer, callback, start, end);
     }
   }
 
@@ -273,7 +273,7 @@ struct TextBuffer::Layer {
     };
 
     Callback callback;
-    add_chunks_in_range(&callback, range.start, range.end);
+    for_each_chunk_in_range(&callback, range.start, range.end);
     return callback.text;
   }
 
@@ -287,7 +287,7 @@ struct TextBuffer::Layer {
     };
 
     Callback callback;
-    add_chunks_in_range(&callback, range.start, range.end);
+    for_each_chunk_in_range(&callback, range.start, range.end);
     return callback.slices;
   }
 };
