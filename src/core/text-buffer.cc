@@ -273,7 +273,7 @@ struct TextBuffer::Layer {
 };
 
 TextBuffer::TextBuffer(Text &&text) :
-  base_text{std::move(text)},
+  base_text{move(text)},
   top_layer{new TextBuffer::Layer(&this->base_text)} {}
 
 TextBuffer::TextBuffer() :
