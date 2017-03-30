@@ -37,6 +37,12 @@ void TextBufferWrapper::init(Local<Object> exports) {
 
 void TextBufferWrapper::construct(const Nan::FunctionCallbackInfo<Value> &info) {
   TextBufferWrapper *wrapper = new TextBufferWrapper();
+  if (info.Length() > 0) {
+    auto text = TextWrapper::text_from_js(info[0]);
+    if (text) {
+      wrapper->text_buffer.reset_base_text(move(*text));
+    }
+  }
   wrapper->Wrap(info.This());
 }
 
@@ -171,7 +177,7 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   );
 
   if (text) {
-    text_buffer.reset(move(*text));
+    text_buffer.reset_base_text(move(*text));
     info.GetReturnValue().Set(Nan::True());
   } else {
     info.GetReturnValue().Set(Nan::False());
@@ -219,7 +225,7 @@ public:
   }
 
   void HandleOKCallback() {
-    bool result = loaded_text && buffer->reset(move(*loaded_text));
+    bool result = loaded_text && buffer->reset_base_text(move(*loaded_text));
     v8::Local<v8::Value> argv[] = {Nan::New<Boolean>(result)};
     callback->Call(1, argv);
   }
@@ -272,7 +278,7 @@ void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) 
     }
   }
 
-  if (text_buffer.flatten()) {
+  if (text_buffer.flush_outstanding_changes()) {
     info.GetReturnValue().Set(Nan::True());
   } else {
     info.GetReturnValue().Set(Nan::False());

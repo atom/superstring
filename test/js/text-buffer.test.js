@@ -55,28 +55,25 @@ describe('TextBuffer', () => {
     if (!TextBuffer.prototype.save) return;
 
     it('writes the buffer\'s content to the given file', () => {
+      const buffer = new TextBuffer('abcdefghijklmnopqrstuvwxyz')
+
+      // Perform some edits just to exercise the saving logic
+      buffer.setTextInRange(Range(Point(0, 3), Point(0, 3)), '123')
+      buffer.setTextInRange(Range(Point(0, 7), Point(0, 7)), '456')
+      assert.equal(buffer.getText(), 'abc123d456efghijklmnopqrstuvwxyz')
+
       const {path: filePath} = temp.openSync()
-      fs.writeFileSync(filePath, 'abcdefghijklmnopqrstuvwxyz')
+      const savePromise = buffer.save(filePath)
 
-      const buffer = new TextBuffer()
-      return buffer.load(filePath)
-        .then(() => {
-          // Perform some edits just to exercise the saving logic
-          buffer.setTextInRange(Range(Point(0, 3), Point(0, 3)), '123')
-          buffer.setTextInRange(Range(Point(0, 7), Point(0, 7)), '456')
-          assert.equal(buffer.getText(), 'abc123d456efghijklmnopqrstuvwxyz')
+      buffer.setTextInRange(Range(Point(0, 11), Point(0, 11)), '789')
+      assert.equal(buffer.getText(), 'abc123d456e789fghijklmnopqrstuvwxyz')
 
-          const savePromise = buffer.save(filePath)
+      return savePromise.then(() => {
+        assert.equal(fs.readFileSync(filePath, 'utf8'), 'abc123d456efghijklmnopqrstuvwxyz')
+        assert.equal(buffer.getText(), 'abc123d456e789fghijklmnopqrstuvwxyz')
+      })
 
-          buffer.setTextInRange(Range(Point(0, 11), Point(0, 11)), '789')
-          assert.equal(buffer.getText(), 'abc123d456e789fghijklmnopqrstuvwxyz')
 
-          return savePromise
-        })
-        .then(() => {
-          assert.equal(fs.readFileSync(filePath, 'utf8'), 'abc123d456efghijklmnopqrstuvwxyz')
-          assert.equal(buffer.getText(), 'abc123d456e789fghijklmnopqrstuvwxyz')
-        })
     })
   })
 

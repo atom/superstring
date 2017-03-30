@@ -17,9 +17,6 @@ public:
   TextBuffer(std::u16string text);
   ~TextBuffer();
 
-  bool flatten();
-  bool reset(Text &&);
-
   uint32_t size() const;
   Point extent() const;
   uint32_t line_length_for_row(uint32_t row);
@@ -33,6 +30,8 @@ public:
   bool is_modified() const;
   std::vector<TextSlice> chunks() const;
 
+  bool reset_base_text(Text &&);
+  bool flush_outstanding_changes();
   std::string get_dot_graph() const;
 
   class Snapshot {

@@ -104,14 +104,14 @@ TEST_CASE("TextBuffer::is_modified") {
 
   auto snapshot2 = buffer.create_snapshot();
   REQUIRE(buffer.is_modified());
-  REQUIRE(!buffer.flatten());
+  REQUIRE(!buffer.flush_outstanding_changes());
 
   delete snapshot1;
-  REQUIRE(!buffer.flatten());
+  REQUIRE(!buffer.flush_outstanding_changes());
   delete snapshot2;
   REQUIRE(buffer.is_modified());
 
-  REQUIRE(buffer.flatten());
+  REQUIRE(buffer.flush_outstanding_changes());
   REQUIRE(!buffer.is_modified());
   REQUIRE(buffer.text() == Text{u"a"});
 }

@@ -283,18 +283,19 @@ TextBuffer::~TextBuffer() { delete top_layer; }
 
 TextBuffer::TextBuffer(std::u16string text) : TextBuffer {Text {text}} {}
 
-bool TextBuffer::reset(Text &&new_base_text) {
-  if (!top_layer->is_first || top_layer->patch.get_change_count() > 0) {
+bool TextBuffer::reset_base_text(Text &&new_base_text) {
+  if (!top_layer->is_first) {
     return false;
   }
 
+  top_layer->patch.clear();
   top_layer->extent_ = new_base_text.extent();
   top_layer->size_ = new_base_text.size();
   base_text = move(new_base_text);
   return true;
 }
 
-bool TextBuffer::flatten() {
+bool TextBuffer::flush_outstanding_changes() {
   if (!top_layer->is_first) return false;
 
   for (auto change : top_layer->patch.get_changes()) {
