@@ -19,6 +19,7 @@ private:
   static void line_for_row(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void line_length_for_row(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void line_ending_for_row(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void get_lines(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void character_index_for_position(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void position_for_character_index(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void is_modified(const Nan::FunctionCallbackInfo<v8::Value> &info);
