@@ -141,9 +141,7 @@ struct TextBuffer::Layer {
     Point goal_position = clip_position(end).position;
     Point current_position = clip_position(start).position;
     Point base_position = current_position;
-    auto change = is_last ?
-      patch.change_for_new_position(current_position) :
-      patch.find_change_for_new_position(current_position);
+    auto change = patch.find_change_for_new_position(current_position);
 
     while (current_position < goal_position) {
       if (change) {
@@ -163,9 +161,7 @@ struct TextBuffer::Layer {
         base_position = change->old_end.traverse(current_position.traversal(change->new_end));
       }
 
-      change = is_last ?
-        patch.change_ending_after_new_position(current_position, true) :
-        patch.find_change_ending_after_new_position(current_position);
+      change = patch.change_ending_after_new_position(current_position, true);
 
       Point next_base_position, next_position;
       if (change) {
@@ -310,6 +306,36 @@ bool TextBuffer::flush_outstanding_changes() {
   return true;
 }
 
+bool TextBuffer::serialize_outstanding_changes(Serializer &serializer) {
+  if (!top_layer->is_first) return false;
+  top_layer->patch.serialize(serializer);
+  serializer.append(top_layer->size_);
+  top_layer->extent_.serialize(serializer);
+  return true;
+}
+
+bool TextBuffer::deserialize_outstanding_changes(Deserializer &deserializer) {
+  if (!top_layer->is_first || top_layer->patch.get_change_count() > 0) return false;
+  top_layer->patch = Patch(deserializer);
+  top_layer->size_ = deserializer.read<uint32_t>();
+  top_layer->extent_ = Point(deserializer);
+  return true;
+}
+
+template <typename T>
+inline void hash_combine(std::size_t &seed, const T &value) {
+    std::hash<T> hasher;
+    seed ^= hasher(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+
+size_t TextBuffer::base_text_digest() {
+  size_t result = 0;
+  for (uint16_t character : base_text) {
+    hash_combine(result, character);
+  }
+  return result;
+}
+
 Point TextBuffer::extent() const {
   return top_layer->extent();
 }
@@ -369,10 +395,13 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
 }
 
 bool TextBuffer::is_modified() const {
-  return (
-    top_layer->patch.get_change_count() > 0 ||
-    (!top_layer->is_first && top_layer->previous_layer->patch.get_change_count() > 0)
-  );
+  Layer *layer = top_layer;
+  for (;;) {
+    if (layer->patch.get_change_count() > 0) return true;
+    if (layer->is_first) break;
+    layer = layer->previous_layer;
+  }
+  return false;
 }
 
 string TextBuffer::get_dot_graph() const {

@@ -32,6 +32,10 @@ public:
 
   bool reset_base_text(Text &&);
   bool flush_outstanding_changes();
+  bool serialize_outstanding_changes(Serializer &);
+  bool deserialize_outstanding_changes(Deserializer &);
+  size_t base_text_digest();
+
   std::string get_dot_graph() const;
 
   class Snapshot {

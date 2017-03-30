@@ -178,6 +178,34 @@ describe('TextBuffer', () => {
       assert.deepEqual(buffer.positionForCharacterIndex(-1), Point(0, 0))
     })
   })
+
+  describe('.baseTextDigest', () => {
+    it('returns a hash of the base text', () => {
+      const buffer = new TextBuffer('abc\r\ndefg\n\r\nhijkl')
+      const digest1 = buffer.baseTextDigest()
+
+      buffer.setTextInRange(Range(Point(0, 0), Point(0, 1)), 'A')
+      assert.equal(buffer.baseTextDigest(), digest1)
+
+      const buffer2 = new TextBuffer('abc\r\ndefg\n\r\nhijkl')
+      assert.equal(buffer2.baseTextDigest(), digest1)
+    })
+  })
+
+  describe('.serializeChanges and .deserializeChanges', () => {
+    it('allows the outstanding changes to be serialized and restored', () => {
+      const buffer = new TextBuffer('abc')
+      buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), '\n')
+      buffer.setTextInRange(Range(Point(1, 3), Point(1, 3)), 'D')
+      assert.equal(buffer.getText(), '\nabcD')
+
+      const changes = buffer.serializeChanges()
+      const buffer2 = new TextBuffer('123')
+      assert.equal(buffer2.getText(), '123')
+      buffer2.deserializeChanges(changes)
+      assert.equal(buffer2.getText(), '\n123D')
+    })
+  })
 })
 
 function Range(start, end) {

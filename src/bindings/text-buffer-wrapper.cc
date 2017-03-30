@@ -5,6 +5,8 @@
 #include "text-wrapper.h"
 #include "text-slice.h"
 #include "noop.h"
+#include <sstream>
+#include <iomanip>
 
 using namespace v8;
 using std::move;
@@ -33,12 +35,15 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("save").ToLocalChecked(), Nan::New<FunctionTemplate>(save));
   prototype_template->Set(Nan::New("loadSync").ToLocalChecked(), Nan::New<FunctionTemplate>(load_sync));
   prototype_template->Set(Nan::New("saveSync").ToLocalChecked(), Nan::New<FunctionTemplate>(save_sync));
+  prototype_template->Set(Nan::New("serializeChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(serialize_changes));
+  prototype_template->Set(Nan::New("deserializeChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(deserialize_changes));
+  prototype_template->Set(Nan::New("baseTextDigest").ToLocalChecked(), Nan::New<FunctionTemplate>(base_text_digest));
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
 }
 
 void TextBufferWrapper::construct(const Nan::FunctionCallbackInfo<Value> &info) {
   TextBufferWrapper *wrapper = new TextBufferWrapper();
-  if (info.Length() > 0) {
+  if (info.Length() > 0 && info[0]->IsString()) {
     auto text = TextWrapper::text_from_js(info[0]);
     if (text) {
       wrapper->text_buffer.reset_base_text(move(*text));
@@ -360,4 +365,42 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
     move(file_path),
     move(encoding_name)
   ));
+}
+
+void TextBufferWrapper::serialize_changes(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+
+  static vector<uint8_t> output;
+  output.clear();
+  Serializer serializer(output);
+  text_buffer.serialize_outstanding_changes(serializer);
+  Local<Object> result;
+  if (Nan::CopyBuffer(reinterpret_cast<char *>(output.data()), output.size()).ToLocal(&result)) {
+    info.GetReturnValue().Set(result);
+  }
+}
+
+void TextBufferWrapper::deserialize_changes(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  if (info[0]->IsUint8Array()) {
+    auto *data = node::Buffer::Data(info[0]);
+    static vector<uint8_t> input;
+    input.assign(data, data + node::Buffer::Length(info[0]));
+    Deserializer deserializer(input);
+    text_buffer.deserialize_outstanding_changes(deserializer);
+  }
+}
+
+void TextBufferWrapper::base_text_digest(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  std::stringstream stream;
+  stream <<
+    std::setfill('0') <<
+    std::setw(2 * sizeof(size_t)) <<
+    std::hex <<
+    text_buffer.base_text_digest();
+  Local<String> result;
+  if (Nan::New(stream.str()).ToLocal(&result)) {
+    info.GetReturnValue().Set(result);
+  }
 }

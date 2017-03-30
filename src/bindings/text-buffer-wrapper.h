@@ -27,6 +27,9 @@ private:
   static void save(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void load_sync(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void save_sync(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void serialize_changes(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void deserialize_changes(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void base_text_digest(const Nan::FunctionCallbackInfo<v8::Value> &info);
 
   TextBuffer text_buffer;
 };
