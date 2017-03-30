@@ -161,7 +161,7 @@ struct TextBuffer::Layer {
         base_position = change->old_end.traverse(current_position.traversal(change->new_end));
       }
 
-      change = patch.change_ending_after_new_position(current_position, true);
+      change = patch.find_change_ending_after_new_position(current_position);
 
       Point next_base_position, next_position;
       if (change) {
