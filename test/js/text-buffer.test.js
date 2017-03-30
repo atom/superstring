@@ -132,16 +132,19 @@ describe('TextBuffer', () => {
       assert.equal(buffer.lineForRow(1), 'defg')
       assert.equal(buffer.lineForRow(2), '')
       assert.equal(buffer.lineForRow(3), 'hijkl')
+      assert.equal(buffer.lineForRow(4), undefined)
 
       assert.equal(buffer.lineLengthForRow(0), 3)
       assert.equal(buffer.lineLengthForRow(1), 4)
       assert.equal(buffer.lineLengthForRow(2), 0)
       assert.equal(buffer.lineLengthForRow(3), 5)
+      assert.equal(buffer.lineLengthForRow(5), undefined)
 
       assert.equal(buffer.lineEndingForRow(0), '\r\n')
       assert.equal(buffer.lineEndingForRow(1), '\n')
       assert.equal(buffer.lineEndingForRow(2), '\r\n')
       assert.equal(buffer.lineEndingForRow(3), '')
+      assert.equal(buffer.lineEndingForRow(5), undefined)
     })
   })
 
