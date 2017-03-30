@@ -322,9 +322,15 @@ Patch::Patch(Patch &&other)
     : root{nullptr}, frozen_node_array{other.frozen_node_array},
       merges_adjacent_changes{other.merges_adjacent_changes},
       change_count{other.change_count} {
+  *this = move(other);
+}
+
+Patch &Patch::operator=(Patch &&other) {
   std::swap(root, other.root);
   std::swap(left_ancestor_stack, other.left_ancestor_stack);
   std::swap(node_stack, other.node_stack);
+  std::swap(change_count, other.change_count);
+  return *this;
 }
 
 Patch::Patch(Node *root, uint32_t change_count, bool merges_adjacent_changes)

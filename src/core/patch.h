@@ -62,6 +62,7 @@ public:
   Patch(const std::vector<const Patch *> &);
   Patch(Node *root, uint32_t change_count, bool merges_adjacent_changes);
   Patch(Patch &&);
+  Patch &operator=(Patch &&);
   ~Patch();
 
   bool splice(Point new_splice_start,
