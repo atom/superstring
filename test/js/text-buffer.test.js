@@ -72,8 +72,29 @@ describe('TextBuffer', () => {
         assert.equal(fs.readFileSync(filePath, 'utf8'), 'abc123d456efghijklmnopqrstuvwxyz')
         assert.equal(buffer.getText(), 'abc123d456e789fghijklmnopqrstuvwxyz')
       })
+    })
+  })
 
+  describe('.isModified', () => {
+    it('indicates whether the buffer changed since its construction', () => {
+      const buffer = new TextBuffer('abc')
+      assert.notOk(buffer.isModified())
 
+      buffer.setTextInRange(Range(Point(0, 2), Point(0, 2)), ' ')
+      assert.ok(buffer.isModified())
+    })
+
+    it('returns false after the buffer is loaded', () => {
+      const buffer = new TextBuffer('abc')
+      buffer.setTextInRange(Range(Point(0, 2), Point(0, 2)), ' ')
+
+      const {path: filePath} = temp.openSync()
+      fs.writeFileSync(filePath, 'defg')
+
+      return buffer.load(filePath).then(() => {
+        assert.equal(buffer.getText(), 'defg')
+        assert.notOk(buffer.isModified())
+      })
     })
   })
 
