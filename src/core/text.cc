@@ -9,6 +9,7 @@ using std::vector;
 
 static const uint32_t bytes_per_character = (sizeof(uint16_t) / sizeof(char));
 static const uint16_t replacement_character = 0xFFFD;
+static const size_t conversion_failure = static_cast<size_t>(-1);
 static const float buffer_growth_factor = 2;
 
 Text::Text() : line_offsets {0} {}
@@ -90,9 +91,36 @@ bool Text::write(std::ostream &stream, const char *encoding_name,
       &output_bytes_remaining
     );
 
-    if (conversion_result == static_cast<size_t>(-1)) {
-      // TODO implement
-      return true;
+    if (conversion_result == conversion_failure) {
+      switch (errno) {
+        // Encountered an incomplete multibyte sequence at end of input.
+        case EINVAL: break;
+
+        // Encountered an invalid character in the input Text. Write the unicode
+        // 'replacement character' to the output buffer in the given encoding.
+        // If there's enough space to hold the replacement character, then skip
+        // the invalid input character. Otherwise, stop here; we'll try again
+        // on the next iteration with an empty output buffer.
+        case EILSEQ: {
+          uint16_t replacement_characters[] = {replacement_character, 0};
+          char *replacement_text = reinterpret_cast<char *>(replacement_characters);
+          size_t replacement_text_size = bytes_per_character;
+          if (iconv(
+            conversion,
+            &replacement_text,
+            &replacement_text_size,
+            &output_pointer,
+            &output_bytes_remaining
+          ) != conversion_failure) {
+            input_bytes_remaining -= bytes_per_character;
+            input_pointer += bytes_per_character;
+          }
+          break;
+        }
+
+        // Insufficient room in the output buffer to write all characters in the input buffer
+        case E2BIG: break;
+      }
     }
 
     size_t output_bytes_written = output_vector.size() - output_bytes_remaining;
@@ -147,7 +175,7 @@ optional<Text> Text::build(std::istream &stream, size_t input_size,
     size_t output_characters_remaining = (output_bytes_remaining / bytes_per_character);
     size_t output_characters_written = output_vector.size() - output_characters_remaining;
 
-    if (conversion_result == static_cast<size_t>(-1)) {
+    if (conversion_result == conversion_failure) {
       switch (errno) {
         // Encountered an incomplete multibyte sequence at end of input
         case EINVAL:

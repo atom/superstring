@@ -65,6 +65,34 @@ TEST_CASE("Text::build - handles CRLF newlines") {
   REQUIRE(*text == Text { u"abc\r\nde\rf\r\ng\r" });
 }
 
+TEST_CASE("Text::write - basic") {
+  Text text{u"abγdefg\nhijklmnop"};
+
+  stringstream stream;
+  Text::write(stream, "UTF8", 3, TextSlice(text));
+  REQUIRE(stream.str() == "abγdefg\nhijklmnop");
+
+  stream = stringstream();
+  Text::write(stream, "UTF8", 3, TextSlice(text).suffix(Point{0, 1}));
+  REQUIRE(stream.str() == "bγdefg\nhijklmnop");
+}
+
+TEST_CASE("Text::write - invalid characters") {
+  Text text{u"abc" "\xD800" "def"};
+
+  stringstream stream;
+  Text::write(stream, "UTF8", 3, TextSlice(text));
+  REQUIRE(stream.str() == "abc" "\ufffd" "def");
+
+  stream = stringstream();
+  Text::write(stream, "UTF8", 3, TextSlice(text).suffix(Point{0, 1}));
+  REQUIRE(stream.str() == "bc" "\ufffd" "def");
+
+  stream = stringstream();
+  Text::write(stream, "UTF8", 3, TextSlice(text).suffix(Point{0, 2}));
+  REQUIRE(stream.str() == "c" "\ufffd" "def");
+}
+
 TEST_CASE("Text::line_iterators - returns iterators at the start and end of lines") {
   Text text { u"a\nbc\r\n\r\nd\n" };
 
