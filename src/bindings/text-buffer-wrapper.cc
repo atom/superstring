@@ -38,6 +38,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("serializeChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(serialize_changes));
   prototype_template->Set(Nan::New("deserializeChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(deserialize_changes));
   prototype_template->Set(Nan::New("baseTextDigest").ToLocalChecked(), Nan::New<FunctionTemplate>(base_text_digest));
+  prototype_template->Set(Nan::New("search").ToLocalChecked(), Nan::New<FunctionTemplate>(search));
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
 }
 
@@ -172,6 +173,16 @@ void TextBufferWrapper::position_for_character_index(const Nan::FunctionCallback
         std::max<int64_t>(0, offset)
       ))
     );
+  }
+}
+
+void TextBufferWrapper::search(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  if (info.Length() > 0 && info[0]->IsRegExp()) {
+    Local<String> js_pattern = info[0].As<RegExp>()->GetSource();
+    std::string pattern(*String::Utf8Value(js_pattern));
+    int64_t result = text_buffer.search(pattern);
+    info.GetReturnValue().Set(Nan::New<Number>(result));
   }
 }
 

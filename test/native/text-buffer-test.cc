@@ -116,6 +116,24 @@ TEST_CASE("TextBuffer::is_modified") {
   REQUIRE(buffer.text() == Text{u"a"});
 }
 
+TEST_CASE("TextBuffer::search") {
+  TextBuffer buffer{u"abcd\nef"};
+
+  REQUIRE(buffer.search("(") == TextBuffer::INVALID_PATTERN);
+
+  REQUIRE(buffer.search("x") == -1);
+
+  REQUIRE(buffer.search("c.") == 2);
+  REQUIRE(buffer.search("d") == 3);
+  REQUIRE(buffer.search("\\n") == 4);
+  REQUIRE(buffer.search("\\be") == 5);
+  REQUIRE(buffer.search("^e") == 5);
+  REQUIRE(buffer.search("^(e|d)g?") == 5);
+
+  buffer.reset_base_text(Text{u"a1b"});
+  REQUIRE(buffer.search("\\d") == 1);
+}
+
 struct SnapshotData {
   Text text;
   Point extent;

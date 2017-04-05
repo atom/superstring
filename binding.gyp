@@ -39,7 +39,10 @@
                         'libraries': ['libiconv.dylib'],
                     }
                 }],
-            ]
+            ],
+            'link_settings': {
+                'libraries': ['/usr/local/lib/libboost_regex.a']
+            }
         },
     ],
 

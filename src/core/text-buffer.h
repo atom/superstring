@@ -36,6 +36,13 @@ public:
   bool deserialize_outstanding_changes(Deserializer &);
   size_t base_text_digest();
 
+  enum {
+    NO_RESULTS = -1,
+    INVALID_PATTERN = -2
+  };
+
+  int64_t search(const std::string &) const;
+
   std::string get_dot_graph() const;
 
   class Snapshot {

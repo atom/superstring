@@ -22,6 +22,7 @@ private:
   static void get_lines(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void character_index_for_position(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void position_for_character_index(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void search(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void is_modified(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void load(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void save(const Nan::FunctionCallbackInfo<v8::Value> &info);
