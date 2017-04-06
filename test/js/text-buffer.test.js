@@ -207,16 +207,31 @@ describe('TextBuffer', () => {
     })
   })
 
-  describe('.search', () => {
+  describe('.searchSync', () => {
     it('returns the index of the first match with the given pattern', () => {
       const buffer = new TextBuffer('abc\ndef')
       buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), '1')
       buffer.setTextInRange(Range(Point(0, 3), Point(0, 4)), '2')
       assert.equal(buffer.getText(), '1ab2\ndef')
 
-      assert.equal(buffer.search(/b2/), 2)
-      assert.equal(buffer.search(/bc/), -1)
-      assert.equal(buffer.search(/^d/), 5)
+      assert.equal(buffer.searchSync(/b2/), 2)
+      assert.equal(buffer.searchSync(/bc/), -1)
+      assert.equal(buffer.searchSync(/^d/), 5)
+    })
+  })
+
+  describe('.search', () => {
+    it('resolves with the index of the first match with the given pattern', () => {
+      const buffer = new TextBuffer('abc\ndef')
+      buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), '1')
+      buffer.setTextInRange(Range(Point(0, 3), Point(0, 4)), '2')
+      assert.equal(buffer.getText(), '1ab2\ndef')
+
+      return Promise.all([
+        buffer.search(/b2/).then(value => assert.equal(value, 2)),
+        buffer.search(/bc/).then(value => assert.equal(value, -1)),
+        buffer.search(/^d/).then(value => assert.equal(value, 5))
+      ])
     })
   })
 })

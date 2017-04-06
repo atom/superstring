@@ -8,7 +8,7 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   }
 
   const {TextBuffer} = module.exports
-  const {load, save} = TextBuffer.prototype
+  const {load, save, search} = TextBuffer.prototype
 
   TextBuffer.prototype.load = function (filePath, encoding, progressCallback) {
     if (typeof encoding !== 'string') {
@@ -48,5 +48,17 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
         }
       )
     )
+  }
+
+  TextBuffer.prototype.search = function (pattern) {
+    return new Promise((resolve, reject) => {
+      search.call(this, pattern, (error, result) => {
+        if (error) {
+          reject(error)
+        } else {
+          resolve(result)
+        }
+      })
+    })
   }
 }

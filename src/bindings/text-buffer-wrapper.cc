@@ -39,6 +39,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("deserializeChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(deserialize_changes));
   prototype_template->Set(Nan::New("baseTextDigest").ToLocalChecked(), Nan::New<FunctionTemplate>(base_text_digest));
   prototype_template->Set(Nan::New("search").ToLocalChecked(), Nan::New<FunctionTemplate>(search));
+  prototype_template->Set(Nan::New("searchSync").ToLocalChecked(), Nan::New<FunctionTemplate>(search_sync));
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
 }
 
@@ -176,7 +177,7 @@ void TextBufferWrapper::position_for_character_index(const Nan::FunctionCallback
   }
 }
 
-void TextBufferWrapper::search(const Nan::FunctionCallbackInfo<Value> &info) {
+void TextBufferWrapper::search_sync(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
   if (info.Length() > 0 && info[0]->IsRegExp()) {
     Local<String> js_pattern = info[0].As<RegExp>()->GetSource();
@@ -184,6 +185,50 @@ void TextBufferWrapper::search(const Nan::FunctionCallbackInfo<Value> &info) {
     js_pattern->Write(pattern.data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
     int64_t result = text_buffer.search(pattern.data(), pattern.size());
     info.GetReturnValue().Set(Nan::New<Number>(result));
+  }
+}
+
+void TextBufferWrapper::search(const Nan::FunctionCallbackInfo<Value> &info) {
+  class TextBufferSearcher : public Nan::AsyncWorker {
+    const TextBuffer::Snapshot *snapshot;
+    vector<uint16_t> pattern;
+    int64_t result;
+
+  public:
+    TextBufferSearcher(Nan::Callback *completion_callback,
+                       const TextBuffer::Snapshot *snapshot,
+                       vector<uint16_t> &&pattern) :
+      AsyncWorker(completion_callback),
+      snapshot{snapshot},
+      pattern{pattern} {}
+
+    void Execute() {
+      result = snapshot->search(pattern.data(), pattern.size());
+    }
+
+    void HandleOKCallback() {
+      delete snapshot;
+      if (result == TextBuffer::INVALID_PATTERN) {
+        v8::Local<v8::Value> argv[] = {Nan::Error("Invalid pattern")};
+        callback->Call(1, argv);
+      } else {
+        v8::Local<v8::Value> argv[] = {Nan::Null(), Nan::New<Number>(result)};
+        callback->Call(2, argv);
+      }
+    }
+  };
+
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+
+  if (info.Length() > 0 && info[0]->IsRegExp()) {
+    Local<String> js_pattern = info[0].As<RegExp>()->GetSource();
+    vector<uint16_t> pattern(js_pattern->Length());
+    js_pattern->Write(pattern.data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
+    Nan::AsyncQueueWorker(new TextBufferSearcher(
+      new Nan::Callback(info[1].As<Function>()),
+      text_buffer.create_snapshot(),
+      move(pattern)
+    ));
   }
 }
 

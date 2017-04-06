@@ -267,6 +267,77 @@ struct TextBuffer::Layer {
     });
     return result;
   }
+
+  int64_t search(const uint16_t *pattern, uint32_t pattern_length) {
+    int error_number = 0;
+    size_t error_offset = 0;
+    pcre2_code *regex = pcre2_compile(
+      pattern,
+      pattern_length,
+      PCRE2_MULTILINE,
+      &error_number,
+      &error_offset,
+      nullptr
+    );
+
+    if (!regex) {
+      // TODO remove? return?
+      PCRE2_UCHAR error_message[256];
+      pcre2_get_error_message(error_number, error_message, sizeof(error_message));
+      printf("COMPILATION FAILED: ");
+      for (uint16_t *c = error_message; *c != 0; c++) printf("%c", (char)*c);
+      puts("");
+      return INVALID_PATTERN;
+    }
+
+    size_t start_position = 0;
+    vector<TextSlice> chunks = this->chunks_in_range({Point(), extent()});
+    pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(regex, nullptr);
+
+    vector<uint16_t> chunk_continuation;
+
+    for (const auto &chunk : chunks) {
+      auto chunk_data = chunk.data();
+      size_t chunk_size = chunk.size();
+
+      if (!chunk_continuation.empty()) {
+        chunk_continuation.insert(chunk_continuation.end(), chunk_data, chunk_data + chunk_size);
+        chunk_data = chunk_continuation.data();
+        chunk_size = chunk_continuation.size();
+      }
+
+      int status = pcre2_match(
+        regex,
+        chunk_data,
+        chunk_size,
+        0,
+        PCRE2_PARTIAL_HARD,
+        match_data,
+        nullptr
+      );
+
+      switch (status) {
+        case PCRE2_ERROR_NOMATCH:
+          start_position += chunk_size;
+          chunk_continuation.clear();
+          break;
+
+        case PCRE2_ERROR_PARTIAL: {
+          size_t partial_match_start = pcre2_get_ovector_pointer(match_data)[0];
+          start_position += partial_match_start;
+          chunk_continuation.assign(chunk_data + partial_match_start, chunk_data + chunk_size);
+          break;
+        }
+
+        default: {
+          size_t match_position = pcre2_get_ovector_pointer(match_data)[0];
+          return start_position + match_position;
+        }
+      }
+    }
+
+    return -1;
+  }
 };
 
 TextBuffer::TextBuffer(Text &&text) :
@@ -395,79 +466,12 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
   top_layer->set_text_in_range(old_range, move(new_text));
 }
 
-int64_t TextBuffer::search(const std::u16string &pattern) const {
+int64_t TextBuffer::search(const std::u16string &pattern) {
   return search(reinterpret_cast<const uint16_t *>(pattern.c_str()), pattern.size());
 }
 
-int64_t TextBuffer::search(const uint16_t *pattern, uint32_t pattern_length) const {
-  int error_number = 0;
-  size_t error_offset = 0;
-  pcre2_code *regex = pcre2_compile(
-    pattern,
-    pattern_length,
-    PCRE2_MULTILINE,
-    &error_number,
-    &error_offset,
-    nullptr
-  );
-
-  if (!regex) {
-    // TODO remove? return?
-    PCRE2_UCHAR error_message[256];
-    pcre2_get_error_message(error_number, error_message, sizeof(error_message));
-    printf("COMPILATION FAILED: ");
-    for (uint16_t *c = error_message; *c != 0; c++) printf("%c", (char)*c);
-    puts("");
-    return INVALID_PATTERN;
-  }
-
-  size_t start_position = 0;
-  vector<TextSlice> chunks = this->chunks();
-  pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(regex, nullptr);
-
-  vector<uint16_t> chunk_continuation;
-
-  for (const auto &chunk : chunks) {
-    auto chunk_data = chunk.data();
-    size_t chunk_size = chunk.size();
-
-    if (!chunk_continuation.empty()) {
-      chunk_continuation.insert(chunk_continuation.end(), chunk_data, chunk_data + chunk_size);
-      chunk_data = chunk_continuation.data();
-      chunk_size = chunk_continuation.size();
-    }
-
-    int status = pcre2_match(
-      regex,
-      chunk_data,
-      chunk_size,
-      0,
-      PCRE2_PARTIAL_HARD,
-      match_data,
-      nullptr
-    );
-
-    switch (status) {
-      case PCRE2_ERROR_NOMATCH:
-        start_position += chunk_size;
-        chunk_continuation.clear();
-        break;
-
-      case PCRE2_ERROR_PARTIAL: {
-        size_t partial_match_start = pcre2_get_ovector_pointer(match_data)[0];
-        start_position += partial_match_start;
-        chunk_continuation.assign(chunk_data + partial_match_start, chunk_data + chunk_size);
-        break;
-      }
-
-      default: {
-        size_t match_position = pcre2_get_ovector_pointer(match_data)[0];
-        return start_position + match_position;
-      }
-    }
-  }
-
-  return -1;
+int64_t TextBuffer::search(const uint16_t *pattern, uint32_t pattern_length) {
+  return top_layer->search(pattern, pattern_length);
 }
 
 bool TextBuffer::is_modified() const {
@@ -540,6 +544,10 @@ vector<TextSlice> TextBuffer::Snapshot::chunks_in_range(Range range) const {
 
 vector<TextSlice> TextBuffer::Snapshot::chunks() const {
   return layer.chunks_in_range({{0, 0}, extent()});
+}
+
+int64_t TextBuffer::Snapshot::search(const uint16_t *pattern, uint32_t pattern_length) const {
+  return layer.search(pattern, pattern_length);
 }
 
 TextBuffer::Snapshot::Snapshot(TextBuffer &buffer, TextBuffer::Layer &layer)
