@@ -72,9 +72,9 @@ TEST_CASE("Text::write - basic") {
   Text::write(stream, "UTF8", 3, TextSlice(text));
   REQUIRE(stream.str() == "abγdefg\nhijklmnop");
 
-  stream = stringstream();
-  Text::write(stream, "UTF8", 3, TextSlice(text).suffix(Point{0, 1}));
-  REQUIRE(stream.str() == "bγdefg\nhijklmnop");
+  stringstream stream2;
+  Text::write(stream2, "UTF8", 3, TextSlice(text).suffix(Point{0, 1}));
+  REQUIRE(stream2.str() == "bγdefg\nhijklmnop");
 }
 
 TEST_CASE("Text::write - invalid characters") {
@@ -84,13 +84,13 @@ TEST_CASE("Text::write - invalid characters") {
   Text::write(stream, "UTF8", 3, TextSlice(text));
   REQUIRE(stream.str() == "abc" "\ufffd" "def");
 
-  stream = stringstream();
-  Text::write(stream, "UTF8", 3, TextSlice(text).suffix(Point{0, 1}));
-  REQUIRE(stream.str() == "bc" "\ufffd" "def");
+  stringstream stream2;
+  Text::write(stream2, "UTF8", 3, TextSlice(text).suffix(Point{0, 1}));
+  REQUIRE(stream2.str() == "bc" "\ufffd" "def");
 
-  stream = stringstream();
-  Text::write(stream, "UTF8", 3, TextSlice(text).suffix(Point{0, 2}));
-  REQUIRE(stream.str() == "c" "\ufffd" "def");
+  stringstream stream3;
+  Text::write(stream3, "UTF8", 3, TextSlice(text).suffix(Point{0, 2}));
+  REQUIRE(stream3.str() == "c" "\ufffd" "def");
 }
 
 TEST_CASE("Text::line_iterators - returns iterators at the start and end of lines") {
