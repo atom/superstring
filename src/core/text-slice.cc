@@ -49,6 +49,10 @@ Point TextSlice::extent() const {
   return end_position.traversal(start_position);
 }
 
+const uint16_t *TextSlice::data() const {
+  return text->data() + start_offset();
+}
+
 uint32_t TextSlice::size() const {
   return end_offset() - start_offset();
 }

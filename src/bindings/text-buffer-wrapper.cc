@@ -180,8 +180,9 @@ void TextBufferWrapper::search(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
   if (info.Length() > 0 && info[0]->IsRegExp()) {
     Local<String> js_pattern = info[0].As<RegExp>()->GetSource();
-    std::string pattern(*String::Utf8Value(js_pattern));
-    int64_t result = text_buffer.search(pattern);
+    vector<uint16_t> pattern(js_pattern->Length());
+    js_pattern->Write(pattern.data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
+    int64_t result = text_buffer.search(pattern.data(), pattern.size());
     info.GetReturnValue().Set(Nan::New<Number>(result));
   }
 }

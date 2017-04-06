@@ -23,6 +23,9 @@
         {
             "target_name": "superstring_core",
             "type": "static_library",
+            "dependencies": [
+                "./vendor/pcre/pcre.gyp:pcre"
+            ],
             "sources": [
                 "src/core/buffer-offset-index.cc",
                 "src/core/marker-index.cc",
@@ -40,9 +43,6 @@
                     }
                 }],
             ],
-            'link_settings': {
-                'libraries': ['/usr/local/lib/libboost_regex.a']
-            }
         },
     ],
 

@@ -24,8 +24,9 @@ class TextSlice {
   TextSlice suffix(Point) const;
   TextSlice slice(Range range) const;
   Point position_for_offset(uint32_t offset) const;
-
   Point extent() const;
+
+  const uint16_t *data() const;
   uint32_t size() const;
 
   Text::const_iterator begin() const;

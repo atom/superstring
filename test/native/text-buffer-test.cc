@@ -119,19 +119,37 @@ TEST_CASE("TextBuffer::is_modified") {
 TEST_CASE("TextBuffer::search") {
   TextBuffer buffer{u"abcd\nef"};
 
-  REQUIRE(buffer.search("(") == TextBuffer::INVALID_PATTERN);
+  REQUIRE(buffer.search(u"(") == TextBuffer::INVALID_PATTERN);
 
-  REQUIRE(buffer.search("x") == -1);
+  REQUIRE(buffer.search(u"x") == -1);
 
-  REQUIRE(buffer.search("c.") == 2);
-  REQUIRE(buffer.search("d") == 3);
-  REQUIRE(buffer.search("\\n") == 4);
-  REQUIRE(buffer.search("\\be") == 5);
-  REQUIRE(buffer.search("^e") == 5);
-  REQUIRE(buffer.search("^(e|d)g?") == 5);
+  REQUIRE(buffer.search(u"c.") == 2);
+  REQUIRE(buffer.search(u"d") == 3);
+  REQUIRE(buffer.search(u"\\n") == 4);
+  REQUIRE(buffer.search(u"\\be") == 5);
+  REQUIRE(buffer.search(u"^e") == 5);
+  REQUIRE(buffer.search(u"^(e|d)g?") == 5);
 
   buffer.reset_base_text(Text{u"a1b"});
-  REQUIRE(buffer.search("\\d") == 1);
+  REQUIRE(buffer.search(u"\\d") == 1);
+}
+
+TEST_CASE("TextBuffer::search - edits") {
+  TextBuffer buffer{u"abcd"};
+  buffer.set_text_in_range({{0, 2}, {0, 2}}, Text{u"12"});
+  buffer.set_text_in_range({{0, 6}, {0, 6}}, Text{u"345"});
+
+  REQUIRE(buffer.text() == Text(u"ab12cd345"));
+  REQUIRE(buffer.search(u"b1\\d") == 1);
+  REQUIRE(buffer.search(u"12[a-z]") == 2);
+  REQUIRE(buffer.search(u"2cd") == 3);
+
+  buffer.reset_base_text(Text{u"abcdef"});
+  buffer.set_text_in_range({{0, 2}, {0, 4}}, Text{u""});
+  REQUIRE(buffer.text() == Text(u"abef"));
+  REQUIRE(buffer.search(u"abe") == 0);
+  REQUIRE(buffer.search(u"bef") == 1);
+  REQUIRE(buffer.search(u"bc") == -1);
 }
 
 struct SnapshotData {

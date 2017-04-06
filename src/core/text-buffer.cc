@@ -2,7 +2,7 @@
 #include "text-buffer.h"
 #include <cassert>
 #include <vector>
-#include "boost/regex.hpp"
+#include "pcre2.h"
 #include <sstream>
 
 using std::move;
@@ -395,133 +395,79 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
   top_layer->set_text_in_range(old_range, move(new_text));
 }
 
-// Based on http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0169r0.html
-class Iterator {
-  const vector<TextSlice> *chunks;
-  uint32_t chunk_index;
-  Text::const_iterator chunk_begin;
-  Text::const_iterator chunk_end;
-  Text::const_iterator chunk_iterator;
-
-  inline bool is_high_surrogate(uint16_t c) const {
-    return (c & 0xdc00) == 0xd800;
-  }
-
-  inline bool is_low_surrogate(uint16_t c) const {
-    return 0xdc00 <= c && c <= 0xdfff;
-  }
-
-  inline bool advance_chunk_if_needed() {
-    while (chunk_iterator == chunk_end) {
-      ++chunk_index;
-      if (chunk_index < chunks->size()) {
-        chunk_begin = chunks->at(chunk_index).begin();
-        chunk_end = chunks->at(chunk_index).end();
-        chunk_iterator = chunk_begin;
-      } else {
-        chunk_index = -1;
-        chunk_begin = Text::const_iterator();
-        chunk_end = Text::const_iterator();
-        chunk_iterator = Text::const_iterator();
-        return false;
-      }
-    }
-    return true;
-  }
-
-public:
-  using value_type = wchar_t;
-  using pointer = wchar_t *;
-  using reference = wchar_t &;
-  using iterator_category = std::bidirectional_iterator_tag;
-  using difference_type = Text::const_iterator::difference_type;
-
-  Iterator() : chunk_index{static_cast<uint32_t>(-1)} {}
-
-  Iterator(const vector<TextSlice> &chunks) :
-    chunks{&chunks},
-    chunk_index{0},
-    chunk_begin{chunks[0].begin()},
-    chunk_end{chunks[0].end()},
-    chunk_iterator{chunk_begin} {}
-
-  Iterator &operator++() {
-    ++chunk_iterator;
-    if (advance_chunk_if_needed() && is_high_surrogate(*chunk_iterator)) {
-      ++chunk_iterator;
-      advance_chunk_if_needed();
-    }
-    return *this;
-  }
-
-  Iterator &operator--() {
-    if (chunk_iterator == chunk_begin) {
-      if (chunk_index > 0) {
-        chunk_index--;
-        chunk_begin = chunks->at(chunk_index).begin();
-        chunk_end = chunks->at(chunk_index).end();
-        chunk_iterator = chunk_end - 1;
-      }
-    } else {
-      --chunk_iterator;
-    }
-
-    if (chunk_iterator != chunk_begin && is_low_surrogate(*chunk_iterator)) {
-      --chunk_iterator;
-    }
-
-    return *this;
-  }
-
-  wchar_t operator*() const {
-    if (is_high_surrogate(*chunk_iterator)) {
-      auto next_iterator = chunk_iterator;
-      ++next_iterator;
-      if (next_iterator != chunk_end) {
-        return static_cast<wchar_t>(
-          ((*chunk_iterator & 0x3ff) << 10 | (*next_iterator & 0x3ff)) + 0x10000
-        );
-      }
-    }
-    return static_cast<wchar_t>(*chunk_iterator);
-  }
-
-  bool operator!=(const Iterator &other) const {
-    return !operator==(other);
-  }
-
-  bool operator==(const Iterator &other) const {
-    if (chunk_index == static_cast<uint32_t>(-1)) {
-      return other.chunk_index == static_cast<uint32_t>(-1);
-    } else {
-      return chunk_index == other.chunk_index && chunk_iterator == other.chunk_iterator;
-    }
-  }
-};
-
-namespace boost {
-  void throw_exception(const std::exception &exception) {
-    fprintf(stderr, "%s", exception.what());
-    abort();
-  }
+int64_t TextBuffer::search(const std::u16string &pattern) const {
+  return search(reinterpret_cast<const uint16_t *>(pattern.c_str()), pattern.size());
 }
 
-int64_t TextBuffer::search(const std::string &pattern) const {
-  std::wstring wpattern(pattern.begin(), pattern.end());
-  boost::wregex regex;
-  auto status = regex.set_expression(
-    wpattern,
-    boost::regex::ECMAScript|boost::regex_constants::no_except
+int64_t TextBuffer::search(const uint16_t *pattern, uint32_t pattern_length) const {
+  int error_number = 0;
+  size_t error_offset = 0;
+  pcre2_code *regex = pcre2_compile(
+    pattern,
+    pattern_length,
+    PCRE2_MULTILINE,
+    &error_number,
+    &error_offset,
+    nullptr
   );
-  if (status != 0) return INVALID_PATTERN;
 
-  vector<TextSlice> chunks = this->chunks();
-  boost::match_results<Iterator> match;
-  if (boost::regex_search(Iterator(chunks), Iterator(), match, regex)) {
-    return match.position();
+  if (!regex) {
+    // TODO remove? return?
+    PCRE2_UCHAR error_message[256];
+    pcre2_get_error_message(error_number, error_message, sizeof(error_message));
+    printf("COMPILATION FAILED: ");
+    for (uint16_t *c = error_message; *c != 0; c++) printf("%c", (char)*c);
+    puts("");
+    return INVALID_PATTERN;
   }
 
-  return NO_RESULTS;
+  size_t start_position = 0;
+  vector<TextSlice> chunks = this->chunks();
+  pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(regex, nullptr);
+
+  vector<uint16_t> chunk_continuation;
+
+  for (const auto &chunk : chunks) {
+    auto chunk_data = chunk.data();
+    size_t chunk_size = chunk.size();
+
+    if (!chunk_continuation.empty()) {
+      chunk_continuation.insert(chunk_continuation.end(), chunk_data, chunk_data + chunk_size);
+      chunk_data = chunk_continuation.data();
+      chunk_size = chunk_continuation.size();
+    }
+
+    int status = pcre2_match(
+      regex,
+      chunk_data,
+      chunk_size,
+      0,
+      PCRE2_PARTIAL_HARD,
+      match_data,
+      nullptr
+    );
+
+    switch (status) {
+      case PCRE2_ERROR_NOMATCH:
+        start_position += chunk_size;
+        chunk_continuation.clear();
+        break;
+
+      case PCRE2_ERROR_PARTIAL: {
+        size_t partial_match_start = pcre2_get_ovector_pointer(match_data)[0];
+        start_position += partial_match_start;
+        chunk_continuation.assign(chunk_data + partial_match_start, chunk_data + chunk_size);
+        break;
+      }
+
+      default: {
+        size_t match_position = pcre2_get_ovector_pointer(match_data)[0];
+        return start_position + match_position;
+      }
+    }
+  }
+
+  return -1;
 }
 
 bool TextBuffer::is_modified() const {

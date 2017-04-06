@@ -41,7 +41,8 @@ public:
     INVALID_PATTERN = -2
   };
 
-  int64_t search(const std::string &) const;
+  int64_t search(const uint16_t *, uint32_t) const;
+  int64_t search(const std::u16string &) const;
 
   std::string get_dot_graph() const;
 
