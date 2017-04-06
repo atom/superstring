@@ -30,7 +30,6 @@ TEST_CASE("Text::build - replaces invalid byte sequences in the middle of the st
 
   REQUIRE(*text == Text { u"ab" "\ufffd" "\ufffd" "de" });
   REQUIRE(progress_reports == vector<size_t>({ 3, 6 }));
-
 }
 
 TEST_CASE("Text::build - replaces invalid byte sequences at the end of the stream with the Unicode replacement characters") {

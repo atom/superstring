@@ -1,8 +1,8 @@
 #include "text-slice.h"
 #include "text-buffer.h"
+#include "regex.h"
 #include <cassert>
 #include <vector>
-#include "pcre2.h"
 #include <sstream>
 
 using std::move;
@@ -269,30 +269,19 @@ struct TextBuffer::Layer {
   }
 
   int64_t search(const uint16_t *pattern, uint32_t pattern_length) {
-    int error_number = 0;
-    size_t error_offset = 0;
-    pcre2_code *regex = pcre2_compile(
-      pattern,
-      pattern_length,
-      PCRE2_MULTILINE,
-      &error_number,
-      &error_offset,
-      nullptr
-    );
+    Regex regex(pattern, pattern_length);
 
-    if (!regex) {
-      // TODO remove? return?
-      PCRE2_UCHAR error_message[256];
-      pcre2_get_error_message(error_number, error_message, sizeof(error_message));
-      printf("COMPILATION FAILED: ");
-      for (uint16_t *c = error_message; *c != 0; c++) printf("%c", (char)*c);
-      puts("");
+    if (!regex.error_message.empty()) {
+
+      // printf("COMPILATION FAILED: ");
+      // for (auto c : regex.error_message) printf("%c", (char)c);
+      // puts("");
+
       return INVALID_PATTERN;
     }
 
     size_t start_position = 0;
     vector<TextSlice> chunks = this->chunks_in_range({Point(), extent()});
-    pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(regex, nullptr);
 
     vector<uint16_t> chunk_continuation;
 
@@ -306,33 +295,28 @@ struct TextBuffer::Layer {
         chunk_size = chunk_continuation.size();
       }
 
-      int status = pcre2_match(
-        regex,
-        chunk_data,
-        chunk_size,
-        0,
-        PCRE2_PARTIAL_HARD,
-        match_data,
-        nullptr
-      );
+      int status = regex.match(chunk_data, chunk_size);
 
-      switch (status) {
-        case PCRE2_ERROR_NOMATCH:
-          start_position += chunk_size;
-          chunk_continuation.clear();
-          break;
+      if (status < 0) {
+        switch (status) {
+          case PCRE2_ERROR_NOMATCH:
+            start_position += chunk_size;
+            chunk_continuation.clear();
+            break;
 
-        case PCRE2_ERROR_PARTIAL: {
-          size_t partial_match_start = pcre2_get_ovector_pointer(match_data)[0];
-          start_position += partial_match_start;
-          chunk_continuation.assign(chunk_data + partial_match_start, chunk_data + chunk_size);
-          break;
+          case PCRE2_ERROR_PARTIAL: {
+            size_t partial_match_start = regex.get_match_offset(0);
+            start_position += partial_match_start;
+            chunk_continuation.assign(chunk_data + partial_match_start, chunk_data + chunk_size);
+            break;
+          }
+
+          default:
+            return -1;
         }
-
-        default: {
-          size_t match_position = pcre2_get_ovector_pointer(match_data)[0];
-          return start_position + match_position;
-        }
+      } else {
+        size_t match_position = regex.get_match_offset(0);
+        return start_position + match_position;
       }
     }
 
