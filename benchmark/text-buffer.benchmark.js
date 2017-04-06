@@ -17,7 +17,7 @@ function benchmarkSearch(description, pattern, expectedPosition) {
   name = `Search for ${description} - string`
   console.time(name)
   for (let i = 0; i < trialCount; i++) {
-    assert.equal(text.search(pattern), expectedPosition)
+    assert.equal(lines.join('\n').search(pattern), expectedPosition)
   }
   console.timeEnd(name)
 
