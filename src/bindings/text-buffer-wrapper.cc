@@ -179,8 +179,8 @@ void TextBufferWrapper::position_for_character_index(const Nan::FunctionCallback
 
 void TextBufferWrapper::search_sync(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
-  if (info.Length() > 0 && info[0]->IsRegExp()) {
-    Local<String> js_pattern = info[0].As<RegExp>()->GetSource();
+  Local<String> js_pattern;
+  if (Nan::To<String>(info[0]).ToLocal(&js_pattern)) {
     vector<uint16_t> pattern(js_pattern->Length());
     js_pattern->Write(pattern.data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
     int64_t result = text_buffer.search(pattern.data(), pattern.size());
@@ -220,8 +220,8 @@ void TextBufferWrapper::search(const Nan::FunctionCallbackInfo<Value> &info) {
 
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
 
-  if (info.Length() > 0 && info[0]->IsRegExp()) {
-    Local<String> js_pattern = info[0].As<RegExp>()->GetSource();
+  Local<String> js_pattern;
+  if (Nan::To<String>(info[0]).ToLocal(&js_pattern)) {
     vector<uint16_t> pattern(js_pattern->Length());
     js_pattern->Write(pattern.data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
     Nan::AsyncQueueWorker(new TextBufferSearcher(

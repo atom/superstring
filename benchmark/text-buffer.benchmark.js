@@ -10,7 +10,7 @@ function benchmarkSearch(description, pattern, expectedPosition) {
   let name = `Search for ${description} - TextBuffer`
   console.time(name)
   for (let i = 0; i < trialCount; i++) {
-    assert.equal(buffer.search(pattern), expectedPosition)
+    assert.equal(buffer.searchSync(pattern.source), expectedPosition)
   }
   console.timeEnd(name)
 

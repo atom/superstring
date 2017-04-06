@@ -214,9 +214,9 @@ describe('TextBuffer', () => {
       buffer.setTextInRange(Range(Point(0, 3), Point(0, 4)), '2')
       assert.equal(buffer.getText(), '1ab2\ndef')
 
-      assert.equal(buffer.searchSync(/b2/), 2)
-      assert.equal(buffer.searchSync(/bc/), -1)
-      assert.equal(buffer.searchSync(/^d/), 5)
+      assert.equal(buffer.searchSync('b2'), 2)
+      assert.equal(buffer.searchSync('bc'), -1)
+      assert.equal(buffer.searchSync('^d'), 5)
     })
   })
 
@@ -228,9 +228,9 @@ describe('TextBuffer', () => {
       assert.equal(buffer.getText(), '1ab2\ndef')
 
       return Promise.all([
-        buffer.search(/b2/).then(value => assert.equal(value, 2)),
-        buffer.search(/bc/).then(value => assert.equal(value, -1)),
-        buffer.search(/^d/).then(value => assert.equal(value, 5))
+        buffer.search('b2').then(value => assert.equal(value, 2)),
+        buffer.search('bc').then(value => assert.equal(value, -1)),
+        buffer.search('^d').then(value => assert.equal(value, 5))
       ])
     })
   })
