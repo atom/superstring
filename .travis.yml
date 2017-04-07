@@ -1,3 +1,4 @@
+dist: trusty
 language: node_js
 sudo: false
 
@@ -41,4 +42,3 @@ addons:
     packages:
     - gcc-4.9
     - g++-4.9
-    - libstdc++6-6-dbg
