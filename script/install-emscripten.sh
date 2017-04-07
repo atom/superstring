@@ -15,5 +15,5 @@ fi
 echo 'Installing emscripten SDK...'
 
 $EMSDK_PATH update
-$EMSDK_PATH install -j4 latest
-$EMSDK_PATH activate latest
+$EMSDK_PATH install -j4 sdk-tag-1.37.9-64bit
+$EMSDK_PATH activate sdk-tag-1.37.9-64bit
