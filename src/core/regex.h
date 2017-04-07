@@ -23,6 +23,7 @@ struct Regex {
     if (!code) {
       error_message.resize(256);
       error_message.resize(pcre2_get_error_message(error_number, error_message.data(), error_message.size()));
+      match_data = nullptr;
       return;
     }
 
