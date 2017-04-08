@@ -8,6 +8,8 @@
 using std::move;
 using std::string;
 using std::vector;
+using std::u16string;
+using SearchResult = TextBuffer::SearchResult;
 
 struct BaseLayer {
   const Text &text;
@@ -268,59 +270,85 @@ struct TextBuffer::Layer {
     return result;
   }
 
-  int64_t search(const uint16_t *pattern, uint32_t pattern_length) {
+  SearchResult search(const uint16_t *pattern, uint32_t pattern_length) {
     Regex regex(pattern, pattern_length);
 
     if (!regex.error_message.empty()) {
-
-      // printf("COMPILATION FAILED: ");
-      // for (auto c : regex.error_message) printf("%c", (char)c);
-      // puts("");
-
-      return INVALID_PATTERN;
+      return {optional<Range>{}, regex.error_message};
     }
 
-    size_t start_position = 0;
-    vector<TextSlice> chunks = this->chunks_in_range({Point(), extent()});
-
+    bool found_match = false;
+    size_t match_start_offset;
+    size_t match_end_offset;
+    size_t current_offset = 0;
     vector<uint16_t> chunk_continuation;
 
-    for (const auto &chunk : chunks) {
-      auto chunk_data = chunk.data();
-      size_t chunk_size = chunk.size();
+    static const size_t MAX_CHUNK_SIZE_TO_COPY = 1024;
 
-      if (!chunk_continuation.empty()) {
-        chunk_continuation.insert(chunk_continuation.end(), chunk_data, chunk_data + chunk_size);
-        chunk_data = chunk_continuation.data();
-        chunk_size = chunk_continuation.size();
-      }
+    this->for_each_chunk_in_range(Point(), extent(), [&](TextSlice chunk) {
+      size_t chunk_offset = 0;
 
-      int status = regex.match(chunk_data, chunk_size);
+      for (;;) {
+        auto chunk_data = chunk.data() + chunk_offset;
+        size_t chunk_size = chunk.size() - chunk_offset;
+        if (chunk_size == 0) break;
 
-      if (status < 0) {
-        switch (status) {
-          case PCRE2_ERROR_NOMATCH:
-            start_position += chunk_size;
-            chunk_continuation.clear();
-            break;
-
-          case PCRE2_ERROR_PARTIAL: {
-            size_t partial_match_start = regex.get_match_offset(0);
-            start_position += partial_match_start;
-            chunk_continuation.assign(chunk_data + partial_match_start, chunk_data + chunk_size);
-            break;
+        if (!chunk_continuation.empty()) {
+          if (chunk_size > MAX_CHUNK_SIZE_TO_COPY) {
+            chunk_continuation.insert(chunk_continuation.end(), chunk_data, chunk_data + MAX_CHUNK_SIZE_TO_COPY);
+            chunk_offset += MAX_CHUNK_SIZE_TO_COPY;
+          } else {
+            chunk_continuation.insert(chunk_continuation.end(), chunk_data, chunk_data + chunk_size);
+            chunk_offset += chunk_size;
           }
-
-          default:
-            return -1;
+          chunk_data = chunk_continuation.data();
+          chunk_size = chunk_continuation.size();
+        } else {
+          chunk_offset = chunk_size;
         }
-      } else {
-        size_t match_position = regex.get_match_offset(0);
-        return start_position + match_position;
-      }
-    }
 
-    return -1;
+        int status = regex.match(chunk_data, chunk_size);
+
+        if (status < 0) {
+          switch (status) {
+            case PCRE2_ERROR_NOMATCH:
+              current_offset += chunk_size;
+              chunk_continuation.clear();
+              chunk_offset = chunk.size();
+              break;
+
+            case PCRE2_ERROR_PARTIAL: {
+              size_t partial_match_start = regex.get_match_offset(0);
+              current_offset += partial_match_start;
+              chunk_continuation.assign(chunk_data + partial_match_start, chunk_data + chunk_size);
+              break;
+            }
+
+            default:
+              return true;
+          }
+        } else {
+          match_start_offset = current_offset + regex.get_match_offset(0);
+          match_end_offset = current_offset + regex.get_match_offset(1);
+          found_match = true;
+          return true;
+        }
+      }
+
+      return false;
+    });
+
+    if (found_match) {
+      return {
+        Range{position_for_offset(match_start_offset), position_for_offset(match_end_offset)},
+        u""
+      };
+    } else {
+      return {
+        optional<Range>{},
+        u""
+      };
+    }
   }
 };
 
@@ -450,11 +478,11 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
   top_layer->set_text_in_range(old_range, move(new_text));
 }
 
-int64_t TextBuffer::search(const std::u16string &pattern) {
+SearchResult TextBuffer::search(const std::u16string &pattern) {
   return search(reinterpret_cast<const uint16_t *>(pattern.c_str()), pattern.size());
 }
 
-int64_t TextBuffer::search(const uint16_t *pattern, uint32_t pattern_length) {
+SearchResult TextBuffer::search(const uint16_t *pattern, uint32_t pattern_length) {
   return top_layer->search(pattern, pattern_length);
 }
 
@@ -530,7 +558,7 @@ vector<TextSlice> TextBuffer::Snapshot::chunks() const {
   return layer.chunks_in_range({{0, 0}, extent()});
 }
 
-int64_t TextBuffer::Snapshot::search(const uint16_t *pattern, uint32_t pattern_length) const {
+SearchResult TextBuffer::Snapshot::search(const uint16_t *pattern, uint32_t pattern_length) const {
   return layer.search(pattern, pattern_length);
 }
 

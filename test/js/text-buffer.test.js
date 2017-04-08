@@ -214,9 +214,14 @@ describe('TextBuffer', () => {
       buffer.setTextInRange(Range(Point(0, 3), Point(0, 4)), '2')
       assert.equal(buffer.getText(), '1ab2\ndef')
 
-      assert.equal(buffer.searchSync('b2'), 2)
-      assert.equal(buffer.searchSync('bc'), -1)
-      assert.equal(buffer.searchSync('^d'), 5)
+      assert.deepEqual(buffer.searchSync('b2'), Range(Point(0, 2), Point(0, 4)))
+      assert.deepEqual(buffer.searchSync('bc'), null)
+      assert.deepEqual(buffer.searchSync('^d'), Range(Point(1, 0), Point(1, 1)))
+    })
+
+    it('throws an exception if an invalid pattern is passed', () => {
+      const buffer = new TextBuffer('abc\ndef')
+      assert.throws(() => buffer.searchSync('['), /missing terminating ] for character class/)
     })
   })
 
@@ -228,10 +233,17 @@ describe('TextBuffer', () => {
       assert.equal(buffer.getText(), '1ab2\ndef')
 
       return Promise.all([
-        buffer.search('b2').then(value => assert.equal(value, 2)),
-        buffer.search('bc').then(value => assert.equal(value, -1)),
-        buffer.search('^d').then(value => assert.equal(value, 5))
+        buffer.search('b2').then(value => assert.deepEqual(value, Range(Point(0, 2), Point(0, 4)))),
+        buffer.search('bc').then(value => assert.deepEqual(value, null)),
+        buffer.search('^d').then(value => assert.deepEqual(value, Range(Point(1, 0), Point(1, 1))))
       ])
+    })
+
+    it('rejects the promise if an invalid pattern is given', () => {
+      const buffer = new TextBuffer('abc\ndef')
+      return buffer.search('[')
+        .then(() => assert(false))
+        .catch((error) => assert.match(error.message, /missing terminating ] for character class/))
     })
   })
 })

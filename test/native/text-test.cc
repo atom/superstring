@@ -5,6 +5,7 @@
 
 using std::string;
 using std::stringstream;
+using std::vector;
 
 TEST_CASE("Text::build - can build a Text from a UTF8 stream") {
   string input = "abγdefg\nhijklmnop";

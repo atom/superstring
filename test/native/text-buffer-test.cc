@@ -11,6 +11,7 @@ using std::pair;
 using std::string;
 using std::stringstream;
 using std::vector;
+using std::u16string;
 
 TEST_CASE("TextBuffer::set_text_in_range - basic") {
   TextBuffer buffer {u"abc\ndef\nghi"};
@@ -119,37 +120,38 @@ TEST_CASE("TextBuffer::is_modified") {
 TEST_CASE("TextBuffer::search") {
   TextBuffer buffer{u"abcd\nef"};
 
-  REQUIRE(buffer.search(u"(") == TextBuffer::INVALID_PATTERN);
+  REQUIRE(buffer.search(u"(").error_message == u"missing closing parenthesis");
 
-  REQUIRE(buffer.search(u"x") == -1);
-
-  REQUIRE(buffer.search(u"c.") == 2);
-  REQUIRE(buffer.search(u"d") == 3);
-  REQUIRE(buffer.search(u"\\n") == 4);
-  REQUIRE(buffer.search(u"\\be") == 5);
-  REQUIRE(buffer.search(u"^e") == 5);
-  REQUIRE(buffer.search(u"^(e|d)g?") == 5);
+  REQUIRE(buffer.search(u"x").range == optional<Range>{});
+  REQUIRE(*buffer.search(u"c.").range == (Range{{0, 2}, {0, 4}}));
+  REQUIRE(*buffer.search(u"d").range == (Range{{0, 3}, {0, 4}}));
+  REQUIRE(*buffer.search(u"\\n").range == (Range{{0, 4}, {1, 0}}));
+  REQUIRE(*buffer.search(u"\\be").range == (Range{{1, 0}, {1, 1}}));
+  REQUIRE(*buffer.search(u"^e").range == (Range{{1, 0}, {1, 1}}));
+  REQUIRE(*buffer.search(u"^(e|d)g?").range == (Range{{1, 0}, {1, 1}}));
 
   buffer.reset_base_text(Text{u"a1b"});
-  REQUIRE(buffer.search(u"\\d") == 1);
+  REQUIRE(*buffer.search(u"\\d").range == (Range{{0, 1}, {0, 2}}));
 }
 
-TEST_CASE("TextBuffer::search - edits") {
+TEST_CASE("TextBuffer::search - spanning edits") {
   TextBuffer buffer{u"abcd"};
-  buffer.set_text_in_range({{0, 2}, {0, 2}}, Text{u"12"});
-  buffer.set_text_in_range({{0, 6}, {0, 6}}, Text{u"345"});
+  buffer.set_text_in_range({{0, 2}, {0, 2}}, Text{u"12345"});
+  buffer.set_text_in_range({{0, 9}, {0, 9}}, Text{u"67890"});
 
-  REQUIRE(buffer.text() == Text(u"ab12cd345"));
-  REQUIRE(buffer.search(u"b1\\d") == 1);
-  REQUIRE(buffer.search(u"12[a-z]") == 2);
-  REQUIRE(buffer.search(u"2cd") == 3);
+  REQUIRE(buffer.text() == Text(u"ab12345cd67890"));
+  REQUIRE(*buffer.search(u"b1234").range == (Range{{0, 1}, {0, 6}}));
+  REQUIRE(*buffer.search(u"b12345c").range == (Range{{0, 1}, {0, 8}}));
+  REQUIRE(*buffer.search(u"b12345cd6").range == (Range{{0, 1}, {0, 10}}));
+  REQUIRE(*buffer.search(u"345[a-z][a-z]").range == (Range{{0, 4}, {0, 9}}));
+  REQUIRE(*buffer.search(u"5cd6").range == (Range{{0, 6}, {0, 10}}));
 
   buffer.reset_base_text(Text{u"abcdef"});
   buffer.set_text_in_range({{0, 2}, {0, 4}}, Text{u""});
   REQUIRE(buffer.text() == Text(u"abef"));
-  REQUIRE(buffer.search(u"abe") == 0);
-  REQUIRE(buffer.search(u"bef") == 1);
-  REQUIRE(buffer.search(u"bc") == -1);
+  REQUIRE(*buffer.search(u"abe").range == (Range{{0, 0}, {0, 3}}));
+  REQUIRE(*buffer.search(u"bef").range == (Range{{0, 1}, {0, 4}}));
+  REQUIRE(buffer.search(u"bc").range == optional<Range>{});
 }
 
 struct SnapshotData {
@@ -164,7 +166,7 @@ struct SnapshotTask {
   std::future<vector<SnapshotData>> future;
 };
 
-TEST_CASE("TextBuffer::set_text_in_range - random edits") {
+TEST_CASE("TextBuffer - random edits and queries") {
   auto t = time(nullptr);
   for (uint i = 0; i < 100; i++) {
     uint32_t seed = t * 1000 + i;

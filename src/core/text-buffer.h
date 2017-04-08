@@ -41,8 +41,13 @@ public:
     INVALID_PATTERN = -2
   };
 
-  int64_t search(const uint16_t *, uint32_t);
-  int64_t search(const std::u16string &);
+  struct SearchResult {
+    optional<Range> range;
+    std::u16string error_message;
+  };
+
+  SearchResult search(const uint16_t *, uint32_t);
+  SearchResult search(const std::u16string &);
 
   std::string get_dot_graph() const;
 
@@ -62,7 +67,7 @@ public:
     std::vector<TextSlice> chunks_in_range(Range) const;
     Text text() const;
     Text text_in_range(Range) const;
-    int64_t search(const uint16_t *, uint32_t) const;
+    SearchResult search(const uint16_t *, uint32_t) const;
   };
 
   friend class Snapshot;

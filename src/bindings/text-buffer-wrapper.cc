@@ -183,8 +183,17 @@ void TextBufferWrapper::search_sync(const Nan::FunctionCallbackInfo<Value> &info
   if (Nan::To<String>(info[0]).ToLocal(&js_pattern)) {
     vector<uint16_t> pattern(js_pattern->Length());
     js_pattern->Write(pattern.data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
-    int64_t result = text_buffer.search(pattern.data(), pattern.size());
-    info.GetReturnValue().Set(Nan::New<Number>(result));
+    auto result = text_buffer.search(pattern.data(), pattern.size());
+    if (!result.error_message.empty()) {
+      Nan::ThrowError(Nan::New<String>(
+        reinterpret_cast<const uint16_t *>(result.error_message.c_str()),
+        result.error_message.size()).ToLocalChecked()
+      );
+    } else if (result.range) {
+      info.GetReturnValue().Set(RangeWrapper::from_range(*result.range));
+    } else {
+      info.GetReturnValue().Set(Nan::Null());
+    }
   }
 }
 
@@ -192,7 +201,7 @@ void TextBufferWrapper::search(const Nan::FunctionCallbackInfo<Value> &info) {
   class TextBufferSearcher : public Nan::AsyncWorker {
     const TextBuffer::Snapshot *snapshot;
     vector<uint16_t> pattern;
-    int64_t result;
+    TextBuffer::SearchResult result;
 
   public:
     TextBufferSearcher(Nan::Callback *completion_callback,
@@ -208,11 +217,19 @@ void TextBufferWrapper::search(const Nan::FunctionCallbackInfo<Value> &info) {
 
     void HandleOKCallback() {
       delete snapshot;
-      if (result == TextBuffer::INVALID_PATTERN) {
-        v8::Local<v8::Value> argv[] = {Nan::Error("Invalid pattern")};
+      if (!result.error_message.empty()) {
+        v8::Local<v8::Value> argv[] = {
+          Nan::Error(Nan::New<String>(
+            reinterpret_cast<const uint16_t *>(result.error_message.c_str()),
+            result.error_message.size()).ToLocalChecked()
+          )
+        };
         callback->Call(1, argv);
+      } else if (result.range) {
+        v8::Local<v8::Value> argv[] = {Nan::Null(), RangeWrapper::from_range(*result.range)};
+        callback->Call(2, argv);
       } else {
-        v8::Local<v8::Value> argv[] = {Nan::Null(), Nan::New<Number>(result)};
+        v8::Local<v8::Value> argv[] = {Nan::Null(), Nan::Null()};
         callback->Call(2, argv);
       }
     }

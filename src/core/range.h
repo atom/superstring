@@ -9,6 +9,10 @@ struct Range {
   Point end;
 
   Point extent() const;
+
+  bool operator==(const Range &other) const {
+    return start == other.start && end == other.end;
+  }
 };
 
 inline std::ostream &operator<<(std::ostream &stream, const Range &range) {

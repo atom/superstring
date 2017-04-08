@@ -6,7 +6,7 @@
 struct Regex {
   pcre2_code *code;
   pcre2_match_data *match_data;
-  std::vector<uint16_t> error_message;
+  std::u16string error_message;
 
   Regex(const uint16_t *pattern, uint32_t pattern_length) {
     int error_number = 0;
@@ -21,8 +21,9 @@ struct Regex {
     );
 
     if (!code) {
-      error_message.resize(256);
-      error_message.resize(pcre2_get_error_message(error_number, error_message.data(), error_message.size()));
+      uint16_t message_buffer[256];
+      size_t length = pcre2_get_error_message(error_number, message_buffer, 256);
+      error_message.assign(message_buffer, message_buffer + length);
       match_data = nullptr;
       return;
     }

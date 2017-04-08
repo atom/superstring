@@ -1,6 +1,7 @@
 #include "test-helpers.h"
 
-typedef Patch::Change Change;
+using Change = Patch::Change;
+using std::vector;
 
 static optional<Text> null_text;
 

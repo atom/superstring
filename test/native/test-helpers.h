@@ -10,17 +10,31 @@
 #include <random>
 #include "range.h"
 
-using std::vector;
-using std::u16string;
-
 class TextBuffer;
 
 bool operator==(const Patch::Change &left, const Patch::Change &right);
-std::unique_ptr<Text> get_text(const u16string content);
+std::unique_ptr<Text> get_text(const std::u16string content);
 std::u16string get_random_string();
 Text get_random_text();
 Range get_random_range(const Text &);
 Range get_random_range(TextBuffer &);
+
+namespace std {
+  inline std::ostream &operator<<(std::ostream &stream, const std::u16string &text) {
+    for (uint16_t character : text) {
+      if (character == '\r') {
+        stream << "\\\\r";
+      } else if (character < 255) {
+        stream << static_cast<char>(character);
+      } else {
+        stream << "\\u";
+        stream << character;
+      }
+    }
+
+    return stream;
+  }
+}
 
 class Generator {
   std::default_random_engine engine;
