@@ -4,6 +4,7 @@
 class PatchWrapper : public Nan::ObjectWrap {
  public:
   static void init(v8::Local<v8::Object> exports);
+  static v8::Local<v8::Value> from_patch(Patch &&);
 
  private:
   PatchWrapper(Patch &&patch);

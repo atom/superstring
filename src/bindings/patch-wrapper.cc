@@ -133,6 +133,16 @@ void PatchWrapper::init(Local<Object> exports) {
 
 PatchWrapper::PatchWrapper(Patch &&patch) : patch{std::move(patch)} {}
 
+Local<Value> PatchWrapper::from_patch(Patch &&patch) {
+  Local<Object> result;
+  if (Nan::NewInstance(Nan::New(patch_wrapper_constructor)).ToLocal(&result)) {
+    (new PatchWrapper(move(patch)))->Wrap(result);
+    return result;
+  } else {
+    return Nan::Null();
+  }
+}
+
 void PatchWrapper::construct(const Nan::FunctionCallbackInfo<Value> &info) {
   bool merges_adjacent_changes = true;
   Local<Object> options;

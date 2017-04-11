@@ -3,7 +3,9 @@
 #include "point-wrapper.h"
 #include "range-wrapper.h"
 #include "text-wrapper.h"
+#include "patch-wrapper.h"
 #include "text-slice.h"
+#include "text-diff.h"
 #include "noop.h"
 #include <sstream>
 #include <iomanip>
@@ -280,8 +282,9 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   );
 
   if (text) {
+    Patch patch = text_diff(text_buffer.get_base_text(), *text);
     text_buffer.reset_base_text(move(*text));
-    info.GetReturnValue().Set(Nan::True());
+    info.GetReturnValue().Set(PatchWrapper::from_patch(move(patch)));
   } else {
     info.GetReturnValue().Set(Nan::False());
   }

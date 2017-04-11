@@ -420,6 +420,10 @@ size_t TextBuffer::base_text_digest() {
   return result;
 }
 
+const Text &TextBuffer::get_base_text() const {
+  return base_text;
+}
+
 Point TextBuffer::extent() const {
   return top_layer->extent();
 }

@@ -35,6 +35,7 @@ public:
   bool serialize_outstanding_changes(Serializer &);
   bool deserialize_outstanding_changes(Deserializer &);
   size_t base_text_digest();
+  const Text &get_base_text() const;
 
   enum {
     NO_RESULTS = -1,

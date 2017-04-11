@@ -24,7 +24,8 @@
             "target_name": "superstring_core",
             "type": "static_library",
             "dependencies": [
-                "./vendor/pcre/pcre.gyp:pcre"
+                "./vendor/pcre/pcre.gyp:pcre",
+                "superstring_core_diff"
             ],
             "sources": [
                 "src/core/buffer-offset-index.cc",
@@ -43,6 +44,22 @@
                     }
                 }],
             ],
+        },
+
+        # This file is built as a separate target because the library that it
+        # uses, diff-match-patch, requires exceptions to be enabled.
+        {
+            "target_name": "superstring_core_diff",
+            "type": "static_library",
+            "include_dirs": [
+                "./vendor/diff-match-patch"
+            ],
+            "sources": [
+                "src/core/text-diff.cc",
+            ],
+            'xcode_settings': {
+                "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
+            },
         },
     ],
 
@@ -67,6 +84,7 @@
                     "test/native/patch-test.cc",
                     "test/native/text-buffer-test.cc",
                     "test/native/text-test.cc",
+                    "test/native/text-diff-test.cc",
                 ],
                 "include_dirs": [
                     "vendor",
@@ -83,7 +101,6 @@
                         "xcode_settings": {
                             "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
                             'MACOSX_DEPLOYMENT_TARGET': '10.8',
-
                         }
                     }]
                 ]
