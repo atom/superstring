@@ -250,6 +250,17 @@ struct TextBuffer::Layer {
       move(new_text),
       deleted_text_size
     );
+
+    auto change = patch.change_for_old_position(start.position);
+    if (is_first && change && change->old_text_size == change->new_text->size()) {
+      TextSlice original_text = TextSlice(*base_text).slice(Range{
+        change->old_start,
+        change->new_start
+      });
+      if (std::equal(change->new_text->begin(), change->new_text->end(), original_text.begin())) {
+        patch.splice_old(start.position, Point(), Point());
+      }
+    }
   }
 
   Text text_in_range(Range range) {

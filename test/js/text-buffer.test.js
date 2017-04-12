@@ -132,6 +132,27 @@ describe('TextBuffer', () => {
       buffer.setTextInRange(Range(Point(0, 1), Point(5, 5)), 'O')
       assert.equal(buffer.getText(), 'aO')
     })
+
+    it('causes .isModified to return false when the original text is restored', () => {
+      const buffer = new TextBuffer('abc\ndef')
+      assert.equal(buffer.isModified(), false)
+
+      buffer.setTextInRange(Range(Point(0, 2), Point(1, 1)), '!')
+      assert.equal(buffer.getText(), 'ab!ef')
+      assert.equal(buffer.isModified(), true)
+
+      buffer.setTextInRange(Range(Point(0, 2), Point(0, 3)), 'c\nd')
+      assert.equal(buffer.getText(), 'abc\ndef')
+      assert.equal(buffer.isModified(), false)
+
+      buffer.setText('ok')
+      assert.equal(buffer.getText(), 'ok')
+      assert.equal(buffer.isModified(), true)
+
+      buffer.setText('abc\ndef')
+      assert.equal(buffer.getText(), 'abc\ndef')
+      assert.equal(buffer.isModified(), false)
+    })
   })
 
   describe('.getTextInRange', () => {
