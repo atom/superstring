@@ -328,6 +328,7 @@ Patch::Patch(Patch &&other)
 Patch &Patch::operator=(Patch &&other) {
   std::swap(root, other.root);
   std::swap(left_ancestor_stack, other.left_ancestor_stack);
+  std::swap(frozen_node_array, other.frozen_node_array);
   std::swap(node_stack, other.node_stack);
   std::swap(change_count, other.change_count);
   return *this;
@@ -1683,13 +1684,10 @@ void get_point_from_buffer(const uint8_t **data, const uint8_t *end,
 }
 
 void Patch::serialize(Serializer &output) {
-  if (!root)
-    return;
-
   output.append(SERIALIZATION_VERSION);
-
   output.append(change_count);
 
+  if (!root) return;
   root->serialize(output);
 
   Node *node = root;
@@ -1724,16 +1722,13 @@ void Patch::serialize(Serializer &output) {
 bool Patch::is_frozen() const { return frozen_node_array != nullptr; }
 
 Patch::Patch(Deserializer &input)
-    : root{nullptr}, frozen_node_array{nullptr}, merges_adjacent_changes{true} {
+    : root{nullptr}, frozen_node_array{nullptr}, merges_adjacent_changes{true},
+      change_count{0} {
   uint32_t serialization_version = input.read<uint32_t>();
-  if (serialization_version != SERIALIZATION_VERSION) {
-    return;
-  }
+  if (serialization_version != SERIALIZATION_VERSION) return;
 
   change_count = input.read<uint32_t>();
-  if (change_count == 0) {
-    return;
-  }
+  if (change_count == 0) return;
 
   node_stack.reserve(change_count);
   frozen_node_array = static_cast<Node *>(calloc(change_count, sizeof(Node)));

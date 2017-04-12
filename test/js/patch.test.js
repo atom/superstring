@@ -158,6 +158,10 @@ describe('Patch', function () {
   })
 
   it('can serialize/deserialize patches', () => {
+    const emptyPatch = Patch.deserialize(new Patch().serialize())
+    assert.equal(emptyPatch.getChangeCount(), 0)
+    assert.deepEqual(emptyPatch.getChanges(), [])
+
     const patch1 = new Patch()
     patch1.splice({row: 0, column: 3}, {row: 0, column: 5}, {row: 0, column: 5}, 'hello', 'world')
 
