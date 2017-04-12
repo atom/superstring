@@ -23,6 +23,11 @@ TEST_CASE("text_diff - multiple lines") {
       nullptr, nullptr, 0, 0
     }
   }));
+
+  // We temporarily move the Text's content in order to diff it without
+  // copying. Check that the text is unchanged afterwards.
+  REQUIRE(old_text == Text(u"abc\nghi\njk\nmno\n"));
+  REQUIRE(new_text == Text(u"abc\ndef\nghi\njkl\nmno\n"));
 }
 
 TEST_CASE("text_diff - single line") {
