@@ -10,10 +10,11 @@ class TextBuffer {
   Text base_text;
   Layer *top_layer;
 
-  TextBuffer(Text &&base_text);
-
 public:
+  static uint32_t MAX_CHUNK_SIZE_TO_COPY;
+
   TextBuffer();
+  TextBuffer(Text &&base_text);
   TextBuffer(std::u16string text);
   ~TextBuffer();
 

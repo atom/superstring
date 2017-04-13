@@ -11,6 +11,8 @@ using std::vector;
 using std::u16string;
 using SearchResult = TextBuffer::SearchResult;
 
+uint32_t TextBuffer::MAX_CHUNK_SIZE_TO_COPY = 1024;
+
 struct BaseLayer {
   const Text &text;
 
@@ -281,6 +283,19 @@ struct TextBuffer::Layer {
     return result;
   }
 
+  Point extent_for_chars(const uint16_t *start, const uint16_t *end) const {
+    Point result;
+    for (const uint16_t *c = start; c < end; c++) {
+      if (*c == '\n') {
+        result.row++;
+        result.column = 0;
+      } else {
+        result.column++;
+      }
+    }
+    return result;
+  }
+
   SearchResult search(const uint16_t *pattern, uint32_t pattern_length) {
     Regex regex(pattern, pattern_length);
 
@@ -288,50 +303,68 @@ struct TextBuffer::Layer {
       return {optional<Range>{}, regex.error_message};
     }
 
-    bool found_match = false;
-    size_t match_start_offset;
-    size_t match_end_offset;
-    size_t current_offset = 0;
+    optional<Range> result;
+    uint32_t current_offset = 0;
     vector<uint16_t> chunk_continuation;
 
-    static const size_t MAX_CHUNK_SIZE_TO_COPY = 1024;
+    uint32_t chunk_start_offset = 0;
+    Point chunk_start_position;
+
+    TextSlice match_start_chunk;
+    Point match_start_chunk_start_position;
+    uint32_t match_start_chunk_start_offset;
 
     this->for_each_chunk_in_range(Point(), extent(), [&](TextSlice chunk) {
-      size_t chunk_offset = 0;
+      const uint16_t *chunk_pointer = chunk.data();
+      const uint16_t *chunk_end = chunk_pointer + chunk.size();
 
-      for (;;) {
-        auto chunk_data = chunk.data() + chunk_offset;
-        size_t chunk_size = chunk.size() - chunk_offset;
-        if (chunk_size == 0) break;
-
-        if (!chunk_continuation.empty()) {
-          if (chunk_size > MAX_CHUNK_SIZE_TO_COPY) {
-            chunk_continuation.insert(chunk_continuation.end(), chunk_data, chunk_data + MAX_CHUNK_SIZE_TO_COPY);
-            chunk_offset += MAX_CHUNK_SIZE_TO_COPY;
-          } else {
-            chunk_continuation.insert(chunk_continuation.end(), chunk_data, chunk_data + chunk_size);
-            chunk_offset += chunk_size;
-          }
-          chunk_data = chunk_continuation.data();
-          chunk_size = chunk_continuation.size();
-        } else {
-          chunk_offset = chunk_size;
+      while (chunk_pointer != chunk_end) {
+        if (current_offset >= chunk_start_offset) {
+          match_start_chunk = chunk;
+          match_start_chunk_start_position = chunk_start_position;
+          match_start_chunk_start_offset = chunk_start_offset;
         }
 
-        int status = regex.match(chunk_data, chunk_size);
+        const uint16_t *current_pointer;
+        size_t current_length;
+
+        if (!chunk_continuation.empty()) {
+          const uint16_t *chunk_copy_end = std::min(
+            chunk_end,
+            chunk_pointer + MAX_CHUNK_SIZE_TO_COPY
+          );
+
+          chunk_continuation.insert(
+            chunk_continuation.end(),
+            chunk_pointer,
+            chunk_copy_end
+          );
+
+          current_pointer = chunk_continuation.data();
+          current_length = chunk_continuation.size();
+          chunk_pointer = chunk_copy_end;
+        } else {
+          current_pointer = chunk_pointer;
+          current_length = chunk_end - chunk_pointer;
+          chunk_pointer = chunk_end;
+        }
+
+        int status = regex.match(current_pointer, current_length);
 
         if (status < 0) {
           switch (status) {
             case PCRE2_ERROR_NOMATCH:
-              current_offset += chunk_size;
               chunk_continuation.clear();
-              chunk_offset = chunk.size();
+              current_offset += current_length;
               break;
 
             case PCRE2_ERROR_PARTIAL: {
               size_t partial_match_start = regex.get_match_offset(0);
               current_offset += partial_match_start;
-              chunk_continuation.assign(chunk_data + partial_match_start, chunk_data + chunk_size);
+              chunk_continuation.assign(
+                current_pointer + partial_match_start,
+                current_pointer + current_length
+              );
               break;
             }
 
@@ -339,27 +372,37 @@ struct TextBuffer::Layer {
               return true;
           }
         } else {
-          match_start_offset = current_offset + regex.get_match_offset(0);
-          match_end_offset = current_offset + regex.get_match_offset(1);
-          found_match = true;
+          Point start = match_start_chunk_start_position.traverse(
+            match_start_chunk.position_for_offset(
+              current_offset + regex.get_match_offset(0) - match_start_chunk_start_offset
+            )
+          );
+
+          Point end;
+          if (chunk_continuation.empty()) {
+            end = chunk_start_position.traverse(
+              chunk.position_for_offset(
+                current_offset + regex.get_match_offset(1) - chunk_start_offset
+              )
+            );
+          } else {
+            end = start.traverse(extent_for_chars(
+              current_pointer + regex.get_match_offset(0),
+              current_pointer + regex.get_match_offset(1)
+            ));
+          }
+
+          result = Range{start, end};
           return true;
         }
       }
 
+      chunk_start_offset += chunk.size();
+      chunk_start_position = chunk_start_position.traverse(chunk.extent());
       return false;
     });
 
-    if (found_match) {
-      return {
-        Range{position_for_offset(match_start_offset), position_for_offset(match_end_offset)},
-        u""
-      };
-    } else {
-      return {
-        optional<Range>{},
-        u""
-      };
-    }
+    return {result, u""};
   }
 };
 

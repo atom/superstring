@@ -49,4 +49,13 @@ namespace std {
   }
 }
 
+template <typename T>
+std::ostream &operator<<(std::ostream &stream, const optional<T> &value) {
+  if (value) {
+    return stream << *value;
+  } else {
+    return stream << "nullopt";
+  }
+}
+
 #endif // SUPERSTRING_TEST_HELPERS_H

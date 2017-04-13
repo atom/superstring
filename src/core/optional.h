@@ -16,6 +16,13 @@ public:
   const T &operator*() const { return value; }
   const T *operator->() const { return &value; }
   operator bool() const { return is_some; }
+  bool operator==(const optional<T> &other) {
+    if (is_some) {
+      return other.is_some && value == other.value;
+    } else {
+      return !other.is_some;
+    }
+  }
 };
 
 #endif // SUPERSTRING_OPTIONAL_H

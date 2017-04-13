@@ -166,6 +166,8 @@ struct SnapshotTask {
 };
 
 TEST_CASE("TextBuffer - random edits and queries") {
+  TextBuffer::MAX_CHUNK_SIZE_TO_COPY = 2;
+
   auto t = time(nullptr);
   for (uint i = 0; i < 100; i++) {
     uint32_t seed = t * 1000 + i;
@@ -219,6 +221,18 @@ TEST_CASE("TextBuffer - random edits and queries") {
         REQUIRE(
           Point(row, buffer.line_length_for_row(row)) ==
           Point(row, original_text.line_length_for_row(row))
+        );
+      }
+
+      for (uint32_t k = 0; k < 5; k++) {
+        Range range = get_random_range(rand, buffer);
+        Text subtext{TextSlice(original_text).slice(range)};
+
+        TextBuffer fresh_buffer{Text(original_text)};
+
+        REQUIRE(
+          buffer.search(subtext.content.data(), subtext.size()).range ==
+          fresh_buffer.search(subtext.content.data(), subtext.size()).range
         );
       }
 

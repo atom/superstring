@@ -2,6 +2,9 @@
 #include "text.h"
 #include <assert.h>
 
+TextSlice::TextSlice() :
+  text {nullptr} {}
+
 TextSlice::TextSlice(const Text *text, Point start_position, Point end_position) :
   text {text}, start_position {start_position}, end_position {end_position} {}
 
