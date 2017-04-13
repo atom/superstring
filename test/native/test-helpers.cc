@@ -1,6 +1,4 @@
-#ifndef SUPERSTRING_TEST_HELPERS_H
-#define SUPERSTRING_TEST_HELPERS_H
-
+#include "test-helpers.h"
 #include "patch.h"
 #include "range.h"
 #include "text-buffer.h"
@@ -35,11 +33,10 @@ std::unique_ptr<Text> get_text(const u16string content) {
   return std::unique_ptr<Text> { new Text(content) };
 }
 
-std::u16string get_random_string() {
-  uint count = rand() % 20;
+std::u16string get_random_string(Generator &rand, uint32_t character_count) {
   u16string content;
-  content.reserve(count);
-  for (uint i = 0; i < count; i++) {
+  content.reserve(character_count);
+  for (uint i = 0; i < character_count; i++) {
     if (rand() % 20 < 1) {
       content.push_back('\n');
     } else if (rand() % 20 < 1) {
@@ -56,11 +53,11 @@ std::u16string get_random_string() {
   return content;
 }
 
-Text get_random_text() {
-  return Text {get_random_string()};
+Text get_random_text(Generator &rand) {
+  return Text {get_random_string(rand)};
 }
 
-Range get_random_range(const Text &text) {
+Range get_random_range(Generator &rand, const Text &text) {
   uint32_t start_row = rand() % (text.extent().row + 1);
   uint32_t max_column = text.line_length_for_row(start_row);
   uint32_t start_column = 0;
@@ -73,8 +70,6 @@ Range get_random_range(const Text &text) {
   return {start, end};
 }
 
-Range get_random_range(TextBuffer &buffer) {
-  return get_random_range(buffer.text());
+Range get_random_range(Generator &rand, TextBuffer &buffer) {
+  return get_random_range(rand, buffer.text());
 }
-
-#endif // SUPERSTRING_TEST_HELPERS_H

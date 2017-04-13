@@ -173,15 +173,15 @@ TEST_CASE("TextBuffer - random edits and queries") {
     Generator rand(seed);
     printf("seed: %u\n", seed);
 
-    TextBuffer buffer {get_random_string()};
+    TextBuffer buffer {get_random_string(rand)};
     vector<SnapshotTask> snapshot_tasks;
 
     for (uint j = 0; j < 10; j++) {
       // printf("iteration %u\n", j);
 
       Text original_text = buffer.text();
-      Range deleted_range = get_random_range(buffer);
-      Text inserted_text = get_random_text();
+      Range deleted_range = get_random_range(rand, buffer);
+      Text inserted_text = get_random_text(rand);
 
       if (rand() % 2) {
         // printf("create snapshot %lu\n", snapshot_tasks.size());
@@ -226,7 +226,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
       for (uint32_t k = 0; k < 5; k++) {
         // printf("check random range %u\n", k);
 
-        Range range = get_random_range(buffer);
+        Range range = get_random_range(rand, buffer);
         REQUIRE(buffer.text_in_range(range) == Text(TextSlice(original_text).slice(range)));
         REQUIRE(buffer.position_for_offset(buffer.clip_position(range.start).offset) == range.start);
         REQUIRE(buffer.position_for_offset(buffer.clip_position(range.end).offset) == range.end);
