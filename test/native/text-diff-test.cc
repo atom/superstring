@@ -64,7 +64,7 @@ TEST_CASE("text_diff - randomized changes") {
     // cout << "extent: " << new_text.extent() << " text:\n" << new_text << "\n\n";
 
     for (uint j = 0; j < 1 + rand() % 10; j++) {
-      printf("j: %u\n", j);
+      // cout << "j: " << j << "\n";
 
       Range deleted_range = get_random_range(rand, new_text);
       Text inserted_text{get_random_string(rand, 3)};

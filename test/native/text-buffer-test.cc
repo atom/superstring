@@ -4,7 +4,6 @@
 #include "text-slice.h"
 #include <future>
 #include <unistd.h>
-#include <iostream>
 
 using std::move;
 using std::pair;
