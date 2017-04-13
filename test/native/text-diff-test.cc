@@ -1,5 +1,6 @@
 #include "test-helpers.h"
 #include "text.h"
+#include "text-slice.h"
 #include "text-diff.h"
 
 using Change = Patch::Change;
@@ -48,4 +49,42 @@ TEST_CASE("text_diff - single line") {
       nullptr, nullptr, 0, 0
     },
   }));
+}
+
+TEST_CASE("text_diff - randomized changes") {
+  auto t = time(nullptr);
+  for (uint i = 0; i < 1000; i++) {
+    uint32_t seed = t * 1000 + i;
+    Generator rand(seed);
+    cout << "seed: " << seed << "\n";
+
+    Text old_text{get_random_string(rand, 10)};
+    Text new_text = old_text;
+
+    // cout << "extent: " << new_text.extent() << " text:\n" << new_text << "\n\n";
+
+    for (uint j = 0; j < 1 + rand() % 10; j++) {
+      printf("j: %u\n", j);
+
+      Range deleted_range = get_random_range(rand, new_text);
+      Text inserted_text{get_random_string(rand, 3)};
+
+      new_text.splice(deleted_range.start, deleted_range.extent(), inserted_text);
+
+      // cout << "replace " << deleted_range << " with " << inserted_text << "\n\n";
+      // cout << "extent: " << new_text.extent() << " text:\n" << new_text << "\n\n";
+    }
+
+    Patch patch = text_diff(old_text, new_text);
+
+    for (const Change &change : patch.get_changes()) {
+      old_text.splice(
+        change.new_start,
+        change.old_end.traversal(change.old_start),
+        TextSlice(new_text).slice(Range{change.new_start, change.new_end})
+      );
+    }
+
+    REQUIRE(old_text == new_text);
+  }
 }

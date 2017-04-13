@@ -9,6 +9,10 @@
 #include <vector>
 #include <random>
 #include "range.h"
+#include <iostream>
+
+using std::cout;
+using std::cerr;
 
 class TextBuffer;
 
