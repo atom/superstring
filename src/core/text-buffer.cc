@@ -315,7 +315,7 @@ TextBuffer::~TextBuffer() { delete top_layer; }
 
 TextBuffer::TextBuffer(std::u16string text) : TextBuffer {Text {text}} {}
 
-bool TextBuffer::reset_base_text(Text &&new_base_text) {
+bool TextBuffer::reset(Text &&new_base_text) {
   if (top_layer != base_layer && top_layer->previous_layer != base_layer) return false;
 
   top_layer->extent_ = new_base_text.extent();
@@ -327,7 +327,7 @@ bool TextBuffer::reset_base_text(Text &&new_base_text) {
   return true;
 }
 
-void TextBuffer::serialize_outstanding_changes(Serializer &serializer) {
+void TextBuffer::serialize_changes(Serializer &serializer) {
   serializer.append(top_layer->size_);
   top_layer->extent_.serialize(serializer);
   if (top_layer == base_layer) {
@@ -349,7 +349,7 @@ void TextBuffer::serialize_outstanding_changes(Serializer &serializer) {
   Patch(patches).serialize(serializer);
 }
 
-bool TextBuffer::deserialize_outstanding_changes(Deserializer &deserializer) {
+bool TextBuffer::deserialize_changes(Deserializer &deserializer) {
   if (top_layer != base_layer || base_layer->previous_layer) return false;
   top_layer = new Layer(base_layer);
   top_layer->is_topmost = true;
@@ -373,7 +373,7 @@ size_t TextBuffer::base_text_digest() {
   return result;
 }
 
-const Text &TextBuffer::get_base_text() const {
+const Text &TextBuffer::base_text() const {
   return *base_layer->text;
 }
 

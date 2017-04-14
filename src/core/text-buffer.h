@@ -31,11 +31,11 @@ public:
   bool is_modified() const;
   std::vector<TextSlice> chunks() const;
 
-  bool reset_base_text(Text &&);
-  void serialize_outstanding_changes(Serializer &);
-  bool deserialize_outstanding_changes(Deserializer &);
+  bool reset(Text &&);
+  void serialize_changes(Serializer &);
+  bool deserialize_changes(Deserializer &);
   size_t base_text_digest();
-  const Text &get_base_text() const;
+  const Text &base_text() const;
 
   enum {
     NO_RESULTS = -1,

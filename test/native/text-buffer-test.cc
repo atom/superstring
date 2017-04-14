@@ -159,13 +159,13 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
   vector<uint8_t> bytes;
 
   SECTION("serializing with no changes flushed") {
-    TextBuffer copy_buffer{Text{buffer.get_base_text()}};
+    TextBuffer copy_buffer{Text{buffer.base_text()}};
     Serializer serializer(bytes);
-    buffer.serialize_outstanding_changes(serializer);
+    buffer.serialize_changes(serializer);
     Deserializer deserializer(bytes);
-    copy_buffer.deserialize_outstanding_changes(deserializer);
+    copy_buffer.deserialize_changes(deserializer);
 
-    REQUIRE(copy_buffer.get_base_text() == buffer.get_base_text());
+    REQUIRE(copy_buffer.base_text() == buffer.base_text());
     REQUIRE(copy_buffer.text() == buffer.text());
     REQUIRE(copy_buffer.is_modified());
   }
@@ -173,13 +173,13 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
   SECTION("flushing the latest snapshot's changes") {
     snapshot2->flush_preceding_changes();
 
-    TextBuffer copy_buffer{Text{buffer.get_base_text()}};
+    TextBuffer copy_buffer{Text{buffer.base_text()}};
     Serializer serializer(bytes);
-    buffer.serialize_outstanding_changes(serializer);
+    buffer.serialize_changes(serializer);
     Deserializer deserializer(bytes);
-    copy_buffer.deserialize_outstanding_changes(deserializer);
+    copy_buffer.deserialize_changes(deserializer);
 
-    REQUIRE(copy_buffer.get_base_text() == snapshot2->text());
+    REQUIRE(copy_buffer.base_text() == snapshot2->text());
     REQUIRE(copy_buffer.text() == buffer.text());
     REQUIRE(!copy_buffer.is_modified());
   }
@@ -198,7 +198,7 @@ TEST_CASE("TextBuffer::search") {
   REQUIRE(*buffer.search(u"^e").range == (Range{{1, 0}, {1, 1}}));
   REQUIRE(*buffer.search(u"^(e|d)g?").range == (Range{{1, 0}, {1, 1}}));
 
-  buffer.reset_base_text(Text{u"a1b"});
+  buffer.reset(Text{u"a1b"});
   REQUIRE(*buffer.search(u"\\d").range == (Range{{0, 1}, {0, 2}}));
 }
 
@@ -214,7 +214,7 @@ TEST_CASE("TextBuffer::search - spanning edits") {
   REQUIRE(*buffer.search(u"345[a-z][a-z]").range == (Range{{0, 4}, {0, 9}}));
   REQUIRE(*buffer.search(u"5cd6").range == (Range{{0, 6}, {0, 10}}));
 
-  buffer.reset_base_text(Text{u"abcdef"});
+  buffer.reset(Text{u"abcdef"});
   buffer.set_text_in_range({{0, 2}, {0, 4}}, Text{u""});
   REQUIRE(buffer.text() == Text(u"abef"));
   REQUIRE(*buffer.search(u"abe").range == (Range{{0, 0}, {0, 3}}));

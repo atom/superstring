@@ -50,7 +50,7 @@ void TextBufferWrapper::construct(const Nan::FunctionCallbackInfo<Value> &info) 
   if (info.Length() > 0 && info[0]->IsString()) {
     auto text = TextWrapper::text_from_js(info[0]);
     if (text) {
-      wrapper->text_buffer.reset_base_text(move(*text));
+      wrapper->text_buffer.reset(move(*text));
     }
   }
   wrapper->Wrap(info.This());
@@ -282,8 +282,8 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   );
 
   if (text) {
-    Patch patch = text_diff(text_buffer.get_base_text(), *text);
-    text_buffer.reset_base_text(move(*text));
+    Patch patch = text_diff(text_buffer.base_text(), *text);
+    text_buffer.reset(move(*text));
     info.GetReturnValue().Set(PatchWrapper::from_patch(move(patch)));
   } else {
     info.GetReturnValue().Set(Nan::False());
@@ -331,7 +331,7 @@ public:
   }
 
   void HandleOKCallback() {
-    bool result = loaded_text && buffer->reset_base_text(move(*loaded_text));
+    bool result = loaded_text && buffer->reset(move(*loaded_text));
     v8::Local<v8::Value> argv[] = {Nan::New<Boolean>(result)};
     callback->Call(1, argv);
   }
@@ -450,7 +450,7 @@ void TextBufferWrapper::serialize_changes(const Nan::FunctionCallbackInfo<Value>
   static vector<uint8_t> output;
   output.clear();
   Serializer serializer(output);
-  text_buffer.serialize_outstanding_changes(serializer);
+  text_buffer.serialize_changes(serializer);
   Local<Object> result;
   if (Nan::CopyBuffer(reinterpret_cast<char *>(output.data()), output.size()).ToLocal(&result)) {
     info.GetReturnValue().Set(result);
@@ -464,7 +464,7 @@ void TextBufferWrapper::deserialize_changes(const Nan::FunctionCallbackInfo<Valu
     static vector<uint8_t> input;
     input.assign(data, data + node::Buffer::Length(info[0]));
     Deserializer deserializer(input);
-    text_buffer.deserialize_outstanding_changes(deserializer);
+    text_buffer.deserialize_changes(deserializer);
   }
 }
 
