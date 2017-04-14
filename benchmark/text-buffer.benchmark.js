@@ -10,36 +10,33 @@ function benchmarkSearch(description, pattern, expectedPosition) {
   let name = `Search for ${description} - TextBuffer`
   console.time(name)
   for (let i = 0; i < trialCount; i++) {
-    assert.equal(buffer.searchSync(pattern.source), expectedPosition)
-  }
-  console.timeEnd(name)
-
-  name = `Search for ${description} - string`
-  console.time(name)
-  for (let i = 0; i < trialCount; i++) {
-    assert.equal(lines.join('\n').search(pattern), expectedPosition)
+    assert.deepEqual(buffer.searchSync(pattern), expectedPosition)
   }
   console.timeEnd(name)
 
   name = `Search for ${description} - lines array`
   console.time(name)
+  const regex = new RegExp(pattern)
   for (let i = 0; i < trialCount; i++) {
-    let position = 0
     for (let row = 0, rowCount = lines.length; row < rowCount; row++) {
-      let linePosition = lines[row].search(pattern)
-      if (linePosition !== -1) {
-        position += linePosition
-        assert.equal(position, expectedPosition)
+      let match = regex.exec(lines[row])
+      if (match) {
+        assert.deepEqual(
+          {
+            start: {row, column: match.index},
+            end: {row, column: match.index + match[0].length}
+          },
+          expectedPosition
+        )
         break
       }
-      position += lines[row].length
     }
   }
   console.timeEnd(name)
   console.log()
 }
 
-benchmarkSearch('simple non-existent pattern', /\t/, -1)
-benchmarkSearch('complex non-existent pattern', /123|456|789/, -1)
-benchmarkSearch('simple existing pattern', /jkl/, 12)
-benchmarkSearch('complex existing pattern', /j\w+/, 12)
+benchmarkSearch('simple non-existent pattern', '\t', null)
+benchmarkSearch('complex non-existent pattern', '123|456|789', null)
+benchmarkSearch('simple existing pattern', 'jkl', {start: {row: 0, column: 12}, end: {row: 0, column: 15}})
+benchmarkSearch('complex existing pattern', 'j\\w+', {start: {row: 0, column: 12}, end: {row: 0, column: 15}})
