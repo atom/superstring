@@ -77,3 +77,11 @@ Text::const_iterator TextSlice::begin() const {
 Text::const_iterator TextSlice::end() const {
   return text->cbegin() + end_offset();
 }
+
+uint16_t TextSlice::front() const {
+  return *begin();
+}
+
+uint16_t TextSlice::back() const {
+  return *(end() - 1);
+}

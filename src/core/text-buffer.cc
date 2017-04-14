@@ -298,8 +298,12 @@ struct TextBuffer::Layer {
 
     this->for_each_chunk_in_range(Point(), extent(), [&](TextSlice chunk) {
       while (!chunk.empty()) {
+
+        // Once a result is found, we only continue if the match ends with a CR
+        // at a chunk boundary. If this chunk starts with an LF, we decrement
+        // the column because Points within CRLF line endings are not valid.
         if (result) {
-          if (!chunk.empty() && *chunk.begin() == '\n') result->end.column--;
+          if (!chunk.empty() && chunk.front() == '\n') result->end.column--;
           return true;
         }
 
@@ -342,16 +346,22 @@ struct TextBuffer::Layer {
         } else {
           uint32_t start_offset = regex.get_match_offset(0);
           uint32_t end_offset = regex.get_match_offset(1);
+
           result = Range{
-            slice_to_search_start_position.traverse(slice_to_search.position_for_offset(start_offset)),
-            slice_to_search_start_position.traverse(slice_to_search.position_for_offset(end_offset))
+            slice_to_search_start_position.traverse(
+              slice_to_search.position_for_offset(start_offset)
+            ),
+            slice_to_search_start_position.traverse(
+              slice_to_search.position_for_offset(end_offset)
+            )
           };
 
-          if (
-            result->end.column == 0 ||
-            end_offset < slice_to_search.size() ||
-            *(slice_to_search.end() - 1) != '\r'
-          ) return true;
+          // If the match ends with a CR at the end of a chunk, continue looking
+          // at the next chunk, in case that chunk starts with an LF. Points
+          // within CRLF line endings are not valid.
+          if (end_offset == slice_to_search.size() && slice_to_search.back() == '\r') continue;
+
+          return true;
         }
       }
 
