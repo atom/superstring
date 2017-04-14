@@ -14,76 +14,60 @@ using SearchResult = TextBuffer::SearchResult;
 
 uint32_t TextBuffer::MAX_CHUNK_SIZE_TO_COPY = 1024;
 
-struct BaseLayer {
-  const Text &text;
-
-  BaseLayer(Text &text) : text{text} {}
-  uint32_t size() const { return text.size(); }
-  Point extent() const { return text.extent(); }
-  uint16_t character_at(Point position) { return text.at(position); }
-  ClipResult clip_position(Point position) { return text.clip_position(position); }
-
-  template <typename Callback>
-  bool for_each_chunk_in_range(Point start, Point end, const Callback &callback) {
-    return callback(TextSlice(text).slice({start, end}));
-  }
-};
-
 struct TextBuffer::Layer {
-  union {
-    Text *base_text;
-    Layer *previous_layer;
-  };
+  Layer *previous_layer;
+  optional<Text> text;
+  optional<Patch> patch;
 
-  Patch patch;
   Point extent_;
   uint32_t size_;
   uint32_t snapshot_count;
-  bool is_first;
-  bool is_last;
+  bool is_topmost;
 
-  Layer(Text *base_text) :
-    base_text{base_text},
-    extent_{base_text->extent()},
-    size_{base_text->size()},
+  Layer(Text &&text) :
+    previous_layer{nullptr},
+    text{move(text)},
+    extent_{this->text->extent()},
+    size_{this->text->size()},
     snapshot_count{0},
-    is_first{true},
-    is_last{true} {}
+    is_topmost{true} {}
 
   Layer(Layer *previous_layer) :
     previous_layer{previous_layer},
+    patch{Patch()},
     extent_{previous_layer->extent()},
     size_{previous_layer->size()},
     snapshot_count{0},
-    is_first{false},
-    is_last{true} {}
+    is_topmost{true} {}
 
   static inline Point previous_column(Point position) {
     return Point(position.row, position.column - 1);
   }
 
-  template <typename T>
-  uint16_t character_at_(T &previous_layer, Point position) {
-    auto change = patch.find_change_for_new_position(position);
-    if (!change) return previous_layer.character_at(position);
+  uint16_t character_at(Point position) {
+    if (!patch) return text->at(position);
+
+    auto change = patch->find_change_for_new_position(position);
+    if (!change) return previous_layer->character_at(position);
     if (position < change->new_end) {
       return change->new_text->at(position.traversal(change->new_start));
     } else {
-      return previous_layer.character_at(
+      return previous_layer->character_at(
         change->old_end.traverse(position.traversal(change->new_end))
       );
     }
   }
 
-  template <typename T>
-  ClipResult clip_position_(T &previous_layer, Point position) {
-    auto preceding_change = is_last ?
-      patch.change_for_new_position(position) :
-      patch.find_change_for_new_position(position);
-    if (!preceding_change) return previous_layer.clip_position(position);
+  ClipResult clip_position(Point position) {
+    if (!patch) return text->clip_position(position);
+
+    auto preceding_change = is_topmost ?
+      patch->change_for_new_position(position) :
+      patch->find_change_for_new_position(position);
+    if (!preceding_change) return previous_layer->clip_position(position);
 
     uint32_t preceding_change_base_offset =
-      previous_layer.clip_position(preceding_change->old_start).offset;
+      previous_layer->clip_position(preceding_change->old_start).offset;
     uint32_t preceding_change_current_offset =
       preceding_change_base_offset +
       preceding_change->preceding_new_text_size -
@@ -97,7 +81,7 @@ struct TextBuffer::Layer {
 
       if (position_within_preceding_change.offset == 0 && preceding_change->old_start.column > 0) {
         if (preceding_change->new_text->content.front() == '\n' &&
-            previous_layer.character_at(previous_column(preceding_change->old_start)) == '\r') {
+            previous_layer->character_at(previous_column(preceding_change->old_start)) == '\r') {
           return {
             previous_column(preceding_change->new_start),
             preceding_change_current_offset - 1
@@ -110,7 +94,7 @@ struct TextBuffer::Layer {
         preceding_change_current_offset + position_within_preceding_change.offset
       };
     } else {
-      ClipResult base_location = previous_layer.clip_position(
+      ClipResult base_location = previous_layer->clip_position(
         preceding_change->old_end.traverse(position.traversal(preceding_change->new_end))
       );
 
@@ -119,15 +103,15 @@ struct TextBuffer::Layer {
         base_location.offset - (preceding_change_base_offset + preceding_change->old_text_size)
       };
 
-      if (distance_past_preceding_change.offset == 0 && base_location.offset < previous_layer.size()) {
+      if (distance_past_preceding_change.offset == 0 && base_location.offset < previous_layer->size()) {
         uint16_t previous_character = 0;
         if (preceding_change->new_text->size() > 0) {
           previous_character = preceding_change->new_text->content.back();
         } else if (preceding_change->old_start.column > 0) {
-          previous_character = previous_layer.character_at(previous_column(preceding_change->old_start));
+          previous_character = previous_layer->character_at(previous_column(preceding_change->old_start));
         }
 
-        if (previous_character == '\r' && previous_layer.character_at(base_location.position) == '\n') {
+        if (previous_character == '\r' && previous_layer->character_at(base_location.position) == '\n') {
           return {
             previous_column(preceding_change->new_end),
             preceding_change_current_offset + preceding_change->new_text->size() - 1
@@ -142,12 +126,14 @@ struct TextBuffer::Layer {
     }
   }
 
-  template <typename T, typename Callback>
-  bool for_each_chunk_in_range_(T &previous_layer, Point start, Point end, const Callback &callback) {
+  template <typename Callback>
+  bool for_each_chunk_in_range(Point start, Point end, const Callback &callback) {
+    if (!patch) return callback(TextSlice(*text).slice({start, end}));
+
     Point goal_position = clip_position(end).position;
     Point current_position = clip_position(start).position;
     Point base_position = current_position;
-    auto change = patch.find_change_for_new_position(current_position);
+    auto change = patch->find_change_for_new_position(current_position);
 
     while (current_position < goal_position) {
       if (change) {
@@ -167,7 +153,7 @@ struct TextBuffer::Layer {
         base_position = change->old_end.traverse(current_position.traversal(change->new_end));
       }
 
-      change = patch.find_change_ending_after_new_position(current_position);
+      change = patch->find_change_ending_after_new_position(current_position);
 
       Point next_base_position, next_position;
       if (change) {
@@ -178,7 +164,7 @@ struct TextBuffer::Layer {
         next_base_position = base_position.traverse(goal_position.traversal(current_position));
       }
 
-      if (previous_layer.for_each_chunk_in_range(base_position, next_base_position, callback)) {
+      if (previous_layer->for_each_chunk_in_range(base_position, next_base_position, callback)) {
         return true;
       }
       base_position = next_base_position;
@@ -186,24 +172,6 @@ struct TextBuffer::Layer {
     }
 
     return false;
-  }
-
-  uint16_t character_at(Point position) {
-    if (is_first) {
-      BaseLayer base_layer(*base_text);
-      return character_at_(base_layer, position);
-    } else {
-      return character_at_(*previous_layer, position);
-    }
-  }
-
-  ClipResult clip_position(Point position) {
-    if (is_first) {
-      BaseLayer base_layer(*base_text);
-      return clip_position_(base_layer, position);
-    } else {
-      return clip_position_(*previous_layer, position);
-    }
   }
 
   Point position_for_offset(uint32_t goal_offset) {
@@ -224,47 +192,9 @@ struct TextBuffer::Layer {
     return position;
   }
 
-  template <typename Callback>
-  bool for_each_chunk_in_range(Point start, Point end, const Callback &callback) {
-    if (is_first) {
-      BaseLayer base_layer(*base_text);
-      return for_each_chunk_in_range_(base_layer, start, end, callback);
-    } else {
-      return for_each_chunk_in_range_(*previous_layer, start, end, callback);
-    }
-  }
-
   Point extent() const { return extent_; }
 
   uint32_t size() const { return size_; }
-
-  void set_text_in_range(Range old_range, Text &&new_text) {
-    auto start = clip_position(old_range.start);
-    auto end = clip_position(old_range.end);
-    Point new_range_end = start.position.traverse(new_text.extent());
-    uint32_t deleted_text_size = end.offset - start.offset;
-    extent_ = new_range_end.traverse(extent_.traversal(old_range.end));
-    size_ += new_text.size() - deleted_text_size;
-    patch.splice(
-      old_range.start,
-      old_range.extent(),
-      new_text.extent(),
-      optional<Text> {},
-      move(new_text),
-      deleted_text_size
-    );
-
-    auto change = patch.change_for_old_position(start.position);
-    if (is_first && change && change->old_text_size == change->new_text->size()) {
-      TextSlice original_text = TextSlice(*base_text).slice(Range{
-        change->old_start,
-        change->new_start
-      });
-      if (equal(change->new_text->begin(), change->new_text->end(), original_text.begin())) {
-        patch.splice_old(start.position, Point(), Point());
-      }
-    }
-  }
 
   Text text_in_range(Range range) {
     Text result;
@@ -297,7 +227,7 @@ struct TextBuffer::Layer {
     Point slice_to_search_start_position;
     uint32_t slice_to_search_start_offset = 0;
 
-    this->for_each_chunk_in_range(Point(), extent(), [&](TextSlice chunk) {
+    for_each_chunk_in_range(Point(), extent(), [&](TextSlice chunk) {
       while (!chunk.empty()) {
 
         // Once a result is found, we only continue if the match ends with a CR
@@ -374,65 +304,55 @@ struct TextBuffer::Layer {
 };
 
 TextBuffer::TextBuffer(Text &&text) :
-  base_text{move(text)},
-  top_layer{new TextBuffer::Layer(&this->base_text)} {}
+  base_layer{new Layer(move(text))},
+  top_layer{base_layer} {}
 
 TextBuffer::TextBuffer() :
-  top_layer{new TextBuffer::Layer(&this->base_text)} {}
+  base_layer{new Layer(Text{})},
+  top_layer{base_layer} {}
 
 TextBuffer::~TextBuffer() { delete top_layer; }
 
 TextBuffer::TextBuffer(std::u16string text) : TextBuffer {Text {text}} {}
 
 bool TextBuffer::reset_base_text(Text &&new_base_text) {
-  if (!top_layer->is_first) {
-    return false;
-  }
+  if (top_layer != base_layer && top_layer->previous_layer != base_layer) return false;
 
-  top_layer->patch.clear();
   top_layer->extent_ = new_base_text.extent();
   top_layer->size_ = new_base_text.size();
-  base_text = move(new_base_text);
-  return true;
-}
-
-bool TextBuffer::flush_outstanding_changes() {
-  if (!top_layer->is_first) return false;
-
-  for (auto change : top_layer->patch.get_changes()) {
-    base_text.splice(
-      change.new_start,
-      change.old_end.traversal(change.old_start),
-      *change.new_text
-    );
-  }
-
-  top_layer->patch.clear();
+  top_layer->text = move(new_base_text);
+  top_layer->patch = optional<Patch>{};
+  delete top_layer->previous_layer;
+  base_layer = top_layer;
   return true;
 }
 
 void TextBuffer::serialize_outstanding_changes(Serializer &serializer) {
   serializer.append(top_layer->size_);
   top_layer->extent_.serialize(serializer);
-  if (top_layer->is_first) {
-    top_layer->patch.serialize(serializer);
-  } else {
-    vector<const Patch *> patches;
-    Layer *layer = top_layer;
-    for (;;) {
-      patches.insert(patches.begin(), &layer->patch);
-      if (layer->is_first) {
-        break;
-      } else {
-        layer = layer->previous_layer;
-      }
-    }
-    Patch(patches).serialize(serializer);
+  if (top_layer == base_layer) {
+    Patch().serialize(serializer);
+    return;
   }
+
+  if (top_layer->previous_layer == base_layer) {
+    top_layer->patch->serialize(serializer);
+    return;
+  }
+
+  vector<const Patch *> patches;
+  Layer *layer = top_layer;
+  while (layer != base_layer) {
+    patches.insert(patches.begin(), &(*layer->patch));
+    layer = layer->previous_layer;
+  }
+  Patch(patches).serialize(serializer);
 }
 
 bool TextBuffer::deserialize_outstanding_changes(Deserializer &deserializer) {
-  if (!top_layer->is_first || top_layer->patch.get_change_count() > 0) return false;
+  if (top_layer != base_layer || base_layer->previous_layer) return false;
+  top_layer = new Layer(base_layer);
+  top_layer->is_topmost = true;
   top_layer->size_ = deserializer.read<uint32_t>();
   top_layer->extent_ = Point(deserializer);
   top_layer->patch = Patch(deserializer);
@@ -447,14 +367,14 @@ inline void hash_combine(std::size_t &seed, const T &value) {
 
 size_t TextBuffer::base_text_digest() {
   size_t result = 0;
-  for (uint16_t character : base_text) {
+  for (uint16_t character : *base_layer->text) {
     hash_combine(result, character);
   }
   return result;
 }
 
 const Text &TextBuffer::get_base_text() const {
-  return base_text;
+  return *base_layer->text;
 }
 
 Point TextBuffer::extent() const {
@@ -511,8 +431,92 @@ void TextBuffer::set_text(Text &&new_text) {
   set_text_in_range(Range {Point(0, 0), extent()}, move(new_text));
 }
 
+class ChunkIterator {
+  const vector<TextSlice> *slices;
+  uint32_t slice_index;
+  Text::const_iterator slice_iterator;
+  Text::const_iterator slice_end;
+  uint32_t offset;
+
+ public:
+  ChunkIterator(vector<TextSlice> &slices) :
+    slices{&slices},
+    slice_index{0},
+    slice_iterator{slices.front().begin()},
+    slice_end{slices.front().end()},
+    offset{0} {}
+
+  ChunkIterator &operator++() {
+    ++offset;
+    ++slice_iterator;
+    while (slice_iterator == slice_end) {
+      slice_index++;
+      if (slice_index == slices->size()) {
+        slices = nullptr;
+        slice_index = 0;
+        slice_iterator = Text::const_iterator();
+        slice_end = Text::const_iterator();
+        break;
+      } else {
+        slice_iterator = slices->at(slice_index).begin();
+        slice_end = slices->at(slice_index).end();
+      }
+    }
+    return *this;
+  }
+
+  uint16_t operator*() const {
+    return *slice_iterator;
+  }
+
+  bool operator!=(const ChunkIterator &other) {
+    return slice_index != other.slice_index || slice_iterator != other.slice_iterator;
+  }
+};
+
+template <>
+struct std::iterator_traits<ChunkIterator> {
+  using value_type = uint16_t;
+  using pointer = uint16_t *;
+  using reference = uint16_t &;
+  using const_pointer = const uint16_t *;
+  using const_reference = const uint16_t &;
+  using difference_type = int64_t;
+};
+
 void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
-  top_layer->set_text_in_range(old_range, move(new_text));
+  if (top_layer == base_layer || top_layer->snapshot_count > 0) {
+    top_layer->is_topmost = false;
+    top_layer = new Layer(top_layer);
+  }
+
+  auto start = clip_position(old_range.start);
+  auto end = clip_position(old_range.end);
+  Point new_range_end = start.position.traverse(new_text.extent());
+  uint32_t deleted_text_size = end.offset - start.offset;
+  top_layer->extent_ = new_range_end.traverse(top_layer->extent_.traversal(end.position));
+  top_layer->size_ += new_text.size() - deleted_text_size;
+  top_layer->patch->splice(
+    old_range.start,
+    old_range.extent(),
+    new_text.extent(),
+    optional<Text> {},
+    move(new_text),
+    deleted_text_size
+  );
+
+  auto change = top_layer->patch->change_for_old_position(start.position);
+  if (change && change->old_text_size == change->new_text->size()) {
+    auto chunks = top_layer->previous_layer->chunks_in_range({
+      change->old_start,
+      change->old_end
+    });
+
+    ChunkIterator existing_text_iter{chunks};
+    if (equal(change->new_text->begin(), change->new_text->end(), existing_text_iter)) {
+      top_layer->patch->splice_old(start.position, Point(), Point());
+    }
+  }
 }
 
 SearchResult TextBuffer::search(const std::u16string &pattern) {
@@ -524,13 +528,13 @@ SearchResult TextBuffer::search(const uint16_t *pattern, uint32_t pattern_length
 }
 
 bool TextBuffer::is_modified() const {
-  if (size() != base_text.size()) return true;
+  if (size() != base_layer->size()) return true;
 
   bool result = false;
   uint32_t start_offset = 0;
   top_layer->for_each_chunk_in_range(Point(), extent(), [&](TextSlice chunk) {
-    if (chunk.text == &base_text ||
-        equal(chunk.begin(), chunk.end(), base_text.begin() + start_offset)) {
+    if (chunk.text == &(*base_layer->text) ||
+        equal(chunk.begin(), chunk.end(), base_layer->text->begin() + start_offset)) {
       start_offset += chunk.size();
       return false;
     }
@@ -543,36 +547,31 @@ bool TextBuffer::is_modified() const {
 
 string TextBuffer::get_dot_graph() const {
   Layer *layer = top_layer;
-  vector<TextBuffer::Layer *> layers;
-  for (;;) {
+  vector<Layer *> layers;
+  while (layer) {
     layers.push_back(layer);
-    if (layer->is_first) break;
     layer = layer->previous_layer;
   }
 
   std::stringstream result;
   result << "graph { label=\"--- buffer ---\" }\n";
-  result << "graph { label=\"base:\n" << base_text << "\" }\n";
   for (auto begin = layers.rbegin(), iter = begin, end = layers.rend();
        iter != end; ++iter) {
-    result << "graph { label=\"layer " << std::to_string(iter - begin) <<
-      " (snapshot count " << std::to_string((*iter)->snapshot_count) <<
-      "):\" }\n" << (*iter)->patch.get_dot_graph();
+    result << "graph { label=\"layer " << (iter - begin) <<
+      " (snapshot count " << ((*iter)->snapshot_count) << "):\" }\n";
+    if ((*iter)->text) {
+      result << "graph { label=\"text:\n" << *(*iter)->text << "\" }\n";
+    }
+    if ((*iter)->patch) {
+      result << (*iter)->patch->get_dot_graph();
+    }
   }
   return result.str();
 }
 
-const TextBuffer::Snapshot *TextBuffer::create_snapshot() {
-  Layer *layer;
-  if (!top_layer->is_first && top_layer->patch.get_change_count() == 0) {
-    layer = top_layer->previous_layer;
-  } else {
-    layer = top_layer;
-    layer->is_last = false;
-    top_layer = new Layer(top_layer);
-  }
-  layer->snapshot_count++;
-  return new Snapshot(*this, *layer);
+TextBuffer::Snapshot *TextBuffer::create_snapshot() {
+  top_layer->snapshot_count++;
+  return new Snapshot(*this, *top_layer);
 }
 
 uint32_t TextBuffer::Snapshot::size() const {
@@ -610,16 +609,25 @@ SearchResult TextBuffer::Snapshot::search(const uint16_t *pattern, uint32_t patt
 TextBuffer::Snapshot::Snapshot(TextBuffer &buffer, TextBuffer::Layer &layer)
   : buffer{buffer}, layer{layer} {}
 
+void TextBuffer::Snapshot::flush_preceding_changes() {
+  layer.text = text();
+  buffer.base_layer = &layer;
+}
+
 TextBuffer::Snapshot::~Snapshot() {
   assert(layer.snapshot_count > 0);
   layer.snapshot_count--;
   if (layer.snapshot_count > 0) return;
 
   // Find the topmost layer that has no snapshots pointing to it.
-  vector<TextBuffer::Layer *> layers_to_remove;
-  TextBuffer::Layer *top_layer = buffer.top_layer;
+  vector<Layer *> layers_to_remove;
+  Layer *top_layer = buffer.top_layer;
   if (top_layer->snapshot_count > 0) return;
-  while (!top_layer->is_first && top_layer->previous_layer->snapshot_count == 0) {
+  while (
+    top_layer->previous_layer &&
+    top_layer->previous_layer->snapshot_count == 0 &&
+    top_layer->previous_layer->patch
+  ) {
     layers_to_remove.push_back(top_layer);
     top_layer = top_layer->previous_layer;
   }
@@ -632,11 +640,11 @@ TextBuffer::Snapshot::~Snapshot() {
   for (auto iter = layers_to_remove.rbegin(),
        end = layers_to_remove.rend();
        iter != end; ++iter) {
-    top_layer->patch.combine((*iter)->patch, left_to_right);
+    top_layer->patch->combine(*(*iter)->patch, left_to_right);
     delete *iter;
     left_to_right = !left_to_right;
   }
 
   buffer.top_layer = top_layer;
-  buffer.top_layer->is_last = true;
+  buffer.top_layer->is_topmost = true;
 }

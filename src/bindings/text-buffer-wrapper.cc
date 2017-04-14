@@ -366,6 +366,7 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
 
 void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  auto snapshot = text_buffer.create_snapshot();
 
   Local<String> js_file_path;
   if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
@@ -377,28 +378,26 @@ void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) 
 
   static size_t CHUNK_SIZE = 10 * 1024;
   std::ofstream file{file_path};
-  for (TextSlice &chunk : text_buffer.chunks()) {
+  for (TextSlice &chunk : snapshot->chunks()) {
     if (!Text::write(file, encoding_name.c_str(), CHUNK_SIZE, chunk)) {
       info.GetReturnValue().Set(Nan::False());
       return;
     }
   }
 
-  if (text_buffer.flush_outstanding_changes()) {
-    info.GetReturnValue().Set(Nan::True());
-  } else {
-    info.GetReturnValue().Set(Nan::False());
-  }
+  snapshot->flush_preceding_changes();
+  delete snapshot;
+  info.GetReturnValue().Set(Nan::True());
 }
 
 class TextBufferSaver : public Nan::AsyncWorker {
-  const TextBuffer::Snapshot *snapshot;
+  TextBuffer::Snapshot *snapshot;
   std::string file_name;
   std::string encoding_name;
   bool result;
 
 public:
-  TextBufferSaver(Nan::Callback *completion_callback, const TextBuffer::Snapshot *snapshot,
+  TextBufferSaver(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
                   std::string &&file_name, std::string &&encoding_name) :
     AsyncWorker(completion_callback),
     snapshot{snapshot},
@@ -418,6 +417,7 @@ public:
   }
 
   void HandleOKCallback() {
+    snapshot->flush_preceding_changes();
     delete snapshot;
     v8::Local<v8::Value> argv[] = {Nan::New<Boolean>(result)};
     callback->Call(1, argv);

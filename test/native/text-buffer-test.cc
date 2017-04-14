@@ -160,7 +160,6 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
 
   SECTION("serializing with no changes flushed") {
     TextBuffer copy_buffer{Text{buffer.get_base_text()}};
-
     Serializer serializer(bytes);
     buffer.serialize_outstanding_changes(serializer);
     Deserializer deserializer(bytes);
@@ -169,6 +168,20 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
     REQUIRE(copy_buffer.get_base_text() == buffer.get_base_text());
     REQUIRE(copy_buffer.text() == buffer.text());
     REQUIRE(copy_buffer.is_modified());
+  }
+
+  SECTION("flushing the latest snapshot's changes") {
+    snapshot2->flush_preceding_changes();
+
+    TextBuffer copy_buffer{Text{buffer.get_base_text()}};
+    Serializer serializer(bytes);
+    buffer.serialize_outstanding_changes(serializer);
+    Deserializer deserializer(bytes);
+    copy_buffer.deserialize_outstanding_changes(deserializer);
+
+    REQUIRE(copy_buffer.get_base_text() == snapshot2->text());
+    REQUIRE(copy_buffer.text() == buffer.text());
+    REQUIRE(!copy_buffer.is_modified());
   }
 }
 

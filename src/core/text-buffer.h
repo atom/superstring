@@ -7,7 +7,7 @@
 
 class TextBuffer {
   struct Layer;
-  Text base_text;
+  Layer *base_layer;
   Layer *top_layer;
 
 public:
@@ -32,7 +32,6 @@ public:
   std::vector<TextSlice> chunks() const;
 
   bool reset_base_text(Text &&);
-  bool flush_outstanding_changes();
   void serialize_outstanding_changes(Serializer &);
   bool deserialize_outstanding_changes(Deserializer &);
   size_t base_text_digest();
@@ -62,6 +61,8 @@ public:
 
   public:
     ~Snapshot();
+    void flush_preceding_changes();
+
     uint32_t size() const;
     Point extent() const;
     uint32_t line_length_for_row(uint32_t) const;
@@ -73,5 +74,5 @@ public:
   };
 
   friend class Snapshot;
-  const Snapshot *create_snapshot();
+  Snapshot *create_snapshot();
 };
