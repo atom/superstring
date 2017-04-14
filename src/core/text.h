@@ -54,13 +54,16 @@ class Text {
   inline const_iterator cend() const { return end(); }
   ClipResult clip_position(Point) const;
   Point extent() const;
+  bool empty() const;
   uint32_t offset_for_position(Point) const;
   Point position_for_offset(uint32_t) const;
   uint32_t line_length_for_row(uint32_t row) const;
   void append(TextSlice);
+  void assign(TextSlice);
   void serialize(Serializer &) const;
   uint32_t size() const;
   const uint16_t *data() const;
+  void clear();
 
   bool operator==(const Text &) const;
 

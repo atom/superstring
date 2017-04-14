@@ -233,6 +233,11 @@ Text Text::concat(TextSlice a, TextSlice b, TextSlice c) {
   return result;
 }
 
+void Text::clear() {
+  content.clear();
+  line_offsets.assign({0});
+}
+
 template<typename T>
 void splice_vector(
   std::vector<T> &vector, uint32_t splice_start, uint32_t deletion_size,
@@ -387,6 +392,10 @@ Point Text::extent() const {
   return Point(line_offsets.size() - 1, content.size() - line_offsets.back());
 }
 
+bool Text::empty() const {
+  return content.empty();
+}
+
 void Text::append(TextSlice slice) {
   int64_t line_offset_delta = static_cast<int64_t>(content.size()) - static_cast<int64_t>(slice.start_offset());
 
@@ -405,6 +414,26 @@ void Text::append(TextSlice slice) {
 
   for (size_t i = original_size; i < line_offsets.size(); i++) {
     line_offsets[i] += line_offset_delta;
+  }
+}
+
+void Text::assign(TextSlice slice) {
+  uint32_t slice_start_offset = slice.start_offset();
+
+  content.assign(
+    slice.begin(),
+    slice.end()
+  );
+
+  line_offsets.assign({0});
+  line_offsets.insert(
+    line_offsets.end(),
+    slice.text->line_offsets.begin() + slice.start_position.row + 1,
+    slice.text->line_offsets.begin() + slice.end_position.row + 1
+  );
+
+  for (size_t i = 1; i < line_offsets.size(); i++) {
+    line_offsets[i] -= slice_start_offset;
   }
 }
 

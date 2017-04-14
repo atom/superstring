@@ -283,19 +283,6 @@ struct TextBuffer::Layer {
     return result;
   }
 
-  Point extent_for_chars(const uint16_t *start, const uint16_t *end) const {
-    Point result;
-    for (const uint16_t *c = start; c < end; c++) {
-      if (*c == '\n') {
-        result.row++;
-        result.column = 0;
-      } else {
-        result.column++;
-      }
-    }
-    return result;
-  }
-
   SearchResult search(const uint16_t *pattern, uint32_t pattern_length) {
     Regex regex(pattern, pattern_length);
 
@@ -304,67 +291,43 @@ struct TextBuffer::Layer {
     }
 
     optional<Range> result;
-    uint32_t current_offset = 0;
-    vector<uint16_t> chunk_continuation;
-
-    uint32_t chunk_start_offset = 0;
-    Point chunk_start_position;
-
-    TextSlice match_start_chunk;
-    Point match_start_chunk_start_position;
-    uint32_t match_start_chunk_start_offset;
+    Text chunk_continuation;
+    TextSlice slice_to_search;
+    Point slice_to_search_start_position;
+    uint32_t slice_to_search_start_offset = 0;
 
     this->for_each_chunk_in_range(Point(), extent(), [&](TextSlice chunk) {
-      const uint16_t *chunk_pointer = chunk.data();
-      const uint16_t *chunk_end = chunk_pointer + chunk.size();
-
-      while (chunk_pointer != chunk_end) {
-        if (current_offset >= chunk_start_offset) {
-          match_start_chunk = chunk;
-          match_start_chunk_start_position = chunk_start_position;
-          match_start_chunk_start_offset = chunk_start_offset;
-        }
-
-        const uint16_t *current_pointer;
-        size_t current_length;
-
+      while (!chunk.empty()) {
         if (!chunk_continuation.empty()) {
-          const uint16_t *chunk_copy_end = std::min(
-            chunk_end,
-            chunk_pointer + MAX_CHUNK_SIZE_TO_COPY
-          );
-
-          chunk_continuation.insert(
-            chunk_continuation.end(),
-            chunk_pointer,
-            chunk_copy_end
-          );
-
-          current_pointer = chunk_continuation.data();
-          current_length = chunk_continuation.size();
-          chunk_pointer = chunk_copy_end;
+          auto split = chunk.split(MAX_CHUNK_SIZE_TO_COPY);
+          chunk_continuation.append(split.first);
+          chunk = split.second;
+          slice_to_search = TextSlice(chunk_continuation);
         } else {
-          current_pointer = chunk_pointer;
-          current_length = chunk_end - chunk_pointer;
-          chunk_pointer = chunk_end;
+          slice_to_search = chunk;
+          chunk = TextSlice();
         }
 
-        int status = regex.match(current_pointer, current_length);
+        int status = regex.match(slice_to_search.data(), slice_to_search.size());
 
         if (status < 0) {
           switch (status) {
             case PCRE2_ERROR_NOMATCH:
+              slice_to_search_start_offset += slice_to_search.size();
+              slice_to_search_start_position = slice_to_search_start_position.traverse(
+                slice_to_search.extent()
+              );
               chunk_continuation.clear();
-              current_offset += current_length;
               break;
 
             case PCRE2_ERROR_PARTIAL: {
-              size_t partial_match_start = regex.get_match_offset(0);
-              current_offset += partial_match_start;
-              chunk_continuation.assign(
-                current_pointer + partial_match_start,
-                current_pointer + current_length
-              );
+              size_t partial_match_offset = regex.get_match_offset(0);
+              Point partial_match_position = slice_to_search.position_for_offset(partial_match_offset);
+              if (chunk_continuation.empty() || partial_match_offset > 0) {
+                slice_to_search_start_offset += partial_match_offset;
+                slice_to_search_start_position = slice_to_search_start_position.traverse(partial_match_position);
+                chunk_continuation.assign(slice_to_search.suffix(partial_match_position));
+              }
               break;
             }
 
@@ -372,33 +335,18 @@ struct TextBuffer::Layer {
               return true;
           }
         } else {
-          Point start = match_start_chunk_start_position.traverse(
-            match_start_chunk.position_for_offset(
-              current_offset + regex.get_match_offset(0) - match_start_chunk_start_offset
+          result = Range{
+            slice_to_search_start_position.traverse(
+              slice_to_search.position_for_offset(regex.get_match_offset(0))
+            ),
+            slice_to_search_start_position.traverse(
+              slice_to_search.position_for_offset(regex.get_match_offset(1))
             )
-          );
-
-          Point end;
-          if (chunk_continuation.empty()) {
-            end = chunk_start_position.traverse(
-              chunk.position_for_offset(
-                current_offset + regex.get_match_offset(1) - chunk_start_offset
-              )
-            );
-          } else {
-            end = start.traverse(extent_for_chars(
-              current_pointer + regex.get_match_offset(0),
-              current_pointer + regex.get_match_offset(1)
-            ));
-          }
-
-          result = Range{start, end};
+          };
           return true;
         }
       }
 
-      chunk_start_offset += chunk.size();
-      chunk_start_position = chunk_start_position.traverse(chunk.extent());
       return false;
     });
 

@@ -21,6 +21,7 @@ class TextSlice {
   TextSlice();
   TextSlice(const Text &text);
   std::pair<TextSlice, TextSlice> split(Point) const;
+  std::pair<TextSlice, TextSlice> split(uint32_t) const;
   TextSlice prefix(Point) const;
   TextSlice suffix(Point) const;
   TextSlice slice(Range range) const;
@@ -29,6 +30,7 @@ class TextSlice {
 
   const uint16_t *data() const;
   uint32_t size() const;
+  bool empty() const;
 
   Text::const_iterator begin() const;
   Text::const_iterator end() const;

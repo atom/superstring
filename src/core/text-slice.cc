@@ -12,17 +12,19 @@ TextSlice::TextSlice(const Text &text) :
   text {&text}, start_position {Point()}, end_position {text.extent()} {}
 
 size_t TextSlice::start_offset() const {
+  if (start_position.is_zero()) return 0;
   assert(start_position.row < text->line_offsets.size());
   return text->line_offsets[start_position.row] + start_position.column;
 }
 
 size_t TextSlice::end_offset() const {
+  if (end_position.is_zero()) return 0;
   return text->line_offsets[end_position.row] + end_position.column;
 }
 
 std::pair<TextSlice, TextSlice> TextSlice::split(Point split_point) const {
   Point absolute_split_point = Point::min(
-    text->extent(),
+    end_position,
     start_position.traverse(split_point)
   );
 
@@ -30,6 +32,10 @@ std::pair<TextSlice, TextSlice> TextSlice::split(Point split_point) const {
     TextSlice {text, start_position, absolute_split_point},
     TextSlice {text, absolute_split_point, end_position}
   };
+}
+
+std::pair<TextSlice, TextSlice> TextSlice::split(uint32_t split_offset) const {
+  return split(position_for_offset(split_offset));
 }
 
 Point TextSlice::position_for_offset(uint32_t offset) const {
@@ -58,6 +64,10 @@ const uint16_t *TextSlice::data() const {
 
 uint32_t TextSlice::size() const {
   return end_offset() - start_offset();
+}
+
+bool TextSlice::empty() const {
+  return size() == 0;
 }
 
 Text::const_iterator TextSlice::begin() const {
