@@ -7,7 +7,7 @@
 #include "text.h"
 
 class TextSlice {
-  friend class Text;
+public:
 
   const Text *text;
   Point start_position;
@@ -17,7 +17,6 @@ class TextSlice {
   size_t start_offset() const;
   size_t end_offset() const;
 
- public:
   TextSlice();
   TextSlice(const Text &text);
   std::pair<TextSlice, TextSlice> split(Point) const;

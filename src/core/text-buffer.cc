@@ -5,6 +5,7 @@
 #include <vector>
 #include <sstream>
 
+using std::equal;
 using std::move;
 using std::string;
 using std::vector;
@@ -259,7 +260,7 @@ struct TextBuffer::Layer {
         change->old_start,
         change->new_start
       });
-      if (std::equal(change->new_text->begin(), change->new_text->end(), original_text.begin())) {
+      if (equal(change->new_text->begin(), change->new_text->end(), original_text.begin())) {
         patch.splice_old(start.position, Point(), Point());
       }
     }
@@ -511,13 +512,21 @@ SearchResult TextBuffer::search(const uint16_t *pattern, uint32_t pattern_length
 }
 
 bool TextBuffer::is_modified() const {
-  Layer *layer = top_layer;
-  for (;;) {
-    if (layer->patch.get_change_count() > 0) return true;
-    if (layer->is_first) break;
-    layer = layer->previous_layer;
-  }
-  return false;
+  if (size() != base_text.size()) return true;
+
+  bool result = false;
+  uint32_t start_offset = 0;
+  top_layer->for_each_chunk_in_range(Point(), extent(), [&](TextSlice chunk) {
+    if (chunk.text == &base_text ||
+        equal(chunk.begin(), chunk.end(), base_text.begin() + start_offset)) {
+      start_offset += chunk.size();
+      return false;
+    }
+    result = true;
+    return true;
+  });
+
+  return result;
 }
 
 string TextBuffer::get_dot_graph() const {

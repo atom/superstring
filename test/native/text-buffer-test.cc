@@ -92,6 +92,57 @@ TEST_CASE("TextBuffer::create_snapshot") {
   }
 }
 
+TEST_CASE("TextBuffer::is_modified - basic") {
+  TextBuffer buffer{u"abcdef"};
+  REQUIRE(!buffer.is_modified());
+
+  buffer.set_text_in_range({{0, 1}, {0, 2}}, Text{u"BBB"});
+  REQUIRE(buffer.is_modified());
+
+  SECTION("undoing a change") {
+    buffer.set_text_in_range({{0, 1}, {0, 4}}, Text{u"b"});
+    REQUIRE(!buffer.is_modified());
+  }
+
+  SECTION("undoing a change after creating a snapshot") {
+    auto snapshot1 = buffer.create_snapshot();
+    buffer.set_text_in_range({{0, 1}, {0, 4}}, Text{u"b"});
+    REQUIRE(!buffer.is_modified());
+    delete snapshot1;
+  }
+
+  SECTION("undoing a change after creating a snapshot") {
+    auto snapshot1 = buffer.create_snapshot();
+    buffer.set_text_in_range({{0, 1}, {0, 4}}, Text{u"b"});
+    REQUIRE(!buffer.is_modified());
+    delete snapshot1;
+  }
+
+  SECTION("undoing a change in multiple steps with snapshots in between") {
+    auto snapshot1 = buffer.create_snapshot();
+    buffer.set_text_in_range({{0, 3}, {0, 4}}, Text{u""});
+    REQUIRE(buffer.is_modified());
+
+    auto snapshot2 = buffer.create_snapshot();
+    buffer.set_text_in_range({{0, 2}, {0, 3}}, Text{u""});
+    REQUIRE(buffer.is_modified());
+
+    auto snapshot3 = buffer.create_snapshot();
+    buffer.set_text_in_range({{0, 1}, {0, 2}}, Text{u""});
+    REQUIRE(buffer.is_modified());
+
+    auto snapshot4 = buffer.create_snapshot();
+    buffer.set_text_in_range({{0, 1}, {0, 1}}, Text{u"b"});
+    REQUIRE(buffer.text() == Text{u"abcdef"});
+    REQUIRE(!buffer.is_modified());
+
+    delete snapshot1;
+    delete snapshot2;
+    delete snapshot3;
+    delete snapshot4;
+  }
+}
+
 TEST_CASE("TextBuffer::is_modified") {
   TextBuffer buffer;
   REQUIRE(!buffer.is_modified());
