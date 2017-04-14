@@ -37,11 +37,6 @@ public:
   size_t base_text_digest();
   const Text &base_text() const;
 
-  enum {
-    NO_RESULTS = -1,
-    INVALID_PATTERN = -2
-  };
-
   struct SearchResult {
     optional<Range> range;
     std::u16string error_message;
@@ -49,8 +44,6 @@ public:
 
   SearchResult search(const uint16_t *, uint32_t);
   SearchResult search(const std::u16string &);
-
-  std::string get_dot_graph() const;
 
   class Snapshot {
     friend class TextBuffer;
@@ -75,4 +68,6 @@ public:
 
   friend class Snapshot;
   Snapshot *create_snapshot();
+
+  std::string get_dot_graph() const;
 };
