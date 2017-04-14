@@ -92,7 +92,7 @@ TEST_CASE("TextBuffer::create_snapshot") {
   }
 }
 
-TEST_CASE("TextBuffer::is_modified - basic") {
+TEST_CASE("TextBuffer::is_modified") {
   TextBuffer buffer{u"abcdef"};
   REQUIRE(!buffer.is_modified());
 
@@ -120,15 +120,15 @@ TEST_CASE("TextBuffer::is_modified - basic") {
 
   SECTION("undoing a change in multiple steps with snapshots in between") {
     auto snapshot1 = buffer.create_snapshot();
-    buffer.set_text_in_range({{0, 3}, {0, 4}}, Text{u""});
+    buffer.set_text_in_range({{0, 3}, {0, 4}}, Text{});
     REQUIRE(buffer.is_modified());
 
     auto snapshot2 = buffer.create_snapshot();
-    buffer.set_text_in_range({{0, 2}, {0, 3}}, Text{u""});
+    buffer.set_text_in_range({{0, 2}, {0, 3}}, Text{});
     REQUIRE(buffer.is_modified());
 
     auto snapshot3 = buffer.create_snapshot();
-    buffer.set_text_in_range({{0, 1}, {0, 2}}, Text{u""});
+    buffer.set_text_in_range({{0, 1}, {0, 2}}, Text{});
     REQUIRE(buffer.is_modified());
 
     auto snapshot4 = buffer.create_snapshot();
@@ -143,28 +143,33 @@ TEST_CASE("TextBuffer::is_modified - basic") {
   }
 }
 
-TEST_CASE("TextBuffer::is_modified") {
-  TextBuffer buffer;
-  REQUIRE(!buffer.is_modified());
+TEST_CASE("Snapshot::flush_preceding_changes") {
+  TextBuffer buffer{u"abcdef"};
 
+  buffer.set_text_in_range({{0, 1}, {0, 2}}, Text{u"B"});
+  REQUIRE(buffer.text() == Text{u"aBcdef"});
+  REQUIRE(buffer.is_modified());
   auto snapshot1 = buffer.create_snapshot();
-  REQUIRE(!buffer.is_modified());
 
-  buffer.set_text_in_range({{0, 0}, {0, 0}}, Text{u"a"});
+  buffer.set_text_in_range({{0, 2}, {0, 3}}, Text{u"C"});
+  REQUIRE(buffer.text() == Text{u"aBCdef"});
   REQUIRE(buffer.is_modified());
-
   auto snapshot2 = buffer.create_snapshot();
-  REQUIRE(buffer.is_modified());
-  REQUIRE(!buffer.flush_outstanding_changes());
 
-  delete snapshot1;
-  REQUIRE(!buffer.flush_outstanding_changes());
-  delete snapshot2;
-  REQUIRE(buffer.is_modified());
+  vector<uint8_t> bytes;
 
-  REQUIRE(buffer.flush_outstanding_changes());
-  REQUIRE(!buffer.is_modified());
-  REQUIRE(buffer.text() == Text{u"a"});
+  SECTION("serializing with no changes flushed") {
+    TextBuffer copy_buffer{Text{buffer.get_base_text()}};
+
+    Serializer serializer(bytes);
+    buffer.serialize_outstanding_changes(serializer);
+    Deserializer deserializer(bytes);
+    copy_buffer.deserialize_outstanding_changes(deserializer);
+
+    REQUIRE(copy_buffer.get_base_text() == buffer.get_base_text());
+    REQUIRE(copy_buffer.text() == buffer.text());
+    REQUIRE(copy_buffer.is_modified());
+  }
 }
 
 TEST_CASE("TextBuffer::search") {

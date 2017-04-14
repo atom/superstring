@@ -411,19 +411,31 @@ bool TextBuffer::flush_outstanding_changes() {
   return true;
 }
 
-bool TextBuffer::serialize_outstanding_changes(Serializer &serializer) {
-  if (!top_layer->is_first) return false;
-  top_layer->patch.serialize(serializer);
+void TextBuffer::serialize_outstanding_changes(Serializer &serializer) {
   serializer.append(top_layer->size_);
   top_layer->extent_.serialize(serializer);
-  return true;
+  if (top_layer->is_first) {
+    top_layer->patch.serialize(serializer);
+  } else {
+    vector<const Patch *> patches;
+    Layer *layer = top_layer;
+    for (;;) {
+      patches.insert(patches.begin(), &layer->patch);
+      if (layer->is_first) {
+        break;
+      } else {
+        layer = layer->previous_layer;
+      }
+    }
+    Patch(patches).serialize(serializer);
+  }
 }
 
 bool TextBuffer::deserialize_outstanding_changes(Deserializer &deserializer) {
   if (!top_layer->is_first || top_layer->patch.get_change_count() > 0) return false;
-  top_layer->patch = Patch(deserializer);
   top_layer->size_ = deserializer.read<uint32_t>();
   top_layer->extent_ = Point(deserializer);
+  top_layer->patch = Patch(deserializer);
   return true;
 }
 

@@ -33,7 +33,7 @@ public:
 
   bool reset_base_text(Text &&);
   bool flush_outstanding_changes();
-  bool serialize_outstanding_changes(Serializer &);
+  void serialize_outstanding_changes(Serializer &);
   bool deserialize_outstanding_changes(Deserializer &);
   size_t base_text_digest();
   const Text &get_base_text() const;
