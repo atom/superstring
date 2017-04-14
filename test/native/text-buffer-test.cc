@@ -161,7 +161,7 @@ struct SnapshotData {
 
 struct SnapshotTask {
   const TextBuffer::Snapshot *snapshot;
-  Text original_text;
+  Text mutated_text;
   std::future<vector<SnapshotData>> future;
 };
 
@@ -172,25 +172,29 @@ TEST_CASE("TextBuffer - random edits and queries") {
   for (uint i = 0; i < 100; i++) {
     uint32_t seed = t * 1000 + i;
     Generator rand(seed);
-    printf("seed: %u\n", seed);
+    cout << "seed: " << seed << "\n";
 
-    TextBuffer buffer {get_random_string(rand)};
+    Text original_text = get_random_text(rand);
+    TextBuffer buffer{Text{original_text}};
     vector<SnapshotTask> snapshot_tasks;
 
-    for (uint j = 0; j < 10; j++) {
-      // printf("iteration %u\n", j);
+    // cout << "trial: " << i << "\n";
+    // cout << "extent: " << original_text.extent() << "\ntext: " << original_text << "\n";
 
-      Text original_text = buffer.text();
+    for (uint j = 0; j < 10; j++) {
+      // cout << "iteration: " << j << "\n";
+
+      Text mutated_text = buffer.text();
       Range deleted_range = get_random_range(rand, buffer);
       Text inserted_text = get_random_text(rand);
 
       if (rand() % 2) {
-        // printf("create snapshot %lu\n", snapshot_tasks.size());
+        // cout << "create snapshot " << snapshot_tasks.size() << "\n";
 
         auto snapshot = buffer.create_snapshot();
         snapshot_tasks.push_back({
           snapshot,
-          original_text,
+          mutated_text,
           std::async([seed, snapshot]() {
             Generator rand(seed);
             vector<SnapshotData> results;
@@ -211,24 +215,29 @@ TEST_CASE("TextBuffer - random edits and queries") {
         });
       }
 
-      original_text.splice(deleted_range.start, deleted_range.extent(), TextSlice{inserted_text});
+      // cout << "set_text_in_range(" << deleted_range << ", " << inserted_text << ")\n";
+
+      mutated_text.splice(deleted_range.start, deleted_range.extent(), TextSlice{inserted_text});
       buffer.set_text_in_range(deleted_range, move(inserted_text));
 
-      REQUIRE(buffer.extent() == original_text.extent());
-      REQUIRE(buffer.text() == original_text);
+      // cout << "extent: " << mutated_text.extent() << "\ntext: " << mutated_text << "\n";
 
-      for (uint32_t row = 0; row < original_text.extent().row; row++) {
+      REQUIRE(buffer.extent() == mutated_text.extent());
+      REQUIRE(buffer.text() == mutated_text);
+
+      for (uint32_t row = 0; row < mutated_text.extent().row; row++) {
         REQUIRE(
           Point(row, buffer.line_length_for_row(row)) ==
-          Point(row, original_text.line_length_for_row(row))
+          Point(row, mutated_text.line_length_for_row(row))
         );
       }
 
       for (uint32_t k = 0; k < 5; k++) {
         Range range = get_random_range(rand, buffer);
-        Text subtext{TextSlice(original_text).slice(range)};
+        Text subtext{TextSlice(mutated_text).slice(range)};
+        TextBuffer fresh_buffer{Text(mutated_text)};
 
-        TextBuffer fresh_buffer{Text(original_text)};
+        // cout << "search for: /" << subtext << "/\n";
 
         REQUIRE(
           buffer.search(subtext.content.data(), subtext.size()).range ==
@@ -237,26 +246,28 @@ TEST_CASE("TextBuffer - random edits and queries") {
       }
 
       for (uint32_t k = 0; k < 5; k++) {
-        // printf("check random range %u\n", k);
-
         Range range = get_random_range(rand, buffer);
-        REQUIRE(buffer.text_in_range(range) == Text(TextSlice(original_text).slice(range)));
+
+        // cout << "check random range " << range << "\n";
+
+        REQUIRE(buffer.text_in_range(range) == Text(TextSlice(mutated_text).slice(range)));
         REQUIRE(buffer.position_for_offset(buffer.clip_position(range.start).offset) == range.start);
         REQUIRE(buffer.position_for_offset(buffer.clip_position(range.end).offset) == range.end);
       }
 
       if (rand() % 3 == 0 && !snapshot_tasks.empty()) {
         uint32_t snapshot_index = rand() % snapshot_tasks.size();
-        // printf("delete snapshot %u of %lu\n", snapshot_index, snapshot_tasks.size());
+
+        // cout << "delete snapshot " << snapshot_index << "\n";
 
         snapshot_tasks[snapshot_index].future.wait();
-        auto original_text = snapshot_tasks[snapshot_index].original_text;
+        auto mutated_text = snapshot_tasks[snapshot_index].mutated_text;
         delete snapshot_tasks[snapshot_index].snapshot;
         for (auto data : snapshot_tasks[snapshot_index].future.get()) {
-          REQUIRE(data.text == original_text);
-          REQUIRE(data.extent == original_text.extent());
+          REQUIRE(data.text == mutated_text);
+          REQUIRE(data.extent == mutated_text.extent());
           for (auto position : data.line_end_positions) {
-            REQUIRE(position == Point(position.row, original_text.line_length_for_row(position.row)));
+            REQUIRE(position == Point(position.row, mutated_text.line_length_for_row(position.row)));
           }
         }
         snapshot_tasks.erase(snapshot_tasks.begin() + snapshot_index);
