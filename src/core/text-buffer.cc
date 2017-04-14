@@ -298,6 +298,11 @@ struct TextBuffer::Layer {
 
     this->for_each_chunk_in_range(Point(), extent(), [&](TextSlice chunk) {
       while (!chunk.empty()) {
+        if (result) {
+          if (!chunk.empty() && *chunk.begin() == '\n') result->end.column--;
+          return true;
+        }
+
         if (!chunk_continuation.empty()) {
           auto split = chunk.split(MAX_CHUNK_SIZE_TO_COPY);
           chunk_continuation.append(split.first);
@@ -335,15 +340,18 @@ struct TextBuffer::Layer {
               return true;
           }
         } else {
+          uint32_t start_offset = regex.get_match_offset(0);
+          uint32_t end_offset = regex.get_match_offset(1);
           result = Range{
-            slice_to_search_start_position.traverse(
-              slice_to_search.position_for_offset(regex.get_match_offset(0))
-            ),
-            slice_to_search_start_position.traverse(
-              slice_to_search.position_for_offset(regex.get_match_offset(1))
-            )
+            slice_to_search_start_position.traverse(slice_to_search.position_for_offset(start_offset)),
+            slice_to_search_start_position.traverse(slice_to_search.position_for_offset(end_offset))
           };
-          return true;
+
+          if (
+            result->end.column == 0 ||
+            end_offset < slice_to_search.size() ||
+            *(slice_to_search.end() - 1) != '\r'
+          ) return true;
         }
       }
 

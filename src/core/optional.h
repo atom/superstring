@@ -15,6 +15,7 @@ public:
   T &operator*() { return value; }
   const T &operator*() const { return value; }
   const T *operator->() const { return &value; }
+  T *operator->() { return &value; }
   operator bool() const { return is_some; }
   bool operator==(const optional<T> &other) {
     if (is_some) {
