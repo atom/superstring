@@ -111,13 +111,6 @@ TEST_CASE("TextBuffer::is_modified") {
     delete snapshot1;
   }
 
-  SECTION("undoing a change after creating a snapshot") {
-    auto snapshot1 = buffer.create_snapshot();
-    buffer.set_text_in_range({{0, 1}, {0, 4}}, Text{u"b"});
-    REQUIRE(!buffer.is_modified());
-    delete snapshot1;
-  }
-
   SECTION("undoing a change in multiple steps with snapshots in between") {
     auto snapshot1 = buffer.create_snapshot();
     buffer.set_text_in_range({{0, 3}, {0, 4}}, Text{});
@@ -173,15 +166,47 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
   SECTION("flushing the latest snapshot's changes") {
     snapshot2->flush_preceding_changes();
 
+    REQUIRE(buffer.text() == Text{u"aBCdef"});
+    REQUIRE(buffer.base_text() == Text{u"aBCdef"});
+    REQUIRE(snapshot1->text() == Text{u"aBcdef"});
+    REQUIRE(snapshot2->text() == Text{u"aBCdef"});
+    REQUIRE(!buffer.is_modified());
+
     TextBuffer copy_buffer{Text{buffer.base_text()}};
     Serializer serializer(bytes);
     buffer.serialize_changes(serializer);
     Deserializer deserializer(bytes);
     copy_buffer.deserialize_changes(deserializer);
 
-    REQUIRE(copy_buffer.base_text() == snapshot2->text());
+    REQUIRE(copy_buffer.base_text() == buffer.base_text());
     REQUIRE(copy_buffer.text() == buffer.text());
     REQUIRE(!copy_buffer.is_modified());
+
+    delete snapshot1;
+    delete snapshot2;
+  }
+
+  SECTION("flushing an earlier snapshot's changes") {
+    snapshot1->flush_preceding_changes();
+
+    REQUIRE(buffer.text() == Text{u"aBCdef"});
+    REQUIRE(buffer.base_text() == Text{u"aBcdef"});
+    REQUIRE(snapshot1->text() == Text{u"aBcdef"});
+    REQUIRE(snapshot2->text() == Text{u"aBCdef"});
+    REQUIRE(buffer.is_modified());
+
+    TextBuffer copy_buffer{Text{buffer.base_text()}};
+    Serializer serializer(bytes);
+    buffer.serialize_changes(serializer);
+    Deserializer deserializer(bytes);
+    copy_buffer.deserialize_changes(deserializer);
+
+    REQUIRE(copy_buffer.base_text() == buffer.base_text());
+    REQUIRE(copy_buffer.text() == buffer.text());
+    REQUIRE(copy_buffer.is_modified());
+
+    delete snapshot1;
+    delete snapshot2;
   }
 }
 

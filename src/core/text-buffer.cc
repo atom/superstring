@@ -311,18 +311,25 @@ TextBuffer::TextBuffer() :
   base_layer{new Layer(Text{})},
   top_layer{base_layer} {}
 
-TextBuffer::~TextBuffer() { delete top_layer; }
+TextBuffer::~TextBuffer() {
+  Layer *layer = top_layer;
+  while (layer) {
+    Layer *previous_layer = layer->previous_layer;
+    delete layer;
+    layer = previous_layer;
+  }
+}
 
 TextBuffer::TextBuffer(std::u16string text) : TextBuffer {Text {text}} {}
 
 bool TextBuffer::reset(Text &&new_base_text) {
   if (top_layer != base_layer && top_layer->previous_layer != base_layer) return false;
-
   top_layer->extent_ = new_base_text.extent();
   top_layer->size_ = new_base_text.size();
   top_layer->text = move(new_base_text);
   top_layer->patch = optional<Patch>{};
   delete top_layer->previous_layer;
+  top_layer->previous_layer = nullptr;
   base_layer = top_layer;
   return true;
 }
@@ -611,40 +618,71 @@ TextBuffer::Snapshot::Snapshot(TextBuffer &buffer, TextBuffer::Layer &layer)
 
 void TextBuffer::Snapshot::flush_preceding_changes() {
   layer.text = text();
-  buffer.base_layer = &layer;
+  Layer *layer = this->layer.previous_layer;
+  while (layer) {
+    if (layer == buffer.base_layer) {
+      buffer.base_layer = &this->layer;
+      break;
+    }
+    layer = layer->previous_layer;
+  }
+  buffer.consolidate_layers();
 }
 
 TextBuffer::Snapshot::~Snapshot() {
   assert(layer.snapshot_count > 0);
   layer.snapshot_count--;
-  if (layer.snapshot_count > 0) return;
+  if (layer.snapshot_count == 0) buffer.consolidate_layers();
+}
 
-  // Find the topmost layer that has no snapshots pointing to it.
-  vector<Layer *> layers_to_remove;
-  Layer *top_layer = buffer.top_layer;
-  if (top_layer->snapshot_count > 0) return;
-  while (
-    top_layer->previous_layer &&
-    top_layer->previous_layer->snapshot_count == 0 &&
-    top_layer->previous_layer->patch
-  ) {
-    layers_to_remove.push_back(top_layer);
-    top_layer = top_layer->previous_layer;
+void TextBuffer::consolidate_layers() {
+  Layer *layer = top_layer;
+  vector<Layer *> mutable_layers;
+  bool needed_by_layer_above = false;
+  while (layer) {
+    bool is_text_layer = !layer->patch;
+
+    if ((!needed_by_layer_above && layer->snapshot_count == 0 && layer != base_layer) ||
+        (mutable_layers.empty() && is_text_layer)) {
+      if (layer->text) layer->patch = optional<Patch>{};
+      mutable_layers.push_back(layer);
+    } else {
+      squash_layers(mutable_layers);
+      mutable_layers.clear();
+      needed_by_layer_above = true;
+    }
+
+    if (is_text_layer) needed_by_layer_above = false;
+    layer = layer->previous_layer;
   }
 
-  top_layer->size_ = buffer.top_layer->size_;
-  top_layer->extent_ = buffer.top_layer->extent_;
+  squash_layers(mutable_layers);
+}
 
-  // Incorporate all the changes from upper layers into this layer.
+void TextBuffer::squash_layers(const vector<Layer *> &layers) {
+  if (layers.size() < 2) return;
+
   bool left_to_right = true;
-  for (auto iter = layers_to_remove.rbegin(),
-       end = layers_to_remove.rend();
-       iter != end; ++iter) {
-    top_layer->patch->combine(*(*iter)->patch, left_to_right);
-    delete *iter;
-    left_to_right = !left_to_right;
+  for (auto iter = layers.rbegin() + 1, end = layers.rend(); iter != end; ++iter) {
+    Layer *layer = *iter;
+    if (layer->text) continue;
+    if (layer->previous_layer->text) {
+      for (auto change : layer->patch->get_changes()) {
+        layer->previous_layer->text->splice(
+          change.new_start,
+          change.old_end.traversal(change.old_start),
+          TextSlice(*change.new_text)
+        );
+      }
+      layer->text = move(layer->previous_layer->text);
+    } else {
+      layer->previous_layer->patch->combine(*layer->patch, left_to_right);
+      layer->patch = move(layer->previous_layer->patch);
+    }
   }
 
-  buffer.top_layer = top_layer;
-  buffer.top_layer->is_topmost = true;
+  layers.front()->previous_layer = layers.back()->previous_layer;
+  for (auto iter = layers.begin() + 1, end = layers.end(); iter != end; ++iter) {
+    delete *iter;
+  }
 }

@@ -9,6 +9,8 @@ class TextBuffer {
   struct Layer;
   Layer *base_layer;
   Layer *top_layer;
+  void squash_layers(const std::vector<Layer *> &);
+  void consolidate_layers();
 
 public:
   static uint32_t MAX_CHUNK_SIZE_TO_COPY;
