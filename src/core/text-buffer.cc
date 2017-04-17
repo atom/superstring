@@ -22,23 +22,20 @@ struct TextBuffer::Layer {
   Point extent_;
   uint32_t size_;
   uint32_t snapshot_count;
-  bool is_topmost;
 
   Layer(Text &&text) :
     previous_layer{nullptr},
     text{move(text)},
     extent_{this->text->extent()},
     size_{this->text->size()},
-    snapshot_count{0},
-    is_topmost{true} {}
+    snapshot_count{0} {}
 
   Layer(Layer *previous_layer) :
     previous_layer{previous_layer},
     patch{Patch()},
     extent_{previous_layer->extent()},
     size_{previous_layer->size()},
-    snapshot_count{0},
-    is_topmost{true} {}
+    snapshot_count{0} {}
 
   static inline Point previous_column(Point position) {
     return Point(position.row, position.column - 1);
@@ -58,10 +55,10 @@ struct TextBuffer::Layer {
     }
   }
 
-  ClipResult clip_position(Point position) {
+  ClipResult clip_position(Point position, bool splay = false) {
     if (!patch) return text->clip_position(position);
 
-    auto preceding_change = is_topmost ?
+    auto preceding_change = splay ?
       patch->change_for_new_position(position) :
       patch->find_change_for_new_position(position);
     if (!preceding_change) return previous_layer->clip_position(position);
@@ -127,11 +124,11 @@ struct TextBuffer::Layer {
   }
 
   template <typename Callback>
-  bool for_each_chunk_in_range(Point start, Point end, const Callback &callback) {
+  bool for_each_chunk_in_range(Point start, Point end, const Callback &callback, bool splay = false) {
     if (!patch) return callback(TextSlice(*text).slice({start, end}));
 
-    Point goal_position = clip_position(end).position;
-    Point current_position = clip_position(start).position;
+    Point goal_position = clip_position(end, splay).position;
+    Point current_position = clip_position(start, splay).position;
     Point base_position = current_position;
     auto change = patch->find_change_for_new_position(current_position);
 
@@ -196,12 +193,12 @@ struct TextBuffer::Layer {
 
   uint32_t size() const { return size_; }
 
-  Text text_in_range(Range range) {
+  Text text_in_range(Range range, bool splay = false) {
     Text result;
     for_each_chunk_in_range(range.start, range.end, [&result](TextSlice slice) {
       result.append(slice);
       return false;
-    });
+    }, splay);
     return result;
   }
 
@@ -359,7 +356,6 @@ void TextBuffer::serialize_changes(Serializer &serializer) {
 bool TextBuffer::deserialize_changes(Deserializer &deserializer) {
   if (top_layer != base_layer || base_layer->previous_layer) return false;
   top_layer = new Layer(base_layer);
-  top_layer->is_topmost = true;
   top_layer->size_ = deserializer.read<uint32_t>();
   top_layer->extent_ = Point(deserializer);
   top_layer->patch = Patch(deserializer);
@@ -393,7 +389,7 @@ uint32_t TextBuffer::size() const {
 }
 
 uint32_t TextBuffer::line_length_for_row(uint32_t row) {
-  return top_layer->clip_position(Point{row, UINT32_MAX}).position.column;
+  return top_layer->clip_position(Point{row, UINT32_MAX}, true).position.column;
 }
 
 const uint16_t *TextBuffer::line_ending_for_row(uint32_t row) {
@@ -410,12 +406,12 @@ const uint16_t *TextBuffer::line_ending_for_row(uint32_t row) {
       if (begin == slice.end()) return false;
       result = (*begin == '\r') ? CRLF : LF;
       return true;
-    });
+    }, true);
   return result;
 }
 
 ClipResult TextBuffer::clip_position(Point position) {
-  return top_layer->clip_position(position);
+  return top_layer->clip_position(position, true);
 }
 
 Point TextBuffer::position_for_offset(uint32_t offset) {
@@ -423,11 +419,11 @@ Point TextBuffer::position_for_offset(uint32_t offset) {
 }
 
 Text TextBuffer::text() {
-  return text_in_range(Range{Point(), extent()});
+  return top_layer->text_in_range(Range{Point(), extent()});
 }
 
 Text TextBuffer::text_in_range(Range range) {
-  return top_layer->text_in_range(range);
+  return top_layer->text_in_range(range, true);
 }
 
 vector<TextSlice> TextBuffer::chunks() const {
@@ -493,7 +489,6 @@ struct std::iterator_traits<ChunkIterator> {
 
 void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
   if (top_layer == base_layer || top_layer->snapshot_count > 0) {
-    top_layer->is_topmost = false;
     top_layer = new Layer(top_layer);
   }
 
