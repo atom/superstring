@@ -34,6 +34,7 @@ public:
   std::vector<TextSlice> chunks() const;
 
   bool reset(Text &&);
+  void flush_changes();
   void serialize_changes(Serializer &);
   bool deserialize_changes(Deserializer &);
   size_t base_text_digest();

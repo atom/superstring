@@ -576,6 +576,14 @@ TextBuffer::Snapshot *TextBuffer::create_snapshot() {
   return new Snapshot(*this, *top_layer);
 }
 
+void TextBuffer::flush_changes() {
+  if (!top_layer->text) {
+    top_layer->text = text();
+    base_layer = top_layer;
+    consolidate_layers();
+  }
+}
+
 uint32_t TextBuffer::Snapshot::size() const {
   return layer.size();
 }

@@ -366,7 +366,6 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
 
 void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
-  auto snapshot = text_buffer.create_snapshot();
 
   Local<String> js_file_path;
   if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
@@ -378,15 +377,14 @@ void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) 
 
   static size_t CHUNK_SIZE = 10 * 1024;
   std::ofstream file{file_path};
-  for (TextSlice &chunk : snapshot->chunks()) {
+  for (TextSlice &chunk : text_buffer.chunks()) {
     if (!Text::write(file, encoding_name.c_str(), CHUNK_SIZE, chunk)) {
       info.GetReturnValue().Set(Nan::False());
       return;
     }
   }
 
-  snapshot->flush_preceding_changes();
-  delete snapshot;
+  text_buffer.flush_changes();
   info.GetReturnValue().Set(Nan::True());
 }
 

@@ -161,6 +161,11 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
     REQUIRE(copy_buffer.base_text() == buffer.base_text());
     REQUIRE(copy_buffer.text() == buffer.text());
     REQUIRE(copy_buffer.is_modified());
+
+    buffer.flush_changes();
+    REQUIRE(!buffer.is_modified());
+    REQUIRE(buffer.base_text() == Text{u"aBCdef"});
+    REQUIRE(buffer.text() == Text{u"aBCdef"});
   }
 
   SECTION("flushing the latest snapshot's changes") {
