@@ -94,6 +94,45 @@ describe('TextBuffer', () => {
         assert.equal(buffer.getText(), 'abc123d456e789fghijklmnopqrstuvwxyz')
       })
     })
+
+    it('handles concurrent saves', () => {
+      const {path: filePath1} = temp.openSync()
+      const {path: filePath2} = temp.openSync()
+      const {path: filePath3} = temp.openSync()
+      const {path: filePath4} = temp.openSync()
+
+      const buffer = new TextBuffer('abc def ghi jkl\n'.repeat(10 * 1024))
+
+      buffer.setTextInRange(Range(Point(10, 15), Point(10, 15)), ' mno')
+      buffer.setTextInRange(Range(Point(20, 15), Point(20, 15)), ' mno')
+      const text1 = buffer.getText()
+      const savePromise1 = buffer.save(filePath1)
+
+      buffer.setTextInRange(Range(Point(30, 15), Point(30, 15)), ' mno')
+      buffer.setTextInRange(Range(Point(40, 15), Point(40, 15)), ' mno')
+      const text2 = buffer.getText()
+      const savePromise2 = buffer.save(filePath2)
+
+      buffer.setTextInRange(Range(Point(50, 15), Point(50, 15)), ' mno')
+      buffer.setTextInRange(Range(Point(60, 15), Point(60, 15)), ' mno')
+      const text3 = buffer.getText()
+      const savePromise3 = buffer.save(filePath3)
+
+      buffer.setTextInRange(Range(Point(70, 15), Point(70, 15)), ' mno')
+      buffer.setTextInRange(Range(Point(80, 15), Point(80, 15)), ' mno')
+      const text4 = buffer.getText()
+      const savePromise4 = buffer.save(filePath4)
+
+      return Promise.all([savePromise1, savePromise2, savePromise3, savePromise4]).then(() => {
+        assert.equal(fs.readFileSync(filePath1, 'utf8'), text1)
+        assert.equal(fs.readFileSync(filePath2, 'utf8'), text2)
+        assert.equal(fs.readFileSync(filePath3, 'utf8'), text3)
+        assert.equal(fs.readFileSync(filePath4, 'utf8'), text4)
+
+        assert.equal(buffer.getText(), text4)
+        assert(!buffer.isModified())
+      })
+    })
   })
 
   describe('.isModified', () => {
