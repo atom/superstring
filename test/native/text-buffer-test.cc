@@ -325,7 +325,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
 
       // cout << "set_text_in_range(" << deleted_range << ", " << inserted_text << ")\n";
 
-      mutated_text.splice(deleted_range.start, deleted_range.extent(), TextSlice{inserted_text});
+      mutated_text.splice(deleted_range.start, deleted_range.extent(), inserted_text);
       buffer.set_text_in_range(deleted_range, move(inserted_text));
 
       // cout << "extent: " << mutated_text.extent() << "\ntext: " << mutated_text << "\n";

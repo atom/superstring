@@ -695,7 +695,7 @@ void TextBuffer::squash_layers(const vector<Layer *> &layers) {
         layer->previous_layer->text->splice(
           change.new_start,
           change.old_end.traversal(change.old_start),
-          TextSlice(*change.new_text)
+          *change.new_text
         );
       }
       layer->text = move(layer->previous_layer->text);
