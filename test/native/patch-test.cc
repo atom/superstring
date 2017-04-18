@@ -263,6 +263,4 @@ TEST_CASE("Patch::serialize") {
       0, 0
     }
   }));
-
-  REQUIRE(patch_copy.splice(Point {0, 1}, Point {0, 1}, Point {0, 2}) == false);
 }

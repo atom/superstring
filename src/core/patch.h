@@ -18,7 +18,6 @@ class Patch {
   std::vector<PositionStackEntry> left_ancestor_stack;
   std::vector<Node *> node_stack;
   Node *root;
-  Node *frozen_node_array;
   bool merges_adjacent_changes;
   uint32_t change_count;
 
@@ -129,7 +128,6 @@ private:
   Node *build_node(Node *, Node *, Point, Point, Point, Point,
                   optional<Text> &&, optional<Text> &&, uint32_t old_text_size);
   void delete_node(Node **);
-  bool is_frozen() const;
 };
 
 std::ostream &operator<<(std::ostream &, const Patch::Change &);

@@ -311,32 +311,28 @@ struct Patch::NewCoordinates {
 };
 
 Patch::Patch()
-    : root{nullptr}, frozen_node_array{nullptr}, merges_adjacent_changes{true},
-      change_count{0} {}
+  : root{nullptr}, merges_adjacent_changes{true}, change_count{0} {}
 
 Patch::Patch(bool merges_adjacent_changes)
-    : root{nullptr}, frozen_node_array{nullptr},
-      merges_adjacent_changes{merges_adjacent_changes}, change_count{0} {}
+  : root{nullptr}, merges_adjacent_changes{merges_adjacent_changes}, change_count{0} {}
 
 Patch::Patch(Patch &&other)
-    : root{nullptr}, frozen_node_array{other.frozen_node_array},
-      merges_adjacent_changes{other.merges_adjacent_changes},
-      change_count{other.change_count} {
+  : root{nullptr}, merges_adjacent_changes{other.merges_adjacent_changes},
+    change_count{other.change_count} {
   *this = move(other);
 }
 
 Patch &Patch::operator=(Patch &&other) {
   std::swap(root, other.root);
   std::swap(left_ancestor_stack, other.left_ancestor_stack);
-  std::swap(frozen_node_array, other.frozen_node_array);
   std::swap(node_stack, other.node_stack);
   std::swap(change_count, other.change_count);
   return *this;
 }
 
 Patch::Patch(Node *root, uint32_t change_count, bool merges_adjacent_changes)
-    : root{root}, frozen_node_array{nullptr},
-      merges_adjacent_changes{merges_adjacent_changes}, change_count{change_count} {}
+  : root{root}, merges_adjacent_changes{merges_adjacent_changes},
+    change_count{change_count} {}
 
 Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
   bool left_to_right = true;
@@ -347,8 +343,6 @@ Patch::Patch(const vector<const Patch *> &patches_to_compose) : Patch() {
 }
 
 bool Patch::combine(const Patch &other, bool left_to_right) {
-  if (is_frozen()) return false;
-
   auto changes = other.get_changes();
   if (left_to_right) {
     for (auto iter = changes.begin(), end = changes.end(); iter != end; ++iter) {
@@ -373,13 +367,7 @@ bool Patch::combine(const Patch &other, bool left_to_right) {
 }
 
 Patch::~Patch() {
-  if (root) {
-    if (frozen_node_array) {
-      free(frozen_node_array);
-    } else {
-      delete_node(&root);
-    }
-  }
+  if (root) delete_node(&root);
 }
 
 Patch::Node *Patch::build_node(Node *left, Node *right,
@@ -731,10 +719,6 @@ bool Patch::splice(Point new_splice_start,
                    Point new_deletion_extent, Point new_insertion_extent,
                    optional<Text> &&deleted_text, optional<Text> &&inserted_text,
                    uint32_t deleted_text_size) {
-  if (is_frozen()) {
-    return false;
-  }
-
   if (new_deletion_extent.is_zero() && new_insertion_extent.is_zero()) {
     return true;
   }
@@ -1040,13 +1024,7 @@ bool Patch::splice(Point new_splice_start,
 
 bool Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
                       Point old_insertion_extent) {
-  if (is_frozen()) {
-    return false;
-  }
-
-  if (!root) {
-    return true;
-  }
+  if (!root) return true;
 
   Point old_deletion_end = old_splice_start.traverse(old_deletion_extent);
   Point old_insertion_end = old_splice_start.traverse(old_insertion_extent);
@@ -1719,11 +1697,8 @@ void Patch::serialize(Serializer &output) {
   }
 }
 
-bool Patch::is_frozen() const { return frozen_node_array != nullptr; }
-
-Patch::Patch(Deserializer &input)
-    : root{nullptr}, frozen_node_array{nullptr}, merges_adjacent_changes{true},
-      change_count{0} {
+Patch::Patch(Deserializer &input) : root{nullptr}, merges_adjacent_changes{true},
+  change_count{0} {
   uint32_t serialization_version = input.read<uint32_t>();
   if (serialization_version != SERIALIZATION_VERSION) return;
 
@@ -1731,27 +1706,24 @@ Patch::Patch(Deserializer &input)
   if (change_count == 0) return;
 
   node_stack.reserve(change_count);
-  frozen_node_array = static_cast<Node *>(calloc(change_count, sizeof(Node)));
-  root = frozen_node_array;
-  Node *node = root, *next_node = root + 1;
+  root = new Node(input);
+  Node *node = root, *next_node = nullptr;
 
-  new(node) Node(input);
-
-  while (next_node < root + change_count) {
+  for (uint32_t i = 1; i < change_count;) {
     switch (input.read<uint32_t>()) {
     case Left:
-      new(next_node) Node(input);
+      next_node = new Node(input);
       node->left = next_node;
       node_stack.push_back(node);
       node = next_node;
-      next_node++;
+      i++;
       break;
     case Right:
-      new(next_node) Node(input);
+      next_node = new Node(input);
       node->right = next_node;
       node_stack.push_back(node);
       node = next_node;
-      next_node++;
+      i++;
       break;
     case Up:
       node->compute_subtree_text_sizes();
@@ -1759,7 +1731,7 @@ Patch::Patch(Deserializer &input)
       node_stack.pop_back();
       break;
     default:
-      delete[] root;
+      delete root;
       return;
     }
   }
