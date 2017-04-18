@@ -138,16 +138,19 @@ TEST_CASE("TextBuffer::is_modified") {
 
 TEST_CASE("Snapshot::flush_preceding_changes") {
   TextBuffer buffer{u"abcdef"};
+  REQUIRE(buffer.layer_count() == 1);
 
   buffer.set_text_in_range({{0, 1}, {0, 2}}, Text{u"B"});
   REQUIRE(buffer.text() == Text{u"aBcdef"});
   REQUIRE(buffer.is_modified());
   auto snapshot1 = buffer.create_snapshot();
+  REQUIRE(buffer.layer_count() == 2);
 
   buffer.set_text_in_range({{0, 2}, {0, 3}}, Text{u"C"});
   REQUIRE(buffer.text() == Text{u"aBCdef"});
   REQUIRE(buffer.is_modified());
   auto snapshot2 = buffer.create_snapshot();
+  REQUIRE(buffer.layer_count() == 3);
 
   vector<uint8_t> bytes;
 
@@ -166,6 +169,10 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
     REQUIRE(!buffer.is_modified());
     REQUIRE(buffer.base_text() == Text{u"aBCdef"});
     REQUIRE(buffer.text() == Text{u"aBCdef"});
+
+    delete snapshot1;
+    delete snapshot2;
+    REQUIRE(buffer.layer_count() == 1);
   }
 
   SECTION("flushing the latest snapshot's changes") {
@@ -189,6 +196,7 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
 
     delete snapshot1;
     delete snapshot2;
+    REQUIRE(buffer.layer_count() == 1);
   }
 
   SECTION("flushing an earlier snapshot's changes") {
@@ -212,6 +220,7 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
 
     delete snapshot1;
     delete snapshot2;
+    REQUIRE(buffer.layer_count() == 2);
   }
 }
 
@@ -259,7 +268,7 @@ struct SnapshotData {
 };
 
 struct SnapshotTask {
-  const TextBuffer::Snapshot *snapshot;
+  TextBuffer::Snapshot *snapshot;
   Text mutated_text;
   std::future<vector<SnapshotData>> future;
 };
@@ -280,14 +289,14 @@ TEST_CASE("TextBuffer - random edits and queries") {
     // cout << "trial: " << i << "\n";
     // cout << "extent: " << original_text.extent() << "\ntext: " << original_text << "\n";
 
-    for (uint j = 0; j < 10; j++) {
+    for (uint j = 0; j < 15; j++) {
       // cout << "iteration: " << j << "\n";
 
       Text mutated_text = buffer.text();
       Range deleted_range = get_random_range(rand, buffer);
       Text inserted_text = get_random_text(rand);
 
-      if (rand() % 2) {
+      if (rand() % 3) {
         // cout << "create snapshot " << snapshot_tasks.size() << "\n";
 
         auto snapshot = buffer.create_snapshot();
@@ -357,11 +366,13 @@ TEST_CASE("TextBuffer - random edits and queries") {
       if (rand() % 3 == 0 && !snapshot_tasks.empty()) {
         uint32_t snapshot_index = rand() % snapshot_tasks.size();
 
-        // cout << "delete snapshot " << snapshot_index << "\n";
-
         snapshot_tasks[snapshot_index].future.wait();
         auto mutated_text = snapshot_tasks[snapshot_index].mutated_text;
-        delete snapshot_tasks[snapshot_index].snapshot;
+
+        if (rand() % 3) {
+          snapshot_tasks[snapshot_index].snapshot->flush_preceding_changes();
+        }
+
         for (auto data : snapshot_tasks[snapshot_index].future.get()) {
           REQUIRE(data.text == mutated_text);
           REQUIRE(data.extent == mutated_text.extent());
@@ -369,6 +380,9 @@ TEST_CASE("TextBuffer - random edits and queries") {
             REQUIRE(position == Point(position.row, mutated_text.line_length_for_row(position.row)));
           }
         }
+
+        // cout << "delete snapshot " << snapshot_index << "\n";
+        delete snapshot_tasks[snapshot_index].snapshot;
         snapshot_tasks.erase(snapshot_tasks.begin() + snapshot_index);
       }
     }
@@ -377,5 +391,9 @@ TEST_CASE("TextBuffer - random edits and queries") {
       task.future.wait();
       delete task.snapshot;
     }
+
+    REQUIRE(buffer.layer_count() <= 2);
+    buffer.flush_changes();
+    REQUIRE(buffer.layer_count() == 1);
   }
 }

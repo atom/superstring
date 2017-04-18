@@ -72,5 +72,6 @@ public:
   friend class Snapshot;
   Snapshot *create_snapshot();
 
+  size_t layer_count()  const;
   std::string get_dot_graph() const;
 };

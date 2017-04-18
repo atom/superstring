@@ -41,6 +41,15 @@ struct TextBuffer::Layer {
     return Point(position.row, position.column - 1);
   }
 
+  bool is_above_layer(const Layer *layer) {
+    Layer *predecessor = previous_layer;
+    while (predecessor) {
+      if (predecessor == layer) return true;
+      predecessor = predecessor->previous_layer;
+    }
+    return false;
+  }
+
   uint16_t character_at(Point position) {
     if (!patch) return text->at(position);
 
@@ -560,7 +569,11 @@ string TextBuffer::get_dot_graph() const {
   for (auto begin = layers.rbegin(), iter = begin, end = layers.rend();
        iter != end; ++iter) {
     result << "graph { label=\"layer " << (iter - begin) <<
-      " (snapshot count " << ((*iter)->snapshot_count) << "):\" }\n";
+      " (snapshot count " << ((*iter)->snapshot_count);
+    if (*iter == base_layer) {
+      result << ", base";
+    }
+    result << "):\" }\n";
     if ((*iter)->text) {
       result << "graph { label=\"text:\n" << *(*iter)->text << "\" }\n";
     }
@@ -569,6 +582,16 @@ string TextBuffer::get_dot_graph() const {
     }
   }
   return result.str();
+}
+
+size_t TextBuffer::layer_count() const {
+  size_t result = 1;
+  const Layer *layer = top_layer;
+  while (layer->previous_layer) {
+    result++;
+    layer = layer->previous_layer;
+  }
+  return result;
 }
 
 TextBuffer::Snapshot *TextBuffer::create_snapshot() {
@@ -620,16 +643,11 @@ TextBuffer::Snapshot::Snapshot(TextBuffer &buffer, TextBuffer::Layer &layer)
   : buffer{buffer}, layer{layer} {}
 
 void TextBuffer::Snapshot::flush_preceding_changes() {
-  layer.text = text();
-  Layer *layer = this->layer.previous_layer;
-  while (layer) {
-    if (layer == buffer.base_layer) {
-      buffer.base_layer = &this->layer;
-      break;
-    }
-    layer = layer->previous_layer;
+  if (!layer.text) {
+    layer.text = text();
+    if (layer.is_above_layer(buffer.base_layer)) buffer.base_layer = &layer;
+    buffer.consolidate_layers();
   }
-  buffer.consolidate_layers();
 }
 
 TextBuffer::Snapshot::~Snapshot() {
@@ -642,20 +660,23 @@ void TextBuffer::consolidate_layers() {
   Layer *layer = top_layer;
   vector<Layer *> mutable_layers;
   bool needed_by_layer_above = false;
-  while (layer) {
-    bool is_text_layer = !layer->patch;
 
-    if ((!needed_by_layer_above && layer->snapshot_count == 0 && layer != base_layer) ||
-        (mutable_layers.empty() && is_text_layer)) {
-      if (layer->text) layer->patch = optional<Patch>{};
-      mutable_layers.push_back(layer);
-    } else {
+  while (layer) {
+    if (needed_by_layer_above || layer->snapshot_count > 0) {
       squash_layers(mutable_layers);
       mutable_layers.clear();
       needed_by_layer_above = true;
+    } else {
+      if (layer == base_layer) {
+        squash_layers(mutable_layers);
+        mutable_layers.clear();
+      }
+
+      if (layer->text) layer->patch = optional<Patch>{};
+      mutable_layers.push_back(layer);
     }
 
-    if (is_text_layer) needed_by_layer_above = false;
+    if (!layer->patch) needed_by_layer_above = false;
     layer = layer->previous_layer;
   }
 
@@ -678,6 +699,7 @@ void TextBuffer::squash_layers(const vector<Layer *> &layers) {
         );
       }
       layer->text = move(layer->previous_layer->text);
+      layer->patch = optional<Patch>{};
     } else {
       layer->previous_layer->patch->combine(*layer->patch, left_to_right);
       layer->patch = move(layer->previous_layer->patch);
