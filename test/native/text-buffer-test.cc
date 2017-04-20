@@ -14,13 +14,15 @@ using std::u16string;
 
 TEST_CASE("TextBuffer::set_text_in_range - basic") {
   TextBuffer buffer {u"abc\ndef\nghi"};
-  buffer.set_text_in_range(Range {{0, 2}, {2, 1}}, Text {u"jkl\nmno"});
-  REQUIRE(buffer.text() == Text {u"abjkl\nmnohi"});
-  REQUIRE(buffer.text_in_range(Range {{0, 1}, {1, 4}}) == Text {u"bjkl\nmnoh"});
+  REQUIRE(buffer.text_in_range({{0, 1}, {0, UINT32_MAX}}) == Text{u"bc"});
 
-  buffer.set_text_in_range(Range {{0, 0}, {10, 1}}, Text {u"yz"});
-  REQUIRE(buffer.text() == Text {u"yz"});
-  REQUIRE(buffer.text_in_range(Range {{0, 1}, {10, 1}}) == Text {u"z"});
+  buffer.set_text_in_range(Range {{0, 2}, {2, 1}}, Text{u"jkl\nmno"});
+  REQUIRE(buffer.text() == Text{u"abjkl\nmnohi"});
+  REQUIRE(buffer.text_in_range(Range {{0, 1}, {1, 4}}) == Text{u"bjkl\nmnoh"});
+
+  buffer.set_text_in_range(Range {{0, 0}, {10, 1}}, Text{u"yz"});
+  REQUIRE(buffer.text() == Text{u"yz"});
+  REQUIRE(buffer.text_in_range(Range {{0, 1}, {10, 1}}) == Text{u"z"});
 }
 
 TEST_CASE("TextBuffer::line_length_for_row - basic") {
@@ -286,7 +288,15 @@ TEST_CASE("TextBuffer - random edits and queries") {
     TextBuffer buffer{Text{original_text}};
     vector<SnapshotTask> snapshot_tasks;
 
-    // cout << "trial: " << i << "\n";
+    for (uint32_t k = 0; k < 5; k++) {
+      Range range = get_random_range(rand, buffer);
+      // cout << "check random range " << range << "\n";
+      REQUIRE(buffer.text_in_range(range) == Text(TextSlice(original_text).slice(range)));
+      REQUIRE(buffer.position_for_offset(buffer.clip_position(range.start).offset) == range.start);
+      REQUIRE(buffer.position_for_offset(buffer.clip_position(range.end).offset) == range.end);
+    }
+
+    // cout << "edit: " << i << "\n";
     // cout << "extent: " << original_text.extent() << "\ntext: " << original_text << "\n";
 
     for (uint j = 0; j < 15; j++) {

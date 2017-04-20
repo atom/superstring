@@ -134,10 +134,11 @@ struct TextBuffer::Layer {
 
   template <typename Callback>
   bool for_each_chunk_in_range(Point start, Point end, const Callback &callback, bool splay = false) {
-    if (!patch) return callback(TextSlice(*text).slice({start, end}));
-
     Point goal_position = clip_position(end, splay).position;
     Point current_position = clip_position(start, splay).position;
+
+    if (!patch) return callback(TextSlice(*text).slice({current_position, goal_position}));
+
     Point base_position = current_position;
     auto change = patch->find_change_for_new_position(current_position);
 

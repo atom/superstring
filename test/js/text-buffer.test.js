@@ -206,8 +206,7 @@ describe('TextBuffer', () => {
 
   describe('.lineForRow, .lineLengthForRow, and .lineEndingForRow', () => {
     it('returns the properties of the given line of text', () => {
-      const buffer = new TextBuffer()
-      buffer.setText('abc\r\ndefg\n\r\nhijkl')
+      const buffer = new TextBuffer('abc\r\ndefg\n\r\nhijkl')
 
       assert.equal(buffer.lineForRow(0), 'abc')
       assert.equal(buffer.lineForRow(1), 'defg')
