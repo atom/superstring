@@ -195,12 +195,15 @@ describe('TextBuffer', () => {
   })
 
   describe('.getTextInRange', () => {
-    it('mutates the buffer', () => {
+    it('reads substrings from the buffer', () => {
       const buffer = new TextBuffer()
       buffer.setText('abc\ndef\nghi')
       assert.equal(buffer.getTextInRange(Range(Point(0, 1), Point(0, 2))), 'b')
       assert.equal(buffer.getTextInRange(Range(Point(0, 1), Point(1, 2))), 'bc\nde')
       assert.equal(buffer.getTextInRange(Range(Point(0, 1), Point(2, 8))), 'bc\ndef\nghi')
+
+      assert.equal(buffer.getTextInRange(Range(Point(-Infinity, -Infinity), Point(0, Infinity))), 'abc')
+      assert.equal(buffer.getTextInRange(Range(Point(1, -Infinity), Point(1, Infinity))), 'def')
     })
   })
 
