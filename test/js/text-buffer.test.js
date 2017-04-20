@@ -49,6 +49,25 @@ describe('TextBuffer', () => {
         .catch(error => rejection = error)
         .then(() => assert.equal(rejection.message, 'Invalid encoding name: GARBAGE-16'))
     })
+
+    it('resolves with a Patch representing the difference between the old and new text', () => {
+      const buffer = new TextBuffer('cat\ndog\nelephant\nfox')
+      const {path: filePath} = temp.openSync()
+      fs.writeFileSync(filePath, 'bug\ncat\ndog\nelephant\nfox\ngoat')
+
+      return buffer.load(filePath).then(patch => {
+        assert.deepEqual(JSON.parse(JSON.stringify(patch.getChanges())), [
+          {
+            oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
+            newStart: {row: 0, column: 0}, newEnd: {row: 1, column: 0}
+          },
+          {
+            oldStart: {row: 3, column: 3}, oldEnd: {row: 3, column: 3},
+            newStart: {row: 4, column: 3}, newEnd: {row: 5, column: 4}
+          }
+        ])
+      })
+    })
   })
 
   describe('.loadSync', () => {

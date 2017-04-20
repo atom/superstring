@@ -331,9 +331,15 @@ public:
   }
 
   void HandleOKCallback() {
-    bool result = loaded_text && buffer->reset(move(*loaded_text));
-    v8::Local<v8::Value> argv[] = {Nan::New<Boolean>(result)};
-    callback->Call(1, argv);
+    if (loaded_text) {
+      Patch patch = text_diff(buffer->base_text(), *loaded_text);
+      buffer->reset(move(*loaded_text));
+      v8::Local<v8::Value> argv[] = {Nan::Null(), PatchWrapper::from_patch(move(patch))};
+      callback->Call(2, argv);
+    } else {
+      v8::Local<v8::Value> argv[] = {Nan::Error(("Invalid encoding name: " + encoding_name).c_str())};
+      callback->Call(1, argv);
+    }
   }
 };
 

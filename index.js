@@ -21,11 +21,11 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
         this,
         filePath,
         encoding,
-        (result) => {
-          if (result) {
-            resolve()
+        (error, result) => {
+          if (error) {
+            reject(error)
           } else {
-            reject(new Error(`Invalid encoding name: ${encoding}`))
+            resolve(result)
           }
         },
         progressCallback
