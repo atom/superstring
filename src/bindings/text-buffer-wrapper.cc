@@ -42,6 +42,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("baseTextDigest").ToLocalChecked(), Nan::New<FunctionTemplate>(base_text_digest));
   prototype_template->Set(Nan::New("search").ToLocalChecked(), Nan::New<FunctionTemplate>(search));
   prototype_template->Set(Nan::New("searchSync").ToLocalChecked(), Nan::New<FunctionTemplate>(search_sync));
+  prototype_template->Set(Nan::New("getDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(dot_graph));
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
 }
 
@@ -484,4 +485,9 @@ void TextBufferWrapper::base_text_digest(const Nan::FunctionCallbackInfo<Value> 
   if (Nan::New(stream.str()).ToLocal(&result)) {
     info.GetReturnValue().Set(result);
   }
+}
+
+void TextBufferWrapper::dot_graph(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  info.GetReturnValue().Set(Nan::New<String>(text_buffer.get_dot_graph()).ToLocalChecked());
 }
