@@ -138,6 +138,41 @@ TEST_CASE("TextBuffer::is_modified") {
   }
 }
 
+TEST_CASE("TextBuffer::flush_changes") {
+  TextBuffer buffer{u"abcdef"};
+  REQUIRE(buffer.layer_count() == 1);
+
+  buffer.set_text_in_range({{0, 1}, {0, 2}}, Text{u"B"});
+  REQUIRE(buffer.text() == Text{u"aBcdef"});
+  REQUIRE(buffer.is_modified());
+  REQUIRE(buffer.layer_count() == 2);
+
+  auto snapshot1 = buffer.create_snapshot();
+  REQUIRE(buffer.layer_count() == 2);
+
+  buffer.set_text_in_range({{0, 2}, {0, 3}}, Text{u"C"});
+  REQUIRE(buffer.text() == Text{u"aBCdef"});
+  REQUIRE(buffer.is_modified());
+  REQUIRE(buffer.layer_count() == 3);
+
+  auto snapshot2 = buffer.create_snapshot();
+  REQUIRE(buffer.layer_count() == 3);
+
+  buffer.flush_changes();
+  REQUIRE(!buffer.is_modified());
+  REQUIRE(buffer.base_text() == Text{u"aBCdef"});
+  REQUIRE(buffer.text() == Text{u"aBCdef"});
+
+  REQUIRE(snapshot1->text() == Text{u"aBcdef"});
+  REQUIRE(snapshot2->text() == Text{u"aBCdef"});
+
+  delete snapshot2;
+  REQUIRE(buffer.layer_count() == 3);
+
+  delete snapshot1;
+  REQUIRE(buffer.layer_count() == 1);
+}
+
 TEST_CASE("Snapshot::flush_preceding_changes") {
   TextBuffer buffer{u"abcdef"};
   REQUIRE(buffer.layer_count() == 1);
@@ -155,27 +190,6 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
   REQUIRE(buffer.layer_count() == 3);
 
   vector<uint8_t> bytes;
-
-  SECTION("serializing with no changes flushed") {
-    TextBuffer copy_buffer{Text{buffer.base_text()}};
-    Serializer serializer(bytes);
-    buffer.serialize_changes(serializer);
-    Deserializer deserializer(bytes);
-    copy_buffer.deserialize_changes(deserializer);
-
-    REQUIRE(copy_buffer.base_text() == buffer.base_text());
-    REQUIRE(copy_buffer.text() == buffer.text());
-    REQUIRE(copy_buffer.is_modified());
-
-    buffer.flush_changes();
-    REQUIRE(!buffer.is_modified());
-    REQUIRE(buffer.base_text() == Text{u"aBCdef"});
-    REQUIRE(buffer.text() == Text{u"aBCdef"});
-
-    delete snapshot1;
-    delete snapshot2;
-    REQUIRE(buffer.layer_count() == 1);
-  }
 
   SECTION("flushing the latest snapshot's changes") {
     snapshot2->flush_preceding_changes();
@@ -224,6 +238,38 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
     delete snapshot2;
     REQUIRE(buffer.layer_count() == 2);
   }
+}
+
+TEST_CASE("TextBuffer::reset") {
+  TextBuffer buffer{u"abcdef"};
+  auto snapshot1 = buffer.create_snapshot();
+
+  buffer.set_text_in_range({{0, 1}, {0, 2}}, Text{u"B"});
+  auto snapshot2 = buffer.create_snapshot();
+
+  buffer.set_text_in_range({{0, 2}, {0, 3}}, Text{u"C"});
+  auto snapshot3 = buffer.create_snapshot();
+
+  buffer.reset(Text{u"123"});
+
+  REQUIRE(!buffer.is_modified());
+  REQUIRE(buffer.text() == Text{u"123"});
+  REQUIRE(snapshot1->text() == Text{u"abcdef"});
+  REQUIRE(snapshot2->text() == Text{u"aBcdef"});
+  REQUIRE(snapshot3->text() == Text{u"aBCdef"});
+
+  delete snapshot1;
+  delete snapshot2;
+  delete snapshot3;
+
+  REQUIRE(!buffer.is_modified());
+  REQUIRE(buffer.layer_count() == 1);
+  REQUIRE(buffer.text() == Text{u"123"});
+
+  buffer.reset(Text{u"456"});
+  REQUIRE(!buffer.is_modified());
+  REQUIRE(buffer.layer_count() == 1);
+  REQUIRE(buffer.text() == Text{u"456"});
 }
 
 TEST_CASE("TextBuffer::search") {

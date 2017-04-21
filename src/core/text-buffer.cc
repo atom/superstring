@@ -329,16 +329,13 @@ TextBuffer::~TextBuffer() {
 
 TextBuffer::TextBuffer(std::u16string text) : TextBuffer {Text {text}} {}
 
-bool TextBuffer::reset(Text &&new_base_text) {
-  if (top_layer != base_layer && top_layer->previous_layer != base_layer) return false;
+void TextBuffer::reset(Text &&new_base_text) {
+  top_layer = new Layer(top_layer);
   top_layer->extent_ = new_base_text.extent();
   top_layer->size_ = new_base_text.size();
   top_layer->text = move(new_base_text);
-  top_layer->patch = optional<Patch>{};
-  delete top_layer->previous_layer;
-  top_layer->previous_layer = nullptr;
   base_layer = top_layer;
-  return true;
+  consolidate_layers();
 }
 
 void TextBuffer::serialize_changes(Serializer &serializer) {

@@ -33,7 +33,7 @@ public:
   bool is_modified() const;
   std::vector<TextSlice> chunks() const;
 
-  bool reset(Text &&);
+  void reset(Text &&);
   void flush_changes();
   void serialize_changes(Serializer &);
   bool deserialize_changes(Deserializer &);
