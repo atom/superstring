@@ -4,13 +4,13 @@ const {assert} = require('chai')
 const {MarkerIndex} = require('../..')
 
 describe('MarkerIndex', () => {
-  it('maintains correct marker positions during randomized insertions and mutations', function () {
+  it.only('maintains correct marker positions during randomized insertions and mutations', function () {
     this.timeout(Infinity)
 
     let seed, seedMessage, random, markerIndex, markers, idCounter
 
     for (let i = 0; i < 1000; i++) {
-      seed = 42;//Date.now()
+      seed = Date.now()
       seedMessage = `Random Seed: ${seed}`
       random = new Random(seed)
       markerIndex = new MarkerIndex(seed)
@@ -41,6 +41,7 @@ describe('MarkerIndex', () => {
         testFindEndingIn,
         testFindStartingAt,
         testFindEndingAt,
+        testFindBoundariesIn
       ].sort((a, b) => random.intBetween(-1, 1))
 
       verifications.forEach(verification => verification())
@@ -280,6 +281,68 @@ describe('MarkerIndex', () => {
       }
     }
 
+    function testFindBoundariesIn () {
+      for (let i = 0; i < 10; i++) {
+        const [start, end] = getRange()
+
+        const expectedContainingMarkerIds = []
+        let expectedBoundaries = []
+        const sortedMarkers = markers.slice().sort(compareMarkers)
+        for (let marker of sortedMarkers) {
+          if (compare(marker.start, start) < 0 && compare(marker.end, start) >= 0) {
+            expectedContainingMarkerIds.push(marker.id)
+          }
+
+          if (compare(marker.start, start) >= 0 && compare(marker.start, end) < 0) {
+            expectedBoundaries.push({
+              position: marker.start,
+              starting: new Set([marker.id]),
+              ending: new Set()
+            })
+          }
+
+          if (compare(marker.end, start) >= 0 && compare(marker.end, end) < 0) {
+            expectedBoundaries.push({
+              position: marker.end,
+              starting: new Set(),
+              ending: new Set([marker.id])
+            })
+          }
+        }
+
+        expectedBoundaries.sort((a, b) => compare(a.position, b.position))
+        expectedBoundaries = expectedBoundaries.reduce((acc, currentBoundary) => {
+          const lastBoundary = acc[acc.length - 1]
+          if (lastBoundary && compare(lastBoundary.position, currentBoundary.position) === 0) {
+            lastBoundary.starting = unifySets(lastBoundary.starting, currentBoundary.starting)
+            lastBoundary.ending = unifySets(lastBoundary.ending, currentBoundary.ending)
+          } else {
+            acc.push(currentBoundary)
+          }
+          return acc
+        }, [])
+
+        const {containingStart, boundaries} = markerIndex.findBoundariesIn(start, end)
+        assert.deepEqual(containingStart, expectedContainingMarkerIds, seedMessage)
+        assert.equal(boundaries.length, expectedBoundaries.length, seedMessage)
+        for (let i = 0; i < boundaries.length; i++) {
+          const actual = boundaries[i]
+          const expected = expectedBoundaries[i]
+          assert.deepEqual(actual.position, expected.position, seedMessage)
+
+          assert.equal(actual.starting.size, expected.starting.size, seedMessage)
+          for (const id of actual.starting) {
+            assert(expected.starting.has(id), seedMessage)
+          }
+
+          assert.equal(actual.ending.size, expected.ending.size, seedMessage)
+          for (const id of actual.ending) {
+            assert(expected.ending.has(id), seedMessage)
+          }
+        }
+      }
+    }
+
     function performInsert () {
       let id = idCounter++
       let [start, end] = getRange()
@@ -420,6 +483,28 @@ describe('MarkerIndex', () => {
           assert(actualSet.has(markerId), `Expected marker ${markerId} to be invalidated via ${strategy} strategy. Seed ${seed}.`)
         }
       }
+    }
+
+    function compareMarkers (a, b) {
+      const startComparison = compare(a.start, b.start)
+      if (startComparison === 0) {
+        const endComparison = compare(b.end, a.end)
+        if (endComparison === 0) {
+          return a.id - b.id
+        } else {
+          return endComparison
+        }
+      } else {
+        return startComparison
+      }
+    }
+
+    function unifySets (a, b) {
+      const union = new Set(a)
+      for (const value of b) {
+        union.add(value)
+      }
+      return union
     }
   })
 
