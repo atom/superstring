@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-EM_COMPILER_PATH=$(find emsdk_portable -name em++ | head -n1)
+EM_COMPILER_PATH=$(find emsdk-portable -name em++ | head -n1)
 
 echo "Running ${EM_COMPILER_PATH}"
 ${EM_COMPILER_PATH}                     \

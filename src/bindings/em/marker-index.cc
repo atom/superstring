@@ -23,6 +23,7 @@ EMSCRIPTEN_BINDINGS(MarkerIndex) {
     .function("findStartingAt", WRAP(&MarkerIndex::find_starting_at))
     .function("findEndingIn", WRAP(&MarkerIndex::find_ending_in))
     .function("findEndingAt", WRAP(&MarkerIndex::find_ending_at))
+    .function("findBoundariesIn", WRAP(&MarkerIndex::find_boundaries_in))
     .function("dump", WRAP(&MarkerIndex::dump));
 
   emscripten::value_object<MarkerIndex::SpliceResult>("SpliceResult")
@@ -30,4 +31,13 @@ EMSCRIPTEN_BINDINGS(MarkerIndex) {
     .field("inside", &MarkerIndex::SpliceResult::inside)
     .field("overlap", &MarkerIndex::SpliceResult::overlap)
     .field("surround", &MarkerIndex::SpliceResult::surround);
+
+  emscripten::value_object<MarkerIndex::BoundaryQueryResult>("BoundaryQueryResult")
+    .field("containing_start", &MarkerIndex::BoundaryQueryResult::containing_start)
+    .field("boundaries", &MarkerIndex::BoundaryQueryResult::boundaries);
+
+  emscripten::value_object<MarkerIndex::Boundary>("Boundary")
+    .field("position", &MarkerIndex::Boundary::position)
+    .field("starting", &MarkerIndex::Boundary::starting)
+    .field("ending", &MarkerIndex::Boundary::ending);
 }

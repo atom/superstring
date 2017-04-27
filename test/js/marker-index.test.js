@@ -2,6 +2,7 @@ const Random = require('random-seed')
 const {traverse, traversalDistance, compare, isZero, max, format: formatPoint} = require('./helpers/point-helpers')
 const {assert} = require('chai')
 const {MarkerIndex} = require('../..')
+const MAX_INT32 = 4294967296
 
 describe('MarkerIndex', () => {
   it('maintains correct marker positions during randomized insertions and mutations', function () {
@@ -9,8 +10,9 @@ describe('MarkerIndex', () => {
 
     let seed, seedMessage, random, markerIndex, markers, idCounter
 
+    const generateSeed = Random.create()
     for (let i = 0; i < 1000; i++) {
-      seed = Date.now()
+      seed = generateSeed(MAX_INT32)
       seedMessage = `Random Seed: ${seed}`
       random = new Random(seed)
       markerIndex = new MarkerIndex(seed)

@@ -134,6 +134,35 @@ struct em_wrap_type<MarkerIndex::SpliceResult> : public em_wrap_type_base<Marker
 };
 
 template <>
+struct em_wrap_type<MarkerIndex::Boundary> : public em_wrap_type_base<MarkerIndex::Boundary, emscripten::val> {
+  static MarkerIndex::Boundary receive(emscripten::val const &value) {
+    throw std::runtime_error("Unimplemented");
+  }
+
+  static emscripten::val transmit(MarkerIndex::Boundary const &boundary) {
+    auto result = emscripten::val::object();
+    result.set("position", em_transmit(boundary.position));
+    result.set("starting", em_transmit(boundary.starting));
+    result.set("ending", em_transmit(boundary.ending));
+    return result;
+  }
+};
+
+template <>
+struct em_wrap_type<MarkerIndex::BoundaryQueryResult> : public em_wrap_type_base<MarkerIndex::BoundaryQueryResult, emscripten::val> {
+  static MarkerIndex::BoundaryQueryResult receive(emscripten::val const &value) {
+    throw std::runtime_error("Unimplemented");
+  }
+
+  static emscripten::val transmit(MarkerIndex::BoundaryQueryResult const &query_result) {
+    auto result = emscripten::val::object();
+    result.set("containingStart", em_transmit(query_result.containing_start));
+    result.set("boundaries", em_transmit(query_result.boundaries));
+    return result;
+  }
+};
+
+template <>
 struct em_wrap_type<Text> : public em_wrap_type_base<Text, std::string> {
   static Text receive(std::string const &str) {
     return Text(str.begin(), str.end());

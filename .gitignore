@@ -4,4 +4,4 @@ build
 .clang_complete
 
 /browser.js
-emsdk_portable
+emsdk-portable
