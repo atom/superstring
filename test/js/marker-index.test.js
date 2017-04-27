@@ -4,7 +4,7 @@ const {assert} = require('chai')
 const {MarkerIndex} = require('../..')
 
 describe('MarkerIndex', () => {
-  it.only('maintains correct marker positions during randomized insertions and mutations', function () {
+  it('maintains correct marker positions during randomized insertions and mutations', function () {
     this.timeout(Infinity)
 
     let seed, seedMessage, random, markerIndex, markers, idCounter
@@ -324,6 +324,7 @@ describe('MarkerIndex', () => {
 
         const {containingStart, boundaries} = markerIndex.findBoundariesIn(start, end)
         assert.deepEqual(containingStart, expectedContainingMarkerIds, seedMessage)
+
         assert.equal(boundaries.length, expectedBoundaries.length, seedMessage)
         for (let i = 0; i < boundaries.length; i++) {
           const actual = boundaries[i]

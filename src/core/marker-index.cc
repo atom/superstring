@@ -212,7 +212,6 @@ void MarkerIndex::Iterator::find_ending_in(const Point &start, const Point &end,
 
 void MarkerIndex::Iterator::find_boundaries_in(Point start, Point end, MarkerIndex::BoundaryQueryResult *result) {
   reset();
-
   if (!current_node) return;
 
   while (true) {
@@ -248,7 +247,6 @@ void MarkerIndex::Iterator::find_boundaries_in(Point start, Point end, MarkerInd
       }
     }
   }
-
   std::sort(
     result->containing_start.begin(),
     result->containing_start.end(),
@@ -257,6 +255,18 @@ void MarkerIndex::Iterator::find_boundaries_in(Point start, Point end, MarkerInd
       return comparison == 0 ? a < b : comparison == -1;
     }
   );
+
+  reset();
+  seek_to_first_node_greater_than_or_equal_to(start);
+  while (current_node && current_node_position < end) {
+    cache_node_position();
+    result->boundaries.push_back({
+      current_node_position,
+      current_node->start_marker_ids,
+      current_node->end_marker_ids
+    });
+    move_to_successor();
+  }
 }
 
 unordered_map<MarkerIndex::MarkerId, Range> MarkerIndex::Iterator::dump() {
