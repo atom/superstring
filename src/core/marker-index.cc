@@ -256,8 +256,7 @@ void MarkerIndex::Iterator::find_boundaries_in(Point start, Point end, MarkerInd
     }
   );
 
-  reset();
-  seek_to_first_node_greater_than_or_equal_to(start);
+  if (current_node_position < start) move_to_successor();
   while (current_node && current_node_position < end) {
     cache_node_position();
     result->boundaries.push_back({
