@@ -250,7 +250,7 @@ void MarkerIndex::Iterator::find_boundaries_in(Point start, Point end, MarkerInd
   std::sort(
     result->containing_start.begin(),
     result->containing_start.end(),
-    [this](MarkerId a, MarkerId b) -> bool {
+    [this](MarkerId a, MarkerId b) {
       int comparison = marker_index->compare(a, b);
       return comparison == 0 ? a < b : comparison == -1;
     }
