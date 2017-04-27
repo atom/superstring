@@ -82,7 +82,7 @@ void MarkerIndexWrapper::generate_random_number(const Nan::FunctionCallbackInfo<
   info.GetReturnValue().Set(Nan::New<v8::Number>(random));
 }
 
-Local<Set> MarkerIndexWrapper::marker_ids_to_js(const MarkerIndex::MarkerIdSet &marker_ids) {
+Local<Set> MarkerIndexWrapper::marker_ids_set_to_js(const MarkerIndex::MarkerIdSet &marker_ids) {
   Isolate *isolate = v8::Isolate::GetCurrent();
   Local<Context> context = isolate->GetCurrentContext();
   Local<v8::Set> js_set = v8::Set::New(isolate);
@@ -96,7 +96,7 @@ Local<Set> MarkerIndexWrapper::marker_ids_to_js(const MarkerIndex::MarkerIdSet &
   return js_set;
 }
 
-Local<Array> MarkerIndexWrapper::marker_id_vector_to_js(const std::vector<MarkerIndex::MarkerId> &marker_ids) {
+Local<Array> MarkerIndexWrapper::marker_ids_vector_to_js(const std::vector<MarkerIndex::MarkerId> &marker_ids) {
   Local<Array> js_array = Nan::New<Array>(marker_ids.size());
   for (size_t i = 0; i < marker_ids.size(); i++) {
     js_array->Set(i, Nan::New<Integer>(marker_ids[i]));
@@ -196,11 +196,11 @@ void MarkerIndexWrapper::splice(const Nan::FunctionCallbackInfo<Value> &info) {
     MarkerIndex::SpliceResult result = wrapper->marker_index.splice(*start, *old_extent, *new_extent);
 
     Local<Object> invalidated = Nan::New<Object>();
-    invalidated->Set(Nan::New(touch_string), marker_ids_to_js(result.touch));
-    invalidated->Set(Nan::New(inside_string), marker_ids_to_js(result.inside));
-    invalidated->Set(Nan::New(inside_string), marker_ids_to_js(result.inside));
-    invalidated->Set(Nan::New(overlap_string), marker_ids_to_js(result.overlap));
-    invalidated->Set(Nan::New(surround_string), marker_ids_to_js(result.surround));
+    invalidated->Set(Nan::New(touch_string), marker_ids_set_to_js(result.touch));
+    invalidated->Set(Nan::New(inside_string), marker_ids_set_to_js(result.inside));
+    invalidated->Set(Nan::New(inside_string), marker_ids_set_to_js(result.inside));
+    invalidated->Set(Nan::New(overlap_string), marker_ids_set_to_js(result.overlap));
+    invalidated->Set(Nan::New(surround_string), marker_ids_set_to_js(result.surround));
     info.GetReturnValue().Set(invalidated);
   }
 }
@@ -255,7 +255,7 @@ void MarkerIndexWrapper::find_intersecting(const Nan::FunctionCallbackInfo<Value
 
   if (start && end) {
     MarkerIndex::MarkerIdSet result = wrapper->marker_index.find_intersecting(*start, *end);
-    info.GetReturnValue().Set(marker_ids_to_js(result));
+    info.GetReturnValue().Set(marker_ids_set_to_js(result));
   }
 }
 
@@ -267,7 +267,7 @@ void MarkerIndexWrapper::find_containing(const Nan::FunctionCallbackInfo<Value> 
 
   if (start && end) {
     MarkerIndex::MarkerIdSet result = wrapper->marker_index.find_containing(*start, *end);
-    info.GetReturnValue().Set(marker_ids_to_js(result));
+    info.GetReturnValue().Set(marker_ids_set_to_js(result));
   }
 }
 
@@ -279,7 +279,7 @@ void MarkerIndexWrapper::find_contained_in(const Nan::FunctionCallbackInfo<Value
 
   if (start && end) {
     MarkerIndex::MarkerIdSet result = wrapper->marker_index.find_contained_in(*start, *end);
-    info.GetReturnValue().Set(marker_ids_to_js(result));
+    info.GetReturnValue().Set(marker_ids_set_to_js(result));
   }
 }
 
@@ -291,7 +291,7 @@ void MarkerIndexWrapper::find_starting_in(const Nan::FunctionCallbackInfo<Value>
 
   if (start && end) {
     MarkerIndex::MarkerIdSet result = wrapper->marker_index.find_starting_in(*start, *end);
-    info.GetReturnValue().Set(marker_ids_to_js(result));
+    info.GetReturnValue().Set(marker_ids_set_to_js(result));
   }
 }
 
@@ -302,7 +302,7 @@ void MarkerIndexWrapper::find_starting_at(const Nan::FunctionCallbackInfo<Value>
 
   if (position) {
     MarkerIndex::MarkerIdSet result = wrapper->marker_index.find_starting_at(*position);
-    info.GetReturnValue().Set(marker_ids_to_js(result));
+    info.GetReturnValue().Set(marker_ids_set_to_js(result));
   }
 }
 
@@ -314,7 +314,7 @@ void MarkerIndexWrapper::find_ending_in(const Nan::FunctionCallbackInfo<Value> &
 
   if (start && end) {
     MarkerIndex::MarkerIdSet result = wrapper->marker_index.find_ending_in(*start, *end);
-    info.GetReturnValue().Set(marker_ids_to_js(result));
+    info.GetReturnValue().Set(marker_ids_set_to_js(result));
   }
 }
 
@@ -325,7 +325,7 @@ void MarkerIndexWrapper::find_ending_at(const Nan::FunctionCallbackInfo<Value> &
 
   if (position) {
     MarkerIndex::MarkerIdSet result = wrapper->marker_index.find_ending_at(*position);
-    info.GetReturnValue().Set(marker_ids_to_js(result));
+    info.GetReturnValue().Set(marker_ids_set_to_js(result));
   }
 }
 
@@ -338,15 +338,15 @@ void MarkerIndexWrapper::find_boundaries_in(const Nan::FunctionCallbackInfo<Valu
   if (start && end) {
     MarkerIndex::BoundaryQueryResult result = wrapper->marker_index.find_boundaries_in(*start, *end);
     Local<Object> js_result = Nan::New<Object>();
-    js_result->Set(Nan::New(containing_start_string), marker_id_vector_to_js(result.containing_start));
+    js_result->Set(Nan::New(containing_start_string), marker_ids_vector_to_js(result.containing_start));
 
     Local<Array> js_boundaries = Nan::New<Array>(result.boundaries.size());
     for (size_t i = 0; i < result.boundaries.size(); i++) {
       MarkerIndex::Boundary boundary = result.boundaries[i];
       Local<Object> js_boundary = Nan::New<Object>();
       js_boundary->Set(Nan::New(position_string), PointWrapper::from_point(boundary.position));
-      js_boundary->Set(Nan::New(starting_string), marker_ids_to_js(boundary.starting));
-      js_boundary->Set(Nan::New(ending_string), marker_ids_to_js(boundary.ending));
+      js_boundary->Set(Nan::New(starting_string), marker_ids_set_to_js(boundary.starting));
+      js_boundary->Set(Nan::New(ending_string), marker_ids_set_to_js(boundary.ending));
       js_boundaries->Set(i, js_boundary);
     }
     js_result->Set(Nan::New(boundaries_string), js_boundaries);
