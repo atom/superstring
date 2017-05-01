@@ -162,3 +162,18 @@ Returns a set with the ids of all markers starting at the specified point.
 ##### `findEndingAt (position)`
 
 Returns a set with the ids of all markers ending at the specified point.
+
+##### `findBoundariesIn (start, end)`
+
+A boundary is a position in the index where a marker starts or ends. Multiple markers starting and/or ending at the same position describe only one boundary. This method returns an object containing all the boundaries in the specified point range, and an array of marker ids that overlap the specified start position. For example:
+
+```js
+{
+  containingStart: [1, 2, 3, 4],
+  boundaries: [
+    {position: {row: 0, column: 1}, starting: new Set([5, 6]), ending: new Set()},
+    {position: {row: 1, column: 0}, starting: new Set(), ending: new Set([5])}
+    {position: {row: 2, column: 0}, starting: new Set(), ending: new Set([6])}
+  ]
+}
+```
