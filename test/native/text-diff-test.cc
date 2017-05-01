@@ -16,12 +16,14 @@ TEST_CASE("text_diff - multiple lines") {
     Change{
       Point{1, 0}, Point{1, 0},
       Point{1, 0}, Point{2, 0},
-      nullptr, nullptr, 0, 0
+      get_text(u"").get(), get_text(u"def\n").get(),
+      0, 0
     },
     Change{
       Point{2, 2}, Point{2, 2},
       Point{3, 2}, Point{3, 3},
-      nullptr, nullptr, 0, 0
+      get_text(u"").get(), get_text(u"l").get(),
+      0, 3
     }
   }));
 
@@ -41,12 +43,14 @@ TEST_CASE("text_diff - single line") {
     Change{
       Point{0, 3}, Point{0, 4},
       Point{0, 3}, Point{0, 5},
-      nullptr, nullptr, 0, 0
+      get_text(u"d").get(), get_text(u"xy").get(),
+      0, 0
     },
     Change{
       Point{0, 6}, Point{0, 8},
       Point{0, 7}, Point{0, 7},
-      nullptr, nullptr, 0, 0
+      get_text(u"gh").get(), get_text(u"").get(),
+      1, 2
     },
   }));
 }
@@ -78,10 +82,15 @@ TEST_CASE("text_diff - randomized changes") {
     Patch patch = text_diff(old_text, new_text);
 
     for (const Change &change : patch.get_changes()) {
+      REQUIRE(
+        *change.new_text ==
+        Text(TextSlice(new_text).slice(Range{change.new_start, change.new_end}))
+      );
+
       old_text.splice(
         change.new_start,
         change.old_end.traversal(change.old_start),
-        TextSlice(new_text).slice(Range{change.new_start, change.new_end})
+        *change.new_text
       );
     }
 

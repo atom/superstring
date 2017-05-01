@@ -56,7 +56,7 @@ class Text {
   Point extent() const;
   bool empty() const;
   uint32_t offset_for_position(Point) const;
-  Point position_for_offset(uint32_t) const;
+  Point position_for_offset(uint32_t, bool clip_crlf = true) const;
   uint32_t line_length_for_row(uint32_t row) const;
   void append(TextSlice);
   void assign(TextSlice);
