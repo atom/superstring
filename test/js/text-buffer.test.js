@@ -59,11 +59,15 @@ describe('TextBuffer', () => {
         assert.deepEqual(JSON.parse(JSON.stringify(patch.getChanges())), [
           {
             oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
-            newStart: {row: 0, column: 0}, newEnd: {row: 1, column: 0}
+            newStart: {row: 0, column: 0}, newEnd: {row: 1, column: 0},
+            oldText: '',
+            newText: 'bug\n'
           },
           {
             oldStart: {row: 3, column: 3}, oldEnd: {row: 3, column: 3},
-            newStart: {row: 4, column: 3}, newEnd: {row: 5, column: 4}
+            newStart: {row: 4, column: 3}, newEnd: {row: 5, column: 4},
+            oldText: '',
+            newText: '\ngoat'
           }
         ])
       })
@@ -81,11 +85,15 @@ describe('TextBuffer', () => {
       assert.deepEqual(JSON.parse(JSON.stringify(patch.getChanges())), [
         {
           oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
-          newStart: {row: 0, column: 0}, newEnd: {row: 1, column: 0}
+          newStart: {row: 0, column: 0}, newEnd: {row: 1, column: 0},
+          oldText: '',
+          newText: 'bug\n'
         },
         {
           oldStart: {row: 3, column: 3}, oldEnd: {row: 3, column: 3},
-          newStart: {row: 4, column: 3}, newEnd: {row: 5, column: 4}
+          newStart: {row: 4, column: 3}, newEnd: {row: 5, column: 4},
+          oldText: '',
+          newText: '\ngoat'
         }
       ])
     })
