@@ -1,58 +1,32 @@
 #ifndef REGEX_H_
 #define REGEX_H_
 
-#include "pcre2.h"
+#include <string>
+
+struct pcre2_real_code_16;
+struct pcre2_real_match_data_16;
 
 struct Regex {
-  pcre2_code *code;
-  pcre2_match_data *match_data;
+  pcre2_real_code_16 *code;
+  pcre2_real_match_data_16 *match_data;
   std::u16string error_message;
 
-  Regex(const uint16_t *pattern, uint32_t pattern_length) {
-    int error_number = 0;
-    size_t error_offset = 0;
-    code = pcre2_compile(
-      pattern,
-      pattern_length,
-      PCRE2_MULTILINE,
-      &error_number,
-      &error_offset,
-      nullptr
-    );
+  Regex(const uint16_t *pattern, uint32_t pattern_length);
+  ~Regex();
 
-    if (!code) {
-      uint16_t message_buffer[256];
-      size_t length = pcre2_get_error_message(error_number, message_buffer, 256);
-      error_message.assign(message_buffer, message_buffer + length);
-      match_data = nullptr;
-      return;
-    }
+  struct MatchResult {
+    enum {
+      None,
+      Error,
+      Partial,
+      Full,
+    } type;
 
-    match_data = pcre2_match_data_create_from_pattern(code, nullptr);
-  }
+    size_t start_offset;
+    size_t end_offset;
+  };
 
-  ~Regex() {
-    if (code) {
-      pcre2_match_data_free(match_data);
-      pcre2_code_free(code);
-    }
-  }
-
-  int match(const uint16_t *data, size_t length) {
-    return pcre2_match(
-      code,
-      data,
-      length,
-      0,
-      PCRE2_PARTIAL_HARD,
-      match_data,
-      nullptr
-    );
-  }
-
-  size_t get_match_offset(uint32_t index) const {
-    return pcre2_get_ovector_pointer(match_data)[index];
-  }
+  MatchResult match(const uint16_t *data, size_t length);
 };
 
 #endif  // REGX_H_

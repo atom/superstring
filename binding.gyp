@@ -33,6 +33,7 @@
                 "src/core/patch.cc",
                 "src/core/point.cc",
                 "src/core/range.cc",
+                "src/core/regex.cc",
                 "src/core/text.cc",
                 "src/core/text-buffer.cc",
                 "src/core/text-slice.cc",

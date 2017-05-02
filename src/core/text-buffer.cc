@@ -11,6 +11,7 @@ using std::string;
 using std::vector;
 using std::u16string;
 using SearchResult = TextBuffer::SearchResult;
+using MatchResult = Regex::MatchResult;
 
 uint32_t TextBuffer::MAX_CHUNK_SIZE_TO_COPY = 1024;
 
@@ -255,56 +256,54 @@ struct TextBuffer::Layer {
           chunk = TextSlice();
         }
 
-        int status = regex.match(slice_to_search.data(), slice_to_search.size());
+        MatchResult match_result = regex.match(slice_to_search.data(), slice_to_search.size());
+        switch (match_result.type) {
+          case MatchResult::Error:
+            chunk_continuation.clear();
+            return true;
 
-        if (status < 0) {
-          switch (status) {
-            case PCRE2_ERROR_NOMATCH:
-              slice_to_search_start_offset += slice_to_search.size();
-              slice_to_search_start_position = slice_to_search_start_position.traverse(
-                slice_to_search.extent()
-              );
-              chunk_continuation.clear();
-              break;
+          case MatchResult::None:
+            slice_to_search_start_offset += slice_to_search.size();
+            slice_to_search_start_position = slice_to_search_start_position.traverse(
+              slice_to_search.extent()
+            );
+            chunk_continuation.clear();
+            break;
 
-            case PCRE2_ERROR_PARTIAL: {
-              size_t partial_match_offset = regex.get_match_offset(0);
-              Point partial_match_position = slice_to_search.position_for_offset(partial_match_offset);
-              if (chunk_continuation.empty() || partial_match_offset > 0) {
-                slice_to_search_start_offset += partial_match_offset;
-                slice_to_search_start_position = slice_to_search_start_position.traverse(partial_match_position);
-                chunk_continuation.assign(slice_to_search.suffix(partial_match_position));
-              }
-              break;
+          case MatchResult::Partial:
+            if (chunk_continuation.empty() || match_result.start_offset > 0) {
+              Point partial_match_position = slice_to_search.position_for_offset(match_result.start_offset);
+              slice_to_search_start_offset += match_result.start_offset;
+              slice_to_search_start_position = slice_to_search_start_position.traverse(partial_match_position);
+              chunk_continuation.assign(slice_to_search.suffix(partial_match_position));
             }
+            break;
 
-            default:
-              return true;
-          }
-        } else {
-          uint32_t start_offset = regex.get_match_offset(0);
-          uint32_t end_offset = regex.get_match_offset(1);
+          case MatchResult::Full:
+            result = Range{
+              slice_to_search_start_position.traverse(
+                slice_to_search.position_for_offset(match_result.start_offset)
+              ),
+              slice_to_search_start_position.traverse(
+                slice_to_search.position_for_offset(match_result.end_offset)
+              )
+            };
 
-          result = Range{
-            slice_to_search_start_position.traverse(
-              slice_to_search.position_for_offset(start_offset)
-            ),
-            slice_to_search_start_position.traverse(
-              slice_to_search.position_for_offset(end_offset)
-            )
-          };
+            // If the match ends with a CR at the end of a chunk, continue looking
+            // at the next chunk, in case that chunk starts with an LF. Points
+            // within CRLF line endings are not valid.
+            if (match_result.end_offset == slice_to_search.size() && slice_to_search.back() == '\r') continue;
 
-          // If the match ends with a CR at the end of a chunk, continue looking
-          // at the next chunk, in case that chunk starts with an LF. Points
-          // within CRLF line endings are not valid.
-          if (end_offset == slice_to_search.size() && slice_to_search.back() == '\r') continue;
-
-          return true;
+            return true;
         }
       }
 
       return false;
     });
+
+    if (!result && !chunk_continuation.empty()) {
+      result = Range{slice_to_search_start_position, extent()};
+    }
 
     return {result, u""};
   }

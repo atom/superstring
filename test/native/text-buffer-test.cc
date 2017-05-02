@@ -2,6 +2,7 @@
 #include <sstream>
 #include "text-buffer.h"
 #include "text-slice.h"
+#include "regex.h"
 #include <future>
 #include <unistd.h>
 
@@ -11,6 +12,7 @@ using std::string;
 using std::stringstream;
 using std::vector;
 using std::u16string;
+using MatchResult = Regex::MatchResult;
 
 TEST_CASE("TextBuffer::set_text_in_range - basic") {
   TextBuffer buffer {u"abc\ndef\nghi"};
@@ -277,6 +279,7 @@ TEST_CASE("TextBuffer::search") {
 
   REQUIRE(buffer.search(u"(").error_message == u"missing closing parenthesis");
 
+  REQUIRE(buffer.search(u"ef*").range == (Range{{1, 0}, {1, 2}}));
   REQUIRE(buffer.search(u"x").range == optional<Range>{});
   REQUIRE(*buffer.search(u"c.").range == (Range{{0, 2}, {0, 4}}));
   REQUIRE(*buffer.search(u"d").range == (Range{{0, 3}, {0, 4}}));
@@ -399,14 +402,21 @@ TEST_CASE("TextBuffer - random edits and queries") {
       for (uint32_t k = 0; k < 5; k++) {
         Range range = get_random_range(rand, buffer);
         Text subtext{TextSlice(mutated_text).slice(range)};
-        TextBuffer fresh_buffer{Text(mutated_text)};
+        if (rand() % 2) subtext.append(Text{u"*"});
 
-        // cout << "search for: /" << subtext << "/\n";
+        cout << "search for: /" << subtext << "/\n";
+        auto search_result = buffer.search(subtext.content.data(), subtext.size());
 
-        REQUIRE(
-          buffer.search(subtext.content.data(), subtext.size()).range ==
-          fresh_buffer.search(subtext.content.data(), subtext.size()).range
-        );
+        Regex regex(subtext.content.data(), subtext.size());
+        MatchResult match_result = regex.match(mutated_text.data(), mutated_text.size());
+        if (match_result.type == MatchResult::Partial || match_result.type == MatchResult::Full) {
+          REQUIRE(search_result.range == (Range{
+            mutated_text.position_for_offset(match_result.start_offset),
+            mutated_text.position_for_offset(match_result.end_offset),
+          }));
+        } else {
+          REQUIRE(search_result.range == optional<Range>());
+        }
       }
 
       for (uint32_t k = 0; k < 5; k++) {
