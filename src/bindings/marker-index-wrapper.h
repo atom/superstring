@@ -33,7 +33,7 @@ private:
   static void find_starting_at(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void find_ending_in(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void find_ending_at(const Nan::FunctionCallbackInfo<v8::Value> &info);
-  static void find_boundaries_in(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void find_boundaries_after(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void dump(const Nan::FunctionCallbackInfo<v8::Value> &info);
   MarkerIndexWrapper(v8::Local<v8::Number> seed);
   MarkerIndex marker_index;

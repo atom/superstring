@@ -53,7 +53,7 @@ void MarkerIndexWrapper::init(Local<Object> exports) {
                           Nan::New<FunctionTemplate>(find_starting_at));
   prototype_template->Set(Nan::New<String>("findEndingIn").ToLocalChecked(), Nan::New<FunctionTemplate>(find_ending_in));
   prototype_template->Set(Nan::New<String>("findEndingAt").ToLocalChecked(), Nan::New<FunctionTemplate>(find_ending_at));
-  prototype_template->Set(Nan::New<String>("findBoundariesIn").ToLocalChecked(), Nan::New<FunctionTemplate>(find_boundaries_in));
+  prototype_template->Set(Nan::New<String>("findBoundariesAfter").ToLocalChecked(), Nan::New<FunctionTemplate>(find_boundaries_after));
   prototype_template->Set(Nan::New<String>("dump").ToLocalChecked(), Nan::New<FunctionTemplate>(dump));
 
   start_string.Reset(Nan::Persistent<String>(Nan::New("start").ToLocalChecked()));
@@ -329,14 +329,18 @@ void MarkerIndexWrapper::find_ending_at(const Nan::FunctionCallbackInfo<Value> &
   }
 }
 
-void MarkerIndexWrapper::find_boundaries_in(const Nan::FunctionCallbackInfo<Value> &info) {
+void MarkerIndexWrapper::find_boundaries_after(const Nan::FunctionCallbackInfo<Value> &info) {
   MarkerIndexWrapper *wrapper = Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(info.This());
 
   optional<Point> start = PointWrapper::point_from_js(info[0]);
-  optional<Point> end = PointWrapper::point_from_js(info[1]);
+  optional<size_t> max_count;
+  Local<Integer> js_max_count;
+  if (Nan::To<Integer>(info[1]).ToLocal(&js_max_count)) {
+    max_count = js_max_count->NumberValue();
+  }
 
-  if (start && end) {
-    MarkerIndex::BoundaryQueryResult result = wrapper->marker_index.find_boundaries_in(*start, *end);
+  if (start && max_count) {
+    MarkerIndex::BoundaryQueryResult result = wrapper->marker_index.find_boundaries_after(*start, *max_count);
     Local<Object> js_result = Nan::New<Object>();
     js_result->Set(Nan::New(containing_start_string), marker_ids_vector_to_js(result.containing_start));
 

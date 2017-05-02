@@ -210,7 +210,7 @@ void MarkerIndex::Iterator::find_ending_in(const Point &start, const Point &end,
   }
 }
 
-void MarkerIndex::Iterator::find_boundaries_in(Point start, Point end, MarkerIndex::BoundaryQueryResult *result) {
+void MarkerIndex::Iterator::find_boundaries_after(Point start, size_t max_count, MarkerIndex::BoundaryQueryResult *result) {
   reset();
   if (!current_node) return;
 
@@ -257,7 +257,7 @@ void MarkerIndex::Iterator::find_boundaries_in(Point start, Point end, MarkerInd
   );
 
   if (current_node_position < start) move_to_successor();
-  while (current_node && current_node_position < end) {
+  while (current_node && max_count > 0) {
     cache_node_position();
     result->boundaries.push_back({
       current_node_position,
@@ -265,6 +265,7 @@ void MarkerIndex::Iterator::find_boundaries_in(Point start, Point end, MarkerInd
       current_node->end_marker_ids
     });
     move_to_successor();
+    max_count--;
   }
 }
 
@@ -700,9 +701,9 @@ flat_set<MarkerIndex::MarkerId> MarkerIndex::find_ending_at(Point position) {
   return find_ending_in(position, position);
 }
 
-MarkerIndex::BoundaryQueryResult MarkerIndex::find_boundaries_in(Point start, Point end) {
+MarkerIndex::BoundaryQueryResult MarkerIndex::find_boundaries_after(Point start, size_t max_count) {
   BoundaryQueryResult result;
-  iterator.find_boundaries_in(start, end, &result);
+  iterator.find_boundaries_after(start, max_count, &result);
   return result;
 }
 

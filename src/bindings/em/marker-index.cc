@@ -23,7 +23,7 @@ EMSCRIPTEN_BINDINGS(MarkerIndex) {
     .function("findStartingAt", WRAP(&MarkerIndex::find_starting_at))
     .function("findEndingIn", WRAP(&MarkerIndex::find_ending_in))
     .function("findEndingAt", WRAP(&MarkerIndex::find_ending_at))
-    .function("findBoundariesIn", WRAP(&MarkerIndex::find_boundaries_in))
+    .function("findBoundariesAfter", WRAP(&MarkerIndex::find_boundaries_after))
     .function("dump", WRAP(&MarkerIndex::dump));
 
   emscripten::value_object<MarkerIndex::SpliceResult>("SpliceResult")
