@@ -43,7 +43,7 @@ describe('MarkerIndex', () => {
         testFindEndingIn,
         testFindStartingAt,
         testFindEndingAt,
-        testFindBoundariesIn
+        testFindBoundariesAfter
       ].sort((a, b) => random.intBetween(-1, 1))
 
       verifications.forEach(verification => verification())
@@ -283,9 +283,10 @@ describe('MarkerIndex', () => {
       }
     }
 
-    function testFindBoundariesIn () {
+    function testFindBoundariesAfter () {
       for (let i = 0; i < 10; i++) {
-        const [start, end] = getRange()
+        const start = {row: random(100), column: random(100)}
+        const maxCount = random(20)
 
         const expectedContainingMarkerIds = []
         let expectedBoundaries = []
@@ -295,7 +296,7 @@ describe('MarkerIndex', () => {
             expectedContainingMarkerIds.push(marker.id)
           }
 
-          if (compare(marker.start, start) >= 0 && compare(marker.start, end) < 0) {
+          if (compare(marker.start, start) >= 0) {
             expectedBoundaries.push({
               position: marker.start,
               starting: new Set([marker.id]),
@@ -303,7 +304,7 @@ describe('MarkerIndex', () => {
             })
           }
 
-          if (compare(marker.end, start) >= 0 && compare(marker.end, end) < 0) {
+          if (compare(marker.end, start) >= 0) {
             expectedBoundaries.push({
               position: marker.end,
               starting: new Set(),
@@ -323,8 +324,9 @@ describe('MarkerIndex', () => {
           }
           return acc
         }, [])
+        expectedBoundaries = expectedBoundaries.slice(0, maxCount)
 
-        const {containingStart, boundaries} = markerIndex.findBoundariesIn(start, end)
+        const {containingStart, boundaries} = markerIndex.findBoundariesAfter(start, maxCount)
         assert.deepEqual(containingStart, expectedContainingMarkerIds, seedMessage)
 
         assert.equal(boundaries.length, expectedBoundaries.length, seedMessage)

@@ -50,7 +50,7 @@ public:
   flat_set<MarkerId> find_starting_at(Point position);
   flat_set<MarkerId> find_ending_in(Point start, Point end);
   flat_set<MarkerId> find_ending_at(Point position);
-  BoundaryQueryResult find_boundaries_in(Point start, Point end);
+  BoundaryQueryResult find_boundaries_after(Point start, size_t max_count);
 
   std::unordered_map<MarkerId, Range> dump();
 
@@ -83,7 +83,7 @@ private:
     void find_contained_in(const Point &start, const Point &end, flat_set<MarkerId> *result);
     void find_starting_in(const Point &start, const Point &end, flat_set<MarkerId> *result);
     void find_ending_in(const Point &start, const Point &end, flat_set<MarkerId> *result);
-    void find_boundaries_in(const Point start, const Point end, BoundaryQueryResult *result);
+    void find_boundaries_after(Point start, size_t max_count, BoundaryQueryResult *result);
     std::unordered_map<MarkerId, Range> dump();
 
   private:
