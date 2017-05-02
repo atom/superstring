@@ -55,12 +55,14 @@ describe('TextBuffer', () => {
       const {path: filePath} = temp.openSync()
       fs.writeFileSync(filePath, 'bug\ncat\ndog\nelephant\nfox\ngoat')
 
+      buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), 'ant-')
+
       return buffer.load(filePath).then(patch => {
         assert.deepEqual(JSON.parse(JSON.stringify(patch.getChanges())), [
           {
-            oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
+            oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 4},
             newStart: {row: 0, column: 0}, newEnd: {row: 1, column: 0},
-            oldText: '',
+            oldText: 'ant-',
             newText: 'bug\n'
           },
           {
@@ -80,13 +82,14 @@ describe('TextBuffer', () => {
       const {path: filePath} = temp.openSync()
       fs.writeFileSync(filePath, 'bug\ncat\ndog\nelephant\nfox\ngoat')
 
-      const patch = buffer.loadSync(filePath, 'UTF-8')
+      buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), 'ant-')
 
+      const patch = buffer.loadSync(filePath, 'UTF-8')
       assert.deepEqual(JSON.parse(JSON.stringify(patch.getChanges())), [
         {
-          oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
+          oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 4},
           newStart: {row: 0, column: 0}, newEnd: {row: 1, column: 0},
-          oldText: '',
+          oldText: 'ant-',
           newText: 'bug\n'
         },
         {
