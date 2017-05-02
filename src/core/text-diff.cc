@@ -11,6 +11,11 @@ using std::ostream;
 using std::vector;
 using std::u16string;
 
+// The `diff-match-patch` library operates on basic_string-compatible objects.
+// Our `Text` stores its content in a `vector` rather than a `string` because
+// we can construct a vector from a v8::String efficiently by writing directly
+// to its internal buffer via the `.data()` method. So in order to diff two
+// `Text` instances, we need to adapt them to the `basic_string` interface.
 struct VectorStringAdapter {
   using vector_type = vector<uint16_t>;
   using value_type = vector_type::value_type;
