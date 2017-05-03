@@ -51,8 +51,9 @@ public:
     friend class TextBuffer;
     TextBuffer &buffer;
     Layer &layer;
+    Layer &base_layer;
 
-    Snapshot(TextBuffer &, Layer &);
+    Snapshot(TextBuffer &, Layer &, Layer &);
 
   public:
     ~Snapshot();
@@ -65,6 +66,7 @@ public:
     std::vector<TextSlice> chunks_in_range(Range) const;
     Text text() const;
     Text text_in_range(Range) const;
+    const Text &base_text() const;
     SearchResult search(const uint16_t *, uint32_t) const;
   };
 

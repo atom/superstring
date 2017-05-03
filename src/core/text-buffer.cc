@@ -579,7 +579,8 @@ size_t TextBuffer::layer_count() const {
 
 TextBuffer::Snapshot *TextBuffer::create_snapshot() {
   top_layer->snapshot_count++;
-  return new Snapshot(*this, *top_layer);
+  base_layer->snapshot_count++;
+  return new Snapshot(*this, *top_layer, *base_layer);
 }
 
 void TextBuffer::flush_changes() {
@@ -622,8 +623,13 @@ SearchResult TextBuffer::Snapshot::search(const uint16_t *pattern, uint32_t patt
   return layer.search(pattern, pattern_length);
 }
 
-TextBuffer::Snapshot::Snapshot(TextBuffer &buffer, TextBuffer::Layer &layer)
-  : buffer{buffer}, layer{layer} {}
+const Text &TextBuffer::Snapshot::base_text() const {
+  return *base_layer.text;
+}
+
+TextBuffer::Snapshot::Snapshot(TextBuffer &buffer, TextBuffer::Layer &layer,
+                               TextBuffer::Layer &base_layer)
+  : buffer{buffer}, layer{layer}, base_layer{base_layer} {}
 
 void TextBuffer::Snapshot::flush_preceding_changes() {
   if (!layer.text) {
@@ -636,7 +642,10 @@ void TextBuffer::Snapshot::flush_preceding_changes() {
 TextBuffer::Snapshot::~Snapshot() {
   assert(layer.snapshot_count > 0);
   layer.snapshot_count--;
-  if (layer.snapshot_count == 0) buffer.consolidate_layers();
+  base_layer.snapshot_count--;
+  if (layer.snapshot_count == 0 || base_layer.snapshot_count == 0) {
+    buffer.consolidate_layers();
+  }
 }
 
 void TextBuffer::consolidate_layers() {

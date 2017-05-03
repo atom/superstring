@@ -313,6 +313,7 @@ TEST_CASE("TextBuffer::search - spanning edits") {
 }
 
 struct SnapshotData {
+  Text base_text;
   Text text;
   Point extent;
   vector<Point> line_end_positions;
@@ -320,6 +321,7 @@ struct SnapshotData {
 
 struct SnapshotTask {
   TextBuffer::Snapshot *snapshot;
+  Text base_text;
   Text mutated_text;
   std::future<vector<SnapshotData>> future;
 };
@@ -361,6 +363,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
         auto snapshot = buffer.create_snapshot();
         snapshot_tasks.push_back({
           snapshot,
+          buffer.base_text(),
           mutated_text,
           std::async([seed, snapshot]() {
             Generator rand(seed);
@@ -372,6 +375,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
                 line_ending_positions.push_back({row, snapshot->line_length_for_row(row)});
               }
               results.push_back({
+                snapshot->base_text(),
                 snapshot->text(),
                 snapshot->extent(),
                 line_ending_positions
@@ -404,7 +408,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
         Text subtext{TextSlice(mutated_text).slice(range)};
         if (rand() % 2) subtext.append(Text{u"*"});
 
-        cout << "search for: /" << subtext << "/\n";
+        // cout << "search for: /" << subtext << "/\n";
         auto search_result = buffer.search(subtext.content.data(), subtext.size());
 
         Regex regex(subtext.content.data(), subtext.size());
@@ -433,13 +437,15 @@ TEST_CASE("TextBuffer - random edits and queries") {
         uint32_t snapshot_index = rand() % snapshot_tasks.size();
 
         snapshot_tasks[snapshot_index].future.wait();
-        auto mutated_text = snapshot_tasks[snapshot_index].mutated_text;
+        auto &base_text = snapshot_tasks[snapshot_index].base_text;
+        auto &mutated_text = snapshot_tasks[snapshot_index].mutated_text;
 
         if (rand() % 3) {
           snapshot_tasks[snapshot_index].snapshot->flush_preceding_changes();
         }
 
         for (auto data : snapshot_tasks[snapshot_index].future.get()) {
+          REQUIRE(data.base_text == base_text);
           REQUIRE(data.text == mutated_text);
           REQUIRE(data.extent == mutated_text.extent());
           for (auto position : data.line_end_positions) {
