@@ -332,7 +332,7 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
           progress.Send(&percent_done, 1);
         }
       );
-      patch = text_diff(buffer->base_text(), *loaded_text);
+      patch = text_diff(snapshot->base_text(), *loaded_text);
     }
 
     void HandleProgressCallback(const size_t *percent_done, size_t count) {
@@ -358,12 +358,14 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
         return;
       }
 
+      bool has_changed = buffer->base_text() != *loaded_text;
       if (progress_callback) {
-        Local<Value> argv[] = {Nan::New<Number>(100), Nan::New<Boolean>(buffer->base_text() != *loaded_text)};
+        Local<Value> argv[] = {Nan::New<Number>(100), Nan::New<Boolean>(has_changed)};
         progress_callback->Call(2, argv);
       }
 
-      buffer->reset(move(*loaded_text));
+      if (has_changed) buffer->reset(move(*loaded_text));
+
       Local<Value> argv[] = {Nan::Null(), PatchWrapper::from_patch(move(patch))};
       callback->Call(2, argv);
     }
