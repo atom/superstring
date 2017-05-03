@@ -12,6 +12,7 @@
 
 using namespace v8;
 using std::move;
+using std::string;
 using std::vector;
 
 void TextBufferWrapper::init(Local<Object> exports) {
@@ -221,7 +222,7 @@ void TextBufferWrapper::search(const Nan::FunctionCallbackInfo<Value> &info) {
     void HandleOKCallback() {
       delete snapshot;
       if (!result.error_message.empty()) {
-        v8::Local<v8::Value> argv[] = {
+        Local<Value> argv[] = {
           Nan::Error(Nan::New<String>(
             reinterpret_cast<const uint16_t *>(result.error_message.c_str()),
             result.error_message.size()).ToLocalChecked()
@@ -229,10 +230,10 @@ void TextBufferWrapper::search(const Nan::FunctionCallbackInfo<Value> &info) {
         };
         callback->Call(1, argv);
       } else if (result.range) {
-        v8::Local<v8::Value> argv[] = {Nan::Null(), RangeWrapper::from_range(*result.range)};
+        Local<Value> argv[] = {Nan::Null(), RangeWrapper::from_range(*result.range)};
         callback->Call(2, argv);
       } else {
-        v8::Local<v8::Value> argv[] = {Nan::Null(), Nan::Null()};
+        Local<Value> argv[] = {Nan::Null(), Nan::Null()};
         callback->Call(2, argv);
       }
     }
@@ -262,11 +263,11 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
 
   Local<String> js_file_path;
   if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
-  std::string file_path = *String::Utf8Value(js_file_path);
+  string file_path = *String::Utf8Value(js_file_path);
 
   Local<String> js_encoding_name;
   if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
-  std::string encoding_name = *String::Utf8Value(info[1].As<String>());
+  string encoding_name = *String::Utf8Value(info[1].As<String>());
 
   static size_t CHUNK_SIZE = 10 * 1024;
   std::ifstream file{file_path};
@@ -296,16 +297,20 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
   class Worker : public Nan::AsyncProgressWorkerBase<size_t> {
     Nan::Callback *progress_callback;
     TextBuffer *buffer;
-    std::string file_name;
-    std::string encoding_name;
+    TextBuffer::Snapshot *snapshot;
+    string file_name;
+    string encoding_name;
     optional<Text> loaded_text;
+    Patch patch;
 
   public:
     Worker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
-           TextBuffer *buffer, std::string &&file_name, std::string &&encoding_name) :
+           TextBuffer *buffer, TextBuffer::Snapshot *snapshot, string &&file_name,
+           string &&encoding_name) :
       AsyncProgressWorkerBase(completion_callback),
       progress_callback{progress_callback},
       buffer{buffer},
+      snapshot{snapshot},
       file_name{file_name},
       encoding_name(encoding_name) {}
 
@@ -316,33 +321,51 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
       file.seekg(0, std::ios::end);
       auto end = file.tellg();
       file.seekg(0);
+      size_t file_size = end - beginning;
       loaded_text = Text::build(
         file,
-        end - beginning,
+        file_size,
         encoding_name.c_str(),
         CHUNK_SIZE,
-        [&progress](size_t percent_done) { progress.Send(&percent_done, 1); }
+        [&progress, file_size](size_t bytes_read) {
+          size_t percent_done = bytes_read / file_size * 100;
+          progress.Send(&percent_done, 1);
+        }
       );
+      patch = text_diff(buffer->base_text(), *loaded_text);
     }
 
     void HandleProgressCallback(const size_t *percent_done, size_t count) {
-      if (!progress_callback) return;
-      Nan::HandleScope scope;
-      v8::Local<v8::Value> argv[] = {Nan::New<Number>(static_cast<uint32_t>(*percent_done))};
-      progress_callback->Call(1, argv);
+      if (progress_callback) {
+        Nan::HandleScope scope;
+        Local<Value> argv[] = {Nan::New<Number>(static_cast<uint32_t>(*percent_done))};
+        progress_callback->Call(1, argv);
+      }
     }
 
     void HandleOKCallback() {
-      if (loaded_text) {
-        buffer->flush_changes();
-        Patch patch = text_diff(buffer->base_text(), *loaded_text);
-        buffer->reset(move(*loaded_text));
-        v8::Local<v8::Value> argv[] = {Nan::Null(), PatchWrapper::from_patch(move(patch))};
-        callback->Call(2, argv);
-      } else {
-        v8::Local<v8::Value> argv[] = {Nan::Error(("Invalid encoding name: " + encoding_name).c_str())};
+      delete snapshot;
+
+      if (!loaded_text) {
+        Local<Value> argv[] = {Nan::Error(("Invalid encoding name: " + encoding_name).c_str())};
         callback->Call(1, argv);
+        return;
       }
+
+      if (buffer->is_modified()) {
+        Local<Value> argv[] = {Nan::Null(), Nan::Null()};
+        callback->Call(2, argv);
+        return;
+      }
+
+      if (progress_callback) {
+        Local<Value> argv[] = {Nan::New<Number>(100), Nan::New<Boolean>(buffer->base_text() != *loaded_text)};
+        progress_callback->Call(2, argv);
+      }
+
+      buffer->reset(move(*loaded_text));
+      Local<Value> argv[] = {Nan::Null(), PatchWrapper::from_patch(move(patch))};
+      callback->Call(2, argv);
     }
   };
 
@@ -350,11 +373,11 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
 
   Local<String> js_file_path;
   if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
-  std::string file_path = *String::Utf8Value(js_file_path);
+  string file_path = *String::Utf8Value(js_file_path);
 
   Local<String> js_encoding_name;
   if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
-  std::string encoding_name = *String::Utf8Value(info[1].As<String>());
+  string encoding_name = *String::Utf8Value(info[1].As<String>());
 
   Nan::Callback *completion_callback = new Nan::Callback(info[2].As<Function>());
 
@@ -363,10 +386,17 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
     progress_callback = new Nan::Callback(info[3].As<Function>());
   }
 
+  if (text_buffer.is_modified()) {
+    Local<Value> argv[] = {Nan::Null(), Nan::Null()};
+    completion_callback->Call(2, argv);
+    return;
+  }
+
   Nan::AsyncQueueWorker(new Worker(
     completion_callback,
     progress_callback,
     &text_buffer,
+    text_buffer.create_snapshot(),
     move(file_path),
     move(encoding_name)
   ));
@@ -377,11 +407,11 @@ void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) 
 
   Local<String> js_file_path;
   if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
-  std::string file_path = *String::Utf8Value(js_file_path);
+  string file_path = *String::Utf8Value(js_file_path);
 
   Local<String> js_encoding_name;
   if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
-  std::string encoding_name = *String::Utf8Value(info[1].As<String>());
+  string encoding_name = *String::Utf8Value(info[1].As<String>());
 
   static size_t CHUNK_SIZE = 10 * 1024;
   std::ofstream file{file_path};
@@ -398,13 +428,13 @@ void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) 
 
 class TextBufferSaver : public Nan::AsyncWorker {
   TextBuffer::Snapshot *snapshot;
-  std::string file_name;
-  std::string encoding_name;
+  string file_name;
+  string encoding_name;
   bool result;
 
 public:
   TextBufferSaver(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
-                  std::string &&file_name, std::string &&encoding_name) :
+                  string &&file_name, string &&encoding_name) :
     AsyncWorker(completion_callback),
     snapshot{snapshot},
     file_name{file_name},
@@ -425,7 +455,7 @@ public:
   void HandleOKCallback() {
     snapshot->flush_preceding_changes();
     delete snapshot;
-    v8::Local<v8::Value> argv[] = {Nan::New<Boolean>(result)};
+    Local<Value> argv[] = {Nan::New<Boolean>(result)};
     callback->Call(1, argv);
   }
 };
@@ -435,11 +465,11 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
 
   Local<String> js_file_path;
   if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
-  std::string file_path = *String::Utf8Value(js_file_path);
+  string file_path = *String::Utf8Value(js_file_path);
 
   Local<String> js_encoding_name;
   if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
-  std::string encoding_name = *String::Utf8Value(info[1].As<String>());
+  string encoding_name = *String::Utf8Value(info[1].As<String>());
 
   Nan::Callback *completion_callback = new Nan::Callback(info[2].As<Function>());
   Nan::AsyncQueueWorker(new TextBufferSaver(
@@ -481,7 +511,7 @@ void TextBufferWrapper::base_text_digest(const Nan::FunctionCallbackInfo<Value> 
     std::setfill('0') <<
     std::setw(2 * sizeof(size_t)) <<
     std::hex <<
-    text_buffer.base_text_digest();
+    text_buffer.base_text().digest();
   Local<String> result;
   if (Nan::New(stream.str()).ToLocal(&result)) {
     info.GetReturnValue().Set(result);

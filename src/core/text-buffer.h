@@ -37,7 +37,6 @@ public:
   void flush_changes();
   void serialize_changes(Serializer &);
   bool deserialize_changes(Deserializer &);
-  size_t base_text_digest();
   const Text &base_text() const;
 
   struct SearchResult {

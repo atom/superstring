@@ -398,6 +398,20 @@ bool Text::empty() const {
   return content.empty();
 }
 
+template <typename T>
+inline void hash_combine(std::size_t &seed, const T &value) {
+  std::hash<T> hasher;
+  seed ^= hasher(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+
+size_t Text::digest() const {
+  size_t result = 0;
+  for (uint16_t character : content) {
+    hash_combine(result, character);
+  }
+  return result;
+}
+
 void Text::append(TextSlice slice) {
   int64_t line_offset_delta = static_cast<int64_t>(content.size()) - static_cast<int64_t>(slice.start_offset());
 
@@ -439,8 +453,12 @@ void Text::assign(TextSlice slice) {
   }
 }
 
+bool Text::operator!=(const Text &other) const {
+  return content != other.content;
+}
+
 bool Text::operator==(const Text &other) const {
-  return content == other.content && line_offsets == other.line_offsets;
+  return content == other.content;
 }
 
 ostream &operator<<(ostream &stream, const Text &text) {

@@ -368,20 +368,6 @@ bool TextBuffer::deserialize_changes(Deserializer &deserializer) {
   return true;
 }
 
-template <typename T>
-inline void hash_combine(std::size_t &seed, const T &value) {
-    std::hash<T> hasher;
-    seed ^= hasher(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-}
-
-size_t TextBuffer::base_text_digest() {
-  size_t result = 0;
-  for (uint16_t character : *base_layer->text) {
-    hash_combine(result, character);
-  }
-  return result;
-}
-
 const Text &TextBuffer::base_text() const {
   return *base_layer->text;
 }

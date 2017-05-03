@@ -63,8 +63,10 @@ class Text {
   void serialize(Serializer &) const;
   uint32_t size() const;
   const uint16_t *data() const;
+  size_t digest() const;
   void clear();
 
+  bool operator!=(const Text &) const;
   bool operator==(const Text &) const;
 
   friend std::ostream &operator<<(std::ostream &, const Text &);
