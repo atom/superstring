@@ -337,6 +337,29 @@ void TextBuffer::reset(Text &&new_base_text) {
   consolidate_layers();
 }
 
+Patch TextBuffer::get_inverted_changes() const {
+  vector<const Patch *> patches;
+  Layer *layer = top_layer;
+  while (layer != base_layer) {
+    patches.insert(patches.begin(), &(*layer->patch));
+    layer = layer->previous_layer;
+  }
+  Patch combination(patches);
+  TextSlice base{this->base_text()};
+  Patch result;
+  for (auto change : combination.get_changes()) {
+    result.splice(
+      change.old_start,
+      change.new_end.traversal(change.new_start),
+      change.old_end.traversal(change.old_start),
+      *change.new_text,
+      Text(base.slice({change.old_start, change.old_end})),
+      change.new_text->size()
+    );
+  }
+  return result;
+}
+
 void TextBuffer::serialize_changes(Serializer &serializer) {
   serializer.append(top_layer->size_);
   top_layer->extent_.serialize(serializer);

@@ -35,6 +35,7 @@ public:
 
   void reset(Text &&);
   void flush_changes();
+  Patch get_inverted_changes() const;
   void serialize_changes(Serializer &);
   bool deserialize_changes(Deserializer &);
   const Text &base_text() const;

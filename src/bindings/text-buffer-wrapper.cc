@@ -37,6 +37,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("positionForCharacterIndex").ToLocalChecked(), Nan::New<FunctionTemplate>(position_for_character_index));
   prototype_template->Set(Nan::New("isModified").ToLocalChecked(), Nan::New<FunctionTemplate>(is_modified));
   prototype_template->Set(Nan::New("load").ToLocalChecked(), Nan::New<FunctionTemplate>(load));
+  prototype_template->Set(Nan::New("reload").ToLocalChecked(), Nan::New<FunctionTemplate>(reload));
   prototype_template->Set(Nan::New("save").ToLocalChecked(), Nan::New<FunctionTemplate>(save));
   prototype_template->Set(Nan::New("loadSync").ToLocalChecked(), Nan::New<FunctionTemplate>(load_sync));
   prototype_template->Set(Nan::New("saveSync").ToLocalChecked(), Nan::New<FunctionTemplate>(save_sync));
@@ -320,7 +321,7 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   info.GetReturnValue().Set(PatchWrapper::from_patch(move(patch)));
 }
 
-void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
+void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool force) {
   class Worker : public Nan::AsyncProgressWorkerBase<size_t> {
     Nan::Callback *progress_callback;
     TextBuffer *buffer;
@@ -329,17 +330,19 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
     string encoding_name;
     optional<Text> loaded_text;
     Patch patch;
+    bool force;
 
   public:
     Worker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
            TextBuffer *buffer, TextBuffer::Snapshot *snapshot, string &&file_name,
-           string &&encoding_name) :
+           string &&encoding_name, bool force) :
       AsyncProgressWorkerBase(completion_callback),
       progress_callback{progress_callback},
       buffer{buffer},
       snapshot{snapshot},
       file_name{file_name},
-      encoding_name(encoding_name) {}
+      encoding_name(encoding_name),
+      force{force} {}
 
     void Execute(const Nan::AsyncProgressWorkerBase<size_t>::ExecutionProgress &progress) {
       std::ifstream file{file_name};
@@ -378,13 +381,20 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
         return;
       }
 
-      if (buffer->is_modified()) {
-        Local<Value> argv[] = {Nan::Null(), Nan::Null()};
-        callback->Call(2, argv);
-        return;
+      bool is_modified = buffer->is_modified();
+      if (is_modified) {
+        if (force) {
+          Patch inverted_changes = buffer->get_inverted_changes();
+          inverted_changes.combine(patch);
+          patch = move(inverted_changes);
+        } else {
+          Local<Value> argv[] = {Nan::Null(), Nan::Null()};
+          callback->Call(2, argv);
+          return;
+        }
       }
 
-      bool has_changed = buffer->base_text() != *loaded_text;
+      bool has_changed = is_modified || buffer->base_text() != *loaded_text;
       if (progress_callback) {
         Local<Value> argv[] = {Nan::New<Number>(100), Nan::New<Boolean>(has_changed)};
         progress_callback->Call(2, argv);
@@ -414,7 +424,7 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
     progress_callback = new Nan::Callback(info[3].As<Function>());
   }
 
-  if (text_buffer.is_modified()) {
+  if (text_buffer.is_modified() && !force) {
     Local<Value> argv[] = {Nan::Null(), Nan::Null()};
     completion_callback->Call(2, argv);
     return;
@@ -426,8 +436,17 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
     &text_buffer,
     text_buffer.create_snapshot(),
     move(file_path),
-    move(encoding_name)
+    move(encoding_name),
+    force
   ));
+}
+
+void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
+  load_(info, false);
+}
+
+void TextBufferWrapper::reload(const Nan::FunctionCallbackInfo<Value> &info) {
+  load_(info, true);
 }
 
 void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) {

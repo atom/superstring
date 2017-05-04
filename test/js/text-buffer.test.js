@@ -14,15 +14,15 @@ describe('TextBuffer', () => {
       const content = 'a\nb\nc\n'.repeat(10 * 1024)
       fs.writeFileSync(filePath, content)
 
-      const progressValues = []
+      const percentages = []
 
-      return buffer.load(filePath, (i) => progressValues.push(i))
+      return buffer.load(filePath, (percentDone) => percentages.push(percentDone))
         .then(() => {
           assert.equal(buffer.getText(), content)
 
-          assert.deepEqual(progressValues, progressValues.map(Number).sort())
-          assert(progressValues[0] >= 0)
-          assert(progressValues[progressValues.length - 1] <= content.length)
+          assert.deepEqual(percentages, percentages.map(Number).sort())
+          assert(percentages[0] >= 0)
+          assert(percentages[percentages.length - 1] == 100)
         })
     })
 
@@ -56,7 +56,7 @@ describe('TextBuffer', () => {
       fs.writeFileSync(filePath, 'bug\ncat\ndog\nelephant\nfox\ngoat')
 
       return buffer.load(filePath).then(patch => {
-        assert.deepEqual(JSON.parse(JSON.stringify(patch.getChanges())), [
+        assert.deepEqual(toPlainObject(patch.getChanges()), [
           {
             oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
             newStart: {row: 0, column: 0}, newEnd: {row: 1, column: 0},
@@ -72,6 +72,78 @@ describe('TextBuffer', () => {
         ])
       })
     })
+
+    it('aborts if the buffer is modified before the load', () => {
+      const buffer = new TextBuffer('abc')
+      const {path: filePath} = temp.openSync()
+      fs.writeFileSync(filePath, 'def')
+
+      buffer.setText('ghi')
+
+      return buffer.load(filePath).then(result => {
+        assert.equal(result, null)
+        assert.equal(buffer.getText(), 'ghi')
+        assert.ok(buffer.isModified())
+      })
+    })
+
+    it('aborts if the buffer is modified during the load', () => {
+      const buffer = new TextBuffer('abc')
+      const {path: filePath} = temp.openSync()
+      fs.writeFileSync(filePath, 'def')
+
+      const loadPromise = buffer.load(filePath).then(result => {
+        assert.equal(result, null)
+        assert.equal(buffer.getText(), 'ghi')
+        assert.ok(buffer.isModified())
+      })
+
+      buffer.setText('ghi')
+      return loadPromise
+    })
+  })
+
+  describe('.reload', () => {
+    it('discards any modifications and incorporates that change into the resolved patch', () => {
+      const buffer = new TextBuffer('abcdef')
+      const {path: filePath} = temp.openSync()
+      fs.writeFileSync(filePath, '  abcdef')
+
+      buffer.setTextInRange(Range(Point(0, 3), Point(0, 3)), ' ')
+      assert.equal(buffer.getText(), 'abc def')
+      assert.ok(buffer.isModified())
+
+      const loadPromise = buffer.reload(filePath).then(patch => {
+        assert.equal(buffer.getText(), '  abcdef')
+        assert.notOk(buffer.isModified())
+        assert.deepEqual(toPlainObject(patch.getChanges()), [
+          {
+            oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
+            newStart: {row: 0, column: 0}, newEnd: {row: 0, column: 2},
+            oldText: '',
+            newText: '  '
+          },
+          {
+            oldStart: {row: 0, column: 3}, oldEnd: {row: 0, column: 4},
+            newStart: {row: 0, column: 5}, newEnd: {row: 0, column: 5},
+            oldText: ' ',
+            newText: ''
+          },
+          {
+            oldStart: {row: 0, column: 7}, oldEnd: {row: 0, column: 8},
+            newStart: {row: 0, column: 8}, newEnd: {row: 0, column: 8},
+            oldText: ' ',
+            newText: ''
+          }
+        ])
+      })
+
+      buffer.setTextInRange(Range(Point(0, 7), Point(0, 7)), ' ')
+      assert.equal(buffer.getText(), 'abc def ')
+      assert.ok(buffer.isModified())
+
+      return loadPromise
+    })
   })
 
   describe('.loadSync', () => {
@@ -81,7 +153,7 @@ describe('TextBuffer', () => {
       fs.writeFileSync(filePath, 'bug\ncat\ndog\nelephant\nfox\ngoat')
 
       const patch = buffer.loadSync(filePath, 'UTF-8')
-      assert.deepEqual(JSON.parse(JSON.stringify(patch.getChanges())), [
+      assert.deepEqual(toPlainObject(patch.getChanges()), [
         {
           oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
           newStart: {row: 0, column: 0}, newEnd: {row: 1, column: 0},
@@ -346,6 +418,10 @@ describe('TextBuffer', () => {
     })
   })
 })
+
+function toPlainObject(value) {
+  return JSON.parse(JSON.stringify(value))
+}
 
 function Range(start, end) {
   return {start, end}
