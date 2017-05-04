@@ -32,38 +32,43 @@ struct VectorStringAdapter {
 
   static const size_type npos = -1;
 
-  vector_type content;
+  vector_type content_;
+  const vector_type *borrowed_content_;
 
-  VectorStringAdapter() {}
-  VectorStringAdapter(vector_type &&content) : content{move(content)} {}
+  VectorStringAdapter() : borrowed_content_{nullptr} {}
+  VectorStringAdapter(vector_type &&content) : content_{move(content)}, borrowed_content_{nullptr} {}
+  VectorStringAdapter(const vector_type *borrowed_content) : borrowed_content_{borrowed_content} {}
 
-  bool empty() const { return content.empty(); }
-  size_t size() const { return content.size(); }
-  size_t length() const { return content.size(); }
-  value_type operator[](size_type index) const { return content[index]; }
-  void clear() { content.clear(); }
-  const_pointer c_str() const { return content.data(); }
-  const_iterator begin() const { return content.begin(); }
-  const_iterator end() const { return content.end(); }
-  const_reverse_iterator rbegin() const { return content.rbegin(); }
-  const_reverse_iterator rend() const { return content.rend(); }
-  bool operator==(const VectorStringAdapter &other) const { return content == other.content; }
-  bool operator!=(const VectorStringAdapter &other) const { return content != other.content; }
-  void swap(VectorStringAdapter &other) { content.swap(other.content); }
+  vector_type &content() { assert(!borrowed_content_); return content_; }
+  const vector_type &content() const { return borrowed_content_ ? *borrowed_content_ : content_; }
+
+  bool empty() const { return content().empty(); }
+  size_t size() const { return content().size(); }
+  size_t length() const { return content().size(); }
+  value_type operator[](size_type index) const { return content()[index]; }
+  void clear() { content().clear(); }
+  const_pointer c_str() const { return content().data(); }
+  const_iterator begin() const { return content().begin(); }
+  const_iterator end() const { return content().end(); }
+  const_reverse_iterator rbegin() const { return content().rbegin(); }
+  const_reverse_iterator rend() const { return content().rend(); }
+  bool operator==(const VectorStringAdapter &other) const { return content() == other.content(); }
+  bool operator!=(const VectorStringAdapter &other) const { return content() != other.content(); }
+  void swap(VectorStringAdapter &other) { content().swap(other.content()); }
 
   int compare(size_type position, size_type length, const VectorStringAdapter &other) const {
-    return traits_type::compare(content.data() + position, other.c_str(), length);
+    return traits_type::compare(content().data() + position, other.c_str(), length);
   }
 
   VectorStringAdapter substr(size_type start, size_type length) const {
     return VectorStringAdapter(vector_type(
-      content.begin() + start,
-      content.begin() + start + length
+      content().begin() + start,
+      content().begin() + start + length
     ));
   }
 
   VectorStringAdapter substr(size_type start) const {
-    return VectorStringAdapter(vector_type(content.begin() + start, content.end()));
+    return VectorStringAdapter(vector_type(content().begin() + start, content().end()));
   }
 
   size_type find(VectorStringAdapter substring) const {
@@ -71,9 +76,9 @@ struct VectorStringAdapter {
   }
 
   size_type find(VectorStringAdapter substring, size_t start) const {
-    auto begin = content.begin() + start;
-    auto iter = std::search(begin, content.end(), substring.content.begin(), substring.content.end());
-    return iter == content.end() ? npos : iter - begin;
+    auto begin = content().begin() + start;
+    auto iter = std::search(begin, content().end(), substring.content().begin(), substring.content().end());
+    return iter == content().end() ? npos : iter - begin;
   }
 
 
@@ -90,15 +95,15 @@ struct VectorStringAdapter {
   }
 
   void append(const_pointer begin, size_type length) {
-    content.insert(content.end(), begin, begin + length);
+    content().insert(content().end(), begin, begin + length);
   }
 
   void operator+=(const VectorStringAdapter &other) {
-    content.insert(content.end(), other.content.begin(), other.content.end());
+    content().insert(content().end(), other.content().begin(), other.content().end());
   }
 
   void operator+=(uint16_t character) {
-    content.push_back(character);
+    content().push_back(character);
   }
 };
 
@@ -125,18 +130,15 @@ static Point previous_column(Point position) {
   return position;
 }
 
-static inline Patch text_diff(Text *old_text, Text *new_text) {
+Patch text_diff(const Text &old_text, const Text &new_text) {
   Patch result;
 
-  VectorStringAdapter old_string(move(old_text->content));
-  VectorStringAdapter new_string(move(new_text->content));
+  VectorStringAdapter old_string(&old_text.content);
+  VectorStringAdapter new_string(&new_text.content);
 
   DiffBuilder diff_builder;
   diff_builder.Diff_Timeout = -1;
   DiffBuilder::Diffs diffs = diff_builder.diff_main(old_string, new_string);
-
-  old_text->content = move(old_string.content);
-  new_text->content = move(new_string.content);
 
   size_t old_offset = 0;
   size_t new_offset = 0;
@@ -153,9 +155,9 @@ static inline Patch text_diff(Text *old_text, Text *new_text) {
 
         // If the previous change ended between a CR and an LF, then expand
         // that change downward to include the LF.
-        if (new_text->at(new_offset) == '\n' &&
-            ((old_offset > 0 && old_text->at(old_offset - 1) == '\r') ||
-             (new_offset > 0 && new_text->at(new_offset - 1) == '\r'))) {
+        if (new_text.at(new_offset) == '\n' &&
+            ((old_offset > 0 && old_text.at(old_offset - 1) == '\r') ||
+             (new_offset > 0 && new_text.at(new_offset - 1) == '\r'))) {
           result.splice(new_position, Point(1, 0), Point(1, 0), lf, lf);
           old_position.row++;
           old_position.column = 0;
@@ -165,31 +167,31 @@ static inline Patch text_diff(Text *old_text, Text *new_text) {
 
         old_offset += diff.text.size();
         new_offset += diff.text.size();
-        old_position = old_text->position_for_offset(old_offset, false);
-        new_position = new_text->position_for_offset(new_offset, false);
+        old_position = old_text.position_for_offset(old_offset, false);
+        new_position = new_text.position_for_offset(new_offset, false);
 
         // If the next change starts between a CR and an LF, then expand that
         // change leftward to include the CR.
-        if (new_text->at(new_offset - 1) == '\r' &&
-            ((old_offset < old_text->size() && old_text->at(old_offset) == '\n') ||
-             (new_offset < new_text->size() && new_text->at(new_offset) == '\n'))) {
+        if (new_text.at(new_offset - 1) == '\r' &&
+            ((old_offset < old_text.size() && old_text.at(old_offset) == '\n') ||
+             (new_offset < new_text.size() && new_text.at(new_offset) == '\n'))) {
           result.splice(previous_column(new_position), Point(0, 1), Point(0, 1), cr, cr);
         }
         break;
 
       case DiffBuilder::Operation::DELETE: {
-        Text deleted_text{move(diff.text.content)};
+        Text deleted_text{move(diff.text.content())};
         old_offset += diff.text.size();
-        Point next_old_position = old_text->position_for_offset(old_offset, false);
+        Point next_old_position = old_text.position_for_offset(old_offset, false);
         result.splice(new_position, next_old_position.traversal(old_position), Point(), deleted_text, empty);
         old_position = next_old_position;
         break;
       }
 
       case DiffBuilder::Operation::INSERT: {
-        Text inserted_text{move(diff.text.content)};
+        Text inserted_text{move(diff.text.content())};
         new_offset += diff.text.size();
-        Point next_new_position = new_text->position_for_offset(new_offset, false);
+        Point next_new_position = new_text.position_for_offset(new_offset, false);
         result.splice(new_position, Point(), next_new_position.traversal(new_position), empty, inserted_text);
         new_position = next_new_position;
         break;
@@ -198,11 +200,4 @@ static inline Patch text_diff(Text *old_text, Text *new_text) {
   }
 
   return result;
-}
-
-Patch text_diff(const Text &old_text, const Text &new_text) {
-  return text_diff(
-    const_cast<Text *>(&old_text),
-    const_cast<Text *>(&new_text)
-  );
 }
