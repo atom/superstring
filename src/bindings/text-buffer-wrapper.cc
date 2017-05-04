@@ -15,6 +15,8 @@ using std::move;
 using std::string;
 using std::vector;
 
+static size_t CHUNK_SIZE = 10 * 1024;
+
 void TextBufferWrapper::init(Local<Object> exports) {
   Local<FunctionTemplate> constructor_template = Nan::New<FunctionTemplate>(construct);
   constructor_template->SetClassName(Nan::New<String>("TextBuffer").ToLocalChecked());
@@ -261,6 +263,11 @@ void TextBufferWrapper::is_modified(const Nan::FunctionCallbackInfo<Value> &info
 void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
 
+  if (text_buffer.is_modified()) {
+    info.GetReturnValue().Set(Nan::Null());
+    return;
+  }
+
   Local<String> js_file_path;
   if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
   string file_path = *String::Utf8Value(js_file_path);
@@ -269,28 +276,48 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
   string encoding_name = *String::Utf8Value(info[1].As<String>());
 
-  static size_t CHUNK_SIZE = 10 * 1024;
+  Nan::Callback *progress_callback = nullptr;
+  if (info[2]->IsFunction()) {
+    progress_callback = new Nan::Callback(info[2].As<Function>());
+  }
+
+  Nan::HandleScope scope;
+
   std::ifstream file{file_path};
   auto beginning = file.tellg();
   file.seekg(0, std::ios::end);
   auto end = file.tellg();
   file.seekg(0);
-  auto text = Text::build(
+  size_t file_size = end - beginning;
+  auto loaded_text = Text::build(
     file,
-    end - beginning,
+    file_size,
     encoding_name.c_str(),
     CHUNK_SIZE,
-    [](size_t percent_done) {}
+    [&progress_callback, file_size](size_t bytes_read) {
+      if (progress_callback) {
+        size_t percent_done = bytes_read / file_size * 100;
+        Local<Value> argv[] = {Nan::New<Number>(static_cast<uint32_t>(percent_done))};
+        progress_callback->Call(1, argv);
+      }
+    }
   );
 
-  if (text) {
-    text_buffer.flush_changes();
-    Patch patch = text_diff(text_buffer.base_text(), *text);
-    text_buffer.reset(move(*text));
-    info.GetReturnValue().Set(PatchWrapper::from_patch(move(patch)));
-  } else {
-    info.GetReturnValue().Set(Nan::False());
+  if (!loaded_text) {
+    Nan::ThrowError(("Invalid encoding name: " + encoding_name).c_str());
+    return;
   }
+
+  bool has_changed = text_buffer.base_text() != *loaded_text;
+  if (progress_callback) {
+    Local<Value> argv[] = {Nan::New<Number>(100), Nan::New<Boolean>(has_changed)};
+    progress_callback->Call(2, argv);
+  }
+
+  Patch patch = text_diff(text_buffer.base_text(), *loaded_text);
+  if (has_changed) text_buffer.reset(move(*loaded_text));
+
+  info.GetReturnValue().Set(PatchWrapper::from_patch(move(patch)));
 }
 
 void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
@@ -315,7 +342,6 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
       encoding_name(encoding_name) {}
 
     void Execute(const Nan::AsyncProgressWorkerBase<size_t>::ExecutionProgress &progress) {
-      static size_t CHUNK_SIZE = 10 * 1024;
       std::ifstream file{file_name};
       auto beginning = file.tellg();
       file.seekg(0, std::ios::end);
