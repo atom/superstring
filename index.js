@@ -3,8 +3,12 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
 } else {
   try {
     module.exports = require('./build/Release/superstring.node')
-  } catch (e) {
-    module.exports = require('./build/Debug/superstring.node')
+  } catch (e1) {
+    try {
+      module.exports = require('./build/Debug/superstring.node')
+    } catch (e2) {
+      throw e1
+    }
   }
 
   const {TextBuffer} = module.exports

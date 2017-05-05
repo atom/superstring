@@ -210,6 +210,65 @@ void MarkerIndex::Iterator::find_ending_in(const Point &start, const Point &end,
   }
 }
 
+void MarkerIndex::Iterator::find_boundaries_after(Point start, size_t max_count, MarkerIndex::BoundaryQueryResult *result) {
+  reset();
+  if (!current_node) return;
+
+  while (true) {
+    cache_node_position();
+
+    if (start <= current_node_position) {
+      if (left_ancestor_position < start) {
+        result->containing_start.insert(
+          result->containing_start.end(),
+          current_node->left_marker_ids.begin(),
+          current_node->left_marker_ids.end()
+        );
+      }
+
+      if (current_node->left) {
+        descend_left();
+      } else {
+        break;
+      }
+    } else {
+      if (right_ancestor_position >= start) {
+        result->containing_start.insert(
+          result->containing_start.end(),
+          current_node->right_marker_ids.begin(),
+          current_node->right_marker_ids.end()
+        );
+      }
+
+      if (current_node->right) {
+        descend_right();
+      } else {
+        break;
+      }
+    }
+  }
+  std::sort(
+    result->containing_start.begin(),
+    result->containing_start.end(),
+    [this](MarkerId a, MarkerId b) {
+      int comparison = marker_index->compare(a, b);
+      return comparison == 0 ? a < b : comparison == -1;
+    }
+  );
+
+  if (current_node_position < start) move_to_successor();
+  while (current_node && max_count > 0) {
+    cache_node_position();
+    result->boundaries.push_back({
+      current_node_position,
+      current_node->start_marker_ids,
+      current_node->end_marker_ids
+    });
+    move_to_successor();
+    max_count--;
+  }
+}
+
 unordered_map<MarkerIndex::MarkerId, Range> MarkerIndex::Iterator::dump() {
   reset();
 
@@ -640,6 +699,12 @@ flat_set<MarkerIndex::MarkerId> MarkerIndex::find_ending_in(Point start, Point e
 
 flat_set<MarkerIndex::MarkerId> MarkerIndex::find_ending_at(Point position) {
   return find_ending_in(position, position);
+}
+
+MarkerIndex::BoundaryQueryResult MarkerIndex::find_boundaries_after(Point start, size_t max_count) {
+  BoundaryQueryResult result;
+  iterator.find_boundaries_after(start, max_count, &result);
+  return result;
 }
 
 unordered_map<MarkerIndex::MarkerId, Range> MarkerIndex::dump() {

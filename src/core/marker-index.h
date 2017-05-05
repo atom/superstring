@@ -19,6 +19,17 @@ public:
     flat_set<MarkerId> surround;
   };
 
+  struct Boundary {
+    Point position;
+    flat_set<MarkerId> starting;
+    flat_set<MarkerId> ending;
+  };
+
+  struct BoundaryQueryResult {
+    std::vector<MarkerId> containing_start;
+    std::vector<Boundary> boundaries;
+  };
+
   MarkerIndex(unsigned seed = 0u);
   ~MarkerIndex();
   int generate_random_number();
@@ -39,6 +50,7 @@ public:
   flat_set<MarkerId> find_starting_at(Point position);
   flat_set<MarkerId> find_ending_in(Point start, Point end);
   flat_set<MarkerId> find_ending_at(Point position);
+  BoundaryQueryResult find_boundaries_after(Point start, size_t max_count);
 
   std::unordered_map<MarkerId, Range> dump();
 
@@ -71,6 +83,7 @@ private:
     void find_contained_in(const Point &start, const Point &end, flat_set<MarkerId> *result);
     void find_starting_in(const Point &start, const Point &end, flat_set<MarkerId> *result);
     void find_ending_in(const Point &start, const Point &end, flat_set<MarkerId> *result);
+    void find_boundaries_after(Point start, size_t max_count, BoundaryQueryResult *result);
     std::unordered_map<MarkerId, Range> dump();
 
   private:
