@@ -473,41 +473,41 @@ void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   info.GetReturnValue().Set(Nan::True());
 }
 
-class TextBufferSaver : public Nan::AsyncWorker {
-  TextBuffer::Snapshot *snapshot;
-  string file_name;
-  string encoding_name;
-  bool result;
+void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
+  class Worker : public Nan::AsyncWorker {
+    TextBuffer::Snapshot *snapshot;
+    string file_name;
+    string encoding_name;
+    bool result;
 
-public:
-  TextBufferSaver(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
-                  string &&file_name, string &&encoding_name) :
-    AsyncWorker(completion_callback),
-    snapshot{snapshot},
-    file_name{file_name},
-    encoding_name(encoding_name),
-    result{true} {}
+  public:
+    Worker(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
+           string &&file_name, string &&encoding_name) :
+      AsyncWorker(completion_callback),
+      snapshot{snapshot},
+      file_name{file_name},
+      encoding_name(encoding_name),
+      result{true} {}
 
-  void Execute() {
-    static size_t CHUNK_SIZE = 10 * 1024;
-    std::ofstream file{file_name};
-    for (TextSlice &chunk : snapshot->chunks()) {
-      if (!Text::write(file, encoding_name.c_str(), CHUNK_SIZE, chunk)) {
-        result = false;
-        return;
+    void Execute() {
+      static size_t CHUNK_SIZE = 10 * 1024;
+      std::ofstream file{file_name};
+      for (TextSlice &chunk : snapshot->chunks()) {
+        if (!Text::write(file, encoding_name.c_str(), CHUNK_SIZE, chunk)) {
+          result = false;
+          return;
+        }
       }
     }
-  }
 
-  void HandleOKCallback() {
-    snapshot->flush_preceding_changes();
-    delete snapshot;
-    Local<Value> argv[] = {Nan::New<Boolean>(result)};
-    callback->Call(1, argv);
-  }
-};
+    void HandleOKCallback() {
+      snapshot->flush_preceding_changes();
+      delete snapshot;
+      Local<Value> argv[] = {Nan::New<Boolean>(result)};
+      callback->Call(1, argv);
+    }
+  };
 
-void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
 
   Local<String> js_file_path;
@@ -519,7 +519,7 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
   string encoding_name = *String::Utf8Value(info[1].As<String>());
 
   Nan::Callback *completion_callback = new Nan::Callback(info[2].As<Function>());
-  Nan::AsyncQueueWorker(new TextBufferSaver(
+  Nan::AsyncQueueWorker(new Worker(
     completion_callback,
     text_buffer.create_snapshot(),
     move(file_path),
