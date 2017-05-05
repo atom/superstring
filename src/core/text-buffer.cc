@@ -403,11 +403,14 @@ uint32_t TextBuffer::size() const {
   return top_layer->size();
 }
 
-uint32_t TextBuffer::line_length_for_row(uint32_t row) {
+optional<uint32_t> TextBuffer::line_length_for_row(uint32_t row) {
+  if (row > extent().row) return optional<uint32_t>{};
   return top_layer->clip_position(Point{row, UINT32_MAX}, true).position.column;
 }
 
 const uint16_t *TextBuffer::line_ending_for_row(uint32_t row) {
+  if (row > extent().row) return nullptr;
+
   static uint16_t LF[] = {'\n', 0};
   static uint16_t CRLF[] = {'\r', '\n', 0};
   static uint16_t NONE[] = {0};
@@ -423,6 +426,11 @@ const uint16_t *TextBuffer::line_ending_for_row(uint32_t row) {
       return true;
     }, true);
   return result;
+}
+
+optional<Text> TextBuffer::line_for_row(uint32_t row) {
+  if (row > extent().row) return optional<Text>{};
+  return text_in_range({{row, 0}, {row, UINT32_MAX}});
 }
 
 ClipResult TextBuffer::clip_position(Point position) {

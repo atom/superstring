@@ -8,10 +8,14 @@ double get_row(const Point &point) {
 }
 
 void set_row(Point &point, double row) {
-  point.row = std::min(
-    row,
-    static_cast<double>(std::numeric_limits<unsigned>::max())
-  );
+  if (row < 0) {
+    point.row = 0;
+  } else {
+    point.row = std::min(
+      row,
+      static_cast<double>(std::numeric_limits<unsigned>::max())
+    );
+  }
 }
 
 double get_column(const Point &point) {
@@ -19,10 +23,14 @@ double get_column(const Point &point) {
 }
 
 void set_column(Point &point, double column) {
-  point.column = std::min(
-    column,
-    static_cast<double>(std::numeric_limits<unsigned>::max())
-  );
+  if (column < 0) {
+    point.column = 0;
+  } else {
+    point.column = std::min(
+      column,
+      static_cast<double>(std::numeric_limits<unsigned>::max())
+    );
+  }
 }
 
 EMSCRIPTEN_BINDINGS(Point) {

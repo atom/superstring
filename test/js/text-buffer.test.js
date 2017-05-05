@@ -104,6 +104,8 @@ describe('TextBuffer', () => {
   })
 
   describe('.reload', () => {
+    if (!TextBuffer.prototype.reload) return;
+
     it('discards any modifications and incorporates that change into the resolved patch', () => {
       const buffer = new TextBuffer('abcdef')
       const {path: filePath} = temp.openSync()
@@ -147,6 +149,8 @@ describe('TextBuffer', () => {
   })
 
   describe('.loadSync', () => {
+    if (!TextBuffer.prototype.loadSync) return;
+
     it('returns a Patch representing the difference between the old and new text', () => {
       const buffer = new TextBuffer('cat\ndog\nelephant\nfox')
       const {path: filePath} = temp.openSync()
@@ -351,6 +355,8 @@ describe('TextBuffer', () => {
   })
 
   describe('.baseTextDigest', () => {
+    if (!TextBuffer.prototype.baseTextDigest) return
+
     it('returns a hash of the base text', () => {
       const buffer = new TextBuffer('abc\r\ndefg\n\r\nhijkl')
       const digest1 = buffer.baseTextDigest()
@@ -364,6 +370,8 @@ describe('TextBuffer', () => {
   })
 
   describe('.serializeChanges and .deserializeChanges', () => {
+    if (!TextBuffer.prototype.serializeChanges) return
+
     it('allows the outstanding changes to be serialized and restored', () => {
       const buffer = new TextBuffer('abc')
       buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), '\n')

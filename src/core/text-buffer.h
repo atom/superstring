@@ -22,7 +22,8 @@ public:
 
   uint32_t size() const;
   Point extent() const;
-  uint32_t line_length_for_row(uint32_t row);
+  optional<Text> line_for_row(uint32_t row);
+  optional<uint32_t> line_length_for_row(uint32_t row);
   const uint16_t *line_ending_for_row(uint32_t row);
   ClipResult clip_position(Point);
   Point position_for_offset(uint32_t offset);

@@ -43,6 +43,7 @@ em++                                    \
   -I src/bindings/em                    \
   -I src/core                           \
   -I vendor/pcre/include                \
+  -I vendor/diff-match-patch            \
   -D PCRE2_CODE_UNIT_WIDTH=16           \
   -xc++                                 \
   --pre-js src/bindings/em/prologue.js  \

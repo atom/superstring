@@ -29,8 +29,8 @@ TEST_CASE("TextBuffer::set_text_in_range - basic") {
 
 TEST_CASE("TextBuffer::line_length_for_row - basic") {
   TextBuffer buffer {u"a\n\nb\r\rc\r\n\r\n"};
-  REQUIRE(buffer.line_length_for_row(0) == 1);
-  REQUIRE(buffer.line_length_for_row(1) == 0);
+  REQUIRE(*buffer.line_length_for_row(0) == 1);
+  REQUIRE(*buffer.line_length_for_row(1) == 0);
 }
 
 TEST_CASE("TextBuffer::position_for_offset") {
@@ -53,12 +53,12 @@ TEST_CASE("TextBuffer::create_snapshot") {
   TextBuffer buffer {u"ab\ndef"};
   buffer.set_text_in_range({{0, 2}, {0, 2}}, Text {u"c"});
   REQUIRE(buffer.text() == Text {u"abc\ndef"});
-  REQUIRE(buffer.line_length_for_row(0) == 3);
+  REQUIRE(*buffer.line_length_for_row(0) == 3);
 
   auto snapshot1 = buffer.create_snapshot();
   buffer.set_text_in_range({{0, 3}, {0, 3}}, Text {u"123"});
   REQUIRE(buffer.text() == Text {u"abc123\ndef"});
-  REQUIRE(buffer.line_length_for_row(0) == 6);
+  REQUIRE(*buffer.line_length_for_row(0) == 6);
   REQUIRE(snapshot1->text() == Text {u"abc\ndef"});
   REQUIRE(snapshot1->line_length_for_row(0) == 3);
   REQUIRE(snapshot1->line_length_for_row(1) == 3);
@@ -67,7 +67,7 @@ TEST_CASE("TextBuffer::create_snapshot") {
   auto snapshot3 = buffer.create_snapshot();
   buffer.set_text_in_range({{0, 6}, {0, 6}}, Text {u"456"});
   REQUIRE(buffer.text() == Text {u"abc123456\ndef"});
-  REQUIRE(buffer.line_length_for_row(0) == 9);
+  REQUIRE(*buffer.line_length_for_row(0) == 9);
   REQUIRE(snapshot2->text() == Text {u"abc123\ndef"});
   REQUIRE(snapshot2->line_length_for_row(0) == 6);
   REQUIRE(snapshot2->line_length_for_row(1) == 3);
@@ -79,7 +79,7 @@ TEST_CASE("TextBuffer::create_snapshot") {
     delete snapshot2;
     delete snapshot3;
     REQUIRE(buffer.text() == Text {u"abc123456\ndef"});
-    REQUIRE(buffer.line_length_for_row(0) == 9);
+    REQUIRE(*buffer.line_length_for_row(0) == 9);
     REQUIRE(snapshot1->text() == Text {u"abc\ndef"});
     REQUIRE(snapshot1->line_length_for_row(0) == 3);
     delete snapshot1;
@@ -88,7 +88,7 @@ TEST_CASE("TextBuffer::create_snapshot") {
   SECTION("deleting an earlier snapshot first") {
     delete snapshot1;
     REQUIRE(buffer.text() == Text {u"abc123456\ndef"});
-    REQUIRE(buffer.line_length_for_row(0) == 9);
+    REQUIRE(*buffer.line_length_for_row(0) == 9);
     REQUIRE(snapshot2->text() == Text {u"abc123\ndef"});
     REQUIRE(snapshot2->line_length_for_row(0) == 6);
     delete snapshot2;
@@ -398,7 +398,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
 
       for (uint32_t row = 0; row < mutated_text.extent().row; row++) {
         REQUIRE(
-          Point(row, buffer.line_length_for_row(row)) ==
+          Point(row, *buffer.line_length_for_row(row)) ==
           Point(row, mutated_text.line_length_for_row(row))
         );
       }

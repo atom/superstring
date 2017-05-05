@@ -129,9 +129,9 @@ void TextBufferWrapper::line_length_for_row(const Nan::FunctionCallbackInfo<Valu
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
   auto maybe_row = Nan::To<uint32_t>(info[0]);
   if (maybe_row.IsJust()) {
-    uint32_t row = maybe_row.FromJust();
-    if (row <= text_buffer.extent().row) {
-      info.GetReturnValue().Set(Nan::New<Number>(text_buffer.line_length_for_row(row)));
+    auto result = text_buffer.line_length_for_row(maybe_row.FromJust());
+    if (result) {
+      info.GetReturnValue().Set(Nan::New<Number>(*result));
     }
   }
 }
@@ -140,9 +140,9 @@ void TextBufferWrapper::line_ending_for_row(const Nan::FunctionCallbackInfo<Valu
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
   auto maybe_row = Nan::To<uint32_t>(info[0]);
   if (maybe_row.IsJust()) {
-    uint32_t row = maybe_row.FromJust();
-    if (row <= text_buffer.extent().row) {
-      info.GetReturnValue().Set(Nan::New<String>(text_buffer.line_ending_for_row(row)).ToLocalChecked());
+    auto result = text_buffer.line_ending_for_row(maybe_row.FromJust());
+    if (result) {
+      info.GetReturnValue().Set(Nan::New<String>(result).ToLocalChecked());
     }
   }
 }

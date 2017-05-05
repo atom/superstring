@@ -1,5 +1,22 @@
 if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   module.exports = require('./browser');
+
+  const {TextBuffer} = module.exports
+  const {search, searchSync} = TextBuffer.prototype
+
+  TextBuffer.prototype.searchSync = function (pattern) {
+    const result = searchSync.call(this, pattern)
+    if (typeof result === 'string') {
+      throw new Error(result);
+    } else {
+      return result
+    }
+  }
+
+  TextBuffer.prototype.search = function (pattern) {
+    return new Promise(resolve => resolve(this.searchSync(pattern)))
+  }
+
 } else {
   try {
     module.exports = require('./build/Release/superstring.node')
