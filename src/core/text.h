@@ -21,6 +21,10 @@ class Text {
   friend class TextSlice;
 
  public:
+  using EncodingConversion = iconv_t;
+  static optional<EncodingConversion> transcoding_to(const char *);
+  static optional<EncodingConversion> transcoding_from(const char *);
+
   std::vector<uint16_t> content;
   std::vector<uint32_t> line_offsets;
   Text(const std::vector<uint16_t> &&, const std::vector<uint32_t> &&);
@@ -35,10 +39,9 @@ class Text {
   template<typename Iter>
   Text(Iter begin, Iter end) : Text(std::vector<uint16_t>{begin, end}) {}
 
-  static optional<Text> build(std::istream &stream, size_t input_size,
-                              const char *encoding_name, size_t chunk_size,
-                              std::function<void(size_t)> progress_callback);
-  static bool write(std::ostream &stream, const char *encoding_name,
+  Text(std::istream &stream, size_t input_size, EncodingConversion conversion,
+       size_t chunk_size, std::function<void(size_t)> progress_callback);
+  static bool write(std::ostream &stream, EncodingConversion conversion,
                     size_t chunk_size, TextSlice slice);
 
   static Text concat(TextSlice a, TextSlice b);

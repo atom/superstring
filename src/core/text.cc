@@ -12,6 +12,20 @@ static const uint16_t replacement_character = 0xFFFD;
 static const size_t conversion_failure = static_cast<size_t>(-1);
 static const float buffer_growth_factor = 2;
 
+optional<Text::EncodingConversion> Text::transcoding_to(const char *name) {
+  iconv_t conversion = iconv_open(name, "UTF-16LE");
+  return conversion == reinterpret_cast<iconv_t>(-1) ?
+    optional<Text::EncodingConversion>{} :
+    conversion;
+}
+
+optional<Text::EncodingConversion> Text::transcoding_from(const char *name) {
+  iconv_t conversion = iconv_open("UTF-16LE", name);
+  return conversion == reinterpret_cast<iconv_t>(-1) ?
+    optional<Text::EncodingConversion>{} :
+    conversion;
+}
+
 Text::Text() : line_offsets {0} {}
 
 Text::Text(vector<uint16_t> &&content) : content {content}, line_offsets {0} {
@@ -63,13 +77,8 @@ void Text::serialize(Serializer &serializer) const {
   }
 }
 
-bool Text::write(std::ostream &stream, const char *encoding_name,
+bool Text::write(std::ostream &stream, EncodingConversion conversion,
                  size_t chunk_size, TextSlice slice) {
-  iconv_t conversion = iconv_open(encoding_name, "UTF-16LE");
-  if (conversion == reinterpret_cast<iconv_t>(-1)) {
-    return false;
-  }
-
   size_t start_offset = slice.start_offset();
   size_t end_offset = slice.end_offset();
   const vector<uint16_t> &input_vector = slice.text->content;
@@ -130,27 +139,21 @@ bool Text::write(std::ostream &stream, const char *encoding_name,
   return true;
 }
 
-optional<Text> Text::build(std::istream &stream, size_t input_size,
-                           const char *encoding_name, size_t chunk_size,
-                           function<void(size_t)> progress_callback) {
-  iconv_t conversion = iconv_open("UTF-16LE", encoding_name);
-  if (conversion == reinterpret_cast<iconv_t>(-1)) {
-    return optional<Text>{};
-  }
-
-  vector<char> input_vector(chunk_size);
-  vector<uint16_t> output_vector(input_size);
-  vector<uint32_t> line_offsets({ 0 });
+Text::Text(std::istream &stream, size_t input_size, EncodingConversion conversion,
+           size_t chunk_size, function<void(size_t)> progress_callback) {
+  content.resize(input_size);
+  line_offsets.push_back(0);
 
   size_t total_bytes_read = 0;
   size_t indexed_character_count = 0;
 
+  vector<char> input_vector(chunk_size);
   char *input_buffer = input_vector.data();
   size_t input_bytes_remaining = 0;
 
-  char *output_buffer = reinterpret_cast<char *>(output_vector.data());
+  char *output_buffer = reinterpret_cast<char *>(content.data());
   char *output_pointer = output_buffer;
-  size_t output_bytes_remaining = output_vector.size() * bytes_per_character;
+  size_t output_bytes_remaining = content.size() * bytes_per_character;
 
   for (;;) {
     stream.read(input_buffer + input_bytes_remaining, chunk_size - input_bytes_remaining);
@@ -173,7 +176,7 @@ optional<Text> Text::build(std::istream &stream, size_t input_size,
     );
 
     size_t output_characters_remaining = (output_bytes_remaining / bytes_per_character);
-    size_t output_characters_written = output_vector.size() - output_characters_remaining;
+    size_t output_characters_written = content.size() - output_characters_remaining;
 
     if (conversion_result == conversion_failure) {
       switch (errno) {
@@ -185,18 +188,18 @@ optional<Text> Text::build(std::istream &stream, size_t input_size,
         case EILSEQ:
           input_bytes_remaining--;
           input_pointer++;
-          output_vector[output_characters_written] = replacement_character;
+          content[output_characters_written] = replacement_character;
           output_pointer += bytes_per_character;
           output_bytes_remaining -= bytes_per_character;
           break;
 
         // Insufficient room in the output buffer to write all characters in the input buffer
         case E2BIG:
-          size_t old_size = output_vector.size();
+          size_t old_size = content.size();
           size_t new_size = old_size * buffer_growth_factor;
-          output_vector.resize(new_size);
+          content.resize(new_size);
           output_bytes_remaining += ((new_size - old_size) * bytes_per_character);
-          output_buffer = reinterpret_cast<char *>(output_vector.data());
+          output_buffer = reinterpret_cast<char *>(content.data());
           output_pointer = output_buffer + (output_characters_written * bytes_per_character);
           break;
       }
@@ -205,7 +208,7 @@ optional<Text> Text::build(std::istream &stream, size_t input_size,
     }
 
     while (indexed_character_count < output_characters_written) {
-      if (output_vector[indexed_character_count] == '\n') {
+      if (content[indexed_character_count] == '\n') {
         line_offsets.push_back(indexed_character_count + 1);
       }
       indexed_character_count++;
@@ -213,9 +216,8 @@ optional<Text> Text::build(std::istream &stream, size_t input_size,
   }
 
   size_t output_characters_remaining = (output_bytes_remaining / bytes_per_character);
-  size_t output_characters_written = output_vector.size() - output_characters_remaining;
-  output_vector.resize(output_characters_written);
-  return Text {move(output_vector), move(line_offsets)};
+  size_t output_characters_written = content.size() - output_characters_remaining;
+  content.resize(output_characters_written);
 }
 
 Text Text::concat(TextSlice a, TextSlice b) {

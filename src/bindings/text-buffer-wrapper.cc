@@ -290,10 +290,17 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   auto end = file.tellg();
   file.seekg(0);
   size_t file_size = end - beginning;
-  auto loaded_text = Text::build(
+
+  auto conversion = Text::transcoding_from(encoding_name.c_str());
+  if (!conversion) {
+    Nan::ThrowError(("Invalid encoding name: " + encoding_name).c_str());
+    return;
+  }
+
+  Text loaded_text(
     file,
     file_size,
-    encoding_name.c_str(),
+    *conversion,
     CHUNK_SIZE,
     [&progress_callback, file_size](size_t bytes_read) {
       if (progress_callback) {
@@ -304,19 +311,14 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
     }
   );
 
-  if (!loaded_text) {
-    Nan::ThrowError(("Invalid encoding name: " + encoding_name).c_str());
-    return;
-  }
-
-  bool has_changed = text_buffer.base_text() != *loaded_text;
+  bool has_changed = text_buffer.base_text() != loaded_text;
   if (progress_callback) {
     Local<Value> argv[] = {Nan::New<Number>(100), Nan::New<Boolean>(has_changed)};
     progress_callback->Call(2, argv);
   }
 
-  Patch patch = text_diff(text_buffer.base_text(), *loaded_text);
-  if (has_changed) text_buffer.reset(move(*loaded_text));
+  Patch patch = text_diff(text_buffer.base_text(), loaded_text);
+  if (has_changed) text_buffer.reset(move(loaded_text));
 
   info.GetReturnValue().Set(PatchWrapper::from_patch(move(patch)));
 }
@@ -351,10 +353,14 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
       auto end = file.tellg();
       file.seekg(0);
       size_t file_size = end - beginning;
-      loaded_text = Text::build(
+
+      auto conversion = Text::transcoding_from(encoding_name.c_str());
+      if (!conversion) return;
+
+      loaded_text = Text(
         file,
         file_size,
-        encoding_name.c_str(),
+        *conversion,
         CHUNK_SIZE,
         [&progress, file_size](size_t bytes_read) {
           size_t percent_done = bytes_read / file_size * 100;
@@ -460,10 +466,16 @@ void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
   string encoding_name = *String::Utf8Value(info[1].As<String>());
 
+  auto conversion = Text::transcoding_to(encoding_name.c_str());
+  if (!conversion) {
+    info.GetReturnValue().Set(Nan::False());
+    return;
+  }
+
   static size_t CHUNK_SIZE = 10 * 1024;
   std::ofstream file{file_path};
   for (TextSlice &chunk : text_buffer.chunks()) {
-    if (!Text::write(file, encoding_name.c_str(), CHUNK_SIZE, chunk)) {
+    if (!Text::write(file, *conversion, CHUNK_SIZE, chunk)) {
       info.GetReturnValue().Set(Nan::False());
       return;
     }
@@ -490,10 +502,16 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
       result{true} {}
 
     void Execute() {
+      auto conversion = Text::transcoding_to(encoding_name.c_str());
+      if (!conversion) {
+        result = false;
+        return;
+      }
+
       static size_t CHUNK_SIZE = 10 * 1024;
       std::ofstream file{file_name};
       for (TextSlice &chunk : snapshot->chunks()) {
-        if (!Text::write(file, encoding_name.c_str(), CHUNK_SIZE, chunk)) {
+        if (!Text::write(file, *conversion, CHUNK_SIZE, chunk)) {
           result = false;
           return;
         }
