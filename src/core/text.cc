@@ -146,31 +146,30 @@ Text::Text(std::istream &stream, size_t input_size, EncodingConversion conversio
 
   vector<char> input_vector(chunk_size);
   char *input_buffer = input_vector.data();
-  size_t input_bytes_remaining = 0;
+  size_t bytes_left_over = 0;
   size_t total_bytes_read = 0;
 
   for (;;) {
-    stream.read(input_buffer + input_bytes_remaining, chunk_size - input_bytes_remaining);
+    stream.read(input_buffer + bytes_left_over, chunk_size - bytes_left_over);
     size_t bytes_read = stream.gcount();
-    input_bytes_remaining += bytes_read;
-    if (input_bytes_remaining == 0) break;
+    size_t bytes_to_append = bytes_left_over + bytes_read;
+    if (bytes_to_append == 0) break;
 
-    if (bytes_read > 0) {
-      total_bytes_read += bytes_read;
-      progress_callback(total_bytes_read);
-    }
-
-    size_t bytes_consumed = append(
+    size_t bytes_appended = append(
       conversion,
       input_buffer,
-      input_bytes_remaining,
+      bytes_to_append,
       bytes_read == 0
     );
 
-    if (bytes_consumed < input_bytes_remaining) {
-      std::copy(input_buffer + bytes_consumed, input_buffer + input_bytes_remaining, input_buffer);
+    total_bytes_read += bytes_appended;
+    progress_callback(total_bytes_read);
+
+    if (bytes_appended < bytes_to_append) {
+      std::copy(input_buffer + bytes_appended, input_buffer + bytes_to_append, input_buffer);
     }
-    input_bytes_remaining -= bytes_consumed;
+
+    bytes_left_over = bytes_to_append - bytes_appended;
   }
 }
 
@@ -200,14 +199,20 @@ size_t Text::append(EncodingConversion conversion, const char *input_bytes,
 
     if (conversion_result == conversion_failure) {
       switch (errno) {
-        // Encountered an incomplete multibyte sequence at end of input
+        // Encountered an incomplete multibyte sequence at end of the chunk. If
+        // this is not the last chunk, then stop here, because maybe the
+        // remainder of the character will occur at the beginning of the next
+        // chunk. If this *is* the last chunk, then we must consume these bytes,
+        // so we fall through to the next case and append the unicode
+        // replacement character.
         case EINVAL:
           if (!is_last_chunk) {
             incomplete_sequence_at_chunk_end = true;
             break;
           }
 
-        // Encountered an invalid multibyte sequence
+        // Encountered an invalid multibyte sequence. Append the unicode
+        // replacement character and resume transcoding.
         case EILSEQ:
           input_bytes_remaining--;
           input_pointer++;
@@ -217,7 +222,8 @@ size_t Text::append(EncodingConversion conversion, const char *input_bytes,
           new_size++;
           break;
 
-        // Insufficient room in the output buffer to write all characters in the input buffer
+        // Insufficient room in the output buffer to write all characters in the
+        // input buffer. Grow the content vector and resume transcoding.
         case E2BIG:
           size_t old_size = content.size();
           size_t new_size = old_size * buffer_growth_factor;
