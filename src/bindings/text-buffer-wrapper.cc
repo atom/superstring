@@ -4,6 +4,7 @@
 #include "range-wrapper.h"
 #include "text-wrapper.h"
 #include "patch-wrapper.h"
+#include "text-builder.h"
 #include "text-slice.h"
 #include "text-diff.h"
 #include "noop.h"
@@ -275,7 +276,12 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
 
   Local<String> js_encoding_name;
   if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
-  string encoding_name = *String::Utf8Value(info[1].As<String>());
+  String::Utf8Value encoding_name(js_encoding_name);
+  auto conversion = Text::transcoding_from(*encoding_name);
+  if (!conversion) {
+    Nan::ThrowError((string("Invalid encoding name: ") + *encoding_name).c_str());
+    return;
+  }
 
   Nan::Callback *progress_callback = nullptr;
   if (info[2]->IsFunction()) {
@@ -290,12 +296,6 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   auto end = file.tellg();
   file.seekg(0);
   size_t file_size = end - beginning;
-
-  auto conversion = Text::transcoding_from(encoding_name.c_str());
-  if (!conversion) {
-    Nan::ThrowError(("Invalid encoding name: " + encoding_name).c_str());
-    return;
-  }
 
   Text loaded_text(
     file,
@@ -346,27 +346,39 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
       encoding_name(encoding_name),
       force{force} {}
 
+    Worker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
+           TextBuffer *buffer, TextBuffer::Snapshot *snapshot, Text &&text, bool force) :
+      AsyncProgressWorkerBase(completion_callback),
+      progress_callback{progress_callback},
+      buffer{buffer},
+      snapshot{snapshot},
+      loaded_text{move(text)},
+      force{force} {}
+
     void Execute(const Nan::AsyncProgressWorkerBase<size_t>::ExecutionProgress &progress) {
-      std::ifstream file{file_name};
-      auto beginning = file.tellg();
-      file.seekg(0, std::ios::end);
-      auto end = file.tellg();
-      file.seekg(0);
-      size_t file_size = end - beginning;
+      if (!loaded_text) {
+        std::ifstream file{file_name};
+        auto beginning = file.tellg();
+        file.seekg(0, std::ios::end);
+        auto end = file.tellg();
+        file.seekg(0);
+        size_t file_size = end - beginning;
 
-      auto conversion = Text::transcoding_from(encoding_name.c_str());
-      if (!conversion) return;
+        auto conversion = Text::transcoding_from(encoding_name.c_str());
+        if (!conversion) return;
 
-      loaded_text = Text(
-        file,
-        file_size,
-        *conversion,
-        CHUNK_SIZE,
-        [&progress, file_size](size_t bytes_read) {
-          size_t percent_done = bytes_read / file_size * 100;
-          progress.Send(&percent_done, 1);
-        }
-      );
+        loaded_text = Text(
+          file,
+          file_size,
+          *conversion,
+          CHUNK_SIZE,
+          [&progress, file_size](size_t bytes_read) {
+            size_t percent_done = bytes_read / file_size * 100;
+            progress.Send(&percent_done, 1);
+          }
+        );
+      }
+
       patch = text_diff(snapshot->base_text(), *loaded_text);
     }
 
@@ -415,19 +427,11 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
 
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
 
-  Local<String> js_file_path;
-  if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
-  string file_path = *String::Utf8Value(js_file_path);
-
-  Local<String> js_encoding_name;
-  if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
-  string encoding_name = *String::Utf8Value(info[1].As<String>());
-
-  Nan::Callback *completion_callback = new Nan::Callback(info[2].As<Function>());
+  Nan::Callback *completion_callback = new Nan::Callback(info[0].As<Function>());
 
   Nan::Callback *progress_callback = nullptr;
-  if (info[3]->IsFunction()) {
-    progress_callback = new Nan::Callback(info[3].As<Function>());
+  if (info[1]->IsFunction()) {
+    progress_callback = new Nan::Callback(info[1].As<Function>());
   }
 
   if (text_buffer.is_modified() && !force) {
@@ -436,15 +440,38 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
     return;
   }
 
-  Nan::AsyncQueueWorker(new Worker(
-    completion_callback,
-    progress_callback,
-    &text_buffer,
-    text_buffer.create_snapshot(),
-    move(file_path),
-    move(encoding_name),
-    force
-  ));
+  Worker *worker;
+  if (info[2]->IsString()) {
+    Local<String> js_file_path;
+    if (!Nan::To<String>(info[2]).ToLocal(&js_file_path)) return;
+    string file_path = *String::Utf8Value(js_file_path);
+
+    Local<String> js_encoding_name;
+    if (!Nan::To<String>(info[3]).ToLocal(&js_encoding_name)) return;
+    string encoding_name = *String::Utf8Value(info[3].As<String>());
+
+    worker = new Worker(
+      completion_callback,
+      progress_callback,
+      &text_buffer,
+      text_buffer.create_snapshot(),
+      move(file_path),
+      move(encoding_name),
+      force
+    );
+  } else {
+    auto text_builder = Nan::ObjectWrap::Unwrap<TextBuilder>(info[2]->ToObject());
+    worker = new Worker(
+      completion_callback,
+      progress_callback,
+      &text_buffer,
+      text_buffer.create_snapshot(),
+      move(text_builder->text),
+      force
+    );
+  }
+
+  Nan::AsyncQueueWorker(worker);
 }
 
 void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {

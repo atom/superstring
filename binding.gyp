@@ -13,6 +13,7 @@
                 "src/bindings/range-wrapper.cc",
                 "src/bindings/buffer-offset-index-wrapper.cc",
                 "src/bindings/text-buffer-wrapper.cc",
+                "src/bindings/text-builder.cc",
                 "src/bindings/text-wrapper.cc",
             ],
             "include_dirs": [

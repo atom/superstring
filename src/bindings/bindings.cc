@@ -4,6 +4,7 @@
 #include "patch-wrapper.h"
 #include "range-wrapper.h"
 #include "point-wrapper.h"
+#include "text-builder.h"
 #include "text-buffer-wrapper.h"
 
 using namespace v8;
@@ -15,6 +16,7 @@ void Init(Local<Object> exports) {
   MarkerIndexWrapper::init(exports);
   BufferOffsetIndexWrapper::init(exports);
   TextBufferWrapper::init(exports);
+  TextBuilder::init(exports);
 }
 
 NODE_MODULE(superstring, Init)

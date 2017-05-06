@@ -101,6 +101,20 @@ describe('TextBuffer', () => {
       buffer.setText('ghi')
       return loadPromise
     })
+
+    it('can load the buffer from a given stream', (done) => {
+      const {path: filePath} = temp.openSync()
+      const fileContent = 'abc def ghi jkl\n'.repeat(1024)
+      fs.writeFileSync(filePath, fileContent)
+      const stream = fs.createReadStream(filePath)
+
+      const buffer = new TextBuffer()
+
+      buffer.load(stream).then(() => {
+        assert.equal(buffer.getText(), fileContent)
+        done()
+      })
+    })
   })
 
   describe('.reload', () => {

@@ -141,19 +141,13 @@ bool Text::write(std::ostream &stream, EncodingConversion conversion,
 
 Text::Text(std::istream &stream, size_t input_size, EncodingConversion conversion,
            size_t chunk_size, function<void(size_t)> progress_callback) {
-  content.resize(input_size);
+  content.reserve(input_size);
   line_offsets.push_back(0);
-
-  size_t total_bytes_read = 0;
-  size_t indexed_character_count = 0;
 
   vector<char> input_vector(chunk_size);
   char *input_buffer = input_vector.data();
   size_t input_bytes_remaining = 0;
-
-  char *output_buffer = reinterpret_cast<char *>(content.data());
-  char *output_pointer = output_buffer;
-  size_t output_bytes_remaining = content.size() * bytes_per_character;
+  size_t total_bytes_read = 0;
 
   for (;;) {
     stream.read(input_buffer + input_bytes_remaining, chunk_size - input_bytes_remaining);
@@ -166,7 +160,34 @@ Text::Text(std::istream &stream, size_t input_size, EncodingConversion conversio
       progress_callback(total_bytes_read);
     }
 
-    char *input_pointer = input_buffer;
+    size_t bytes_consumed = append(
+      conversion,
+      input_buffer,
+      input_bytes_remaining,
+      bytes_read == 0
+    );
+
+    if (bytes_consumed < input_bytes_remaining) {
+      std::copy(input_buffer + bytes_consumed, input_buffer + input_bytes_remaining, input_buffer);
+    }
+    input_bytes_remaining -= bytes_consumed;
+  }
+}
+
+size_t Text::append(EncodingConversion conversion, const char *input_bytes,
+                    size_t input_length, bool is_last_chunk) {
+  size_t previous_size = content.size();
+  content.resize(previous_size + input_length);
+
+  size_t new_size = previous_size;
+  size_t input_bytes_remaining = input_length;
+  size_t output_bytes_remaining = input_length * bytes_per_character;
+  char *input_pointer = const_cast<char *>(input_bytes);
+  char *output_pointer = reinterpret_cast<char *>(content.data() + previous_size);
+  size_t indexed_character_count = previous_size;
+  bool incomplete_sequence_at_chunk_end = false;
+
+  while (input_bytes_remaining > 0 && !incomplete_sequence_at_chunk_end) {
     size_t conversion_result = iconv(
       conversion,
       &input_pointer,
@@ -175,22 +196,25 @@ Text::Text(std::istream &stream, size_t input_size, EncodingConversion conversio
       &output_bytes_remaining
     );
 
-    size_t output_characters_remaining = (output_bytes_remaining / bytes_per_character);
-    size_t output_characters_written = content.size() - output_characters_remaining;
+    new_size = content.size() - output_bytes_remaining / bytes_per_character;
 
     if (conversion_result == conversion_failure) {
       switch (errno) {
         // Encountered an incomplete multibyte sequence at end of input
         case EINVAL:
-          if (bytes_read > 0) break;
+          if (!is_last_chunk) {
+            incomplete_sequence_at_chunk_end = true;
+            break;
+          }
 
         // Encountered an invalid multibyte sequence
         case EILSEQ:
           input_bytes_remaining--;
           input_pointer++;
-          content[output_characters_written] = replacement_character;
+          content[new_size] = replacement_character;
           output_pointer += bytes_per_character;
           output_bytes_remaining -= bytes_per_character;
+          new_size++;
           break;
 
         // Insufficient room in the output buffer to write all characters in the input buffer
@@ -199,15 +223,12 @@ Text::Text(std::istream &stream, size_t input_size, EncodingConversion conversio
           size_t new_size = old_size * buffer_growth_factor;
           content.resize(new_size);
           output_bytes_remaining += ((new_size - old_size) * bytes_per_character);
-          output_buffer = reinterpret_cast<char *>(content.data());
-          output_pointer = output_buffer + (output_characters_written * bytes_per_character);
+          output_pointer = reinterpret_cast<char *>(content.data() + new_size);
           break;
       }
-
-      std::copy(input_pointer, input_pointer + input_bytes_remaining, input_buffer);
     }
 
-    while (indexed_character_count < output_characters_written) {
+    while (indexed_character_count < new_size) {
       if (content[indexed_character_count] == '\n') {
         line_offsets.push_back(indexed_character_count + 1);
       }
@@ -215,9 +236,8 @@ Text::Text(std::istream &stream, size_t input_size, EncodingConversion conversio
     }
   }
 
-  size_t output_characters_remaining = (output_bytes_remaining / bytes_per_character);
-  size_t output_characters_written = content.size() - output_characters_remaining;
-  content.resize(output_characters_written);
+  content.resize(new_size);
+  return input_pointer - input_bytes;
 }
 
 Text Text::concat(TextSlice a, TextSlice b) {

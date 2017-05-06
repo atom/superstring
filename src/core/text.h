@@ -62,6 +62,7 @@ class Text {
   Point position_for_offset(uint32_t, bool clip_crlf = true) const;
   uint32_t line_length_for_row(uint32_t row) const;
   void append(TextSlice);
+  size_t append(EncodingConversion, const char *, size_t, bool is_last = false);
   void assign(TextSlice);
   void serialize(Serializer &) const;
   uint32_t size() const;

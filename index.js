@@ -1,7 +1,9 @@
-if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
-  module.exports = require('./browser');
+let binding
 
-  const {TextBuffer} = module.exports
+if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
+  binding = require('./browser');
+
+  const {TextBuffer} = binding
   const {search, searchSync} = TextBuffer.prototype
 
   TextBuffer.prototype.searchSync = function (pattern) {
@@ -19,33 +21,45 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
 
 } else {
   try {
-    module.exports = require('./build/Release/superstring.node')
+    binding = require('./build/Release/superstring.node')
   } catch (e1) {
     try {
-      module.exports = require('./build/Debug/superstring.node')
+      binding = require('./build/Debug/superstring.node')
     } catch (e2) {
       throw e1
     }
   }
 
-  const {TextBuffer} = module.exports
+  const {TextBuffer, TextBuilder} = binding
   const {load, reload, save, search} = TextBuffer.prototype
 
   for (const methodName of ['load', 'reload']) {
-    const nativeMethod = TextBuffer.prototype[methodName]
-    TextBuffer.prototype[methodName] = function (filePath, encoding, progressCallback) {
+    const method = TextBuffer.prototype[methodName]
+    TextBuffer.prototype[methodName] = function (source, encoding, progressCallback) {
       if (typeof encoding !== 'string') {
         progressCallback = encoding
         encoding = 'UTF8'
       }
 
-      return new Promise((resolve, reject) =>
-        nativeMethod.call(this, filePath, encoding, (error, result) => {
-          error ?
-            reject(error) :
-            resolve(result)
-        }, progressCallback)
-      )
+      return new Promise((resolve, reject) => {
+        const completionCallback = (error, result) => {
+          error ? reject(error) : resolve(result)
+        }
+
+        if (typeof source === 'string') {
+          const filePath = source
+          method.call(this, completionCallback, progressCallback, filePath, encoding)
+        } else {
+          const stream = source
+          const textBuilder = new TextBuilder(encoding)
+          stream.on('data', (data) => textBuilder.write(data))
+          stream.on('error', reject)
+          stream.on('end', () => {
+            textBuilder.end()
+            method.call(this, completionCallback, progressCallback, textBuilder)
+          })
+        }
+      })
     }
   }
 
@@ -68,4 +82,10 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
       })
     })
   }
+}
+
+module.exports = {
+  TextBuffer: binding.TextBuffer,
+  Patch: binding.Patch,
+  MarkerIndex: binding.MarkerIndex,
 }
