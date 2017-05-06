@@ -7,7 +7,7 @@ describe('TextBuffer', () => {
   describe('.load', () => {
     if (!TextBuffer.prototype.load) return;
 
-    it('loads the contents of the given filePath in the background', () => {
+    it('can load from a file at a given path', () => {
       const buffer = new TextBuffer()
 
       const {path: filePath} = temp.openSync()
@@ -15,39 +15,30 @@ describe('TextBuffer', () => {
       fs.writeFileSync(filePath, content)
 
       const percentages = []
-
       return buffer.load(filePath, (percentDone) => percentages.push(percentDone))
         .then(() => {
           assert.equal(buffer.getText(), content)
-
           assert.deepEqual(percentages, percentages.map(Number).sort())
           assert(percentages[0] >= 0)
           assert(percentages[percentages.length - 1] == 100)
         })
     })
 
-    it('can load a file in a non-UTF8 encoding', () => {
+    it('can load from a given stream', () => {
       const buffer = new TextBuffer()
 
       const {path: filePath} = temp.openSync()
-      const content = 'a\nb\nc\n'.repeat(10)
-      fs.writeFileSync(filePath, content, 'utf16le')
+      const fileContent = 'abc def ghi jkl\n'.repeat(10 * 1024)
+      fs.writeFileSync(filePath, fileContent)
 
-      return buffer.load(filePath, 'UTF-16LE')
-        .then(() => assert.equal(buffer.getText(), content))
-    })
-
-    it('rejects its promise if an invalid encoding is given', () => {
-      const buffer = new TextBuffer()
-
-      const {path: filePath} = temp.openSync()
-      const content = 'a\nb\nc\n'.repeat(10)
-      fs.writeFileSync(filePath, content, 'utf16le')
-
-      let rejection = null
-      return buffer.load(filePath, 'GARBAGE-16')
-        .catch(error => rejection = error)
-        .then(() => assert.equal(rejection.message, 'Invalid encoding name: GARBAGE-16'))
+      const percentages = []
+      const stream = fs.createReadStream(filePath)
+      return buffer.load(stream, (percentage) => percentages.push(percentage))
+        .then(() => {
+          assert.equal(buffer.getText(), fileContent)
+          assert.deepEqual(percentages, percentages.map(Number).sort())
+          assert(percentages[percentages.length - 1] == 100)
+        })
     })
 
     it('resolves with a Patch representing the difference between the old and new text', () => {
@@ -71,6 +62,31 @@ describe('TextBuffer', () => {
           }
         ])
       })
+    })
+
+    it('can load a file in a non-UTF8 encoding', () => {
+      const buffer = new TextBuffer()
+
+      const {path: filePath} = temp.openSync()
+      const content = 'a\nb\nc\n'.repeat(10)
+      fs.writeFileSync(filePath, content, 'utf16le')
+
+      return buffer.load(filePath, 'UTF-16LE').then(() =>
+        assert.equal(buffer.getText(), content)
+      )
+    })
+
+    it('rejects its promise if an invalid encoding is given', () => {
+      const buffer = new TextBuffer()
+
+      const {path: filePath} = temp.openSync()
+      const content = 'a\nb\nc\n'.repeat(10)
+      fs.writeFileSync(filePath, content, 'utf16le')
+
+      let rejection = null
+      return buffer.load(filePath, 'GARBAGE-16')
+        .catch(error => rejection = error)
+        .then(() => assert.equal(rejection.message, 'Invalid encoding name: GARBAGE-16'))
     })
 
     it('aborts if the buffer is modified before the load', () => {
@@ -100,20 +116,6 @@ describe('TextBuffer', () => {
 
       buffer.setText('ghi')
       return loadPromise
-    })
-
-    it('can load the buffer from a given stream', (done) => {
-      const {path: filePath} = temp.openSync()
-      const fileContent = 'abc def ghi jkl\n'.repeat(1024)
-      fs.writeFileSync(filePath, fileContent)
-      const stream = fs.createReadStream(filePath)
-
-      const buffer = new TextBuffer()
-
-      buffer.load(stream).then(() => {
-        assert.equal(buffer.getText(), fileContent)
-        done()
-      })
     })
   })
 
