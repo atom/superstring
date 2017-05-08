@@ -18,7 +18,7 @@ TEST_CASE("Text - can build a Text from a UTF8 stream") {
   });
 
   REQUIRE(text == Text { u"abγdefg\nhijklmnop" });
-  REQUIRE(progress_reports == vector<size_t>({3, 5, 8, 11, 14, 17, 18}));
+  REQUIRE(progress_reports == vector<size_t>({2, 5, 8, 11, 14, 17, 18}));
 }
 
 TEST_CASE("Text - replaces invalid byte sequences in the middle of the stream with the Unicode replacement character") {

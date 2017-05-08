@@ -7,6 +7,7 @@
 class TextBufferWrapper : public Nan::ObjectWrap {
 public:
   static void init(v8::Local<v8::Object> exports);
+  TextBuffer text_buffer;
 
 private:
   static void construct(const Nan::FunctionCallbackInfo<v8::Value> &info);
@@ -35,8 +36,6 @@ private:
   static void deserialize_changes(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void base_text_digest(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void dot_graph(const Nan::FunctionCallbackInfo<v8::Value> &info);
-
-  TextBuffer text_buffer;
 };
 
 #endif // SUPERSTRING_TEXT_BUFFER_WRAPPER_H

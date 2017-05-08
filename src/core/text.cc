@@ -79,61 +79,23 @@ void Text::serialize(Serializer &serializer) const {
 
 bool Text::write(std::ostream &stream, EncodingConversion conversion,
                  size_t chunk_size, TextSlice slice) {
-  size_t start_offset = slice.start_offset();
-  size_t end_offset = slice.end_offset();
-  const vector<uint16_t> &input_vector = slice.text->content;
-  const char *input_buffer = reinterpret_cast<const char *>(input_vector.data() + start_offset);
-  char *input_pointer = const_cast<char *>(input_buffer);
-  size_t input_bytes_remaining = (end_offset - start_offset) * bytes_per_character;
-
   vector<char> output_vector(chunk_size);
   char *output_buffer = output_vector.data();
 
-  while (input_bytes_remaining) {
-    char *output_pointer = output_buffer;
-    size_t output_bytes_remaining = output_vector.size();
-    size_t conversion_result = iconv(
+  bool end = false;
+  size_t offset = 0;
+  for (;;) {
+    size_t output_bytes_written = write(
+      slice,
       conversion,
-      &input_pointer,
-      &input_bytes_remaining,
-      &output_pointer,
-      &output_bytes_remaining
+      &offset,
+      output_vector.data(),
+      output_vector.size(),
+      end
     );
-
-    if (conversion_result == conversion_failure) {
-      switch (errno) {
-        // Encountered an incomplete multibyte sequence at end of input.
-        case EINVAL: break;
-
-        // Encountered an invalid character in the input Text. Write the unicode
-        // 'replacement character' to the output buffer in the given encoding.
-        // If there's enough space to hold the replacement character, then skip
-        // the invalid input character. Otherwise, stop here; we'll try again
-        // on the next iteration with an empty output buffer.
-        case EILSEQ: {
-          uint16_t replacement_characters[] = {replacement_character, 0};
-          char *replacement_text = reinterpret_cast<char *>(replacement_characters);
-          size_t replacement_text_size = bytes_per_character;
-          if (iconv(
-            conversion,
-            &replacement_text,
-            &replacement_text_size,
-            &output_pointer,
-            &output_bytes_remaining
-          ) != conversion_failure) {
-            input_bytes_remaining -= bytes_per_character;
-            input_pointer += bytes_per_character;
-          }
-          break;
-        }
-
-        // Insufficient room in the output buffer to write all characters in the input buffer
-        case E2BIG: break;
-      }
-    }
-
-    size_t output_bytes_written = output_vector.size() - output_bytes_remaining;
     stream.write(output_buffer, output_bytes_written);
+    if (end) break;
+    if (output_bytes_written == 0) end = true;
   }
 
   return true;
@@ -171,6 +133,74 @@ Text::Text(std::istream &stream, size_t input_size, EncodingConversion conversio
 
     bytes_left_over = bytes_to_append - bytes_appended;
   }
+}
+
+size_t Text::write(TextSlice slice, EncodingConversion conversion, size_t *offset,
+                   char *output_buffer, size_t output_length, bool is_at_end) {
+  size_t start_offset = slice.start_offset() + *offset;
+  size_t end_offset = slice.end_offset();
+
+  const char *input_buffer = reinterpret_cast<const char *>(slice.text->content.data() + start_offset);
+  char *input_pointer = const_cast<char *>(input_buffer);
+  size_t input_bytes_remaining = (end_offset - start_offset) * bytes_per_character;
+  char *output_pointer = output_buffer;
+  size_t output_bytes_remaining = output_length;
+
+  bool done = false;
+  while (!done) {
+    size_t conversion_result = iconv(
+      conversion,
+      &input_pointer,
+      &input_bytes_remaining,
+      &output_pointer,
+      &output_bytes_remaining
+    );
+
+    if (conversion_result == conversion_failure) {
+      switch (errno) {
+        // Encountered an incomplete multibyte sequence at end of input.
+        case EINVAL: {
+          done = true;
+          if (!is_at_end) break;
+        }
+
+        // Encountered an invalid character in the input Text. Write the unicode
+        // 'replacement character' to the output buffer in the given encoding.
+        // If there's enough space to hold the replacement character, then skip
+        // the invalid input character. Otherwise, stop here; we'll try again
+        // on the next iteration with an empty output buffer.
+        case EILSEQ: {
+          uint16_t replacement_characters[] = {replacement_character, 0};
+          char *replacement_text = reinterpret_cast<char *>(replacement_characters);
+          size_t replacement_text_size = bytes_per_character;
+          if (iconv(
+            conversion,
+            &replacement_text,
+            &replacement_text_size,
+            &output_pointer,
+            &output_bytes_remaining
+          ) == conversion_failure) {
+            done = true;
+          } else {
+            input_bytes_remaining -= bytes_per_character;
+            input_pointer += bytes_per_character;
+          }
+          break;
+        }
+
+        // Insufficient room in the output buffer to write all characters in the input buffer
+        case E2BIG: {
+          done = true;
+          break;
+        }
+      }
+    } else {
+      done = true;
+    }
+  }
+
+  *offset += (input_pointer - input_buffer) / bytes_per_character;
+  return output_pointer - output_buffer;
 }
 
 size_t Text::append(EncodingConversion conversion, const char *input_bytes,

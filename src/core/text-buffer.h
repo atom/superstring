@@ -1,3 +1,6 @@
+#ifndef SUPERSTRING_TEXT_BUFFER_H_
+#define SUPERSTRING_TEXT_BUFFER_H_
+
 #include <string>
 #include <vector>
 #include "patch.h"
@@ -78,3 +81,5 @@ public:
   size_t layer_count()  const;
   std::string get_dot_graph() const;
 };
+
+#endif  // SUPERSTRING_TEXT_BUFFER_H_

@@ -30,7 +30,7 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
     }
   }
 
-  const {TextBuffer, TextBuilder} = binding
+  const {TextBuffer, TextBuilder, TextReader} = binding
   const {load, reload, save, search} = TextBuffer.prototype
 
   for (const methodName of ['load', 'reload']) {
@@ -63,14 +63,31 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
     }
   }
 
-  TextBuffer.prototype.save = function (filePath, encoding = 'UTF8') {
-    return new Promise((resolve, reject) =>
-      save.call(this, filePath, encoding, (result) => {
-        result ?
-          resolve() :
-          reject(new Error(`Invalid encoding name: ${encoding}`))
-      })
-    )
+  TextBuffer.prototype.save = function (destination, encoding = 'UTF8') {
+    const CHUNK_SIZE = 10 * 1024
+
+    return new Promise((resolve, reject) => {
+      if (typeof destination === 'string') {
+        const filePath = destination
+        save.call(this, filePath, encoding, (result) => {
+          result ? resolve() : reject(new Error(`Invalid encoding name: ${encoding}`))
+        })
+      } else {
+        const stream = destination
+        stream.on('error', reject)
+
+        const reader = new TextReader(this, encoding)
+        const buffer = Buffer.allocUnsafe(CHUNK_SIZE)
+
+        function write () {
+          const bytesRead = reader.read(buffer)
+          if (bytesRead === 0) return stream.end(resolve)
+          stream.write(buffer.slice(0, bytesRead), write)
+        }
+
+        write()
+      }
+    })
   }
 
   TextBuffer.prototype.search = function (pattern) {
