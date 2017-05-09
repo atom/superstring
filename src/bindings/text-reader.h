@@ -19,7 +19,7 @@ private:
   TextBuffer::Snapshot *snapshot;
   std::vector<TextSlice> slices;
   size_t slice_index;
-  size_t slice_offset;
+  size_t text_offset;
   Text::EncodingConversion conversion;
 };
 

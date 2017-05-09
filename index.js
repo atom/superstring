@@ -30,7 +30,7 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
     }
   }
 
-  const {TextBuffer, TextBuilder, TextReader} = binding
+  const {TextBuffer, TextWriter, TextReader} = binding
   const {load, reload, save, search} = TextBuffer.prototype
 
   for (const methodName of ['load', 'reload']) {
@@ -51,12 +51,12 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
           method.call(this, completionCallback, progressCallback, filePath, encoding)
         } else {
           const stream = source
-          const textBuilder = new TextBuilder(encoding)
-          stream.on('data', (data) => textBuilder.write(data))
+          const writer = new TextWriter(encoding)
+          stream.on('data', (data) => writer.write(data))
           stream.on('error', reject)
           stream.on('end', () => {
-            textBuilder.end()
-            method.call(this, completionCallback, progressCallback, textBuilder)
+            writer.end()
+            method.call(this, completionCallback, progressCallback, writer)
           })
         }
       })

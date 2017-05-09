@@ -4,7 +4,7 @@
 #include "patch-wrapper.h"
 #include "range-wrapper.h"
 #include "point-wrapper.h"
-#include "text-builder.h"
+#include "text-writer.h"
 #include "text-reader.h"
 #include "text-buffer-wrapper.h"
 
@@ -17,7 +17,7 @@ void Init(Local<Object> exports) {
   MarkerIndexWrapper::init(exports);
   BufferOffsetIndexWrapper::init(exports);
   TextBufferWrapper::init(exports);
-  TextBuilder::init(exports);
+  TextWriter::init(exports);
   TextReader::init(exports);
 }
 

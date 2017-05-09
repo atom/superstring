@@ -19,7 +19,7 @@ TextReader::TextReader(TextBuffer::Snapshot *snapshot,
   snapshot{snapshot},
   slices{snapshot->chunks()},
   slice_index{0},
-  slice_offset{0},
+  text_offset{slices[0].start_offset()},
   conversion{conversion} {}
 
 TextReader::~TextReader() {
@@ -58,18 +58,20 @@ void TextReader::read(const Nan::FunctionCallbackInfo<Value> &info) {
   for (;;) {
     if (reader->slice_index == reader->slices.size()) break;
     TextSlice &slice = reader->slices[reader->slice_index];
-    size_t bytes_written = Text::write(
-      slice,
+    size_t end_offset = slice.end_offset();
+    size_t bytes_written = slice.text->encode(
       reader->conversion,
-      &reader->slice_offset,
+      &reader->text_offset,
+      end_offset,
       buffer + total_bytes_written,
       buffer_length - total_bytes_written
     );
     if (bytes_written == 0) break;
     total_bytes_written += bytes_written;
-    if (reader->slice_offset == slice.size()) {
+    if (reader->text_offset == end_offset) {
       reader->slice_index++;
-      reader->slice_offset = 0;
+      if (reader->slice_index == reader->slices.size()) break;
+      reader->text_offset = reader->slices[reader->slice_index].start_offset();
     }
   }
 

@@ -7,13 +7,14 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-TEST_CASE("Text - can build a Text from a UTF8 stream") {
+TEST_CASE("Text::decode - can build a Text from a UTF8 stream") {
   string input = "abγdefg\nhijklmnop";
   stringstream stream(input, std::ios_base::in);
   auto conversion = Text::transcoding_from("UTF8");
 
   vector<size_t> progress_reports;
-  Text text(stream, input.size(), *conversion, 3, [&](size_t percent_done) {
+  Text text;
+  text.decode(*conversion, stream, 3, [&](size_t percent_done) {
     progress_reports.push_back(percent_done);
   });
 
@@ -21,13 +22,14 @@ TEST_CASE("Text - can build a Text from a UTF8 stream") {
   REQUIRE(progress_reports == vector<size_t>({2, 5, 8, 11, 14, 17, 18}));
 }
 
-TEST_CASE("Text - replaces invalid byte sequences in the middle of the stream with the Unicode replacement character") {
+TEST_CASE("Text::decode - replaces invalid byte sequences in the middle of the stream with the Unicode replacement character") {
   string input = "ab" "\xc0" "\xc1" "de";
   stringstream stream(input, std::ios_base::in);
   auto conversion = Text::transcoding_from("UTF8");
 
   vector<size_t> progress_reports;
-  Text text(stream, input.size(), *conversion, 3, [&](size_t percent_done) {
+  Text text;
+  text.decode(*conversion, stream, 3, [&](size_t percent_done) {
     progress_reports.push_back(percent_done);
   });
 
@@ -35,69 +37,90 @@ TEST_CASE("Text - replaces invalid byte sequences in the middle of the stream wi
   REQUIRE(progress_reports == vector<size_t>({ 3, 6 }));
 }
 
-TEST_CASE("Text - replaces invalid byte sequences at the end of the stream with the Unicode replacement characters") {
+TEST_CASE("Text::decode - replaces invalid byte sequences at the end of the stream with the Unicode replacement characters") {
   string input = "ab" "\xf0\x9f"; // incomplete 4-byte code point for '😁' at the end of the stream
   stringstream stream(input, std::ios_base::in);
   auto conversion = Text::transcoding_from("UTF8");
 
-  Text text(stream, input.size(), *conversion, 5, [&](size_t percent_done) {});
+  Text text;
+  text.decode(*conversion, stream, 5, [&](size_t percent_done) {});
   REQUIRE(text == Text { u"ab" "\ufffd" "\ufffd" });
 }
 
-TEST_CASE("Text - handles characters that require two 16-bit code units") {
+TEST_CASE("Text::decode - handles characters that require two 16-bit code units") {
   string input = "ab" "\xf0\x9f" "\x98\x81" "cd"; // 'ab😁cd'
   stringstream stream(input, std::ios_base::in);
   auto conversion = Text::transcoding_from("UTF8");
 
-  Text text(stream, input.size(), *conversion, 5, [&](size_t percent_done) {});
+  Text text;
+  text.decode(*conversion, stream, 5, [&](size_t percent_done) {});
   REQUIRE(text == Text { u"ab" "\xd83d" "\xde01" "cd" });
 }
 
-TEST_CASE("Text - resizes the buffer if the encoding conversion runs out of room") {
+TEST_CASE("Text::decode - resizes the buffer if the encoding conversion runs out of room") {
   string input = "abcdef";
   stringstream stream(input, std::ios_base::in);
   auto conversion = Text::transcoding_from("UTF8");
 
-  Text text(stream, 3, *conversion, 5, [&](size_t percent_done) {});
+  Text text;
+  text.decode(*conversion, stream, 5, [&](size_t percent_done) {});
   REQUIRE(text == Text { u"abcdef" });
 }
 
-TEST_CASE("Text - handles CRLF newlines") {
+TEST_CASE("Text::decode - handles CRLF newlines") {
   string input = "abc\r\nde\rf\r\ng\r";
   stringstream stream(input, std::ios_base::in);
   auto conversion = Text::transcoding_from("UTF8");
 
-  Text text(stream, input.size(), *conversion, 4, [&](size_t percent_done) {});
+  Text text;
+  text.decode(*conversion, stream, 4, [&](size_t percent_done) {});
   REQUIRE(text == Text { u"abc\r\nde\rf\r\ng\r" });
 }
 
-TEST_CASE("Text::write - basic") {
+TEST_CASE("Text::encode - basic") {
   Text text{u"abγdefg\nhijklmnop"};
   auto conversion = Text::transcoding_to("UTF8");
 
   stringstream stream;
-  Text::write(stream, *conversion, 3, TextSlice(text));
+  text.encode(*conversion, 0, text.size(), stream, 3);
   REQUIRE(stream.str() == "abγdefg\nhijklmnop");
 
   stringstream stream2;
-  Text::write(stream2, *conversion, 3, TextSlice(text).suffix(Point{0, 1}));
+  text.encode(*conversion, 1, text.size(), stream2, 3);
   REQUIRE(stream2.str() == "bγdefg\nhijklmnop");
 }
 
-TEST_CASE("Text::write - invalid characters") {
+TEST_CASE("Text::encode - invalid characters") {
   Text text{u"abc" "\xD800" "def"};
   auto conversion = Text::transcoding_to("UTF8");
 
   stringstream stream;
-  Text::write(stream, *conversion, 3, TextSlice(text));
+  text.encode(*conversion, 0, text.size(), stream, 3);
   REQUIRE(stream.str() == "abc" "\ufffd" "def");
 
   stringstream stream2;
-  Text::write(stream2, *conversion, 3, TextSlice(text).suffix(Point{0, 1}));
+  text.encode(*conversion, 1, text.size(), stream2, 3);
   REQUIRE(stream2.str() == "bc" "\ufffd" "def");
 
   stringstream stream3;
-  Text::write(stream3, *conversion, 3, TextSlice(text).suffix(Point{0, 2}));
+  text.encode(*conversion, 2, text.size(), stream3, 3);
+  REQUIRE(stream3.str() == "c" "\ufffd" "def");
+}
+
+TEST_CASE("Text::encode - invalid characters at the end of the slice") {
+  Text text{u"abc" "\xD800" "def"};
+  auto conversion = Text::transcoding_to("UTF8");
+
+  stringstream stream;
+  text.encode(*conversion, 0, text.size(), stream, 3);
+  REQUIRE(stream.str() == "abc" "\ufffd" "def");
+
+  stringstream stream2;
+  text.encode(*conversion, 1, text.size(), stream2, 3);
+  REQUIRE(stream2.str() == "bc" "\ufffd" "def");
+
+  stringstream stream3;
+  text.encode(*conversion, 2, text.size(), stream3, 3);
   REQUIRE(stream3.str() == "c" "\ufffd" "def");
 }
 

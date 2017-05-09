@@ -4,7 +4,7 @@
 #include "range-wrapper.h"
 #include "text-wrapper.h"
 #include "patch-wrapper.h"
-#include "text-builder.h"
+#include "text-writer.h"
 #include "text-slice.h"
 #include "text-diff.h"
 #include "noop.h"
@@ -297,10 +297,11 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   file.seekg(0);
   size_t file_size = end - beginning;
 
-  Text loaded_text(
-    file,
-    file_size,
+  Text loaded_text;
+  loaded_text.reserve(file_size);
+  loaded_text.decode(
     *conversion,
+    file,
     CHUNK_SIZE,
     [&progress_callback, file_size](size_t bytes_read) {
       if (progress_callback) {
@@ -367,10 +368,11 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
         auto conversion = Text::transcoding_from(encoding_name.c_str());
         if (!conversion) return;
 
-        loaded_text = Text(
-          file,
-          file_size,
+        loaded_text = Text();
+        loaded_text->reserve(file_size);
+        loaded_text->decode(
           *conversion,
+          file,
           CHUNK_SIZE,
           [&progress, file_size](size_t bytes_read) {
             size_t percent_done = bytes_read / file_size * 100;
@@ -460,13 +462,13 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
       force
     );
   } else {
-    auto text_builder = Nan::ObjectWrap::Unwrap<TextBuilder>(info[2]->ToObject());
+    auto text_writer = Nan::ObjectWrap::Unwrap<TextWriter>(info[2]->ToObject());
     worker = new Worker(
       completion_callback,
       progress_callback,
       &text_buffer,
       text_buffer.create_snapshot(),
-      move(text_builder->text),
+      move(text_writer->text),
       force
     );
   }
@@ -502,7 +504,7 @@ void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   static size_t CHUNK_SIZE = 10 * 1024;
   std::ofstream file{file_path};
   for (TextSlice &chunk : text_buffer.chunks()) {
-    if (!Text::write(file, *conversion, CHUNK_SIZE, chunk)) {
+    if (!chunk.text->encode(*conversion, chunk.start_offset(), chunk.end_offset(), file, CHUNK_SIZE)) {
       info.GetReturnValue().Set(Nan::False());
       return;
     }
@@ -538,7 +540,7 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
       static size_t CHUNK_SIZE = 10 * 1024;
       std::ofstream file{file_name};
       for (TextSlice &chunk : snapshot->chunks()) {
-        if (!Text::write(file, *conversion, CHUNK_SIZE, chunk)) {
+        if (!chunk.text->encode(*conversion, chunk.start_offset(), chunk.end_offset(), file, CHUNK_SIZE)) {
           result = false;
           return;
         }

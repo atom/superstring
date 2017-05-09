@@ -39,14 +39,15 @@ class Text {
   template<typename Iter>
   Text(Iter begin, Iter end) : Text(std::vector<uint16_t>{begin, end}) {}
 
-  Text(std::istream &stream, size_t input_size, EncodingConversion conversion,
-       size_t chunk_size, std::function<void(size_t)> progress_callback);
-  static bool write(std::ostream &stream, EncodingConversion conversion,
-                    size_t chunk_size, TextSlice slice);
+  bool encode(EncodingConversion, size_t start_offset, size_t end_offset,
+              std::ostream &stream, size_t chunk_size) const;
+  size_t encode(EncodingConversion, size_t *start_offset, size_t end_offset,
+                char *buffer, size_t buffer_size, bool is_last = false) const;
 
-  static size_t write(TextSlice slice, EncodingConversion, size_t *offset,
-                      char *buffer, size_t buffer_size, bool is_last = false);
-  size_t append(EncodingConversion, const char *, size_t, bool is_last = false);
+  bool decode(EncodingConversion, std::istream &stream,
+              size_t chunk_size, std::function<void(size_t)> progress_callback);
+  size_t decode(EncodingConversion, const char *buffer, size_t buffer_size,
+                bool is_last = false);
 
   static Text concat(TextSlice a, TextSlice b);
   static Text concat(TextSlice a, TextSlice b, TextSlice c);
@@ -72,6 +73,7 @@ class Text {
   const uint16_t *data() const;
   size_t digest() const;
   void clear();
+  void reserve(size_t capacity);
 
   bool operator!=(const Text &) const;
   bool operator==(const Text &) const;
