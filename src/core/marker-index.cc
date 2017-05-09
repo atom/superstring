@@ -9,19 +9,19 @@ using std::default_random_engine;
 using std::unordered_map;
 
 MarkerIndex::Node::Node(Node *parent, Point left_extent) :
-  parent {parent},
-  left {nullptr},
-  right {nullptr},
-  left_extent {left_extent},
-  priority {0} {}
+  parent{parent},
+  left{nullptr},
+  right{nullptr},
+  left_extent{left_extent},
+  priority{0} {}
 
 bool MarkerIndex::Node::is_marker_endpoint() {
   return (start_marker_ids.size() + end_marker_ids.size()) > 0;
 }
 
 MarkerIndex::Iterator::Iterator(MarkerIndex *marker_index) :
-  marker_index {marker_index},
-  current_node {nullptr} {}
+  marker_index{marker_index},
+  current_node{nullptr} {}
 
 void MarkerIndex::Iterator::reset() {
   current_node = marker_index->root;
@@ -418,10 +418,10 @@ void MarkerIndex::Iterator::cache_node_position() const {
 }
 
 MarkerIndex::MarkerIndex(unsigned seed)
-  : random_engine {static_cast<default_random_engine::result_type>(seed)},
+  : random_engine{static_cast<default_random_engine::result_type>(seed)},
     random_distribution{1, INT_MAX - 1},
-    root {nullptr},
-    iterator {this} {}
+    root{nullptr},
+    iterator{this} {}
 
 MarkerIndex::~MarkerIndex() {
   if (root) delete_subtree(root);

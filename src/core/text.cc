@@ -26,9 +26,9 @@ optional<Text::EncodingConversion> Text::transcoding_from(const char *name) {
     conversion;
 }
 
-Text::Text() : line_offsets {0} {}
+Text::Text() : line_offsets{0} {}
 
-Text::Text(vector<uint16_t> &&content) : content {content}, line_offsets {0} {
+Text::Text(vector<uint16_t> &&content) : content{content}, line_offsets{0} {
   for (uint32_t offset = 0, size = content.size(); offset < size; offset++) {
     if (content[offset] == '\n') {
       line_offsets.push_back(offset + 1);
@@ -37,14 +37,14 @@ Text::Text(vector<uint16_t> &&content) : content {content}, line_offsets {0} {
 }
 
 Text::Text(const std::u16string &string) :
-  Text(vector<uint16_t> {string.begin(), string.end()}) {}
+  Text(vector<uint16_t>{string.begin(), string.end()}) {}
 
 Text::Text(TextSlice slice) :
-  content {
+  content{
     slice.text->content.begin() + slice.start_offset(),
     slice.text->content.begin() + slice.end_offset()
-  }, line_offsets {} {
-
+  },
+  line_offsets{} {
   line_offsets.push_back(slice.start_offset());
   line_offsets.insert(
     line_offsets.end(),
@@ -58,9 +58,9 @@ Text::Text(TextSlice slice) :
 }
 
 Text::Text(const vector<uint16_t> &&content, const vector<uint32_t> &&line_offsets) :
-  content {move(content)}, line_offsets {move(line_offsets)} {}
+  content{move(content)}, line_offsets{move(line_offsets)} {}
 
-Text::Text(Deserializer &deserializer) : line_offsets {0} {
+Text::Text(Deserializer &deserializer) : line_offsets{0} {
   uint32_t size = deserializer.read<uint32_t>();
   content.reserve(size);
   for (uint32_t offset = 0; offset < size; offset++) {
@@ -383,7 +383,7 @@ ClipResult Text::clip_position(Point position) const {
       position_iterator < iterators.first) {
     position_iterator = iterators.second;
   }
-  return ClipResult {
+  return ClipResult{
     Point(row, position_iterator - iterators.first),
     static_cast<uint32_t>(position_iterator - begin())
   };

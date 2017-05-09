@@ -11,11 +11,11 @@ Point Point::max(const Point &left, const Point &right) {
 
 Point::Point() : Point(0, 0) {}
 
-Point::Point(unsigned row, unsigned column) : row {row}, column {column} {}
+Point::Point(unsigned row, unsigned column) : row{row}, column{column} {}
 
 Point::Point(Deserializer &input) :
-  row {input.read<uint32_t>()},
-  column {input.read<uint32_t>()} {}
+  row{input.read<uint32_t>()},
+  column{input.read<uint32_t>()} {}
 
 int Point::compare(const Point &other) const {
   if (row < other.row) return -1;

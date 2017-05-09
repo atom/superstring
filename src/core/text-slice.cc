@@ -3,13 +3,13 @@
 #include <assert.h>
 
 TextSlice::TextSlice() :
-  text {nullptr} {}
+  text{nullptr} {}
 
 TextSlice::TextSlice(const Text *text, Point start_position, Point end_position) :
-  text {text}, start_position {start_position}, end_position {end_position} {}
+  text{text}, start_position{start_position}, end_position{end_position} {}
 
 TextSlice::TextSlice(const Text &text) :
-  text {&text}, start_position {Point()}, end_position {text.extent()} {}
+  text{&text}, start_position{Point()}, end_position{text.extent()} {}
 
 size_t TextSlice::start_offset() const {
   if (start_position.is_zero()) return 0;
@@ -28,9 +28,9 @@ std::pair<TextSlice, TextSlice> TextSlice::split(Point split_point) const {
     start_position.traverse(split_point)
   );
 
-  return std::pair<TextSlice, TextSlice> {
-    TextSlice {text, start_position, absolute_split_point},
-    TextSlice {text, absolute_split_point, end_position}
+  return std::pair<TextSlice, TextSlice>{
+    TextSlice{text, start_position, absolute_split_point},
+    TextSlice{text, absolute_split_point, end_position}
   };
 }
 

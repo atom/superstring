@@ -326,7 +326,7 @@ TextBuffer::~TextBuffer() {
   }
 }
 
-TextBuffer::TextBuffer(std::u16string text) : TextBuffer {Text {text}} {}
+TextBuffer::TextBuffer(std::u16string text) : TextBuffer{Text{text}} {}
 
 void TextBuffer::reset(Text &&new_base_text) {
   top_layer = new Layer(top_layer);
@@ -454,7 +454,7 @@ vector<TextSlice> TextBuffer::chunks() const {
 }
 
 void TextBuffer::set_text(Text &&new_text) {
-  set_text_in_range(Range {Point(0, 0), extent()}, move(new_text));
+  set_text_in_range(Range{Point(0, 0), extent()}, move(new_text));
 }
 
 class ChunkIterator {
@@ -525,7 +525,7 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
     old_range.start,
     old_range.extent(),
     new_text.extent(),
-    optional<Text> {},
+    optional<Text>{},
     move(new_text),
     deleted_text_size
   );
