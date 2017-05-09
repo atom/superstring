@@ -108,20 +108,20 @@ TEST_CASE("Text::encode - invalid characters") {
 }
 
 TEST_CASE("Text::encode - invalid characters at the end of the slice") {
-  Text text{u"abc" "\xD800" "def"};
+  Text text{u"abc" "\xD800"};
   auto conversion = Text::transcoding_to("UTF8");
 
   stringstream stream;
   text.encode(*conversion, 0, text.size(), stream, 3);
-  REQUIRE(stream.str() == "abc" "\ufffd" "def");
+  REQUIRE(stream.str() == "abc" "\ufffd");
 
   stringstream stream2;
   text.encode(*conversion, 1, text.size(), stream2, 3);
-  REQUIRE(stream2.str() == "bc" "\ufffd" "def");
+  REQUIRE(stream2.str() == "bc" "\ufffd");
 
   stringstream stream3;
   text.encode(*conversion, 2, text.size(), stream3, 3);
-  REQUIRE(stream3.str() == "c" "\ufffd" "def");
+  REQUIRE(stream3.str() == "c" "\ufffd");
 }
 
 TEST_CASE("Text::line_iterators - returns iterators at the start and end of lines") {
