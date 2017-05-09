@@ -78,14 +78,13 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
 
         const reader = new TextReader(this, encoding)
         const buffer = Buffer.allocUnsafe(CHUNK_SIZE)
+        writeToStream()
 
-        function write () {
+        function writeToStream () {
           const bytesRead = reader.read(buffer)
           if (bytesRead === 0) return stream.end(resolve)
-          stream.write(buffer.slice(0, bytesRead), write)
+          stream.write(buffer.slice(0, bytesRead), writeToStream)
         }
-
-        write()
       }
     })
   }
