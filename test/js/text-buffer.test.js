@@ -2,6 +2,10 @@ const {assert} = require('chai')
 const temp = require('temp').track()
 const {TextBuffer} = require('../..')
 const fs = require('fs')
+const Random = require('random-seed')
+const TestDocument = require('./helpers/test-document')
+const {traverse} = require('./helpers/point-helpers')
+const MAX_INT32 = 4294967296
 
 describe('TextBuffer', () => {
   describe('.load', () => {
@@ -473,6 +477,54 @@ describe('TextBuffer', () => {
         .then(() => assert(false))
         .catch((error) => assert.match(error.message, /missing terminating ] for character class/))
     })
+  })
+
+  it('handles random concurrent IO calls', () => {
+    const generateSeed = Random.create()
+    let seed = generateSeed(MAX_INT32)
+    const random = new Random(seed)
+    const {path: filePath} = temp.openSync()
+    const testDocument = new TestDocument(seed)
+
+    fs.writeFileSync(filePath, testDocument.getText(), 'utf8')
+
+    const promises = []
+    const buffer = new TextBuffer()
+    buffer.loadSync(filePath, 'utf8')
+
+    for (let i = 0; i < 20; i++) {
+      switch (random(4)) {
+        case 0: {
+          testDocument.performRandomSplice()
+          fs.writeFileSync(filePath, testDocument.getText(), 'utf8')
+          promises.push(buffer.load(filePath))
+          break;
+        }
+
+        case 1: {
+          testDocument.performRandomSplice()
+          fs.writeFileSync(filePath, testDocument.getText(), 'utf8')
+          promises.push(buffer.reload(filePath))
+          break;
+        }
+
+        case 2: {
+          const {start, deletedExtent, insertedText} = testDocument.performRandomSplice()
+          buffer.setTextInRange(Range(start, traverse(start, deletedExtent)), insertedText)
+          promises.push(buffer.save(filePath))
+          break;
+        }
+
+        case 3: {
+          const range = testDocument.buildRandomRange()
+          const text = buffer.getTextInRange(range)
+          promises.push(buffer.search(text))
+          break;
+        }
+      }
+    }
+
+    return Promise.all(promises)
   })
 })
 
