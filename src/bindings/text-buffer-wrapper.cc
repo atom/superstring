@@ -393,26 +393,28 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
     }
 
     void HandleOKCallback() {
-      delete snapshot;
-
       if (!loaded_text) {
         Local<Value> argv[] = {Nan::Error(("Invalid encoding name: " + encoding_name).c_str())};
         callback->Call(1, argv);
+        delete snapshot;
         return;
       }
 
       bool is_modified = buffer->is_modified();
       if (is_modified) {
         if (force) {
-          Patch inverted_changes = buffer->get_inverted_changes();
+          Patch inverted_changes = buffer->get_inverted_changes(snapshot);
           inverted_changes.combine(patch);
           patch = move(inverted_changes);
         } else {
           Local<Value> argv[] = {Nan::Null(), Nan::Null()};
           callback->Call(2, argv);
+          delete snapshot;
           return;
         }
       }
+
+      delete snapshot;
 
       bool has_changed = is_modified || buffer->base_text() != *loaded_text;
       if (progress_callback) {

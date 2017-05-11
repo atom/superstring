@@ -96,6 +96,25 @@ TEST_CASE("TextBuffer::create_snapshot") {
   }
 }
 
+TEST_CASE("TextBuffer::get_inverted_changes") {
+  TextBuffer buffer {u"ab\ndef"};
+  auto snapshot1 = buffer.create_snapshot();
+
+  buffer.set_text_in_range({{0, 2}, {0, 2}}, Text {u"c"});
+  buffer.flush_changes();
+
+  auto patch = buffer.get_inverted_changes(snapshot1);
+  REQUIRE(patch.get_changes() == vector<Patch::Change>({
+    Patch::Change{
+      Point {0, 2}, Point {0, 3},
+      Point {0, 2}, Point {0, 2},
+      get_text(u"c").get(),
+      get_text(u"").get(),
+      0, 0
+    },
+  }));
+}
+
 TEST_CASE("TextBuffer::is_modified") {
   TextBuffer buffer{u"abcdef"};
   REQUIRE(!buffer.is_modified());
@@ -436,7 +455,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
       if (rand() % 3 == 0 && !snapshot_tasks.empty()) {
         uint32_t snapshot_index = rand() % snapshot_tasks.size();
 
-        buffer.get_inverted_changes();
+        buffer.get_inverted_changes(snapshot_tasks[snapshot_index].snapshot);
         snapshot_tasks[snapshot_index].future.wait();
         auto &base_text = snapshot_tasks[snapshot_index].base_text;
         auto &mutated_text = snapshot_tasks[snapshot_index].mutated_text;

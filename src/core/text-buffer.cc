@@ -340,15 +340,15 @@ void TextBuffer::reset(Text &&new_base_text) {
   consolidate_layers();
 }
 
-Patch TextBuffer::get_inverted_changes() const {
+Patch TextBuffer::get_inverted_changes(const Snapshot *snapshot) const {
   vector<const Patch *> patches;
   Layer *layer = top_layer;
-  while (layer != base_layer) {
+  while (layer != &snapshot->base_layer) {
     patches.insert(patches.begin(), &layer->patch);
     layer = layer->previous_layer;
   }
   Patch combination(patches);
-  TextSlice base{this->base_text()};
+  TextSlice base{snapshot->base_text()};
   Patch result;
   for (auto change : combination.get_changes()) {
     result.splice(
