@@ -586,18 +586,14 @@ string TextBuffer::get_dot_graph() const {
   result << "graph { label=\"--- buffer ---\" }\n";
   for (auto begin = layers.rbegin(), iter = begin, end = layers.rend();
        iter != end; ++iter) {
-    result << "graph { label=\"layer " << (iter - begin) <<
-      " (snapshot count " << ((*iter)->snapshot_count);
-    if (*iter == base_layer) {
-      result << ", base";
-    }
+    auto layer = *iter;
+    auto index = iter - begin;
+    result << "graph { label=\"layer " << index << " (snapshot count " << layer->snapshot_count;
+    if (layer == base_layer) result << ", base";
+    if (layer->is_derived) result << ", derived";
     result << "):\" }\n";
-    if ((*iter)->text) {
-      result << "graph { label=\"text:\n" << *(*iter)->text << "\" }\n";
-    }
-    if ((*iter)->previous_layer) {
-      result << (*iter)->patch.get_dot_graph();
-    }
+    if (layer->text) result << "graph { label=\"text:\n" << *layer->text << "\" }\n";
+    if (index > 0) result << layer->patch.get_dot_graph();
   }
   return result.str();
 }
