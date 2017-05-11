@@ -100,7 +100,10 @@ TEST_CASE("TextBuffer::get_inverted_changes") {
   TextBuffer buffer {u"ab\ndef"};
   auto snapshot1 = buffer.create_snapshot();
 
-  buffer.set_text_in_range({{0, 2}, {0, 2}}, Text {u"c"});
+  // This range gets clipped. The ::get_inverted_changes method is one of the
+  // few reasons it matters that we clip ranges before passing them to
+  // Patch::splice.
+  buffer.set_text_in_range({{0, 2}, {0, 10}}, Text {u"c"});
   buffer.flush_changes();
 
   auto patch = buffer.get_inverted_changes(snapshot1);

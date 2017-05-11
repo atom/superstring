@@ -520,13 +520,14 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
 
   auto start = clip_position(old_range.start);
   auto end = clip_position(old_range.end);
+  Point deleted_extent = end.position.traversal(start.position);
   Point new_range_end = start.position.traverse(new_text.extent());
   uint32_t deleted_text_size = end.offset - start.offset;
   top_layer->extent_ = new_range_end.traverse(top_layer->extent_.traversal(end.position));
   top_layer->size_ += new_text.size() - deleted_text_size;
   top_layer->patch.splice(
-    old_range.start,
-    old_range.extent(),
+    start.position,
+    deleted_extent,
     new_text.extent(),
     optional<Text>{},
     move(new_text),
