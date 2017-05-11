@@ -17,8 +17,9 @@ uint32_t TextBuffer::MAX_CHUNK_SIZE_TO_COPY = 1024;
 
 struct TextBuffer::Layer {
   Layer *previous_layer;
+  Patch patch;
   optional<Text> text;
-  optional<Patch> patch;
+  bool is_derived;
 
   Point extent_;
   uint32_t size_;
@@ -27,6 +28,7 @@ struct TextBuffer::Layer {
   Layer(Text &&text) :
     previous_layer{nullptr},
     text{move(text)},
+    is_derived{false},
     extent_{this->text->extent()},
     size_{this->text->size()},
     snapshot_count{0} {}
@@ -34,6 +36,7 @@ struct TextBuffer::Layer {
   Layer(Layer *previous_layer) :
     previous_layer{previous_layer},
     patch{Patch()},
+    is_derived{true},
     extent_{previous_layer->extent()},
     size_{previous_layer->size()},
     snapshot_count{0} {}
@@ -52,9 +55,9 @@ struct TextBuffer::Layer {
   }
 
   uint16_t character_at(Point position) {
-    if (!patch) return text->at(position);
+    if (!is_derived) return text->at(position);
 
-    auto change = patch->find_change_for_new_position(position);
+    auto change = patch.find_change_for_new_position(position);
     if (!change) return previous_layer->character_at(position);
     if (position < change->new_end) {
       return change->new_text->at(position.traversal(change->new_start));
@@ -66,11 +69,11 @@ struct TextBuffer::Layer {
   }
 
   ClipResult clip_position(Point position, bool splay = false) {
-    if (!patch) return text->clip_position(position);
+    if (!is_derived) return text->clip_position(position);
 
     auto preceding_change = splay ?
-      patch->change_for_new_position(position) :
-      patch->find_change_for_new_position(position);
+      patch.change_for_new_position(position) :
+      patch.find_change_for_new_position(position);
     if (!preceding_change) return previous_layer->clip_position(position);
 
     uint32_t preceding_change_base_offset =
@@ -138,10 +141,10 @@ struct TextBuffer::Layer {
     Point goal_position = clip_position(end, splay).position;
     Point current_position = clip_position(start, splay).position;
 
-    if (!patch) return callback(TextSlice(*text).slice({current_position, goal_position}));
+    if (!is_derived) return callback(TextSlice(*text).slice({current_position, goal_position}));
 
     Point base_position = current_position;
-    auto change = patch->find_change_for_new_position(current_position);
+    auto change = patch.find_change_for_new_position(current_position);
 
     while (current_position < goal_position) {
       if (change) {
@@ -161,7 +164,7 @@ struct TextBuffer::Layer {
         base_position = change->old_end.traverse(current_position.traversal(change->new_end));
       }
 
-      change = patch->find_change_ending_after_new_position(current_position);
+      change = patch.find_change_ending_after_new_position(current_position);
 
       Point next_base_position, next_position;
       if (change) {
@@ -341,7 +344,7 @@ Patch TextBuffer::get_inverted_changes() const {
   vector<const Patch *> patches;
   Layer *layer = top_layer;
   while (layer != base_layer) {
-    patches.insert(patches.begin(), &(*layer->patch));
+    patches.insert(patches.begin(), &layer->patch);
     layer = layer->previous_layer;
   }
   Patch combination(patches);
@@ -369,14 +372,14 @@ void TextBuffer::serialize_changes(Serializer &serializer) {
   }
 
   if (top_layer->previous_layer == base_layer) {
-    top_layer->patch->serialize(serializer);
+    top_layer->patch.serialize(serializer);
     return;
   }
 
   vector<const Patch *> patches;
   Layer *layer = top_layer;
   while (layer != base_layer) {
-    patches.insert(patches.begin(), &(*layer->patch));
+    patches.insert(patches.begin(), &layer->patch);
     layer = layer->previous_layer;
   }
   Patch(patches).serialize(serializer);
@@ -521,7 +524,7 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
   uint32_t deleted_text_size = end.offset - start.offset;
   top_layer->extent_ = new_range_end.traverse(top_layer->extent_.traversal(end.position));
   top_layer->size_ += new_text.size() - deleted_text_size;
-  top_layer->patch->splice(
+  top_layer->patch.splice(
     old_range.start,
     old_range.extent(),
     new_text.extent(),
@@ -530,7 +533,7 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
     deleted_text_size
   );
 
-  auto change = top_layer->patch->change_for_old_position(start.position);
+  auto change = top_layer->patch.change_for_old_position(start.position);
   if (change && change->old_text_size == change->new_text->size()) {
     auto chunks = top_layer->previous_layer->chunks_in_range({
       change->old_start,
@@ -539,7 +542,7 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
 
     ChunkIterator existing_text_iter{chunks};
     if (equal(change->new_text->begin(), change->new_text->end(), existing_text_iter)) {
-      top_layer->patch->splice_old(start.position, Point(), Point());
+      top_layer->patch.splice_old(start.position, Point(), Point());
     }
   }
 }
@@ -591,8 +594,8 @@ string TextBuffer::get_dot_graph() const {
     if ((*iter)->text) {
       result << "graph { label=\"text:\n" << *(*iter)->text << "\" }\n";
     }
-    if ((*iter)->patch) {
-      result << (*iter)->patch->get_dot_graph();
+    if ((*iter)->previous_layer) {
+      result << (*iter)->patch.get_dot_graph();
     }
   }
   return result.str();
@@ -695,11 +698,11 @@ void TextBuffer::consolidate_layers() {
         mutable_layers.clear();
       }
 
-      if (layer->text) layer->patch = optional<Patch>{};
+      if (layer->text) layer->is_derived = false;
       mutable_layers.push_back(layer);
     }
 
-    if (!layer->patch) needed_by_layer_above = false;
+    if (!layer->is_derived) needed_by_layer_above = false;
     layer = layer->previous_layer;
   }
 
@@ -712,21 +715,22 @@ void TextBuffer::squash_layers(const vector<Layer *> &layers) {
   bool left_to_right = true;
   for (auto iter = layers.rbegin() + 1, end = layers.rend(); iter != end; ++iter) {
     Layer *layer = *iter;
-    if (layer->text) continue;
-    if (layer->previous_layer->text) {
-      for (auto change : layer->patch->get_changes()) {
-        layer->previous_layer->text->splice(
-          change.new_start,
-          change.old_end.traversal(change.old_start),
-          *change.new_text
-        );
+    if (!layer->text) {
+      if (layer->previous_layer->text) {
+        for (auto change : layer->patch.get_changes()) {
+          layer->previous_layer->text->splice(
+            change.new_start,
+            change.old_end.traversal(change.old_start),
+            *change.new_text
+          );
+        }
+        layer->text = move(layer->previous_layer->text);
+        layer->is_derived = false;
       }
-      layer->text = move(layer->previous_layer->text);
-      layer->patch = optional<Patch>{};
-    } else {
-      layer->previous_layer->patch->combine(*layer->patch, left_to_right);
-      layer->patch = move(layer->previous_layer->patch);
     }
+
+    layer->previous_layer->patch.combine(layer->patch, left_to_right);
+    layer->patch = move(layer->previous_layer->patch);
   }
 
   layers.front()->previous_layer = layers.back()->previous_layer;

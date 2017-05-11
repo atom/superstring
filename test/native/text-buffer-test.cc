@@ -436,6 +436,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
       if (rand() % 3 == 0 && !snapshot_tasks.empty()) {
         uint32_t snapshot_index = rand() % snapshot_tasks.size();
 
+        buffer.get_inverted_changes();
         snapshot_tasks[snapshot_index].future.wait();
         auto &base_text = snapshot_tasks[snapshot_index].base_text;
         auto &mutated_text = snapshot_tasks[snapshot_index].mutated_text;
