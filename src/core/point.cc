@@ -1,4 +1,5 @@
 #include <climits>
+#include <algorithm>
 #include "point.h"
 
 Point Point::min(const Point &left, const Point &right) {

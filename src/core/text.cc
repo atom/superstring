@@ -1,6 +1,7 @@
 #include "text.h"
 #include <algorithm>
 #include "text-slice.h"
+#include <iconv.h>
 
 using std::function;
 using std::move;

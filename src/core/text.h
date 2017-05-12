@@ -2,7 +2,6 @@
 #define FLAT_TEXT_H_
 
 #include <istream>
-#include <iconv.h>
 #include <functional>
 #include <vector>
 #include <ostream>
@@ -21,7 +20,7 @@ class Text {
   friend class TextSlice;
 
  public:
-  using EncodingConversion = iconv_t;
+  using EncodingConversion = void *;
   static optional<EncodingConversion> transcoding_to(const char *);
   static optional<EncodingConversion> transcoding_from(const char *);
 

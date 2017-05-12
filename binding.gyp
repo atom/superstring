@@ -46,6 +46,18 @@
                         'libraries': ['libiconv.dylib'],
                     }
                 }],
+                ['OS=="win"', {
+                   'sources': [
+                       'vendor/win-iconv/win_iconv.c',
+                    ],
+                    'include_dirs': [
+                        'vendor/win-iconv'
+                    ],
+                    'defines': [
+                        'WINICONV_CONST=',
+                        'PCRE2_STATIC',
+                    ]
+                }],
             ],
         },
 
