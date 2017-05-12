@@ -226,6 +226,8 @@ struct TextBuffer::Layer {
   }
 
   SearchResult search(const uint16_t *pattern, uint32_t pattern_length) {
+    if (pattern_length == 0) return {Range{Point(), Point()}, u""};
+
     Regex regex(pattern, pattern_length);
 
     if (!regex.error_message.empty()) {
