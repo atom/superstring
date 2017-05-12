@@ -1,3 +1,6 @@
 [submodule "vendor/diff-match-patch"]
 	path = vendor/diff-match-patch
 	url = https://github.com/leutloff/diff-match-patch-cpp-stl.git
+[submodule "vendor/win-iconv"]
+	path = vendor/win-iconv
+	url = https://github.com/win-iconv/win-iconv
