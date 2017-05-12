@@ -505,8 +505,10 @@ class ChunkIterator {
   }
 };
 
+namespace std {
+
 template <>
-struct std::iterator_traits<ChunkIterator> {
+struct iterator_traits<ChunkIterator> {
   using value_type = uint16_t;
   using pointer = uint16_t *;
   using reference = uint16_t &;
@@ -514,6 +516,8 @@ struct std::iterator_traits<ChunkIterator> {
   using const_reference = const uint16_t &;
   using difference_type = int64_t;
 };
+
+}  // namespace std
 
 void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
   if (top_layer == base_layer || top_layer->snapshot_count > 0) {
