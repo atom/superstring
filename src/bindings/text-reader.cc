@@ -14,20 +14,24 @@ void TextReader::init(Local<Object> exports) {
   exports->Set(Nan::New("TextReader").ToLocalChecked(), constructor_template->GetFunction());
 }
 
-TextReader::TextReader(TextBuffer::Snapshot *snapshot,
+TextReader::TextReader(Local<Object> js_buffer,
+                       TextBuffer::Snapshot *snapshot,
                        Text::EncodingConversion conversion) :
   snapshot{snapshot},
   slices{snapshot->chunks()},
   slice_index{0},
   text_offset{slices[0].start_offset()},
-  conversion{conversion} {}
+  conversion{conversion} {
+  js_text_buffer.Reset(Isolate::GetCurrent(), js_buffer);
+}
 
 TextReader::~TextReader() {
   delete snapshot;
 }
 
 void TextReader::construct(const Nan::FunctionCallbackInfo<Value> &info) {
-  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info[0]->ToObject())->text_buffer;
+  auto js_text_buffer = info[0]->ToObject();
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(js_text_buffer)->text_buffer;
   auto snapshot = text_buffer.create_snapshot();
 
   Local<String> js_encoding_name;
@@ -39,7 +43,7 @@ void TextReader::construct(const Nan::FunctionCallbackInfo<Value> &info) {
     return;
   }
 
-  TextReader *reader = new TextReader(snapshot, *conversion);
+  TextReader *reader = new TextReader(js_text_buffer, snapshot, *conversion);
   reader->Wrap(info.This());
 }
 

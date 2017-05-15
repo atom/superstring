@@ -10,12 +10,14 @@ public:
   static void init(v8::Local<v8::Object> exports);
 
 private:
-  TextReader(TextBuffer::Snapshot *snapshot, Text::EncodingConversion conversion);
+  TextReader(v8::Local<v8::Object> js_buffer, TextBuffer::Snapshot *snapshot,
+             Text::EncodingConversion conversion);
   ~TextReader();
 
   static void construct(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void read(const Nan::FunctionCallbackInfo<v8::Value> &info);
 
+  v8::Persistent<v8::Object> js_text_buffer;
   TextBuffer::Snapshot *snapshot;
   std::vector<TextSlice> slices;
   size_t slice_index;
