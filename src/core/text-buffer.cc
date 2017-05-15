@@ -515,6 +515,7 @@ struct iterator_traits<ChunkIterator> {
   using const_pointer = const uint16_t *;
   using const_reference = const uint16_t &;
   using difference_type = int64_t;
+  using iterator_category = std::forward_iterator_tag;
 };
 
 }  // namespace std
