@@ -124,21 +124,6 @@ TEST_CASE("Text::encode - invalid characters at the end of the slice") {
   REQUIRE(stream3.str() == "c" "\ufffd");
 }
 
-TEST_CASE("Text::line_iterators - returns iterators at the start and end of lines") {
-  Text text { u"a\nbc\r\n\r\nd\n" };
-
-  auto line0 = text.line_iterators(0);
-  REQUIRE(std::string(line0.first, line0.second) == "a");
-  auto line1 = text.line_iterators(1);
-  REQUIRE(std::string(line1.first, line1.second) == "bc");
-  auto line2 = text.line_iterators(2);
-  REQUIRE(std::string(line2.first, line2.second) == "");
-  auto line3 = text.line_iterators(3);
-  REQUIRE(std::string(line3.first, line3.second) == "d");
-  auto line4 = text.line_iterators(4);
-  REQUIRE(std::string(line4.first, line4.second) == "");
-}
-
 TEST_CASE("Text::split") {
   Text text {u"abc\ndef\r\nghi"};
   TextSlice base_slice {text};
