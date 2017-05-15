@@ -479,52 +479,56 @@ describe('TextBuffer', () => {
     })
   })
 
-  it('handles random concurrent IO calls', () => {
-    const generateSeed = Random.create()
-    let seed = generateSeed(MAX_INT32)
-    const random = new Random(seed)
-    const {path: filePath} = temp.openSync()
-    const testDocument = new TestDocument(seed)
+  describe('random IO', () => {
+    if (!TextBuffer.prototype.load) return;
 
-    fs.writeFileSync(filePath, testDocument.getText(), 'utf8')
+    it('handles random concurrent IO calls', () => {
+      const generateSeed = Random.create()
+      let seed = generateSeed(MAX_INT32)
+      const random = new Random(seed)
+      const {path: filePath} = temp.openSync()
+      const testDocument = new TestDocument(seed)
 
-    const promises = []
-    const buffer = new TextBuffer()
-    buffer.loadSync(filePath, 'utf8')
+      fs.writeFileSync(filePath, testDocument.getText(), 'utf8')
 
-    for (let i = 0; i < 20; i++) {
-      switch (random(4)) {
-        case 0: {
-          testDocument.performRandomSplice()
-          fs.writeFileSync(filePath, testDocument.getText(), 'utf8')
-          promises.push(buffer.load(filePath))
-          break;
-        }
+      const promises = []
+      const buffer = new TextBuffer()
+      buffer.loadSync(filePath, 'utf8')
 
-        case 1: {
-          testDocument.performRandomSplice()
-          fs.writeFileSync(filePath, testDocument.getText(), 'utf8')
-          promises.push(buffer.reload(filePath))
-          break;
-        }
+      for (let i = 0; i < 20; i++) {
+        switch (random(4)) {
+          case 0: {
+            testDocument.performRandomSplice()
+            fs.writeFileSync(filePath, testDocument.getText(), 'utf8')
+            promises.push(buffer.load(filePath))
+            break;
+          }
 
-        case 2: {
-          const {start, deletedExtent, insertedText} = testDocument.performRandomSplice()
-          buffer.setTextInRange(Range(start, traverse(start, deletedExtent)), insertedText)
-          promises.push(buffer.save(filePath))
-          break;
-        }
+          case 1: {
+            testDocument.performRandomSplice()
+            fs.writeFileSync(filePath, testDocument.getText(), 'utf8')
+            promises.push(buffer.reload(filePath))
+            break;
+          }
 
-        case 3: {
-          const range = testDocument.buildRandomRange()
-          const text = buffer.getTextInRange(range)
-          promises.push(buffer.search(text))
-          break;
+          case 2: {
+            const {start, deletedExtent, insertedText} = testDocument.performRandomSplice()
+            buffer.setTextInRange(Range(start, traverse(start, deletedExtent)), insertedText)
+            promises.push(buffer.save(filePath))
+            break;
+          }
+
+          case 3: {
+            const range = testDocument.buildRandomRange()
+            const text = buffer.getTextInRange(range)
+            promises.push(buffer.search(text))
+            break;
+          }
         }
       }
-    }
 
-    return Promise.all(promises)
+      return Promise.all(promises)
+    })
   })
 })
 
