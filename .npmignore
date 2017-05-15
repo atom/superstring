@@ -14,7 +14,9 @@
 !vendor/pcre/pcre.gyp
 !vendor/pcre/pcre2_chartables.c
 !vendor/pcre/include/*.h
+!vendor/pcre/10.23/src/*.h
 !vendor/pcre/10.23/src/*.c
+!vendor/pcre/10.23/COPYING
 !vendor/pcre/10.23/LICENSE
 
 !vendor/win-iconv/iconv.h
