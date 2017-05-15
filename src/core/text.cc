@@ -377,17 +377,25 @@ uint16_t Text::at(Point position) const {
 
 ClipResult Text::clip_position(Point position) const {
   uint32_t row = position.row;
-  if (row >= line_offsets.size()) return {extent(), size()};
-  auto iterators = line_iterators(row);
-  auto position_iterator = iterators.first + position.column;
-  if (position_iterator > iterators.second ||
-      position_iterator < iterators.first) {
-    position_iterator = iterators.second;
+  if (row >= line_offsets.size()) {
+    return {extent(), size()};
+  } else {
+    uint32_t start = line_offsets[row];
+    uint32_t end;
+    if (row == line_offsets.size() - 1) {
+      end = content.size();
+    } else {
+      end = line_offsets[row + 1] - 1;
+      if (end > 0 && content[end - 1] == '\r') {
+        end--;
+      }
+    }
+    if (position.column > end - start) {
+      return {Point(row, end - start), end};
+    } else {
+      return {position, start + position.column};
+    }
   }
-  return ClipResult{
-    Point(row, position_iterator - iterators.first),
-    static_cast<uint32_t>(position_iterator - begin())
-  };
 }
 
 uint32_t Text::offset_for_position(Point position) const {
@@ -408,24 +416,7 @@ Point Text::position_for_offset(uint32_t offset, bool clip_crlf) const {
 }
 
 uint32_t Text::line_length_for_row(uint32_t row) const {
-  auto iterators = line_iterators(row);
-  return iterators.second - iterators.first;
-}
-
-std::pair<Text::const_iterator, Text::const_iterator> Text::line_iterators(uint32_t row) const {
-  const_iterator begin = content.cbegin() + line_offsets[row];
-
-  const_iterator end;
-  if (row < line_offsets.size() - 1) {
-    end = content.cbegin() + line_offsets[row + 1] - 1;
-    if (end > begin && *(end - 1) == '\r') {
-      --end;
-    }
-  } else {
-    end = content.end();
-  }
-
-  return std::pair<const_iterator, const_iterator>(begin, end);
+  return clip_position(Point{row, UINT32_MAX}).position.column;
 }
 
 Text::const_iterator Text::begin() const {

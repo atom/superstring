@@ -54,7 +54,6 @@ class Text {
 
   uint16_t at(Point position) const;
   uint16_t at(uint32_t offset) const;
-  std::pair<const_iterator, const_iterator> line_iterators(uint32_t row) const;
   const_iterator begin() const;
   const_iterator end() const;
   inline const_iterator cbegin() const { return begin(); }
