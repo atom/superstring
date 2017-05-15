@@ -9,6 +9,7 @@ platform:
 
 install:
   - ps: Install-Product node $env:nodejs_version
+  - git submodule update --init
   - npm install
 
 test_script:
