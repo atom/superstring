@@ -290,7 +290,7 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
 
   Nan::HandleScope scope;
 
-  std::ifstream file{file_path};
+  std::ifstream file(file_path, std::ios_base::binary);
   auto beginning = file.tellg();
   file.seekg(0, std::ios::end);
   auto end = file.tellg();
@@ -358,7 +358,7 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
 
     void Execute(const Nan::AsyncProgressWorkerBase<size_t>::ExecutionProgress &progress) {
       if (!loaded_text) {
-        std::ifstream file{file_name};
+        std::ifstream file(file_name, std::ios_base::binary);
         auto beginning = file.tellg();
         file.seekg(0, std::ios::end);
         auto end = file.tellg();
@@ -504,7 +504,7 @@ void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   }
 
   static size_t CHUNK_SIZE = 10 * 1024;
-  std::ofstream file{file_path};
+  std::ofstream file(file_path, std::ios_base::binary);
   for (TextSlice &chunk : text_buffer.chunks()) {
     if (!chunk.text->encode(*conversion, chunk.start_offset(), chunk.end_offset(), file, CHUNK_SIZE)) {
       info.GetReturnValue().Set(Nan::False());
@@ -540,7 +540,7 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
       }
 
       static size_t CHUNK_SIZE = 10 * 1024;
-      std::ofstream file{file_name};
+      std::ofstream file(file_name, std::ios_base::binary);
       for (TextSlice &chunk : snapshot->chunks()) {
         if (!chunk.text->encode(*conversion, chunk.start_offset(), chunk.end_offset(), file, CHUNK_SIZE)) {
           result = false;
