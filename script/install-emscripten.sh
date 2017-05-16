@@ -13,6 +13,7 @@ fi
 echo 'Installing emscripten SDK...'
 
 $EMSDK_PATH update
+$EMSDK_PATH update-tags
 $EMSDK_PATH list
 $EMSDK_PATH install sdk-1.37.9-64bit
 $EMSDK_PATH activate sdk-1.37.9-64bit
