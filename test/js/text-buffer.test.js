@@ -479,8 +479,10 @@ describe('TextBuffer', () => {
     })
   })
 
-  describe('random IO', () => {
+  describe('random IO', function () {
     if (!TextBuffer.prototype.load) return;
+
+    this.timeout(60 * 1000);
 
     it('handles random concurrent IO calls', () => {
       const generateSeed = Random.create()
