@@ -12,8 +12,11 @@ fi
 
 echo 'Installing emscripten SDK...'
 
+# Workaround https://github.com/juj/emsdk/pull/74
+sed -i{} "s_/kripken/emscripten/'_/kripken/emscripten'_" $EMSDK_PATH
+sed -i{} "s_/WebAssembly/binaryen/'_/WebAssembly/binaryen'_" $EMSDK_PATH
+
 $EMSDK_PATH update
-$EMSDK_PATH update-tags
 $EMSDK_PATH list
 $EMSDK_PATH install sdk-1.37.9-64bit
 $EMSDK_PATH activate sdk-1.37.9-64bit
