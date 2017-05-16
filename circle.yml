@@ -21,6 +21,7 @@ dependencies:
 
   cache_directories:
     - $HOME/.nvm
+    - $HOME/.emscripten_cache
     - emsdk-portable
 
 test:

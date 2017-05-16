@@ -2,8 +2,6 @@
 
 set -e
 
-rm -f $(find emsdk-portable -name CMakeCache.txt)
-
 EMSCRIPTEN_DOWNLOAD_URL='https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz'
 EMSDK_PATH="./emsdk-portable/emsdk"
 
@@ -15,5 +13,6 @@ fi
 echo 'Installing emscripten SDK...'
 
 $EMSDK_PATH update
-$EMSDK_PATH install -j4 sdk-tag-1.37.9-64bit
-$EMSDK_PATH activate sdk-tag-1.37.9-64bit
+$EMSDK_PATH list
+$EMSDK_PATH install sdk-1.37.9-64bit
+$EMSDK_PATH activate sdk-1.37.9-64bit
