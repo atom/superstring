@@ -7,7 +7,7 @@ using namespace v8;
 
 void TextReader::init(Local<Object> exports) {
   Local<FunctionTemplate> constructor_template = Nan::New<FunctionTemplate>(construct);
-  constructor_template->SetClassName(Nan::New<String>("TextBuilder").ToLocalChecked());
+  constructor_template->SetClassName(Nan::New<String>("TextReader").ToLocalChecked());
   constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
   const auto &prototype_template = constructor_template->PrototypeTemplate();
   prototype_template->Set(Nan::New("read").ToLocalChecked(), Nan::New<FunctionTemplate>(read));
