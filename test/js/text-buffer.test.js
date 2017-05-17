@@ -45,6 +45,19 @@ describe('TextBuffer', () => {
         })
     })
 
+    it('can load from a given stream with an encoding already set', () => {
+      const buffer = new TextBuffer()
+
+      const {path: filePath} = temp.openSync()
+      const fileContent = 'abc def ghi jkl\n'.repeat(1024)
+      fs.writeFileSync(filePath, fileContent)
+
+      const stream = fs.createReadStream(filePath, 'utf8')
+      return buffer.load(stream).then(() => {
+        assert.equal(buffer.getText(), fileContent)
+      })
+    })
+
     it('resolves with a Patch representing the difference between the old and new text', () => {
       const buffer = new TextBuffer('cat\ndog\nelephant\nfox')
       const {path: filePath} = temp.openSync()

@@ -1,6 +1,7 @@
 #include "text-writer.h"
 
 using std::string;
+using std::move;
 using namespace v8;
 
 void TextWriter::init(Local<Object> exports) {
@@ -32,7 +33,12 @@ void TextWriter::construct(const Nan::FunctionCallbackInfo<Value> &info) {
 void TextWriter::write(const Nan::FunctionCallbackInfo<Value> &info) {
   auto writer = Nan::ObjectWrap::Unwrap<TextWriter>(info.This());
 
-  if (info[0]->IsUint8Array()) {
+  if (info[0]->IsString()) {
+    Local<String> js_chunk = info[0]->ToString();
+    size_t size = writer->content.size();
+    writer->content.resize(size + js_chunk->Length());
+    js_chunk->Write(writer->content.data() + size, 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
+  } else if (info[0]->IsUint8Array()) {
     auto *data = node::Buffer::Data(info[0]);
     size_t length = node::Buffer::Length(info[0]);
     if (!writer->leftover_bytes.empty()) {
@@ -66,5 +72,13 @@ void TextWriter::end(const Nan::FunctionCallbackInfo<Value> &info) {
       writer->leftover_bytes.size(),
       true
     );
+  }
+}
+
+Text TextWriter::get_text() {
+  if (!text.empty()) {
+    return move(text);
+  } else {
+    return Text(move(content));
   }
 }

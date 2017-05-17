@@ -8,7 +8,7 @@ class TextWriter : public Nan::ObjectWrap {
 public:
   static void init(v8::Local<v8::Object> exports);
   TextWriter(Text::EncodingConversion conversion);
-  Text text;
+  Text get_text();
 
 private:
   static void construct(const Nan::FunctionCallbackInfo<v8::Value> &info);
@@ -17,6 +17,8 @@ private:
 
   Text::EncodingConversion conversion;
   std::vector<char> leftover_bytes;
+  std::vector<uint16_t> content;
+  Text text;
 };
 
 #endif // SUPERSTRING_TEXT_WRITER_H

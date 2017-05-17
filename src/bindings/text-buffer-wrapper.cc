@@ -470,7 +470,7 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
       progress_callback,
       &text_buffer,
       text_buffer.create_snapshot(),
-      move(text_writer->text),
+      text_writer->get_text(),
       force
     );
   }
