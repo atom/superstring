@@ -137,7 +137,7 @@ Patch text_diff(const Text &old_text, const Text &new_text) {
   VectorStringAdapter new_string(&new_text.content);
 
   DiffBuilder diff_builder;
-  diff_builder.Diff_Timeout = -1;
+  diff_builder.Diff_Timeout = 5;
   DiffBuilder::Diffs diffs = diff_builder.diff_main(old_string, new_string);
 
   size_t old_offset = 0;
