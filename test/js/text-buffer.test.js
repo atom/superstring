@@ -226,8 +226,7 @@ describe('TextBuffer', () => {
       assert.equal(buffer.getText(), 'abc123d456efghijklmnopqrstuvwxyz')
 
       const {path: filePath} = temp.openSync()
-      const stream = fs.createWriteStream(filePath)
-      const savePromise = buffer.save(stream)
+      const savePromise = buffer.save(fs.createWriteStream(filePath))
 
       buffer.setTextInRange(Range(Point(0, 11), Point(0, 11)), '789')
       assert.equal(buffer.getText(), 'abc123d456e789fghijklmnopqrstuvwxyz')
@@ -235,6 +234,11 @@ describe('TextBuffer', () => {
       return savePromise.then(() => {
         assert.equal(fs.readFileSync(filePath, 'utf8'), 'abc123d456efghijklmnopqrstuvwxyz')
         assert.equal(buffer.getText(), 'abc123d456e789fghijklmnopqrstuvwxyz')
+
+        return buffer.save(fs.createWriteStream(filePath)).then(() => {
+          assert.equal(fs.readFileSync(filePath, 'utf8'), 'abc123d456e789fghijklmnopqrstuvwxyz')
+          assert.notOk(buffer.isModified())
+        })
       })
     })
 

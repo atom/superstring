@@ -11,6 +11,7 @@ void TextReader::init(Local<Object> exports) {
   constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
   const auto &prototype_template = constructor_template->PrototypeTemplate();
   prototype_template->Set(Nan::New("read").ToLocalChecked(), Nan::New<FunctionTemplate>(read));
+  prototype_template->Set(Nan::New("end").ToLocalChecked(), Nan::New<FunctionTemplate>(end));
   exports->Set(Nan::New("TextReader").ToLocalChecked(), constructor_template->GetFunction());
 }
 
@@ -80,4 +81,9 @@ void TextReader::read(const Nan::FunctionCallbackInfo<Value> &info) {
   }
 
   info.GetReturnValue().Set(Nan::New<Number>(total_bytes_written));
+}
+
+void TextReader::end(const Nan::FunctionCallbackInfo<Value> &info) {
+  TextReader *reader = Nan::ObjectWrap::Unwrap<TextReader>(info.This()->ToObject());
+  reader->snapshot->flush_preceding_changes();
 }

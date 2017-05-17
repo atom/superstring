@@ -82,8 +82,14 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
 
         function writeToStream () {
           const bytesRead = reader.read(buffer)
-          if (bytesRead === 0) return stream.end(resolve)
-          stream.write(buffer.slice(0, bytesRead), writeToStream)
+          if (bytesRead > 0) {
+            stream.write(buffer.slice(0, bytesRead), writeToStream)
+          } else {
+            stream.end(() => {
+              reader.end()
+              resolve()
+            })
+          }
         }
       }
     })
