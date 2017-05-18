@@ -305,7 +305,7 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
     CHUNK_SIZE,
     [&progress_callback, file_size](size_t bytes_read) {
       if (progress_callback) {
-        size_t percent_done = file_size > 0 ? bytes_read / file_size * 100 : 100;
+        size_t percent_done = file_size > 0 ? 100 * bytes_read / file_size : 100;
         Local<Value> argv[] = {Nan::New<Number>(static_cast<uint32_t>(percent_done))};
         progress_callback->Call(1, argv);
       }
@@ -393,7 +393,7 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
           file,
           CHUNK_SIZE,
           [&progress, file_size](size_t bytes_read) {
-            size_t percent_done = file_size > 0 ? bytes_read / file_size * 100 : 100;
+            size_t percent_done = file_size > 0 ? 100 * bytes_read / file_size : 100;
             progress.Send(&percent_done, 1);
           }
         )) {
