@@ -47,10 +47,6 @@ static Point position_for_character_index(TextBuffer &buffer, long index) {
     buffer.position_for_offset(static_cast<uint32_t>(index));
 }
 
-static string base_text_digest(TextBuffer &buffer) {
-
-}
-
 EMSCRIPTEN_BINDINGS(TextBuffer) {
   emscripten::class_<TextBuffer>("TextBuffer")
     .constructor<>()
@@ -64,7 +60,6 @@ EMSCRIPTEN_BINDINGS(TextBuffer) {
     .function("lineLengthForRow", WRAP(&TextBuffer::line_length_for_row))
     .function("lineEndingForRow", line_ending_for_row)
     .function("lineForRow", WRAP(&TextBuffer::line_for_row))
-    // .function("baseTextDigest", &TextBuffer::base_text_digest)
     .function("characterIndexForPosition", character_index_for_position)
     .function("positionForCharacterIndex", position_for_character_index)
     .function("isModified", &TextBuffer::is_modified)
