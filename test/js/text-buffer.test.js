@@ -148,7 +148,7 @@ describe('TextBuffer', () => {
             done(new Error('Expected an error'))
           })
           .catch((error) => {
-            assert.equal(error.code, isWindows ? 'EACCESS' : 'EISDIR')
+            assert.equal(error.code, isWindows ? 'EACCES' : 'EISDIR')
             assert.equal(error.path, filePath)
             done()
           })
@@ -355,7 +355,7 @@ describe('TextBuffer', () => {
             done(new Error('Expected an error'))
           })
           .catch((error) => {
-            assert.equal(error.code, isWindows ? 'EACCESS' : 'EISDIR')
+            assert.equal(error.code, isWindows ? 'EACCES' : 'EISDIR')
             assert.equal(error.path, filePath)
             done()
           })
