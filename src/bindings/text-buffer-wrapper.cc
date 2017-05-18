@@ -406,7 +406,7 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
     }
 
     void HandleProgressCallback(const size_t *percent_done, size_t count) {
-      if (progress_callback) {
+      if (progress_callback && percent_done) {
         Nan::HandleScope scope;
         Local<Value> argv[] = {Nan::New<Number>(static_cast<uint32_t>(*percent_done))};
         progress_callback->Call(1, argv);
