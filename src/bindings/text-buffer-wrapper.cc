@@ -326,6 +326,14 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
 
 static const int INVALID_ENCODING = -1;
 
+static Local<Value> error_for_number(int error_number, string encoding_name, string file_name) {
+  if (error_number == INVALID_ENCODING) {
+    return Nan::Error(("Invalid encoding name: " + encoding_name).c_str());
+  } else {
+    return node::ErrnoException(v8::Isolate::GetCurrent(), error_number, nullptr, nullptr, file_name.c_str());
+  }
+}
+
 void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool force) {
   class Worker : public Nan::AsyncProgressWorkerBase<size_t> {
     Nan::Callback *progress_callback;
@@ -407,13 +415,7 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
 
     void HandleOKCallback() {
       if (error_number) {
-        Local<Value> error;
-        if (*error_number == INVALID_ENCODING) {
-          error = Nan::Error(("Invalid encoding name: " + encoding_name).c_str());
-        } else {
-          error = node::ErrnoException(v8::Isolate::GetCurrent(), *error_number, nullptr, nullptr, file_name.c_str());
-        }
-        Local<Value> argv[] = {error};
+        Local<Value> argv[] = {error_for_number(*error_number, encoding_name, file_name)};
         callback->Call(1, argv);
         delete snapshot;
         return;
@@ -540,7 +542,7 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
     TextBuffer::Snapshot *snapshot;
     string file_name;
     string encoding_name;
-    bool result;
+    optional<int> error_number;
 
   public:
     Worker(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
@@ -548,21 +550,25 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
       AsyncWorker(completion_callback),
       snapshot{snapshot},
       file_name{file_name},
-      encoding_name(encoding_name),
-      result{true} {}
+      encoding_name(encoding_name) {}
 
     void Execute() {
       auto conversion = Text::transcoding_to(encoding_name.c_str());
       if (!conversion) {
-        result = false;
+        error_number = INVALID_ENCODING;
+        return;
+      }
+
+      std::ofstream file(file_name, std::ios_base::binary);
+      if (!file) {
+        error_number = errno;
         return;
       }
 
       static size_t CHUNK_SIZE = 10 * 1024;
-      std::ofstream file(file_name, std::ios_base::binary);
       for (TextSlice &chunk : snapshot->chunks()) {
         if (!chunk.text->encode(*conversion, chunk.start_offset(), chunk.end_offset(), file, CHUNK_SIZE)) {
-          result = false;
+          error_number = errno;
           return;
         }
       }
@@ -571,8 +577,13 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
     void HandleOKCallback() {
       snapshot->flush_preceding_changes();
       delete snapshot;
-      Local<Value> argv[] = {Nan::New<Boolean>(result)};
-      callback->Call(1, argv);
+      if (error_number) {
+        Local<Value> argv[] = {error_for_number(*error_number, encoding_name, file_name)};
+        callback->Call(1, argv);
+      } else {
+        Local<Value> argv[] = {Nan::Null()};
+        callback->Call(1, argv);
+      }
     }
   };
 

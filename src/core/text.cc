@@ -201,9 +201,11 @@ bool Text::encode(EncodingConversion conversion, size_t start_offset,
       output_vector.size(),
       end
     );
+    errno = 0;
     stream.write(output_buffer, output_bytes_written);
     if (end) break;
     if (output_bytes_written == 0) end = true;
+    if (!stream && errno != 0) return false;
   }
 
   return true;

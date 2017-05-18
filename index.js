@@ -69,8 +69,8 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
     return new Promise((resolve, reject) => {
       if (typeof destination === 'string') {
         const filePath = destination
-        save.call(this, filePath, encoding, (result) => {
-          result ? resolve() : reject(new Error(`Invalid encoding name: ${encoding}`))
+        save.call(this, filePath, encoding, (error) => {
+          error ? reject(error) : resolve()
         })
       } else {
         const stream = destination
