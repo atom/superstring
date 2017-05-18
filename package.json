@@ -1,6 +1,6 @@
 {
   "name": "superstring",
-  "version": "1.3.0-5",
+  "version": "1.3.0-6",
   "description": "A data structure to efficiently represent the results of applying patches.",
   "main": "./index",
   "browser": "./browser",
