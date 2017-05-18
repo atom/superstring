@@ -8,6 +8,8 @@ const TestDocument = require('./helpers/test-document')
 const {traverse} = require('./helpers/point-helpers')
 const MAX_INT32 = 4294967296
 
+const isWindows = process.platform === 'win32'
+
 describe('TextBuffer', () => {
   describe('.load', () => {
     if (!TextBuffer.prototype.load) return;
@@ -146,7 +148,7 @@ describe('TextBuffer', () => {
             done(new Error('Expected an error'))
           })
           .catch((error) => {
-            assert.equal(error.code, 'EISDIR')
+            assert.equal(error.code, isWindows ? 'EACCESS' : 'EISDIR')
             assert.equal(error.path, filePath)
             done()
           })
@@ -165,7 +167,7 @@ describe('TextBuffer', () => {
             done(new Error('Expected an error'))
           })
           .catch((error) => {
-            assert.equal(error.code, 'ELOOP')
+            assert.equal(error.code, isWindows ? 'EINVAL' : 'ELOOP')
             assert.equal(error.path, filePath)
             done()
           })
@@ -353,7 +355,7 @@ describe('TextBuffer', () => {
             done(new Error('Expected an error'))
           })
           .catch((error) => {
-            assert.equal(error.code, 'EISDIR')
+            assert.equal(error.code, isWindows ? 'EACCESS' : 'EISDIR')
             assert.equal(error.path, filePath)
             done()
           })
@@ -372,7 +374,7 @@ describe('TextBuffer', () => {
             done(new Error('Expected an error'))
           })
           .catch((error) => {
-            assert.equal(error.code, 'ELOOP')
+            assert.equal(error.code, isWindows ? 'EINVAL' : 'ELOOP')
             assert.equal(error.path, filePath)
             done()
           })
