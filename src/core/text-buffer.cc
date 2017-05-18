@@ -186,21 +186,19 @@ struct TextBuffer::Layer {
   }
 
   Point position_for_offset(uint32_t goal_offset) {
-    Point position;
-    uint32_t offset = 0;
-
-    for_each_chunk_in_range(Point(0, 0), extent(), [&position, &offset, goal_offset](TextSlice slice) {
-      uint32_t size = slice.size();
-      if (offset + size >= goal_offset) {
-        position = position.traverse(slice.position_for_offset(goal_offset - offset));
-        return true;
-      }
-      position = position.traverse(slice.extent());
-      offset += size;
-      return false;
-    });
-
-    return position;
+    if (text) {
+      return text->position_for_offset(goal_offset);
+    } else {
+      return patch.new_position_for_new_offset(
+        goal_offset,
+        [this](Point old_position) {
+          return previous_layer->clip_position(old_position).offset;
+        },
+        [this](uint32_t old_offset) {
+          return previous_layer->position_for_offset(old_offset);
+        }
+      );
+    }
   }
 
   Point extent() const { return extent_; }

@@ -9,6 +9,7 @@
 #include <sstream>
 #include <vector>
 
+using std::function;
 using std::move;
 using std::vector;
 using std::unique_ptr;
@@ -1556,6 +1557,59 @@ optional<Change> Patch::find_change_for_new_position(Point target) const {
 
 optional<Change> Patch::change_for_new_position(Point target) {
   return change_for_position<NewCoordinates>(target);
+}
+
+Point Patch::new_position_for_new_offset(uint32_t target_offset,
+                                         function<uint32_t(Point)> old_offset_for_old_position,
+                                         function<Point(uint32_t)> old_position_for_old_offset) const {
+  const Node *node = root;
+  Patch::PositionStackEntry left_ancestor_info;
+  Point preceding_new_position, preceding_old_position;
+  uint32_t preceding_old_offset = 0, preceding_new_offset = 0;
+
+  while (node) {
+    Point node_old_start = left_ancestor_info.old_end.traverse(node->old_distance_from_left_ancestor);
+    Point node_new_start = left_ancestor_info.new_end.traverse(node->new_distance_from_left_ancestor);
+    uint32_t node_old_start_offset = old_offset_for_old_position(node_old_start);
+    uint32_t node_new_start_offset = node_old_start_offset -
+      left_ancestor_info.total_old_text_size +
+      left_ancestor_info.total_new_text_size -
+      node->left_subtree_old_text_size() +
+      node->left_subtree_new_text_size();
+    uint32_t node_new_end_offset = node_new_start_offset + node->new_text_size();
+    uint32_t node_old_end_offset = node_old_start_offset + node->old_text_size();
+
+    if (node_new_end_offset <= target_offset) {
+      preceding_old_position = node_old_start.traverse(node->old_extent);
+      preceding_new_position = node_new_start.traverse(node->new_extent);
+      preceding_old_offset = node_old_end_offset;
+      preceding_new_offset = node_new_end_offset;
+      if (node->right) {
+        left_ancestor_info.old_end = preceding_old_position;
+        left_ancestor_info.new_end = preceding_new_position;
+        left_ancestor_info.total_old_text_size += node->left_subtree_old_text_size() + node->old_text_size();
+        left_ancestor_info.total_new_text_size += node->left_subtree_new_text_size() + node->new_text_size();
+        node = node->right;
+      } else {
+        break;
+      }
+    } else if (node_new_start_offset <= target_offset) {
+      return node_new_start
+        .traverse(node->new_text->position_for_offset(target_offset - node_new_start_offset));
+    } else {
+      if (node->left) {
+        node = node->left;
+      } else {
+        break;
+      }
+    }
+  }
+
+  return preceding_new_position.traverse(
+    old_position_for_old_offset(
+      preceding_old_offset + (target_offset - preceding_new_offset)
+    ).traversal(preceding_old_position)
+  );
 }
 
 optional<Text> Patch::compute_old_text(optional<Text> &&deleted_text,

@@ -81,6 +81,10 @@ public:
   optional<Change> find_change_for_new_position(Point position) const;
   optional<Change> change_ending_after_new_position(Point position, bool exclusive = false);
   optional<Change> find_change_ending_after_new_position(Point position) const;
+  Point new_position_for_new_offset(uint32_t offset,
+                                    std::function<uint32_t(Point)> old_offset_for_old_position,
+                                    std::function<Point(uint32_t)> old_position_for_old_offset) const;
+
   bool combine(const Patch &other, bool left_to_right = true);
 
   void serialize(Serializer &serializer);
