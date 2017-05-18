@@ -1,7 +1,8 @@
-const {assert} = require('chai')
-const temp = require('temp').track()
-const {TextBuffer} = require('../..')
 const fs = require('fs')
+const path = require('path')
+const temp = require('temp').track()
+const {assert} = require('chai')
+const {TextBuffer} = require('../..')
 const Random = require('random-seed')
 const TestDocument = require('./helpers/test-document')
 const {traverse} = require('./helpers/point-helpers')
@@ -133,6 +134,42 @@ describe('TextBuffer', () => {
 
       buffer.setText('ghi')
       return loadPromise
+    })
+
+    describe('error handling', () => {
+      it('rejects with an error if the path points to a directory', (done) => {
+        const buffer = new TextBuffer()
+        const filePath = temp.mkdirSync()
+
+        return buffer.load(filePath)
+          .then(() => {
+            done(new Error('Expected an error'))
+          })
+          .catch((error) => {
+            assert.equal(error.code, 'EISDIR')
+            assert.equal(error.path, filePath)
+            done()
+          })
+      })
+
+      it('rejects with an error if the path is a circular symlink', (done) => {
+        const tempDir = temp.mkdirSync()
+        const filePath = path.join(tempDir, 'one')
+        const otherPath = path.join(tempDir, 'two')
+        fs.symlinkSync(filePath, otherPath)
+        fs.symlinkSync(otherPath, filePath)
+
+        const buffer = new TextBuffer()
+        return buffer.load(filePath)
+          .then(() => {
+            done(new Error('Expected an error'))
+          })
+          .catch((error) => {
+            assert.equal(error.code, 'ELOOP')
+            assert.equal(error.path, filePath)
+            done()
+          })
+      })
     })
   })
 

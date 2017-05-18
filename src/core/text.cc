@@ -86,7 +86,9 @@ bool Text::decode(EncodingConversion conversion, std::istream &stream,
   size_t total_bytes_read = 0;
 
   for (;;) {
+    errno = 0;
     stream.read(input_buffer + bytes_left_over, chunk_size - bytes_left_over);
+    if (!stream && errno != 0) return false;
     size_t bytes_read = stream.gcount();
     size_t bytes_to_append = bytes_left_over + bytes_read;
     if (bytes_to_append == 0) break;

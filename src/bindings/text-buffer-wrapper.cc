@@ -324,6 +324,8 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   info.GetReturnValue().Set(PatchWrapper::from_patch(move(patch)));
 }
 
+static const int INVALID_ENCODING = -1;
+
 void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool force) {
   class Worker : public Nan::AsyncProgressWorkerBase<size_t> {
     Nan::Callback *progress_callback;
@@ -332,6 +334,7 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
     string file_name;
     string encoding_name;
     optional<Text> loaded_text;
+    optional<int> error_number;
     Patch patch;
     bool force;
 
@@ -364,13 +367,20 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
         auto end = file.tellg();
         file.seekg(0);
         size_t file_size = end - beginning;
+        if (!file) {
+          error_number = errno;
+          return;
+        }
 
         auto conversion = Text::transcoding_from(encoding_name.c_str());
-        if (!conversion) return;
+        if (!conversion) {
+          error_number = INVALID_ENCODING;
+          return;
+        }
 
         loaded_text = Text();
         loaded_text->reserve(file_size);
-        loaded_text->decode(
+        if (!loaded_text->decode(
           *conversion,
           file,
           CHUNK_SIZE,
@@ -378,7 +388,10 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
             size_t percent_done = file_size > 0 ? bytes_read / file_size * 100 : 100;
             progress.Send(&percent_done, 1);
           }
-        );
+        )) {
+          error_number = errno;
+          return;
+        }
       }
 
       patch = text_diff(snapshot->base_text(), *loaded_text);
@@ -393,8 +406,14 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
     }
 
     void HandleOKCallback() {
-      if (!loaded_text) {
-        Local<Value> argv[] = {Nan::Error(("Invalid encoding name: " + encoding_name).c_str())};
+      if (error_number) {
+        Local<Value> error;
+        if (*error_number == INVALID_ENCODING) {
+          error = Nan::Error(("Invalid encoding name: " + encoding_name).c_str());
+        } else {
+          error = node::ErrnoException(v8::Isolate::GetCurrent(), *error_number, nullptr, nullptr, file_name.c_str());
+        }
+        Local<Value> argv[] = {error};
         callback->Call(1, argv);
         delete snapshot;
         return;
