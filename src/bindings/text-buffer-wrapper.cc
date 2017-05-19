@@ -297,12 +297,13 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   file.seekg(0);
   size_t file_size = end - beginning;
 
+  vector<char> input_buffer(CHUNK_SIZE);
   Text loaded_text;
   loaded_text.reserve(file_size);
   loaded_text.decode(
     *conversion,
     file,
-    CHUNK_SIZE,
+    input_buffer,
     [&progress_callback, file_size](size_t bytes_read) {
       if (progress_callback) {
         size_t percent_done = file_size > 0 ? 100 * bytes_read / file_size : 100;
@@ -387,11 +388,12 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
         }
 
         loaded_text = Text();
+        vector<char> input_buffer(CHUNK_SIZE);
         loaded_text->reserve(file_size);
         if (!loaded_text->decode(
           *conversion,
           file,
-          CHUNK_SIZE,
+          input_buffer,
           [&progress, file_size](size_t bytes_read) {
             size_t percent_done = file_size > 0 ? 100 * bytes_read / file_size : 100;
             progress.Send(&percent_done, 1);
@@ -524,10 +526,10 @@ void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) 
     return;
   }
 
-  static size_t CHUNK_SIZE = 10 * 1024;
   std::ofstream file(file_path, std::ios_base::binary);
+  vector<char> output_buffer(CHUNK_SIZE);
   for (TextSlice &chunk : text_buffer.chunks()) {
-    if (!chunk.text->encode(*conversion, chunk.start_offset(), chunk.end_offset(), file, CHUNK_SIZE)) {
+    if (!chunk.text->encode(*conversion, chunk.start_offset(), chunk.end_offset(), file, output_buffer)) {
       info.GetReturnValue().Set(Nan::False());
       return;
     }
@@ -565,9 +567,9 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
         return;
       }
 
-      static size_t CHUNK_SIZE = 10 * 1024;
+      vector<char> output_buffer(CHUNK_SIZE);
       for (TextSlice &chunk : snapshot->chunks()) {
-        if (!chunk.text->encode(*conversion, chunk.start_offset(), chunk.end_offset(), file, CHUNK_SIZE)) {
+        if (!chunk.text->encode(*conversion, chunk.start_offset(), chunk.end_offset(), file, output_buffer)) {
           error_number = errno;
           return;
         }

@@ -47,12 +47,12 @@ class Text {
   Text(Iter begin, Iter end) : Text(std::vector<uint16_t>{begin, end}) {}
 
   bool encode(const EncodingConversion &, size_t start_offset, size_t end_offset,
-              std::ostream &stream, size_t chunk_size) const;
+              std::ostream &stream, std::vector<char> &buffer) const;
   size_t encode(const EncodingConversion &, size_t *start_offset, size_t end_offset,
                 char *buffer, size_t buffer_size, bool is_last = false) const;
 
   bool decode(const EncodingConversion &, std::istream &stream,
-              size_t chunk_size, std::function<void(size_t)> progress_callback);
+              std::vector<char> &buffer, std::function<void(size_t)> progress_callback);
   size_t decode(const EncodingConversion &, const char *buffer, size_t buffer_size,
                 bool is_last = false);
 

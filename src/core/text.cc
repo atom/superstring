@@ -84,15 +84,14 @@ void Text::serialize(Serializer &serializer) const {
 }
 
 bool Text::decode(const EncodingConversion &conversion, std::istream &stream,
-                  size_t chunk_size, function<void(size_t)> progress_callback) {
-  vector<char> input_vector(chunk_size);
+                  vector<char> &input_vector, function<void(size_t)> progress_callback) {
   char *input_buffer = input_vector.data();
   size_t bytes_left_over = 0;
   size_t total_bytes_read = 0;
 
   for (;;) {
     errno = 0;
-    stream.read(input_buffer + bytes_left_over, chunk_size - bytes_left_over);
+    stream.read(input_buffer + bytes_left_over, input_vector.size() - bytes_left_over);
     if (!stream && errno != 0) return false;
     size_t bytes_read = stream.gcount();
     size_t bytes_to_append = bytes_left_over + bytes_read;
@@ -192,8 +191,7 @@ size_t Text::decode(const EncodingConversion &conversion, const char *input_byte
 }
 
 bool Text::encode(const EncodingConversion &conversion, size_t start_offset,
-                  size_t end_offset, std::ostream &stream, size_t chunk_size) const {
-  vector<char> output_vector(chunk_size);
+                  size_t end_offset, std::ostream &stream, vector<char> &output_vector) const {
   char *output_buffer = output_vector.data();
 
   bool end = false;
