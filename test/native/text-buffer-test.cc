@@ -116,6 +116,8 @@ TEST_CASE("TextBuffer::get_inverted_changes") {
       0, 0
     },
   }));
+
+  delete snapshot1;
 }
 
 TEST_CASE("TextBuffer::is_modified") {
@@ -353,7 +355,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
   TextBuffer::MAX_CHUNK_SIZE_TO_COPY = 2;
 
   auto t = time(nullptr);
-  for (uint i = 0; i < 100; i++) {
+  for (uint i = 0; i < 2; i++) {
     uint32_t seed = t * 1000 + i;
     Generator rand(seed);
     cout << "seed: " << seed << "\n";
