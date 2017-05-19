@@ -14,7 +14,7 @@ void TextWriter::init(Local<Object> exports) {
   exports->Set(Nan::New("TextWriter").ToLocalChecked(), constructor_template->GetFunction());
 }
 
-TextWriter::TextWriter(Text::EncodingConversion conversion) : conversion{conversion} {}
+TextWriter::TextWriter(Text::EncodingConversion &&conversion) : conversion{move(conversion)} {}
 
 void TextWriter::construct(const Nan::FunctionCallbackInfo<Value> &info) {
   Local<String> js_encoding_name;
@@ -26,7 +26,7 @@ void TextWriter::construct(const Nan::FunctionCallbackInfo<Value> &info) {
     return;
   }
 
-  TextWriter *wrapper = new TextWriter(*conversion);
+  TextWriter *wrapper = new TextWriter(move(*conversion));
   wrapper->Wrap(info.This());
 }
 

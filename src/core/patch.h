@@ -55,11 +55,9 @@ public:
       old_text_size {old_text_size} {}
   };
 
-  Patch();
-  Patch(bool merges_adjacent_changes);
+  Patch(bool merges_adjacent_changes = true);
   Patch(Deserializer &input);
   Patch(const std::vector<const Patch *> &);
-  Patch(Node *root, uint32_t change_count, bool merges_adjacent_changes);
   Patch(Patch &&);
   Patch &operator=(Patch &&);
   ~Patch();
@@ -95,6 +93,8 @@ public:
   void clear();
 
 private:
+  Patch(Node *root, uint32_t change_count, bool merges_adjacent_changes);
+
   template <typename CoordinateSpace>
   std::vector<Change> get_changes_in_range(Point, Point, bool inclusive = false);
 

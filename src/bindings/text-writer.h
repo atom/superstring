@@ -7,7 +7,7 @@
 class TextWriter : public Nan::ObjectWrap {
 public:
   static void init(v8::Local<v8::Object> exports);
-  TextWriter(Text::EncodingConversion conversion);
+  TextWriter(Text::EncodingConversion &&conversion);
   Text get_text();
 
 private:

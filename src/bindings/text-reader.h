@@ -11,7 +11,7 @@ public:
 
 private:
   TextReader(v8::Local<v8::Object> js_buffer, TextBuffer::Snapshot *snapshot,
-             Text::EncodingConversion conversion);
+             Text::EncodingConversion &&conversion);
   ~TextReader();
 
   static void construct(const Nan::FunctionCallbackInfo<v8::Value> &info);

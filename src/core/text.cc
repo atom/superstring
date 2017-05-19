@@ -17,15 +17,20 @@ optional<Text::EncodingConversion> Text::transcoding_to(const char *name) {
   iconv_t conversion = iconv_open(name, "UTF-16LE");
   return conversion == reinterpret_cast<iconv_t>(-1) ?
     optional<Text::EncodingConversion>{} :
-    conversion;
+    optional<Text::EncodingConversion>{conversion};
 }
 
 optional<Text::EncodingConversion> Text::transcoding_from(const char *name) {
   iconv_t conversion = iconv_open("UTF-16LE", name);
   return conversion == reinterpret_cast<iconv_t>(-1) ?
     optional<Text::EncodingConversion>{} :
-    conversion;
+    Text::EncodingConversion(conversion);
 }
+
+Text::EncodingConversion::EncodingConversion(EncodingConversion &&other) : data{other.data} {other.data = nullptr;}
+Text::EncodingConversion::EncodingConversion() : data{nullptr} {}
+Text::EncodingConversion::EncodingConversion(void *data) : data{data} {}
+Text::EncodingConversion::~EncodingConversion() { if (data) iconv_close(data); }
 
 Text::Text() : line_offsets{0} {}
 
@@ -78,7 +83,7 @@ void Text::serialize(Serializer &serializer) const {
   }
 }
 
-bool Text::decode(EncodingConversion conversion, std::istream &stream,
+bool Text::decode(const EncodingConversion &conversion, std::istream &stream,
                   size_t chunk_size, function<void(size_t)> progress_callback) {
   vector<char> input_vector(chunk_size);
   char *input_buffer = input_vector.data();
@@ -113,7 +118,7 @@ bool Text::decode(EncodingConversion conversion, std::istream &stream,
   return true;
 }
 
-size_t Text::decode(EncodingConversion conversion, const char *input_bytes,
+size_t Text::decode(const EncodingConversion &conversion, const char *input_bytes,
                     size_t input_length, bool is_last_chunk) {
   size_t previous_size = content.size();
   content.resize(previous_size + input_length);
@@ -128,7 +133,7 @@ size_t Text::decode(EncodingConversion conversion, const char *input_bytes,
 
   while (input_bytes_remaining > 0 && !incomplete_sequence_at_chunk_end) {
     size_t conversion_result = iconv(
-      conversion,
+      conversion.data,
       &input_pointer,
       &input_bytes_remaining,
       &output_pointer,
@@ -186,7 +191,7 @@ size_t Text::decode(EncodingConversion conversion, const char *input_bytes,
   return input_pointer - input_bytes;
 }
 
-bool Text::encode(EncodingConversion conversion, size_t start_offset,
+bool Text::encode(const EncodingConversion &conversion, size_t start_offset,
                   size_t end_offset, std::ostream &stream, size_t chunk_size) const {
   vector<char> output_vector(chunk_size);
   char *output_buffer = output_vector.data();
@@ -211,7 +216,7 @@ bool Text::encode(EncodingConversion conversion, size_t start_offset,
   return true;
 }
 
-size_t Text::encode(EncodingConversion conversion, size_t *start_offset, size_t end_offset,
+size_t Text::encode(const EncodingConversion &conversion, size_t *start_offset, size_t end_offset,
                     char *output_buffer, size_t output_length, bool is_at_end) const {
   const char *input_buffer = reinterpret_cast<const char *>(content.data() + *start_offset);
   char *input_pointer = const_cast<char *>(input_buffer);
@@ -222,7 +227,7 @@ size_t Text::encode(EncodingConversion conversion, size_t *start_offset, size_t 
   bool done = false;
   while (!done) {
     size_t conversion_result = iconv(
-      conversion,
+      conversion.data,
       &input_pointer,
       &input_bytes_remaining,
       &output_pointer,
@@ -247,7 +252,7 @@ size_t Text::encode(EncodingConversion conversion, size_t *start_offset, size_t 
           char *replacement_text = reinterpret_cast<char *>(replacement_characters);
           size_t replacement_text_size = bytes_per_character;
           if (iconv(
-            conversion,
+            conversion.data,
             &replacement_text,
             &replacement_text_size,
             &output_pointer,

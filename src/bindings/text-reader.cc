@@ -2,6 +2,7 @@
 #include "text-reader.h"
 #include "text-buffer-wrapper.h"
 
+using std::move;
 using std::string;
 using namespace v8;
 
@@ -17,12 +18,12 @@ void TextReader::init(Local<Object> exports) {
 
 TextReader::TextReader(Local<Object> js_buffer,
                        TextBuffer::Snapshot *snapshot,
-                       Text::EncodingConversion conversion) :
+                       Text::EncodingConversion &&conversion) :
   snapshot{snapshot},
   slices{snapshot->chunks()},
   slice_index{0},
   text_offset{slices[0].start_offset()},
-  conversion{conversion} {
+  conversion{move(conversion)} {
   js_text_buffer.Reset(Isolate::GetCurrent(), js_buffer);
 }
 
@@ -44,7 +45,7 @@ void TextReader::construct(const Nan::FunctionCallbackInfo<Value> &info) {
     return;
   }
 
-  TextReader *reader = new TextReader(js_text_buffer, snapshot, *conversion);
+  TextReader *reader = new TextReader(js_text_buffer, snapshot, move(*conversion));
   reader->Wrap(info.This());
 }
 

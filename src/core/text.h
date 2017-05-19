@@ -20,7 +20,15 @@ class Text {
   friend class TextSlice;
 
  public:
-  using EncodingConversion = void *;
+  class EncodingConversion {
+    friend class Text;
+    void *data;
+    EncodingConversion(void *);
+  public:
+    EncodingConversion(EncodingConversion &&);
+    EncodingConversion();
+    ~EncodingConversion();
+  };
   static optional<EncodingConversion> transcoding_to(const char *);
   static optional<EncodingConversion> transcoding_from(const char *);
 
@@ -38,14 +46,14 @@ class Text {
   template<typename Iter>
   Text(Iter begin, Iter end) : Text(std::vector<uint16_t>{begin, end}) {}
 
-  bool encode(EncodingConversion, size_t start_offset, size_t end_offset,
+  bool encode(const EncodingConversion &, size_t start_offset, size_t end_offset,
               std::ostream &stream, size_t chunk_size) const;
-  size_t encode(EncodingConversion, size_t *start_offset, size_t end_offset,
+  size_t encode(const EncodingConversion &, size_t *start_offset, size_t end_offset,
                 char *buffer, size_t buffer_size, bool is_last = false) const;
 
-  bool decode(EncodingConversion, std::istream &stream,
+  bool decode(const EncodingConversion &, std::istream &stream,
               size_t chunk_size, std::function<void(size_t)> progress_callback);
-  size_t decode(EncodingConversion, const char *buffer, size_t buffer_size,
+  size_t decode(const EncodingConversion &, const char *buffer, size_t buffer_size,
                 bool is_last = false);
 
   static Text concat(TextSlice a, TextSlice b);
