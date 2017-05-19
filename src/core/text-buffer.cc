@@ -180,7 +180,7 @@ struct TextBuffer::Layer {
     }
 
     if (current_position < goal_position) {
-      previous_layer->for_each_chunk_in_range(
+      return previous_layer->for_each_chunk_in_range(
         base_position,
         base_position.traverse(goal_position.traversal(current_position)),
         callback
