@@ -73,6 +73,8 @@ public:
   std::vector<Change> get_changes() const;
   std::vector<Change> get_changes_in_new_range(Point start, Point end);
   std::vector<Change> get_changes_in_old_range(Point start, Point end);
+  std::vector<Change> find_changes_in_old_range(Point start, Point end) const;
+  std::vector<Change> find_changes_in_new_range(Point start, Point end) const;
   optional<Change> change_for_old_position(Point position);
   optional<Change> change_for_new_position(Point position);
   optional<Change> find_change_for_old_position(Point position) const;
@@ -112,6 +114,9 @@ private:
 
   template <typename CoordinateSpace>
   optional<Change> find_change_ending_after(Point target) const;
+
+  template <typename CoordinateSpace>
+  std::vector<Change> find_changes_in_range(Point, Point, bool inclusive) const;
 
   template <typename CoordinateSpace>
   Node *splay_node_starting_after(Point target, optional<Point> exclusive_lower_bound);

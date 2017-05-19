@@ -1356,21 +1356,55 @@ void Patch::perform_rebalancing_rotations(uint32_t count) {
   }
 }
 
-vector<Change> Patch::get_changes() const {
+template <typename CoordinateSpace>
+vector<Patch::Change> Patch::find_changes_in_range(Point start, Point end, bool inclusive) const {
   vector<Change> result;
-  if (!root) {
-    return result;
-  }
 
   Node *node = root;
   vector<Node *> node_stack;
-  vector<PositionStackEntry> left_ancestor_stack;
-  left_ancestor_stack.push_back({});
+  vector<Patch::PositionStackEntry> left_ancestor_stack{{}};
 
-  while (node->left) {
-    node_stack.push_back(node);
-    node = node->left;
+  Node *found_node = nullptr;
+  size_t found_node_ancestor_count = 0;
+  size_t found_node_left_ancestor_count = 0;
+
+  while (node) {
+    auto &left_ancestor_info = left_ancestor_stack.back();
+    Point node_old_start = left_ancestor_info.old_end.traverse(node->old_distance_from_left_ancestor);
+    Point node_new_start = left_ancestor_info.new_end.traverse(node->new_distance_from_left_ancestor);
+    Point node_old_end = node_old_start.traverse(node->old_extent);
+    Point node_new_end = node_new_start.traverse(node->new_extent);
+
+    Point node_end = CoordinateSpace::choose(node_old_end, node_new_end);
+    if (node_end > start || (inclusive && node_end == start)) {
+      found_node_ancestor_count = node_stack.size();
+      found_node_left_ancestor_count = left_ancestor_stack.size();
+      found_node = node;
+      if (node->left) {
+        node_stack.push_back(node);
+        node = node->left;
+      } else {
+        break;
+      }
+    } else {
+      if (node->right) {
+        left_ancestor_stack.push_back({
+          node_old_end,
+          node_new_end,
+          left_ancestor_info.total_old_text_size + node->left_subtree_old_text_size() + node->old_text_size(),
+          left_ancestor_info.total_new_text_size + node->left_subtree_new_text_size() + node->new_text_size()
+        });
+        node_stack.push_back(node);
+        node = node->right;
+      } else {
+        break;
+      }
+    }
   }
+
+  node = found_node;
+  node_stack.resize(found_node_ancestor_count);
+  left_ancestor_stack.resize(found_node_left_ancestor_count);
 
   while (node) {
     PositionStackEntry &left_ancestor_info = left_ancestor_stack.back();
@@ -1378,6 +1412,9 @@ vector<Change> Patch::get_changes() const {
         node->old_distance_from_left_ancestor);
     Point new_start = left_ancestor_info.new_end.traverse(
         node->new_distance_from_left_ancestor);
+    Point node_start = CoordinateSpace::choose(old_start, new_start);
+    if (node_start > end || (!inclusive && node_start == end)) break;
+
     Point old_end = old_start.traverse(node->old_extent);
     Point new_end = new_start.traverse(node->new_extent);
     Text *old_text = node->old_text.get();
@@ -1431,6 +1468,10 @@ vector<Change> Patch::get_changes() const {
   }
 
   return result;
+}
+
+vector<Change> Patch::get_changes() const {
+  return find_changes_in_range<NewCoordinates>(Point(), Point(UINT32_MAX, UINT32_MAX), true);
 }
 
 template <typename CoordinateSpace>
@@ -1539,6 +1580,14 @@ vector<Change> Patch::get_changes_in_old_range(Point start, Point end) {
 
 vector<Change> Patch::get_changes_in_new_range(Point start, Point end) {
   return get_changes_in_range<NewCoordinates>(start, end);
+}
+
+vector<Change> Patch::find_changes_in_old_range(Point start, Point end) const {
+  return find_changes_in_range<OldCoordinates>(start, end, false);
+}
+
+vector<Change> Patch::find_changes_in_new_range(Point start, Point end) const {
+  return find_changes_in_range<NewCoordinates>(start, end, false);
 }
 
 optional<Change> Patch::change_for_old_position(Point target) {
