@@ -143,43 +143,43 @@ struct TextBuffer::Layer {
 
     if (!is_derived) return callback(TextSlice(*text).slice({current_position, goal_position}));
 
-    Point base_position = current_position;
+    Point base_position;
     auto change = patch.find_change_for_new_position(current_position);
+    if (!change) {
+      base_position = current_position;
+    } else if (current_position < change->new_end) {
+      TextSlice slice = TextSlice(*change->new_text).slice({
+        Point::min(change->new_end, current_position).traversal(change->new_start),
+        goal_position.traversal(change->new_start)
+      });
+      if (callback(slice)) return true;
+      base_position = change->old_end;
+      current_position = change->new_end;
+    } else {
+      base_position = change->old_end.traverse(current_position.traversal(change->new_end));
+    }
 
-    while (current_position < goal_position) {
-      if (change) {
-        if (current_position < change->new_end) {
-          TextSlice slice = TextSlice(*change->new_text)
-            .prefix(Point::min(
-              goal_position.traversal(change->new_start),
-              change->new_end.traversal(change->new_start)
-            ))
-            .suffix(current_position.traversal(change->new_start));
-          if (callback(slice)) return true;
-          base_position = change->old_end;
-          current_position = change->new_end;
-          if (current_position > goal_position) break;
+    for (const auto &change : patch.find_changes_in_new_range(current_position, goal_position)) {
+      if (base_position < change.old_start) {
+        if (previous_layer->for_each_chunk_in_range(base_position, change.old_start, callback)) {
+          return true;
         }
-
-        base_position = change->old_end.traverse(current_position.traversal(change->new_end));
       }
 
-      change = patch.find_change_ending_after_new_position(current_position);
+      TextSlice slice = TextSlice(*change.new_text)
+        .prefix(Point::min(change.new_end, goal_position).traversal(change.new_start));
+      if (callback(slice)) return true;
 
-      Point next_base_position, next_position;
-      if (change) {
-        next_position = Point::min(goal_position, change->new_start);
-        next_base_position = Point::min(base_position.traverse(goal_position.traversal(current_position)), change->old_start);
-      } else {
-        next_position = goal_position;
-        next_base_position = base_position.traverse(goal_position.traversal(current_position));
-      }
+      base_position = change.old_end;
+      current_position = change.new_end;
+    }
 
-      if (previous_layer->for_each_chunk_in_range(base_position, next_base_position, callback)) {
-        return true;
-      }
-      base_position = next_base_position;
-      current_position = next_position;
+    if (current_position < goal_position) {
+      previous_layer->for_each_chunk_in_range(
+        base_position,
+        base_position.traverse(goal_position.traversal(current_position)),
+        callback
+      );
     }
 
     return false;
