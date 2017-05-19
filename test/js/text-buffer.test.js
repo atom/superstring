@@ -25,7 +25,7 @@ describe('TextBuffer', () => {
       return buffer.load(filePath, (percentDone) => percentages.push(percentDone))
         .then(() => {
           assert.equal(buffer.getText(), content)
-          assert.deepEqual(percentages, percentages.map(Number).sort())
+          assert.deepEqual(percentages, percentages.map(Number).sort((a, b) => a - b))
           assert(percentages[0] >= 0)
           assert(percentages[percentages.length - 1] == 100)
         })
@@ -43,7 +43,7 @@ describe('TextBuffer', () => {
       return buffer.load(stream, (percentage) => percentages.push(percentage))
         .then(() => {
           assert.equal(buffer.getText(), fileContent)
-          assert.deepEqual(percentages, percentages.map(Number).sort())
+          assert.deepEqual(percentages, percentages.map(Number).sort((a, b) => a - b))
           assert(percentages[percentages.length - 1] == 100)
         })
     })
