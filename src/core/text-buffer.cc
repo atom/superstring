@@ -57,7 +57,7 @@ struct TextBuffer::Layer {
   uint16_t character_at(Point position) {
     if (!is_derived) return text->at(position);
 
-    auto change = patch.find_change_for_new_position(position);
+    auto change = patch.get_change_starting_before_new_position(position);
     if (!change) return previous_layer->character_at(position);
     if (position < change->new_end) {
       return change->new_text->at(position.traversal(change->new_start));
@@ -72,8 +72,8 @@ struct TextBuffer::Layer {
     if (!is_derived) return text->clip_position(position);
 
     auto preceding_change = splay ?
-      patch.change_for_new_position(position) :
-      patch.find_change_for_new_position(position);
+      patch.grab_change_starting_before_new_position(position) :
+      patch.get_change_starting_before_new_position(position);
     if (!preceding_change) return previous_layer->clip_position(position);
 
     uint32_t preceding_change_base_offset =
@@ -144,7 +144,9 @@ struct TextBuffer::Layer {
     if (!is_derived) return callback(TextSlice(*text).slice({current_position, goal_position}));
 
     Point base_position;
-    auto change = patch.find_change_for_new_position(current_position);
+    auto change = splay ?
+      patch.grab_change_starting_before_new_position(current_position) :
+      patch.get_change_starting_before_new_position(current_position);
     if (!change) {
       base_position = current_position;
     } else if (current_position < change->new_end) {
@@ -159,7 +161,10 @@ struct TextBuffer::Layer {
       base_position = change->old_end.traverse(current_position.traversal(change->new_end));
     }
 
-    for (const auto &change : patch.find_changes_in_new_range(current_position, goal_position)) {
+    auto changes = splay ?
+      patch.grab_changes_in_new_range(current_position, goal_position) :
+      patch.get_changes_in_new_range(current_position, goal_position);
+    for (const auto &change : changes) {
       if (base_position < change.old_start) {
         if (previous_layer->for_each_chunk_in_range(base_position, change.old_start, callback)) {
           return true;
@@ -540,7 +545,7 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
     deleted_text_size
   );
 
-  auto change = top_layer->patch.change_for_old_position(start.position);
+  auto change = top_layer->patch.grab_change_starting_before_new_position(start.position);
   if (change && change->old_text_size == change->new_text->size()) {
     auto chunks = top_layer->previous_layer->chunks_in_range({
       change->old_start,

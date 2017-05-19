@@ -113,7 +113,7 @@ TEST_CASE("TextBuffer::get_inverted_changes") {
       Point {0, 2}, Point {0, 2},
       get_text(u"c").get(),
       get_text(u"").get(),
-      0, 0
+      0, 0, 0
     },
   }));
 
@@ -355,7 +355,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
   TextBuffer::MAX_CHUNK_SIZE_TO_COPY = 2;
 
   auto t = time(nullptr);
-  for (uint i = 0; i < 2; i++) {
+  for (uint i = 0; i < 100; i++) {
     uint32_t seed = t * 1000 + i;
     Generator rand(seed);
     cout << "seed: " << seed << "\n";

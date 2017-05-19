@@ -17,13 +17,13 @@ TEST_CASE("text_diff - multiple lines") {
       Point{1, 0}, Point{1, 0},
       Point{1, 0}, Point{2, 0},
       get_text(u"").get(), get_text(u"def\n").get(),
-      0, 0
+      0, 0, 0
     },
     Change{
       Point{2, 2}, Point{2, 2},
       Point{3, 2}, Point{3, 3},
       get_text(u"").get(), get_text(u"l").get(),
-      0, 3
+      0, 3, 0
     }
   }));
 
@@ -44,13 +44,14 @@ TEST_CASE("text_diff - single line") {
       Point{0, 3}, Point{0, 4},
       Point{0, 3}, Point{0, 5},
       get_text(u"d").get(), get_text(u"xy").get(),
-      0, 0
+      0, 0, 0
+
     },
     Change{
       Point{0, 6}, Point{0, 8},
       Point{0, 7}, Point{0, 7},
       get_text(u"gh").get(), get_text(u"").get(),
-      1, 2
+      1, 2, 0
     },
   }));
 }

@@ -273,7 +273,7 @@ void PatchWrapper::change_for_old_position(const Nan::FunctionCallbackInfo<Value
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
   optional<Point> start = PointWrapper::point_from_js(info[0]);
   if (start) {
-    auto change = patch.change_for_old_position(*start);
+    auto change = patch.grab_change_starting_before_old_position(*start);
     if (change) {
       info.GetReturnValue().Set(ChangeWrapper::FromChange(*change));
     } else {
@@ -286,7 +286,7 @@ void PatchWrapper::change_for_new_position(const Nan::FunctionCallbackInfo<Value
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
   optional<Point> start = PointWrapper::point_from_js(info[0]);
   if (start) {
-    auto change = patch.change_for_new_position(*start);
+    auto change = patch.grab_change_starting_before_new_position(*start);
     if (change) {
       info.GetReturnValue().Set(ChangeWrapper::FromChange(*change));
     } else {
