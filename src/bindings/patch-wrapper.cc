@@ -243,7 +243,7 @@ void PatchWrapper::get_changes_in_old_range(const Nan::FunctionCallbackInfo<Valu
     Local<Array> js_result = Nan::New<Array>();
 
     size_t i = 0;
-    for (auto change : patch.get_changes_in_old_range(*start, *end)) {
+    for (auto change : patch.grab_changes_in_old_range(*start, *end)) {
       js_result->Set(i++, ChangeWrapper::FromChange(change));
     }
 
@@ -261,7 +261,7 @@ void PatchWrapper::get_changes_in_new_range(const Nan::FunctionCallbackInfo<Valu
     Local<Array> js_result = Nan::New<Array>();
 
     size_t i = 0;
-    for (auto change : patch.get_changes_in_new_range(*start, *end)) {
+    for (auto change : patch.grab_changes_in_new_range(*start, *end)) {
       js_result->Set(i++, ChangeWrapper::FromChange(change));
     }
 

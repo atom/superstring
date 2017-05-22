@@ -457,64 +457,6 @@ void TextBuffer::set_text(Text &&new_text) {
   set_text_in_range(Range{Point(0, 0), extent()}, move(new_text));
 }
 
-class ChunkIterator {
-  const vector<TextSlice> *slices;
-  uint32_t slice_index;
-  Text::const_iterator slice_iterator;
-  Text::const_iterator slice_end;
-  uint32_t offset;
-
- public:
-  ChunkIterator(vector<TextSlice> &slices) :
-    slices{&slices},
-    slice_index{0},
-    slice_iterator{slices.front().begin()},
-    slice_end{slices.front().end()},
-    offset{0} {}
-
-  ChunkIterator &operator++() {
-    ++offset;
-    ++slice_iterator;
-    while (slice_iterator == slice_end) {
-      slice_index++;
-      if (slice_index == slices->size()) {
-        slices = nullptr;
-        slice_index = 0;
-        slice_iterator = Text::const_iterator();
-        slice_end = Text::const_iterator();
-        break;
-      } else {
-        slice_iterator = slices->at(slice_index).begin();
-        slice_end = slices->at(slice_index).end();
-      }
-    }
-    return *this;
-  }
-
-  uint16_t operator*() const {
-    return *slice_iterator;
-  }
-
-  bool operator!=(const ChunkIterator &other) {
-    return slice_index != other.slice_index || slice_iterator != other.slice_iterator;
-  }
-};
-
-namespace std {
-
-template <>
-struct iterator_traits<ChunkIterator> {
-  using value_type = uint16_t;
-  using pointer = uint16_t *;
-  using reference = uint16_t &;
-  using const_pointer = const uint16_t *;
-  using const_reference = const uint16_t &;
-  using difference_type = int64_t;
-  using iterator_category = std::forward_iterator_tag;
-};
-
-}  // namespace std
-
 void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
   if (top_layer == base_layer || top_layer->snapshot_count > 0) {
     top_layer = new Layer(top_layer);
@@ -539,14 +481,22 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
 
   auto change = top_layer->patch.grab_change_starting_before_new_position(start.position);
   if (change && change->old_text_size == change->new_text->size()) {
-    auto chunks = top_layer->previous_layer->chunks_in_range({
+    bool change_is_noop = true;
+    auto new_text_iter = change->new_text->begin();
+    top_layer->previous_layer->for_each_chunk_in_range(
       change->old_start,
-      change->old_end
-    });
-
-    ChunkIterator existing_text_iter{chunks};
-    if (equal(change->new_text->begin(), change->new_text->end(), existing_text_iter)) {
-      top_layer->patch.splice_old(start.position, Point(), Point());
+      change->old_end,
+      [&change_is_noop, &new_text_iter](TextSlice chunk) {
+        auto new_text_end = new_text_iter + chunk.size();
+        if (!std::equal(new_text_iter, new_text_end, chunk.begin())) {
+          change_is_noop = false;
+          return true;
+        }
+        new_text_iter = new_text_end;
+        return false;
+      });
+    if (change_is_noop) {
+      top_layer->patch.splice_old(change->old_start, Point(), Point());
     }
   }
 }
