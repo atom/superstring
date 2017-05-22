@@ -9,17 +9,17 @@ static TextBuffer *construct(const std::string &text) {
   return new TextBuffer(u16string(text.begin(), text.end()));
 }
 
-static emscripten::val search_sync(TextBuffer &buffer, std::string pattern) {
-  auto result = buffer.search(u16string(pattern.begin(), pattern.end()));
-  if (!result.error_message.empty()) {
-    return emscripten::val(string(
-      result.error_message.begin(),
-      result.error_message.end()
-    ));
+static emscripten::val search_sync(TextBuffer &buffer, std::string js_pattern) {
+  u16string pattern(js_pattern.begin(), js_pattern.end());
+  u16string error_message;
+  Regex regex(pattern, &error_message);
+  if (!error_message.empty()) {
+    return emscripten::val(string(error_message.begin(), error_message.end()));
   }
 
-  if (result.range) {
-    return emscripten::val(*result.range);
+  auto result = buffer.search(regex);
+  if (result) {
+    return emscripten::val(*result);
   }
 
   return emscripten::val::null();
