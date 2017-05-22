@@ -358,6 +358,17 @@ struct SnapshotTask {
   std::future<vector<SnapshotData>> future;
 };
 
+void query_random_ranges(TextBuffer &buffer, Generator &rand, Text &mutated_text) {
+  for (uint32_t k = 0; k < 5; k++) {
+    Range range = get_random_range(rand, buffer);
+    // cout << "query random range " << range << "\n";
+
+    REQUIRE(buffer.text_in_range(range) == Text(TextSlice(mutated_text).slice(range)));
+    REQUIRE(buffer.position_for_offset(buffer.clip_position(range.start).offset) == range.start);
+    REQUIRE(buffer.position_for_offset(buffer.clip_position(range.end).offset) == range.end);
+  }
+}
+
 TEST_CASE("TextBuffer - random edits and queries") {
   TextBuffer::MAX_CHUNK_SIZE_TO_COPY = 2;
 
@@ -370,14 +381,9 @@ TEST_CASE("TextBuffer - random edits and queries") {
     Text original_text = get_random_text(rand);
     TextBuffer buffer{Text{original_text}};
     vector<SnapshotTask> snapshot_tasks;
+    Text mutated_text(original_text);
 
-    for (uint32_t k = 0; k < 5; k++) {
-      Range range = get_random_range(rand, buffer);
-      // cout << "check random range " << range << "\n";
-      REQUIRE(buffer.text_in_range(range) == Text(TextSlice(original_text).slice(range)));
-      REQUIRE(buffer.position_for_offset(buffer.clip_position(range.start).offset) == range.start);
-      REQUIRE(buffer.position_for_offset(buffer.clip_position(range.end).offset) == range.end);
-    }
+    query_random_ranges(buffer, rand, mutated_text);
 
     // cout << "edit: " << i << "\n";
     // cout << "extent: " << original_text.extent() << "\ntext: " << original_text << "\n";
@@ -418,13 +424,13 @@ TEST_CASE("TextBuffer - random edits and queries") {
         });
       }
 
-      // cout << "set_text_in_range(" << deleted_range << ", " << inserted_text << ")\n";
+      query_random_ranges(buffer, rand, mutated_text);
 
+      // cout << "set_text_in_range(" << deleted_range << ", " << inserted_text << ")\n";
       mutated_text.splice(deleted_range.start, deleted_range.extent(), inserted_text);
       buffer.set_text_in_range(deleted_range, move(inserted_text));
 
       // cout << "extent: " << mutated_text.extent() << "\ntext: " << mutated_text << "\n";
-
       REQUIRE(buffer.extent() == mutated_text.extent());
       REQUIRE(buffer.text() == mutated_text);
 
@@ -458,15 +464,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
         }
       }
 
-      for (uint32_t k = 0; k < 5; k++) {
-        Range range = get_random_range(rand, buffer);
-
-        // cout << "check random range " << range << "\n";
-
-        REQUIRE(buffer.text_in_range(range) == Text(TextSlice(mutated_text).slice(range)));
-        REQUIRE(buffer.position_for_offset(buffer.clip_position(range.start).offset) == range.start);
-        REQUIRE(buffer.position_for_offset(buffer.clip_position(range.end).offset) == range.end);
-      }
+      query_random_ranges(buffer, rand, mutated_text);
 
       if (rand() % 3 == 0 && !snapshot_tasks.empty()) {
         uint32_t snapshot_index = rand() % snapshot_tasks.size();

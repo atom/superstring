@@ -44,7 +44,7 @@ struct TextBuffer::Layer {
     return Point(position.row, position.column - 1);
   }
 
-  bool is_above_layer(const Layer *layer) {
+  bool is_above_layer(const Layer *layer) const {
     Layer *predecessor = previous_layer;
     while (predecessor) {
       if (predecessor == layer) return true;
@@ -53,7 +53,7 @@ struct TextBuffer::Layer {
     return false;
   }
 
-  uint16_t character_at(Point position) {
+  uint16_t character_at(Point position) const {
     if (!is_derived) return text->at(position);
 
     auto change = patch.get_change_starting_before_new_position(position);
@@ -69,6 +69,7 @@ struct TextBuffer::Layer {
 
   ClipResult clip_position(Point position, bool splay = false) {
     if (!is_derived) return text->clip_position(position);
+    if (snapshot_count > 0) splay = false;
 
     auto preceding_change = splay ?
       patch.grab_change_starting_before_new_position(position) :
@@ -141,6 +142,7 @@ struct TextBuffer::Layer {
     Point current_position = clip_position(start, splay).position;
 
     if (!is_derived) return callback(TextSlice(*text).slice({current_position, goal_position}));
+    if (snapshot_count > 0) splay = false;
 
     Point base_position;
     auto change = splay ?
@@ -189,7 +191,7 @@ struct TextBuffer::Layer {
     return false;
   }
 
-  Point position_for_offset(uint32_t goal_offset) {
+  Point position_for_offset(uint32_t goal_offset) const {
     if (text) {
       return text->position_for_offset(goal_offset);
     } else {
@@ -227,7 +229,7 @@ struct TextBuffer::Layer {
     return result;
   }
 
-  optional<Range> search(const Regex &regex) {
+  optional<Range> search(const Regex &regex, bool splay = false) {
     Regex::MatchData match_data(regex);
     optional<Range> result;
     Text chunk_continuation;
@@ -301,7 +303,7 @@ struct TextBuffer::Layer {
       }
 
       return false;
-    });
+    }, splay);
 
     return result;
   }
@@ -550,7 +552,7 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
 }
 
 optional<Range> TextBuffer::search(const Regex &regex) const {
-  return top_layer->search(regex);
+  return top_layer->search(regex, true);
 }
 
 bool TextBuffer::is_modified() const {
