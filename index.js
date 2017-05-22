@@ -7,6 +7,7 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   const {search, searchSync} = TextBuffer.prototype
 
   TextBuffer.prototype.searchSync = function (pattern) {
+    if (pattern.source) pattern = pattern.source
     const result = searchSync.call(this, pattern)
     if (typeof result === 'string') {
       throw new Error(result);
