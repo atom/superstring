@@ -1,9 +1,19 @@
 #include "regex.h"
 #include "pcre2.h"
 
+using std::u16string;
 using MatchResult = Regex::MatchResult;
 
-Regex::Regex(const uint16_t *pattern, uint32_t pattern_length) {
+const char16_t EMPTY_PATTERN[] = u".{0}";
+
+Regex::Regex() : code{nullptr} {}
+
+Regex::Regex(const uint16_t *pattern, uint32_t pattern_length, u16string *error_message) {
+  if (pattern_length == 0) {
+    pattern = reinterpret_cast<const uint16_t *>(EMPTY_PATTERN);
+    pattern_length = 4;
+  }
+
   int error_number = 0;
   size_t error_offset = 0;
   code = pcre2_compile(
@@ -18,31 +28,39 @@ Regex::Regex(const uint16_t *pattern, uint32_t pattern_length) {
   if (!code) {
     uint16_t message_buffer[256];
     size_t length = pcre2_get_error_message(error_number, message_buffer, 256);
-    error_message.assign(message_buffer, message_buffer + length);
-    match_data = nullptr;
-    return;
+    error_message->assign(message_buffer, message_buffer + length);
   }
+}
 
-  match_data = pcre2_match_data_create_from_pattern(code, nullptr);
+Regex::Regex(const u16string &pattern, u16string *error_message)
+  : Regex(reinterpret_cast<const uint16_t *>(pattern.data()), pattern.size(), error_message) {}
+
+Regex::Regex(Regex &&other) : code{other.code} {
+  other.code = nullptr;
 }
 
 Regex::~Regex() {
-  if (code) {
-    pcre2_match_data_free(match_data);
-    pcre2_code_free(code);
-  }
+  if (code) pcre2_code_free(code);
 }
 
-MatchResult Regex::match(const uint16_t *data, size_t length, bool is_last) {
+Regex::MatchData::MatchData(const Regex &regex)
+  : data{pcre2_match_data_create_from_pattern(regex.code, nullptr)} {}
+
+Regex::MatchData::~MatchData() {
+  pcre2_match_data_free(data);
+}
+
+MatchResult Regex::match(const uint16_t *string, size_t length,
+                         MatchData &match_data, bool is_last) const {
   MatchResult result{MatchResult::None, 0, 0};
 
   int status = pcre2_match(
     code,
-    data,
+    string,
     length,
     0,
     is_last ? PCRE2_PARTIAL_SOFT : PCRE2_PARTIAL_HARD,
-    match_data,
+    match_data.data,
     nullptr
   );
 
@@ -50,8 +68,8 @@ MatchResult Regex::match(const uint16_t *data, size_t length, bool is_last) {
     switch (status) {
       case PCRE2_ERROR_PARTIAL:
         result.type = MatchResult::Partial;
-        result.start_offset = pcre2_get_ovector_pointer(match_data)[0];
-        result.end_offset = pcre2_get_ovector_pointer(match_data)[1];
+        result.start_offset = pcre2_get_ovector_pointer(match_data.data)[0];
+        result.end_offset = pcre2_get_ovector_pointer(match_data.data)[1];
         break;
       case PCRE2_ERROR_NOMATCH:
         result.type = MatchResult::None;
@@ -62,8 +80,8 @@ MatchResult Regex::match(const uint16_t *data, size_t length, bool is_last) {
     }
   } else {
     result.type = MatchResult::Full;
-    result.start_offset = pcre2_get_ovector_pointer(match_data)[0];
-    result.end_offset = pcre2_get_ovector_pointer(match_data)[1];
+    result.start_offset = pcre2_get_ovector_pointer(match_data.data)[0];
+    result.end_offset = pcre2_get_ovector_pointer(match_data.data)[1];
   }
 
   return result;

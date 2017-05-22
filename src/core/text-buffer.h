@@ -7,6 +7,7 @@
 #include "point.h"
 #include "range.h"
 #include "text.h"
+#include "regex.h"
 
 class TextBuffer {
   struct Layer;
@@ -43,13 +44,7 @@ public:
   bool deserialize_changes(Deserializer &);
   const Text &base_text() const;
 
-  struct SearchResult {
-    optional<Range> range;
-    std::u16string error_message;
-  };
-
-  SearchResult search(const uint16_t *, uint32_t);
-  SearchResult search(const std::u16string &);
+  optional<Range> search(const Regex &) const;
 
   class Snapshot {
     friend class TextBuffer;
@@ -71,7 +66,7 @@ public:
     Text text() const;
     Text text_in_range(Range) const;
     const Text &base_text() const;
-    SearchResult search(const uint16_t *, uint32_t) const;
+    optional<Range> search(const Regex &) const;
   };
 
   friend class Snapshot;

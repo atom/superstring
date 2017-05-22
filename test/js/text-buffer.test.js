@@ -569,6 +569,19 @@ describe('TextBuffer', () => {
         .then(() => assert(false))
         .catch((error) => assert.match(error.message, /missing terminating ] for character class/))
     })
+
+    it('can search for a RegExp or a string', () => {
+      const buffer = new TextBuffer('abc\ndef')
+      const regex = /b/
+      return buffer.search(regex)
+        .then((result) => assert.deepEqual(result, Range(Point(0, 1), Point(0, 2))))
+        .then(() => buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), ' '))
+        .then(() => buffer.search(regex))
+        .then((result) => assert.deepEqual(result, Range(Point(0, 2), Point(0, 3))))
+        .then(() => buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), ' '))
+        .then(() => buffer.search(regex))
+        .then((result) => assert.deepEqual(result, Range(Point(0, 3), Point(0, 4))))
+    })
   })
 
   describe('random IO', function () {
@@ -615,7 +628,7 @@ describe('TextBuffer', () => {
           case 3: {
             const range = testDocument.buildRandomRange()
             const text = buffer.getTextInRange(range)
-            promises.push(buffer.search(text))
+            promises.push(buffer.search(new RegExp(text)))
             break;
           }
         }

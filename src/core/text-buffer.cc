@@ -10,7 +10,6 @@ using std::move;
 using std::string;
 using std::vector;
 using std::u16string;
-using SearchResult = TextBuffer::SearchResult;
 using MatchResult = Regex::MatchResult;
 
 uint32_t TextBuffer::MAX_CHUNK_SIZE_TO_COPY = 1024;
@@ -228,20 +227,12 @@ struct TextBuffer::Layer {
     return result;
   }
 
-  SearchResult search(const uint16_t *pattern, uint32_t pattern_length) {
-    if (pattern_length == 0) return {Range{Point(), Point()}, u""};
-
-    Regex regex(pattern, pattern_length);
-
-    if (!regex.error_message.empty()) {
-      return {optional<Range>{}, regex.error_message};
-    }
-
+  optional<Range> search(const Regex &regex) {
+    Regex::MatchData match_data(regex);
     optional<Range> result;
     Text chunk_continuation;
     TextSlice slice_to_search;
     Point slice_to_search_start_position;
-    uint32_t slice_to_search_start_offset = 0;
 
     for_each_chunk_in_range(Point(), extent(), [&](TextSlice chunk) {
       while (!chunk.empty()) {
@@ -267,7 +258,8 @@ struct TextBuffer::Layer {
         MatchResult match_result = regex.match(
           slice_to_search.data(),
           slice_to_search.size(),
-          slice_to_search_start_offset + slice_to_search.size() == size()
+          match_data,
+          slice_to_search_start_position.traverse(slice_to_search.extent()) == extent()
         );
         switch (match_result.type) {
           case MatchResult::Error:
@@ -275,7 +267,6 @@ struct TextBuffer::Layer {
             return true;
 
           case MatchResult::None:
-            slice_to_search_start_offset += slice_to_search.size();
             slice_to_search_start_position = slice_to_search_start_position.traverse(
               slice_to_search.extent()
             );
@@ -285,7 +276,6 @@ struct TextBuffer::Layer {
           case MatchResult::Partial:
             if (chunk_continuation.empty() || match_result.start_offset > 0) {
               Point partial_match_position = slice_to_search.position_for_offset(match_result.start_offset);
-              slice_to_search_start_offset += match_result.start_offset;
               slice_to_search_start_position = slice_to_search_start_position.traverse(partial_match_position);
               chunk_continuation.assign(slice_to_search.suffix(partial_match_position));
             }
@@ -313,7 +303,7 @@ struct TextBuffer::Layer {
       return false;
     });
 
-    return {result, u""};
+    return result;
   }
 };
 
@@ -559,12 +549,8 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
   }
 }
 
-SearchResult TextBuffer::search(const std::u16string &pattern) {
-  return search(reinterpret_cast<const uint16_t *>(pattern.c_str()), pattern.size());
-}
-
-SearchResult TextBuffer::search(const uint16_t *pattern, uint32_t pattern_length) {
-  return top_layer->search(pattern, pattern_length);
+optional<Range> TextBuffer::search(const Regex &regex) const {
+  return top_layer->search(regex);
 }
 
 bool TextBuffer::is_modified() const {
@@ -661,8 +647,8 @@ vector<TextSlice> TextBuffer::Snapshot::chunks() const {
   return layer.chunks_in_range({{0, 0}, extent()});
 }
 
-SearchResult TextBuffer::Snapshot::search(const uint16_t *pattern, uint32_t pattern_length) const {
-  return layer.search(pattern, pattern_length);
+optional<Range> TextBuffer::Snapshot::search(const Regex &regex) const {
+  return layer.search(regex);
 }
 
 const Text &TextBuffer::Snapshot::base_text() const {

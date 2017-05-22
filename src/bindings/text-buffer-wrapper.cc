@@ -14,9 +14,71 @@
 using namespace v8;
 using std::move;
 using std::string;
+using std::u16string;
 using std::vector;
 
 static size_t CHUNK_SIZE = 10 * 1024;
+
+class RegexWrapper : public Nan::ObjectWrap {
+public:
+  Regex regex;
+  static Nan::Persistent<Function> constructor;
+  static void construct(const Nan::FunctionCallbackInfo<v8::Value> &info) {}
+
+  RegexWrapper(Regex &&regex) : regex{move(regex)} {}
+
+  static const Regex *regex_from_js(const Local<Value> &value) {
+    Local<String> js_pattern;
+    Local<RegExp> js_regex;
+    Local<String> cache_key = Nan::New("__textBufferRegex").ToLocalChecked();
+
+    if (value->IsString()) {
+      js_pattern = Local<String>::Cast(value);
+    } else if (value->IsRegExp()) {
+      js_regex = Local<RegExp>::Cast(value);
+      Local<Value> stored_regex = js_regex->Get(cache_key);
+      if (!stored_regex->IsUndefined()) {
+        return &Nan::ObjectWrap::Unwrap<RegexWrapper>(stored_regex->ToObject())->regex;
+      }
+      js_pattern = js_regex->GetSource();
+    } else {
+      Nan::ThrowTypeError("Argument must be a RegExp");
+      return nullptr;
+    }
+
+    u16string error_message;
+    vector<uint16_t> pattern(js_pattern->Length());
+    js_pattern->Write(pattern.data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
+    Regex regex(pattern.data(), pattern.size(), &error_message);
+    if (!error_message.empty()) {
+      Nan::ThrowError(Nan::New<String>(
+        reinterpret_cast<const uint16_t *>(error_message.c_str()),
+        error_message.size()
+      ).ToLocalChecked());
+      return nullptr;
+    }
+
+    Local<Object> result;
+    if (!Nan::New(constructor)->NewInstance(Nan::GetCurrentContext()).ToLocal(&result)) {
+      Nan::ThrowError("Could not create regex wrapper");
+      return nullptr;
+    }
+
+    auto regex_wrapper = new RegexWrapper(move(regex));
+    regex_wrapper->Wrap(result);
+    if (!js_regex.IsEmpty()) js_regex->Set(cache_key, result);
+    return &regex_wrapper->regex;
+  }
+
+  static void init() {
+    Local<FunctionTemplate> constructor_template = Nan::New<FunctionTemplate>(construct);
+    constructor_template->SetClassName(Nan::New<String>("TextBufferRegex").ToLocalChecked());
+    constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
+    constructor.Reset(constructor_template->GetFunction());
+  }
+};
+
+Nan::Persistent<Function> RegexWrapper::constructor;
 
 void TextBufferWrapper::init(Local<Object> exports) {
   Local<FunctionTemplate> constructor_template = Nan::New<FunctionTemplate>(construct);
@@ -48,6 +110,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("search").ToLocalChecked(), Nan::New<FunctionTemplate>(search));
   prototype_template->Set(Nan::New("searchSync").ToLocalChecked(), Nan::New<FunctionTemplate>(search_sync));
   prototype_template->Set(Nan::New("getDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(dot_graph));
+  RegexWrapper::init();
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
 }
 
@@ -187,18 +250,11 @@ void TextBufferWrapper::position_for_character_index(const Nan::FunctionCallback
 
 void TextBufferWrapper::search_sync(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
-  Local<String> js_pattern;
-  if (Nan::To<String>(info[0]).ToLocal(&js_pattern)) {
-    vector<uint16_t> pattern(js_pattern->Length());
-    js_pattern->Write(pattern.data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
-    auto result = text_buffer.search(pattern.data(), pattern.size());
-    if (!result.error_message.empty()) {
-      Nan::ThrowError(Nan::New<String>(
-        reinterpret_cast<const uint16_t *>(result.error_message.c_str()),
-        result.error_message.size()).ToLocalChecked()
-      );
-    } else if (result.range) {
-      info.GetReturnValue().Set(RangeWrapper::from_range(*result.range));
+  const Regex *regex = RegexWrapper::regex_from_js(info[0]);
+  if (regex) {
+    auto result = text_buffer.search(*regex);
+    if (result) {
+      info.GetReturnValue().Set(RangeWrapper::from_range(*result));
     } else {
       info.GetReturnValue().Set(Nan::Null());
     }
@@ -208,33 +264,29 @@ void TextBufferWrapper::search_sync(const Nan::FunctionCallbackInfo<Value> &info
 void TextBufferWrapper::search(const Nan::FunctionCallbackInfo<Value> &info) {
   class TextBufferSearcher : public Nan::AsyncWorker {
     const TextBuffer::Snapshot *snapshot;
-    vector<uint16_t> pattern;
-    TextBuffer::SearchResult result;
+    const Regex *regex;
+    optional<Range> result;
+    Nan::Persistent<Value> argument;
 
   public:
     TextBufferSearcher(Nan::Callback *completion_callback,
                        const TextBuffer::Snapshot *snapshot,
-                       vector<uint16_t> &&pattern) :
+                       const Regex *regex,
+                       Local<Value> arg) :
       AsyncWorker(completion_callback),
       snapshot{snapshot},
-      pattern{pattern} {}
+      regex{regex} {
+      argument.Reset(arg);
+    }
 
     void Execute() {
-      result = snapshot->search(pattern.data(), pattern.size());
+      result = snapshot->search(*regex);
     }
 
     void HandleOKCallback() {
       delete snapshot;
-      if (!result.error_message.empty()) {
-        Local<Value> argv[] = {
-          Nan::Error(Nan::New<String>(
-            reinterpret_cast<const uint16_t *>(result.error_message.c_str()),
-            result.error_message.size()).ToLocalChecked()
-          )
-        };
-        callback->Call(1, argv);
-      } else if (result.range) {
-        Local<Value> argv[] = {Nan::Null(), RangeWrapper::from_range(*result.range)};
+      if (result) {
+        Local<Value> argv[] = {Nan::Null(), RangeWrapper::from_range(*result)};
         callback->Call(2, argv);
       } else {
         Local<Value> argv[] = {Nan::Null(), Nan::Null()};
@@ -244,15 +296,14 @@ void TextBufferWrapper::search(const Nan::FunctionCallbackInfo<Value> &info) {
   };
 
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
-
-  Local<String> js_pattern;
-  if (Nan::To<String>(info[0]).ToLocal(&js_pattern)) {
-    vector<uint16_t> pattern(js_pattern->Length());
-    js_pattern->Write(pattern.data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
+  auto callback = new Nan::Callback(info[1].As<Function>());
+  const Regex *regex = RegexWrapper::regex_from_js(info[0]);
+  if (regex) {
     Nan::AsyncQueueWorker(new TextBufferSearcher(
-      new Nan::Callback(info[1].As<Function>()),
+      callback,
       text_buffer.create_snapshot(),
-      move(pattern)
+      regex,
+      info[0]
     ));
   }
 }

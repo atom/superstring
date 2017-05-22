@@ -1,18 +1,32 @@
 #ifndef REGEX_H_
 #define REGEX_H_
 
+#include "optional.h"
 #include <string>
 
 struct pcre2_real_code_16;
 struct pcre2_real_match_data_16;
+struct BuildRegexResult;
 
-struct Regex {
+class Regex {
   pcre2_real_code_16 *code;
-  pcre2_real_match_data_16 *match_data;
-  std::u16string error_message;
+  Regex(pcre2_real_code_16 *);
 
-  Regex(const uint16_t *pattern, uint32_t pattern_length);
+ public:
+  Regex();
+  Regex(const uint16_t *, uint32_t, std::u16string *error_message);
+  Regex(const std::u16string &, std::u16string *error_message);
+  Regex(Regex &&);
   ~Regex();
+
+  class MatchData {
+    pcre2_real_match_data_16 *data;
+    friend class Regex;
+
+   public:
+    MatchData(const Regex &);
+    ~MatchData();
+  };
 
   struct MatchResult {
     enum {
@@ -26,7 +40,12 @@ struct Regex {
     size_t end_offset;
   };
 
-  MatchResult match(const uint16_t *data, size_t length, bool is_last = false);
+  MatchResult match(const uint16_t *data, size_t length, MatchData &, bool is_last = false) const;
+};
+
+struct BuildRegexResult {
+  optional<Regex> regex;
+  std::u16string error_message;
 };
 
 #endif  // REGX_H_
