@@ -264,7 +264,11 @@ struct TextBuffer::Layer {
           chunk = TextSlice();
         }
 
-        MatchResult match_result = regex.match(slice_to_search.data(), slice_to_search.size());
+        MatchResult match_result = regex.match(
+          slice_to_search.data(),
+          slice_to_search.size(),
+          slice_to_search_start_offset + slice_to_search.size() == size()
+        );
         switch (match_result.type) {
           case MatchResult::Error:
             chunk_continuation.clear();
@@ -308,10 +312,6 @@ struct TextBuffer::Layer {
 
       return false;
     });
-
-    if (!result && !chunk_continuation.empty()) {
-      result = Range{slice_to_search_start_position, extent()};
-    }
 
     return {result, u""};
   }

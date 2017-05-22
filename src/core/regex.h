@@ -26,7 +26,7 @@ struct Regex {
     size_t end_offset;
   };
 
-  MatchResult match(const uint16_t *data, size_t length);
+  MatchResult match(const uint16_t *data, size_t length, bool is_last = false);
 };
 
 #endif  // REGX_H_

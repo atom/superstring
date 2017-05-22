@@ -337,6 +337,11 @@ TEST_CASE("TextBuffer::search - spanning edits") {
   REQUIRE(buffer.search(u"bc").range == optional<Range>{});
 }
 
+TEST_CASE("TextBuffer::search - partial matches at EOF") {
+  TextBuffer buffer{u"abc\r\ndef\r\nghi\r\n"};
+  REQUIRE(buffer.search(u"[^\r]\n").range == optional<Range>());
+}
+
 struct SnapshotData {
   Text base_text;
   Text text;

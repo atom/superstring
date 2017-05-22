@@ -33,7 +33,7 @@ Regex::~Regex() {
   }
 }
 
-MatchResult Regex::match(const uint16_t *data, size_t length) {
+MatchResult Regex::match(const uint16_t *data, size_t length, bool is_last) {
   MatchResult result{MatchResult::None, 0, 0};
 
   int status = pcre2_match(
@@ -41,7 +41,7 @@ MatchResult Regex::match(const uint16_t *data, size_t length) {
     data,
     length,
     0,
-    PCRE2_PARTIAL_HARD,
+    is_last ? PCRE2_PARTIAL_SOFT : PCRE2_PARTIAL_HARD,
     match_data,
     nullptr
   );
