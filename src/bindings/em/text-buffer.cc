@@ -57,6 +57,7 @@ EMSCRIPTEN_BINDINGS(TextBuffer) {
     .function("setTextInRange", WRAP(&TextBuffer::set_text_in_range))
     .function("getLength", &TextBuffer::size)
     .function("getExtent", &TextBuffer::extent)
+    .function("reset", WRAP(&TextBuffer::reset))
     .function("lineLengthForRow", WRAP(&TextBuffer::line_length_for_row))
     .function("lineEndingForRow", line_ending_for_row)
     .function("lineForRow", WRAP(&TextBuffer::line_for_row))
