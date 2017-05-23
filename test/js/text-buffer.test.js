@@ -584,6 +584,19 @@ describe('TextBuffer', () => {
     })
   })
 
+  describe('.reset', () => {
+    it('sets the buffer\'s text and does not consider it modified', () => {
+      const buffer = new TextBuffer('abc')
+      buffer.setTextInRange(Range(Point(0, 3), Point(0, 3)), 'def')
+      assert.equal(buffer.getText(), 'abcdef')
+      assert.ok(buffer.isModified())
+
+      buffer.reset('g')
+      assert.equal(buffer.getText(), 'g')
+      assert.notOk(buffer.isModified())
+    })
+  })
+
   describe('random IO', function () {
     if (!TextBuffer.prototype.load) return;
 

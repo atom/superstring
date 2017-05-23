@@ -106,6 +106,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("saveSync").ToLocalChecked(), Nan::New<FunctionTemplate>(save_sync));
   prototype_template->Set(Nan::New("serializeChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(serialize_changes));
   prototype_template->Set(Nan::New("deserializeChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(deserialize_changes));
+  prototype_template->Set(Nan::New("reset").ToLocalChecked(), Nan::New<FunctionTemplate>(reset));
   prototype_template->Set(Nan::New("baseTextDigest").ToLocalChecked(), Nan::New<FunctionTemplate>(base_text_digest));
   prototype_template->Set(Nan::New("search").ToLocalChecked(), Nan::New<FunctionTemplate>(search));
   prototype_template->Set(Nan::New("searchSync").ToLocalChecked(), Nan::New<FunctionTemplate>(search_sync));
@@ -680,6 +681,14 @@ void TextBufferWrapper::deserialize_changes(const Nan::FunctionCallbackInfo<Valu
     input.assign(data, data + node::Buffer::Length(info[0]));
     Deserializer deserializer(input);
     text_buffer.deserialize_changes(deserializer);
+  }
+}
+
+void TextBufferWrapper::reset(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  auto text = TextWrapper::text_from_js(info[0]);
+  if (text) {
+    text_buffer.reset(move(*text));
   }
 }
 
