@@ -173,6 +173,17 @@ struct em_wrap_type<Text> : public em_wrap_type_base<Text, std::string> {
 };
 
 template <>
+struct em_wrap_type<Text::String> : public em_wrap_type_base<Text::String, std::string> {
+  static Text::String receive(std::string const &str) {
+    return Text::String(str.begin(), str.end());
+  }
+
+  static std::string transmit(Text::String const &text) {
+    return std::string(text.begin(), text.end());
+  }
+};
+
+template <>
 struct em_wrap_type<Text *> : public em_wrap_type_base<Text *, emscripten::val> {
   static Text * receive(emscripten::val const &value) {
     return new Text(em_wrap_type<Text>::receive(value.as<std::string>()));
