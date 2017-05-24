@@ -1,5 +1,6 @@
 #include "text-slice.h"
 #include "text-reader.h"
+#include "encoding-conversion.h"
 #include "text-buffer-wrapper.h"
 
 using std::move;
@@ -18,7 +19,7 @@ void TextReader::init(Local<Object> exports) {
 
 TextReader::TextReader(Local<Object> js_buffer,
                        TextBuffer::Snapshot *snapshot,
-                       Text::EncodingConversion &&conversion) :
+                       EncodingConversion &&conversion) :
   snapshot{snapshot},
   slices{snapshot->chunks()},
   slice_index{0},
@@ -39,7 +40,7 @@ void TextReader::construct(const Nan::FunctionCallbackInfo<Value> &info) {
   Local<String> js_encoding_name;
   if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
   String::Utf8Value encoding_name(js_encoding_name);
-  auto conversion = Text::transcoding_to(*encoding_name);
+  auto conversion = transcoding_to(*encoding_name);
   if (!conversion) {
     Nan::ThrowError((string("Invalid encoding name: ") + *encoding_name).c_str());
     return;
@@ -65,8 +66,8 @@ void TextReader::read(const Nan::FunctionCallbackInfo<Value> &info) {
     if (reader->slice_index == reader->slices.size()) break;
     TextSlice &slice = reader->slices[reader->slice_index];
     size_t end_offset = slice.end_offset();
-    size_t bytes_written = slice.text->encode(
-      reader->conversion,
+    size_t bytes_written = reader->conversion.encode(
+      slice.text->content,
       &reader->text_offset,
       end_offset,
       buffer + total_bytes_written,

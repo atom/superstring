@@ -1,5 +1,5 @@
-#ifndef FLAT_TEXT_H_
-#define FLAT_TEXT_H_
+#ifndef SUPERSTRING_TEXT_H_
+#define SUPERSTRING_TEXT_H_
 
 #include <istream>
 #include <functional>
@@ -20,19 +20,11 @@ class Text {
   friend class TextSlice;
 
  public:
-  class EncodingConversion {
-    friend class Text;
-    void *data;
-    EncodingConversion(void *);
-  public:
-    EncodingConversion(EncodingConversion &&);
-    EncodingConversion();
-    ~EncodingConversion();
-  };
-  static optional<EncodingConversion> transcoding_to(const char *);
-  static optional<EncodingConversion> transcoding_from(const char *);
+  typedef std::vector<uint16_t> String;
 
-  std::vector<uint16_t> content;
+  static Point extent(const std::u16string &);
+
+  String content;
   std::vector<uint32_t> line_offsets;
   Text(const std::vector<uint16_t> &&, const std::vector<uint32_t> &&);
 
@@ -40,21 +32,11 @@ class Text {
 
   Text();
   Text(const std::u16string &string);
-  Text(std::vector<uint16_t> &&content);
+  Text(String &&content);
   Text(TextSlice slice);
   Text(Deserializer &deserializer);
   template<typename Iter>
-  Text(Iter begin, Iter end) : Text(std::vector<uint16_t>{begin, end}) {}
-
-  bool encode(const EncodingConversion &, size_t start_offset, size_t end_offset,
-              std::ostream &stream, std::vector<char> &buffer) const;
-  size_t encode(const EncodingConversion &, size_t *start_offset, size_t end_offset,
-                char *buffer, size_t buffer_size, bool is_last = false) const;
-
-  bool decode(const EncodingConversion &, std::istream &stream,
-              std::vector<char> &buffer, std::function<void(size_t)> progress_callback);
-  size_t decode(const EncodingConversion &, const char *buffer, size_t buffer_size,
-                bool is_last = false);
+  Text(Iter begin, Iter end) : Text(String{begin, end}) {}
 
   static Text concat(TextSlice a, TextSlice b);
   static Text concat(TextSlice a, TextSlice b, TextSlice c);
@@ -79,7 +61,6 @@ class Text {
   const uint16_t *data() const;
   size_t digest() const;
   void clear();
-  void reserve(size_t capacity);
 
   bool operator!=(const Text &) const;
   bool operator==(const Text &) const;
@@ -87,4 +68,12 @@ class Text {
   friend std::ostream &operator<<(std::ostream &, const Text &);
 };
 
-#endif // FLAT_TEXT_H_
+inline bool operator==(const Text::String &string, const char16_t *other) {
+  return std::u16string(string.begin(), string.end()) == std::u16string(other);
+}
+
+inline bool operator==(const Text::String &string, const std::u16string &other) {
+  return std::u16string(string.begin(), string.end()) == other;
+}
+
+#endif // SUPERSTRING_TEXT_H_

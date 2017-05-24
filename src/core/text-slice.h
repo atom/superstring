@@ -7,8 +7,7 @@
 #include "text.h"
 
 class TextSlice {
-public:
-
+ public:
   const Text *text;
   Point start_position;
   Point end_position;

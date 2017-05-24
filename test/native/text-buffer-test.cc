@@ -13,30 +13,31 @@ using std::stringstream;
 using std::vector;
 using std::u16string;
 using MatchResult = Regex::MatchResult;
+using String = Text::String;
 
 TEST_CASE("TextBuffer::set_text_in_range - basic") {
-  TextBuffer buffer {u"abc\ndef\nghi"};
-  REQUIRE(buffer.text_in_range({{0, 1}, {0, UINT32_MAX}}) == Text{u"bc"});
+  TextBuffer buffer{u"abc\ndef\nghi"};
+  REQUIRE(buffer.text_in_range({{0, 1}, {0, UINT32_MAX}}) == u"bc");
 
-  buffer.set_text_in_range(Range {{0, 2}, {2, 1}}, Text{u"jkl\nmno"});
-  REQUIRE(buffer.text() == Text{u"abjkl\nmnohi"});
-  REQUIRE(buffer.text_in_range(Range {{0, 1}, {1, 4}}) == Text{u"bjkl\nmnoh"});
+  buffer.set_text_in_range({{0, 2}, {2, 1}}, u"jkl\nmno");
+  REQUIRE(buffer.text() == u"abjkl\nmnohi");
+  REQUIRE(buffer.text_in_range(Range {{0, 1}, {1, 4}}) == u"bjkl\nmnoh");
 
-  buffer.set_text_in_range(Range {{0, 0}, {10, 1}}, Text{u"yz"});
-  REQUIRE(buffer.text() == Text{u"yz"});
-  REQUIRE(buffer.text_in_range(Range {{0, 1}, {10, 1}}) == Text{u"z"});
+  buffer.set_text_in_range(Range {{0, 0}, {10, 1}}, u"yz");
+  REQUIRE(buffer.text() == u"yz");
+  REQUIRE(buffer.text_in_range(Range {{0, 1}, {10, 1}}) == u"z");
 }
 
 TEST_CASE("TextBuffer::line_length_for_row - basic") {
-  TextBuffer buffer {u"a\n\nb\r\rc\r\n\r\n"};
+  TextBuffer buffer{u"a\n\nb\r\rc\r\n\r\n"};
   REQUIRE(*buffer.line_length_for_row(0) == 1);
   REQUIRE(*buffer.line_length_for_row(1) == 0);
 }
 
 TEST_CASE("TextBuffer::position_for_offset") {
-  TextBuffer buffer {u"ab\ndef\r\nhijk"};
-  buffer.set_text_in_range({{0, 2}, {0, 2}}, Text{u"c"});
-  buffer.set_text_in_range({{1, 3}, {1, 3}}, Text{u"g"});
+  TextBuffer buffer{u"ab\ndef\r\nhijk"};
+  buffer.set_text_in_range({{0, 2}, {0, 2}}, u"c");
+  buffer.set_text_in_range({{1, 3}, {1, 3}}, u"g");
   REQUIRE(buffer.position_for_offset(0) == Point(0, 0));
   REQUIRE(buffer.position_for_offset(1) == Point(0, 1));
   REQUIRE(buffer.position_for_offset(2) == Point(0, 2));
@@ -50,46 +51,46 @@ TEST_CASE("TextBuffer::position_for_offset") {
 }
 
 TEST_CASE("TextBuffer::create_snapshot") {
-  TextBuffer buffer {u"ab\ndef"};
-  buffer.set_text_in_range({{0, 2}, {0, 2}}, Text {u"c"});
-  REQUIRE(buffer.text() == Text {u"abc\ndef"});
+  TextBuffer buffer{u"ab\ndef"};
+  buffer.set_text_in_range({{0, 2}, {0, 2}}, u"c");
+  REQUIRE(buffer.text() == u"abc\ndef");
   REQUIRE(*buffer.line_length_for_row(0) == 3);
 
   auto snapshot1 = buffer.create_snapshot();
-  buffer.set_text_in_range({{0, 3}, {0, 3}}, Text {u"123"});
-  REQUIRE(buffer.text() == Text {u"abc123\ndef"});
+  buffer.set_text_in_range({{0, 3}, {0, 3}}, u"123");
+  REQUIRE(buffer.text() == u"abc123\ndef");
   REQUIRE(*buffer.line_length_for_row(0) == 6);
-  REQUIRE(snapshot1->text() == Text {u"abc\ndef"});
+  REQUIRE(snapshot1->text() == u"abc\ndef");
   REQUIRE(snapshot1->line_length_for_row(0) == 3);
   REQUIRE(snapshot1->line_length_for_row(1) == 3);
 
   auto snapshot2 = buffer.create_snapshot();
   auto snapshot3 = buffer.create_snapshot();
-  buffer.set_text_in_range({{0, 6}, {0, 6}}, Text {u"456"});
-  REQUIRE(buffer.text() == Text {u"abc123456\ndef"});
+  buffer.set_text_in_range({{0, 6}, {0, 6}}, u"456");
+  REQUIRE(buffer.text() == u"abc123456\ndef");
   REQUIRE(*buffer.line_length_for_row(0) == 9);
-  REQUIRE(snapshot2->text() == Text {u"abc123\ndef"});
+  REQUIRE(snapshot2->text() == u"abc123\ndef");
   REQUIRE(snapshot2->line_length_for_row(0) == 6);
   REQUIRE(snapshot2->line_length_for_row(1) == 3);
-  REQUIRE(snapshot1->text() == Text {u"abc\ndef"});
+  REQUIRE(snapshot1->text() == u"abc\ndef");
   REQUIRE(snapshot1->line_length_for_row(0) == 3);
   REQUIRE(snapshot1->line_length_for_row(1) == 3);
 
   SECTION("deleting the latest snapshot") {
     delete snapshot2;
     delete snapshot3;
-    REQUIRE(buffer.text() == Text {u"abc123456\ndef"});
+    REQUIRE(buffer.text() == u"abc123456\ndef");
     REQUIRE(*buffer.line_length_for_row(0) == 9);
-    REQUIRE(snapshot1->text() == Text {u"abc\ndef"});
+    REQUIRE(snapshot1->text() == u"abc\ndef");
     REQUIRE(snapshot1->line_length_for_row(0) == 3);
     delete snapshot1;
   }
 
   SECTION("deleting an earlier snapshot first") {
     delete snapshot1;
-    REQUIRE(buffer.text() == Text {u"abc123456\ndef"});
+    REQUIRE(buffer.text() == u"abc123456\ndef");
     REQUIRE(*buffer.line_length_for_row(0) == 9);
-    REQUIRE(snapshot2->text() == Text {u"abc123\ndef"});
+    REQUIRE(snapshot2->text() == u"abc123\ndef");
     REQUIRE(snapshot2->line_length_for_row(0) == 6);
     delete snapshot2;
     delete snapshot3;
@@ -97,13 +98,13 @@ TEST_CASE("TextBuffer::create_snapshot") {
 }
 
 TEST_CASE("TextBuffer::get_inverted_changes") {
-  TextBuffer buffer {u"ab\ndef"};
+  TextBuffer buffer{u"ab\ndef"};
   auto snapshot1 = buffer.create_snapshot();
 
   // This range gets clipped. The ::get_inverted_changes method is one of the
   // few reasons it matters that we clip ranges before passing them to
   // Patch::splice.
-  buffer.set_text_in_range({{0, 2}, {0, 10}}, Text {u"c"});
+  buffer.set_text_in_range({{0, 2}, {0, 10}}, u"c");
   buffer.flush_changes();
 
   auto patch = buffer.get_inverted_changes(snapshot1);
@@ -124,37 +125,37 @@ TEST_CASE("TextBuffer::is_modified") {
   TextBuffer buffer{u"abcdef"};
   REQUIRE(!buffer.is_modified());
 
-  buffer.set_text_in_range({{0, 1}, {0, 2}}, Text{u"BBB"});
+  buffer.set_text_in_range({{0, 1}, {0, 2}}, u"BBB");
   REQUIRE(buffer.is_modified());
 
   SECTION("undoing a change") {
-    buffer.set_text_in_range({{0, 1}, {0, 4}}, Text{u"b"});
+    buffer.set_text_in_range({{0, 1}, {0, 4}}, u"b");
     REQUIRE(!buffer.is_modified());
   }
 
   SECTION("undoing a change after creating a snapshot") {
     auto snapshot1 = buffer.create_snapshot();
-    buffer.set_text_in_range({{0, 1}, {0, 4}}, Text{u"b"});
+    buffer.set_text_in_range({{0, 1}, {0, 4}}, u"b");
     REQUIRE(!buffer.is_modified());
     delete snapshot1;
   }
 
   SECTION("undoing a change in multiple steps with snapshots in between") {
     auto snapshot1 = buffer.create_snapshot();
-    buffer.set_text_in_range({{0, 3}, {0, 4}}, Text{});
+    buffer.set_text_in_range({{0, 3}, {0, 4}}, u"");
     REQUIRE(buffer.is_modified());
 
     auto snapshot2 = buffer.create_snapshot();
-    buffer.set_text_in_range({{0, 2}, {0, 3}}, Text{});
+    buffer.set_text_in_range({{0, 2}, {0, 3}}, u"");
     REQUIRE(buffer.is_modified());
 
     auto snapshot3 = buffer.create_snapshot();
-    buffer.set_text_in_range({{0, 1}, {0, 2}}, Text{});
+    buffer.set_text_in_range({{0, 1}, {0, 2}}, u"");
     REQUIRE(buffer.is_modified());
 
     auto snapshot4 = buffer.create_snapshot();
-    buffer.set_text_in_range({{0, 1}, {0, 1}}, Text{u"b"});
-    REQUIRE(buffer.text() == Text{u"abcdef"});
+    buffer.set_text_in_range({{0, 1}, {0, 1}}, u"b");
+    REQUIRE(buffer.text() == u"abcdef");
     REQUIRE(!buffer.is_modified());
 
     delete snapshot1;
@@ -168,16 +169,16 @@ TEST_CASE("TextBuffer::flush_changes") {
   TextBuffer buffer{u"abcdef"};
   REQUIRE(buffer.layer_count() == 1);
 
-  buffer.set_text_in_range({{0, 1}, {0, 2}}, Text{u"B"});
-  REQUIRE(buffer.text() == Text{u"aBcdef"});
+  buffer.set_text_in_range({{0, 1}, {0, 2}}, u"B");
+  REQUIRE(buffer.text() == u"aBcdef");
   REQUIRE(buffer.is_modified());
   REQUIRE(buffer.layer_count() == 2);
 
   auto snapshot1 = buffer.create_snapshot();
   REQUIRE(buffer.layer_count() == 2);
 
-  buffer.set_text_in_range({{0, 2}, {0, 3}}, Text{u"C"});
-  REQUIRE(buffer.text() == Text{u"aBCdef"});
+  buffer.set_text_in_range({{0, 2}, {0, 3}}, u"C");
+  REQUIRE(buffer.text() == u"aBCdef");
   REQUIRE(buffer.is_modified());
   REQUIRE(buffer.layer_count() == 3);
 
@@ -187,10 +188,10 @@ TEST_CASE("TextBuffer::flush_changes") {
   buffer.flush_changes();
   REQUIRE(!buffer.is_modified());
   REQUIRE(buffer.base_text() == Text{u"aBCdef"});
-  REQUIRE(buffer.text() == Text{u"aBCdef"});
+  REQUIRE(buffer.text() == u"aBCdef");
 
-  REQUIRE(snapshot1->text() == Text{u"aBcdef"});
-  REQUIRE(snapshot2->text() == Text{u"aBCdef"});
+  REQUIRE(snapshot1->text() == u"aBcdef");
+  REQUIRE(snapshot2->text() == u"aBCdef");
 
   delete snapshot2;
   REQUIRE(buffer.layer_count() == 3);
@@ -203,14 +204,14 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
   TextBuffer buffer{u"abcdef"};
   REQUIRE(buffer.layer_count() == 1);
 
-  buffer.set_text_in_range({{0, 1}, {0, 2}}, Text{u"B"});
-  REQUIRE(buffer.text() == Text{u"aBcdef"});
+  buffer.set_text_in_range({{0, 1}, {0, 2}}, u"B");
+  REQUIRE(buffer.text() == u"aBcdef");
   REQUIRE(buffer.is_modified());
   auto snapshot1 = buffer.create_snapshot();
   REQUIRE(buffer.layer_count() == 2);
 
-  buffer.set_text_in_range({{0, 2}, {0, 3}}, Text{u"C"});
-  REQUIRE(buffer.text() == Text{u"aBCdef"});
+  buffer.set_text_in_range({{0, 2}, {0, 3}}, u"C");
+  REQUIRE(buffer.text() == u"aBCdef");
   REQUIRE(buffer.is_modified());
   auto snapshot2 = buffer.create_snapshot();
   REQUIRE(buffer.layer_count() == 3);
@@ -220,13 +221,13 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
   SECTION("flushing the latest snapshot's changes") {
     snapshot2->flush_preceding_changes();
 
-    REQUIRE(buffer.text() == Text{u"aBCdef"});
+    REQUIRE(buffer.text() == u"aBCdef");
     REQUIRE(buffer.base_text() == Text{u"aBCdef"});
-    REQUIRE(snapshot1->text() == Text{u"aBcdef"});
-    REQUIRE(snapshot2->text() == Text{u"aBCdef"});
+    REQUIRE(snapshot1->text() == u"aBcdef");
+    REQUIRE(snapshot2->text() == u"aBCdef");
     REQUIRE(!buffer.is_modified());
 
-    TextBuffer copy_buffer{Text{buffer.base_text()}};
+    TextBuffer copy_buffer{String{buffer.base_text().content}};
     Serializer serializer(bytes);
     buffer.serialize_changes(serializer);
     Deserializer deserializer(bytes);
@@ -244,13 +245,13 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
   SECTION("flushing an earlier snapshot's changes") {
     snapshot1->flush_preceding_changes();
 
-    REQUIRE(buffer.text() == Text{u"aBCdef"});
+    REQUIRE(buffer.text() == u"aBCdef");
     REQUIRE(buffer.base_text() == Text{u"aBcdef"});
-    REQUIRE(snapshot1->text() == Text{u"aBcdef"});
-    REQUIRE(snapshot2->text() == Text{u"aBCdef"});
+    REQUIRE(snapshot1->text() == u"aBcdef");
+    REQUIRE(snapshot2->text() == u"aBCdef");
     REQUIRE(buffer.is_modified());
 
-    TextBuffer copy_buffer{Text{buffer.base_text()}};
+    TextBuffer copy_buffer{String{buffer.base_text().content}};
     Serializer serializer(bytes);
     buffer.serialize_changes(serializer);
     Deserializer deserializer(bytes);
@@ -270,19 +271,19 @@ TEST_CASE("TextBuffer::reset") {
   TextBuffer buffer{u"abcdef"};
   auto snapshot1 = buffer.create_snapshot();
 
-  buffer.set_text_in_range({{0, 1}, {0, 2}}, Text{u"B"});
+  buffer.set_text_in_range({{0, 1}, {0, 2}}, u"B");
   auto snapshot2 = buffer.create_snapshot();
 
-  buffer.set_text_in_range({{0, 2}, {0, 3}}, Text{u"C"});
+  buffer.set_text_in_range({{0, 2}, {0, 3}}, u"C");
   auto snapshot3 = buffer.create_snapshot();
 
   buffer.reset(Text{u"123"});
 
   REQUIRE(!buffer.is_modified());
-  REQUIRE(buffer.text() == Text{u"123"});
-  REQUIRE(snapshot1->text() == Text{u"abcdef"});
-  REQUIRE(snapshot2->text() == Text{u"aBcdef"});
-  REQUIRE(snapshot3->text() == Text{u"aBCdef"});
+  REQUIRE(buffer.text() == u"123");
+  REQUIRE(snapshot1->text() == u"abcdef");
+  REQUIRE(snapshot2->text() == u"aBcdef");
+  REQUIRE(snapshot3->text() == u"aBCdef");
 
   delete snapshot1;
   delete snapshot2;
@@ -290,12 +291,12 @@ TEST_CASE("TextBuffer::reset") {
 
   REQUIRE(!buffer.is_modified());
   REQUIRE(buffer.layer_count() == 1);
-  REQUIRE(buffer.text() == Text{u"123"});
+  REQUIRE(buffer.text() == u"123");
 
   buffer.reset(Text{u"456"});
   REQUIRE(!buffer.is_modified());
   REQUIRE(buffer.layer_count() == 1);
-  REQUIRE(buffer.text() == Text{u"456"});
+  REQUIRE(buffer.text() == u"456");
 }
 
 TEST_CASE("TextBuffer::search") {
@@ -321,10 +322,10 @@ TEST_CASE("TextBuffer::search") {
 
 TEST_CASE("TextBuffer::search - spanning edits") {
   TextBuffer buffer{u"abcd"};
-  buffer.set_text_in_range({{0, 2}, {0, 2}}, Text{u"12345"});
-  buffer.set_text_in_range({{0, 9}, {0, 9}}, Text{u"67890"});
+  buffer.set_text_in_range({{0, 2}, {0, 2}}, u"12345");
+  buffer.set_text_in_range({{0, 9}, {0, 9}}, u"67890");
 
-  REQUIRE(buffer.text() == Text(u"ab12345cd67890"));
+  REQUIRE(buffer.text() == u"ab12345cd67890");
   REQUIRE(buffer.search(Regex(u"b1234", nullptr)) == (Range{{0, 1}, {0, 6}}));
   REQUIRE(buffer.search(Regex(u"b12345c", nullptr)) == (Range{{0, 1}, {0, 8}}));
   REQUIRE(buffer.search(Regex(u"b12345cd6", nullptr)) == (Range{{0, 1}, {0, 10}}));
@@ -332,8 +333,8 @@ TEST_CASE("TextBuffer::search - spanning edits") {
   REQUIRE(buffer.search(Regex(u"5cd6", nullptr)) == (Range{{0, 6}, {0, 10}}));
 
   buffer.reset(Text{u"abcdef"});
-  buffer.set_text_in_range({{0, 2}, {0, 4}}, Text{u""});
-  REQUIRE(buffer.text() == Text(u"abef"));
+  buffer.set_text_in_range({{0, 2}, {0, 4}}, u"");
+  REQUIRE(buffer.text() == u"abef");
   REQUIRE(buffer.search(Regex(u"abe", nullptr)) == (Range{{0, 0}, {0, 3}}));
   REQUIRE(buffer.search(Regex(u"bef", nullptr)) == (Range{{0, 1}, {0, 4}}));
   REQUIRE(buffer.search(Regex(u"bc", nullptr)) == optional<Range>{});
@@ -346,7 +347,7 @@ TEST_CASE("TextBuffer::search - partial matches at EOF") {
 
 struct SnapshotData {
   Text base_text;
-  Text text;
+  String text;
   Point extent;
   vector<Point> line_end_positions;
 };
@@ -363,7 +364,9 @@ void query_random_ranges(TextBuffer &buffer, Generator &rand, Text &mutated_text
     Range range = get_random_range(rand, buffer);
     // cout << "query random range " << range << "\n";
 
-    REQUIRE(buffer.text_in_range(range) == Text(TextSlice(mutated_text).slice(range)));
+    TextSlice slice = TextSlice(mutated_text).slice(range);
+    String expected_text{slice.begin(), slice.end()};
+    REQUIRE(buffer.text_in_range(range) == expected_text);
     REQUIRE(buffer.position_for_offset(buffer.clip_position(range.start).offset) == range.start);
     REQUIRE(buffer.position_for_offset(buffer.clip_position(range.end).offset) == range.end);
   }
@@ -379,7 +382,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
     cout << "seed: " << seed << "\n";
 
     Text original_text = get_random_text(rand);
-    TextBuffer buffer{Text{original_text}};
+    TextBuffer buffer{String(original_text.content)};
     vector<SnapshotTask> snapshot_tasks;
     Text mutated_text(original_text);
 
@@ -428,11 +431,11 @@ TEST_CASE("TextBuffer - random edits and queries") {
 
       // cout << "set_text_in_range(" << deleted_range << ", " << inserted_text << ")\n";
       mutated_text.splice(deleted_range.start, deleted_range.extent(), inserted_text);
-      buffer.set_text_in_range(deleted_range, move(inserted_text));
+      buffer.set_text_in_range(deleted_range, move(inserted_text.content));
 
       // cout << "extent: " << mutated_text.extent() << "\ntext: " << mutated_text << "\n";
       REQUIRE(buffer.extent() == mutated_text.extent());
-      REQUIRE(buffer.text() == mutated_text);
+      REQUIRE(buffer.text() == mutated_text.content);
 
       for (uint32_t row = 0; row < mutated_text.extent().row; row++) {
         REQUIRE(
@@ -480,7 +483,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
 
         for (auto data : snapshot_tasks[snapshot_index].future.get()) {
           REQUIRE(data.base_text == base_text);
-          REQUIRE(data.text == mutated_text);
+          REQUIRE(data.text == mutated_text.content);
           REQUIRE(data.extent == mutated_text.extent());
           for (auto position : data.line_end_positions) {
             REQUIRE(position == Point(position.row, mutated_text.line_length_for_row(position.row)));

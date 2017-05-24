@@ -4,6 +4,7 @@
 #include "nan.h"
 #include "text.h"
 #include "text-buffer.h"
+#include "encoding-conversion.h"
 
 class TextReader : public Nan::ObjectWrap {
 public:
@@ -11,7 +12,7 @@ public:
 
 private:
   TextReader(v8::Local<v8::Object> js_buffer, TextBuffer::Snapshot *snapshot,
-             Text::EncodingConversion &&conversion);
+             EncodingConversion &&conversion);
   ~TextReader();
 
   static void construct(const Nan::FunctionCallbackInfo<v8::Value> &info);
@@ -23,7 +24,7 @@ private:
   std::vector<TextSlice> slices;
   size_t slice_index;
   size_t text_offset;
-  Text::EncodingConversion conversion;
+  EncodingConversion conversion;
 };
 
 #endif // SUPERSTRING_TEXT_READER_H

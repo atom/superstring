@@ -14,13 +14,13 @@ void TextWriter::init(Local<Object> exports) {
   exports->Set(Nan::New("TextWriter").ToLocalChecked(), constructor_template->GetFunction());
 }
 
-TextWriter::TextWriter(Text::EncodingConversion &&conversion) : conversion{move(conversion)} {}
+TextWriter::TextWriter(EncodingConversion &&conversion) : conversion{move(conversion)} {}
 
 void TextWriter::construct(const Nan::FunctionCallbackInfo<Value> &info) {
   Local<String> js_encoding_name;
   if (!Nan::To<String>(info[0]).ToLocal(&js_encoding_name)) return;
   String::Utf8Value encoding_name(js_encoding_name);
-  auto conversion = Text::transcoding_from(*encoding_name);
+  auto conversion = transcoding_from(*encoding_name);
   if (!conversion) {
     Nan::ThrowError((string("Invalid encoding name: ") + *encoding_name).c_str());
     return;
@@ -50,8 +50,8 @@ void TextWriter::write(const Nan::FunctionCallbackInfo<Value> &info) {
       data = writer->leftover_bytes.data();
       length = writer->leftover_bytes.size();
     }
-    size_t bytes_written = writer->text.decode(
-      writer->conversion,
+    size_t bytes_written = writer->conversion.decode(
+      writer->content,
       data,
       length
     );
@@ -66,8 +66,8 @@ void TextWriter::write(const Nan::FunctionCallbackInfo<Value> &info) {
 void TextWriter::end(const Nan::FunctionCallbackInfo<Value> &info) {
   auto writer = Nan::ObjectWrap::Unwrap<TextWriter>(info.This());
   if (!writer->leftover_bytes.empty()) {
-    writer->text.decode(
-      writer->conversion,
+    writer->conversion.decode(
+      writer->content,
       writer->leftover_bytes.data(),
       writer->leftover_bytes.size(),
       true
@@ -75,10 +75,6 @@ void TextWriter::end(const Nan::FunctionCallbackInfo<Value> &info) {
   }
 }
 
-Text TextWriter::get_text() {
-  if (!text.empty()) {
-    return move(text);
-  } else {
-    return Text(move(content));
-  }
+Text::String TextWriter::get_text() {
+  return move(content);
 }

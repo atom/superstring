@@ -9,6 +9,7 @@
 #include <vector>
 #include <random>
 #include "range.h"
+#include "text.h"
 #include <iostream>
 
 using std::cout;

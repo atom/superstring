@@ -10,6 +10,7 @@ using std::move;
 using std::string;
 using std::vector;
 using std::u16string;
+using String = Text::String;
 using MatchResult = Regex::MatchResult;
 
 uint32_t TextBuffer::MAX_CHUNK_SIZE_TO_COPY = 1024;
@@ -211,10 +212,10 @@ struct TextBuffer::Layer {
 
   uint32_t size() const { return size_; }
 
-  Text text_in_range(Range range, bool splay = false) {
-    Text result;
+  String text_in_range(Range range, bool splay = false) {
+    String result;
     for_each_chunk_in_range(range.start, range.end, [&result](TextSlice slice) {
-      result.append(slice);
+      result.insert(result.end(), slice.begin(), slice.end());
       return false;
     }, splay);
     return result;
@@ -309,7 +310,7 @@ struct TextBuffer::Layer {
   }
 };
 
-TextBuffer::TextBuffer(Text &&text) :
+TextBuffer::TextBuffer(String &&text) :
   base_layer{new Layer(move(text))},
   top_layer{base_layer} {}
 
@@ -326,7 +327,8 @@ TextBuffer::~TextBuffer() {
   }
 }
 
-TextBuffer::TextBuffer(std::u16string text) : TextBuffer{Text{text}} {}
+TextBuffer::TextBuffer(const std::u16string &text) :
+  TextBuffer{String{text.begin(), text.end()}} {}
 
 void TextBuffer::reset(Text &&new_base_text) {
   top_layer = new Layer(top_layer);
@@ -345,7 +347,7 @@ Patch TextBuffer::get_inverted_changes(const Snapshot *snapshot) const {
     layer = layer->previous_layer;
   }
   Patch combination(patches);
-  TextSlice base{snapshot->base_text()};
+  TextSlice base{*snapshot->base_layer.text};
   Patch result;
   for (auto change : combination.get_changes()) {
     result.splice(
@@ -353,7 +355,7 @@ Patch TextBuffer::get_inverted_changes(const Snapshot *snapshot) const {
       change.new_end.traversal(change.new_start),
       change.old_end.traversal(change.old_start),
       *change.new_text,
-      Text(base.slice({change.old_start, change.old_end})),
+      Text{base.slice({change.old_start, change.old_end})},
       change.new_text->size()
     );
   }
@@ -428,8 +430,8 @@ const uint16_t *TextBuffer::line_ending_for_row(uint32_t row) {
   return result;
 }
 
-optional<Text> TextBuffer::line_for_row(uint32_t row) {
-  if (row > extent().row) return optional<Text>{};
+optional<String> TextBuffer::line_for_row(uint32_t row) {
+  if (row > extent().row) return optional<String>{};
   return text_in_range({{row, 0}, {row, UINT32_MAX}});
 }
 
@@ -441,11 +443,11 @@ Point TextBuffer::position_for_offset(uint32_t offset) {
   return top_layer->position_for_offset(offset);
 }
 
-Text TextBuffer::text() {
+String TextBuffer::text() {
   return top_layer->text_in_range(Range{Point(), extent()});
 }
 
-Text TextBuffer::text_in_range(Range range) {
+String TextBuffer::text_in_range(Range range) {
   return top_layer->text_in_range(range, true);
 }
 
@@ -453,11 +455,15 @@ vector<TextSlice> TextBuffer::chunks() const {
   return top_layer->chunks_in_range({{0, 0}, extent()});
 }
 
-void TextBuffer::set_text(Text &&new_text) {
+void TextBuffer::set_text(String &&new_text) {
   set_text_in_range(Range{Point(0, 0), extent()}, move(new_text));
 }
 
-void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
+void TextBuffer::set_text(const u16string &string) {
+  set_text(String(string.begin(), string.end()));
+}
+
+void TextBuffer::set_text_in_range(Range old_range, String &&string) {
   if (top_layer == base_layer || top_layer->snapshot_count > 0) {
     top_layer = new Layer(top_layer);
   }
@@ -465,6 +471,7 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
   auto start = clip_position(old_range.start);
   auto end = clip_position(old_range.end);
   Point deleted_extent = end.position.traversal(start.position);
+  Text new_text{move(string)};
   Point inserted_extent = new_text.extent();
   Point new_range_end = start.position.traverse(new_text.extent());
   uint32_t deleted_text_size = end.offset - start.offset;
@@ -499,6 +506,10 @@ void TextBuffer::set_text_in_range(Range old_range, Text &&new_text) {
       top_layer->patch.splice_old(change->old_start, Point(), Point());
     }
   }
+}
+
+void TextBuffer::set_text_in_range(Range old_range, const u16string &string) {
+  set_text_in_range(old_range, String(string.begin(), string.end()));
 }
 
 optional<Range> TextBuffer::search(const Regex &regex) const {
@@ -565,7 +576,7 @@ TextBuffer::Snapshot *TextBuffer::create_snapshot() {
 
 void TextBuffer::flush_changes() {
   if (!top_layer->text) {
-    top_layer->text = text();
+    top_layer->text = Text{text()};
     base_layer = top_layer;
     consolidate_layers();
   }
@@ -583,11 +594,11 @@ uint32_t TextBuffer::Snapshot::line_length_for_row(uint32_t row) const {
   return layer.clip_position(Point{row, UINT32_MAX}).position.column;
 }
 
-Text TextBuffer::Snapshot::text_in_range(Range range) const {
+String TextBuffer::Snapshot::text_in_range(Range range) const {
   return layer.text_in_range(range);
 }
 
-Text TextBuffer::Snapshot::text() const {
+String TextBuffer::Snapshot::text() const {
   return layer.text_in_range({{0, 0}, extent()});
 }
 
@@ -613,7 +624,7 @@ TextBuffer::Snapshot::Snapshot(TextBuffer &buffer, TextBuffer::Layer &layer,
 
 void TextBuffer::Snapshot::flush_preceding_changes() {
   if (!layer.text) {
-    layer.text = text();
+    layer.text = Text{text()};
     if (layer.is_above_layer(buffer.base_layer)) buffer.base_layer = &layer;
     buffer.consolidate_layers();
   }

@@ -31,6 +31,7 @@
             ],
             "sources": [
                 "src/core/buffer-offset-index.cc",
+                "src/core/encoding-conversion.cc",
                 "src/core/marker-index.cc",
                 "src/core/patch.cc",
                 "src/core/point.cc",
@@ -97,6 +98,7 @@
                 "sources": [
                     "test/native/test-helpers.cc",
                     "test/native/tests.cc",
+                    "test/native/encoding-conversion-test.cc",
                     "test/native/patch-test.cc",
                     "test/native/text-buffer-test.cc",
                     "test/native/text-test.cc",
