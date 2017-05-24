@@ -484,20 +484,18 @@ Patch Patch::invert() {
 
 // Mutations
 
-bool Patch::splice(Point new_splice_start,
+void Patch::splice(Point new_splice_start,
                    Point new_deletion_extent, Point new_insertion_extent,
                    optional<Text> &&deleted_text, optional<Text> &&inserted_text,
                    uint32_t deleted_text_size) {
-  if (new_deletion_extent.is_zero() && new_insertion_extent.is_zero()) {
-    return true;
-  }
+  if (new_deletion_extent.is_zero() && new_insertion_extent.is_zero()) return;
 
   if (!root) {
     root = build_node(nullptr, nullptr, new_splice_start, new_splice_start,
                      new_deletion_extent, new_insertion_extent,
                      move(deleted_text), move(inserted_text),
                      deleted_text_size);
-    return true;
+    return;
   }
 
   Point new_deletion_end = new_splice_start.traverse(new_deletion_extent);
@@ -787,13 +785,11 @@ bool Patch::splice(Point new_splice_start,
 
   if (lower_bound) lower_bound->compute_subtree_text_sizes();
   if (upper_bound) upper_bound->compute_subtree_text_sizes();
-
-  return true;
 }
 
-bool Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
+void Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
                       Point old_insertion_extent) {
-  if (!root) return true;
+  if (!root) return;
 
   Point old_deletion_end = old_splice_start.traverse(old_deletion_extent);
   Point old_insertion_end = old_splice_start.traverse(old_insertion_extent);
@@ -803,7 +799,7 @@ bool Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
 
   if (!lower_bound && !upper_bound) {
     delete_node(&root);
-    return true;
+    return;
   }
 
   if (upper_bound == lower_bound) {
@@ -813,7 +809,7 @@ bool Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
         root->old_distance_from_left_ancestor.traverse(old_insertion_extent);
     root->new_distance_from_left_ancestor =
         root->new_distance_from_left_ancestor.traverse(old_insertion_extent);
-    return true;
+    return;
   }
 
   if (upper_bound && lower_bound) {
@@ -891,11 +887,9 @@ bool Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
 
   if (lower_bound) lower_bound->compute_subtree_text_sizes();
   if (upper_bound) upper_bound->compute_subtree_text_sizes();
-
-  return true;
 }
 
-bool Patch::combine(const Patch &other, bool left_to_right) {
+void Patch::combine(const Patch &other, bool left_to_right) {
   auto changes = other.get_changes();
   if (left_to_right) {
     for (auto iter = changes.begin(), end = changes.end(); iter != end; ++iter) {
@@ -915,8 +909,6 @@ bool Patch::combine(const Patch &other, bool left_to_right) {
              iter->old_text_size);
     }
   }
-
-  return true;
 }
 
 void Patch::clear() {

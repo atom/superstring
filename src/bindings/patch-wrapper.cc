@@ -179,10 +179,13 @@ void PatchWrapper::splice(const Nan::FunctionCallbackInfo<Value> &info) {
       if (!inserted_text) return;
     }
 
-    if (!patch.splice(*start, *deletion_extent, *insertion_extent,
-                      move(deleted_text), move(inserted_text))) {
-      Nan::ThrowError("Can't splice into a frozen patch");
-    }
+    patch.splice(
+      *start,
+      *deletion_extent,
+      *insertion_extent,
+      move(deleted_text),
+      move(inserted_text)
+    );
   }
 }
 
@@ -194,9 +197,7 @@ void PatchWrapper::splice_old(const Nan::FunctionCallbackInfo<Value> &info) {
   optional<Point> insertion_extent = PointWrapper::point_from_js(info[2]);
 
   if (start && deletion_extent && insertion_extent) {
-    if (!patch.splice_old(*start, *deletion_extent, *insertion_extent)) {
-      Nan::ThrowError("Can't splice_old into a frozen patch");
-    }
+    patch.splice_old(*start, *deletion_extent, *insertion_extent);
   }
 }
 

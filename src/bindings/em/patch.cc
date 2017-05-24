@@ -50,24 +50,22 @@ Patch *deserialize(const vector<uint8_t> &bytes) {
 }
 
 void splice(Patch &patch, Point start, Point deleted_extent, Point inserted_extent) {
-  bool result = patch.splice(
+  patch.splice(
     start,
     deleted_extent,
     inserted_extent
   );
-  if (!result) throw runtime_error("Can't splice into a frozen patch");
 }
 
 void splice_with_text(Patch &patch, Point start, Point deleted_extent, Point inserted_extent,
                       const string &deleted_text, const string &inserted_text) {
-  bool result = patch.splice(
+  patch.splice(
     start,
     deleted_extent,
     inserted_extent,
     Text(deleted_text.begin(), deleted_text.end()),
     Text(inserted_text.begin(), inserted_text.end())
   );
-  if (!result) throw runtime_error("Can't splice into a frozen patch");
 }
 
 template <typename T>

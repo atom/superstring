@@ -47,13 +47,13 @@ public:
   Patch invert();
 
   // Mutations
-  bool splice(Point new_splice_start,
+  void splice(Point new_splice_start,
               Point new_deletion_extent, Point new_insertion_extent,
               optional<Text> &&deleted_text = optional<Text> {},
               optional<Text> &&inserted_text = optional<Text> {},
               uint32_t deleted_text_size = 0);
-  bool splice_old(Point start, Point deletion_extent, Point insertion_extent);
-  bool combine(const Patch &other, bool left_to_right = true);
+  void splice_old(Point start, Point deletion_extent, Point insertion_extent);
+  void combine(const Patch &other, bool left_to_right = true);
   void clear();
   void rebalance();
 
