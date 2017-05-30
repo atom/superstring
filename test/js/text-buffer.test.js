@@ -6,6 +6,7 @@ const {TextBuffer} = require('../..')
 const Random = require('random-seed')
 const TestDocument = require('./helpers/test-document')
 const {traverse} = require('./helpers/point-helpers')
+const {getExtent} = require('./helpers/text-helpers')
 const MAX_INT32 = 4294967296
 
 const isWindows = process.platform === 'win32'
@@ -606,42 +607,66 @@ describe('TextBuffer', () => {
       const generateSeed = Random.create()
       let seed = generateSeed(MAX_INT32)
       const random = new Random(seed)
-      const {path: filePath} = temp.openSync()
       const testDocument = new TestDocument(seed)
-
-      fs.writeFileSync(filePath, testDocument.getText(), 'utf8')
+      console.log('Seed: ', seed);
 
       const promises = []
-      const buffer = new TextBuffer()
-      buffer.loadSync(filePath, 'utf8')
+      const buffer = new TextBuffer(testDocument.getText())
+      let currentText = buffer.getText()
 
       for (let i = 0; i < 20; i++) {
         switch (random(4)) {
           case 0: {
             testDocument.performRandomSplice()
-            fs.writeFileSync(filePath, testDocument.getText(), 'utf8')
-            promises.push(buffer.load(filePath))
+            const text = testDocument.getText()
+            const filePath = temp.openSync().path
+            const previousText = buffer.getText()
+            const wasModified = buffer.isModified()
+            fs.writeFileSync(filePath, text, 'utf8')
+            promises.push(buffer.load(filePath).then(() => {
+              if (!wasModified && currentText === previousText) {
+                assert.equal(buffer.getText(), text)
+                assert.notOk(buffer.isModified())
+                currentText = text
+              } else {
+                assert.equal(buffer.getText(), currentText)
+              }
+            }))
             break;
           }
 
           case 1: {
-            testDocument.performRandomSplice()
-            fs.writeFileSync(filePath, testDocument.getText(), 'utf8')
-            promises.push(buffer.reload(filePath))
+            const text = testDocument.getText()
+            const filePath = temp.openSync().path
+            fs.writeFileSync(filePath, text, 'utf8')
+            promises.push(buffer.reload(filePath).then((patch) => {
+              assert.equal(buffer.getText(), text)
+              assert.equal(applyPatch(currentText, patch), text)
+              currentText = text
+              assert.notOk(buffer.isModified())
+            }))
             break;
           }
 
           case 2: {
             const {start, deletedExtent, insertedText} = testDocument.performRandomSplice()
             buffer.setTextInRange(Range(start, traverse(start, deletedExtent)), insertedText)
-            promises.push(buffer.save(filePath))
+            const text = buffer.getText()
+            const filePath = temp.openSync().path
+            currentText = text
+            promises.push(buffer.save(filePath).then(() => {
+              assert.equal(fs.readFileSync(filePath, 'utf8'), text)
+            }))
             break;
           }
 
           case 3: {
-            const range = testDocument.buildRandomRange()
-            const text = buffer.getTextInRange(range)
-            promises.push(buffer.search(new RegExp(text)))
+            const subtext = buffer.getTextInRange(testDocument.buildRandomRange())
+            const regex = new RegExp(subtext)
+            const expectedRange = referenceSearch(buffer.getText(), regex)
+            promises.push(buffer.search(regex).then((result) => {
+              assert.deepEqual(result, expectedRange)
+            }))
             break;
           }
         }
@@ -651,6 +676,29 @@ describe('TextBuffer', () => {
     })
   })
 })
+
+function referenceSearch(text, regex) {
+  const match = regex.exec(text)
+  if (match) {
+    const start = getExtent(text.slice(0, match.index))
+    const end = traverse(start, getExtent(match[0]))
+    return {start, end}
+  }
+  return null
+}
+
+function applyPatch(text, patch) {
+  const buffer = new TextBuffer(text)
+  const changes = patch.getChanges()
+  for (let i = changes.length - 1; i >= 0; i--) {
+    const change = changes[i]
+    buffer.setTextInRange(
+      Range(change.oldStart, change.oldEnd),
+      change.newText
+    )
+  }
+  return buffer.getText()
+}
 
 function toPlainObject(value) {
   return JSON.parse(JSON.stringify(value))
