@@ -25,7 +25,6 @@ const encodings = [
   'iso88591',
   'iso88593',
   'iso885915',
-  'macroman',
   'cp437',
   'cp850',
   'windows1256',
@@ -61,6 +60,13 @@ const encodings = [
   'eucjp',
   'euckr',
 ]
+
+if (process.platform === 'darwin') {
+  encodings.push(
+    'macroman',
+    'MAC-ROMAN'
+  )
+}
 
 describe('TextBuffer', () => {
   describe('.load', () => {
