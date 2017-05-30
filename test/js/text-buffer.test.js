@@ -11,6 +11,57 @@ const MAX_INT32 = 4294967296
 
 const isWindows = process.platform === 'win32'
 
+const encodings = [
+  'utf8',
+  'UTF8',
+  'UTF-8',
+  'utf16le',
+  'UTF16LE',
+  'UTF-16-LE',
+  'utf16be',
+  'UTF16BE',
+  'windows1252',
+  'WINDOWS_1252',
+  'iso88591',
+  'iso88593',
+  'iso885915',
+  'macroman',
+  'cp437',
+  'cp850',
+  'windows1256',
+  'iso88596',
+  'windows1257',
+  'iso88594',
+  'ISO-8859-4',
+  'iso885914',
+  'windows1250',
+  'iso88592',
+  'windows1251',
+  'cp866',
+  'iso88595',
+  'koi8r',
+  'koi8u',
+  'iso885913',
+  'windows1253',
+  'iso88597',
+  'windows1255',
+  'iso88598',
+  'iso885910',
+  'iso885916',
+  'windows1254',
+  'iso88599',
+  'windows1258',
+  'gbk',
+  'gb18030',
+  'cp950',
+  'big5hkscs',
+  'shiftjis',
+  'shift_jis',
+  'cp932',
+  'eucjp',
+  'euckr',
+]
+
 describe('TextBuffer', () => {
   describe('.load', () => {
     if (!TextBuffer.prototype.load) return;
@@ -105,9 +156,9 @@ describe('TextBuffer', () => {
       fs.writeFileSync(filePath, content, 'utf16le')
 
       let rejection = null
-      return buffer.load(filePath, 'GARBAGE-16')
+      return buffer.load(filePath, 'GARBAGE16')
         .catch(error => rejection = error)
-        .then(() => assert.equal(rejection.message, 'Invalid encoding name: GARBAGE-16'))
+        .then(() => assert.equal(rejection.message, 'Invalid encoding name: GARBAGE16'))
     })
 
     it('aborts if the buffer is modified before the load', () => {
@@ -137,6 +188,14 @@ describe('TextBuffer', () => {
 
       buffer.setText('ghi')
       return loadPromise
+    })
+
+    it('can handle a variety of encodings', () => {
+      const {path: filePath} = temp.openSync()
+
+      return Promise.all(encodings.map((encoding) =>
+        new TextBuffer().load(filePath, encoding)
+      ))
     })
 
     describe('error handling', () => {
@@ -344,6 +403,14 @@ describe('TextBuffer', () => {
         assert.equal(buffer.getText(), text4)
         assert(!buffer.isModified())
       })
+    })
+
+    it('can handle a variety of encodings', () => {
+      const {path: filePath} = temp.openSync()
+
+      return Promise.all(encodings.map((encoding) =>
+        new TextBuffer('abc').save(filePath, encoding)
+      ))
     })
 
     describe('error handling', () => {

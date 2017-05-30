@@ -42,6 +42,8 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
         encoding = 'UTF8'
       }
 
+      encoding = normalizeEncoding(encoding)
+
       return new Promise((resolve, reject) => {
         const completionCallback = (error, result) => {
           error ? reject(error) : resolve(result)
@@ -66,6 +68,8 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
 
   TextBuffer.prototype.save = function (destination, encoding = 'UTF8') {
     const CHUNK_SIZE = 10 * 1024
+
+    encoding = normalizeEncoding(encoding)
 
     return new Promise((resolve, reject) => {
       if (typeof destination === 'string') {
@@ -105,6 +109,14 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
       })
     })
   }
+}
+
+function normalizeEncoding(encoding) {
+  return encoding.toUpperCase()
+    .replace(/[^A-Z\d]/g, '')
+    .replace(/^(UTF|UCS|ISO|WINDOWS|KOI8)(\w)/, '$1-$2')
+    .replace(/^(ISO-8859)(\d)/, '$1-$2')
+    .replace(/^(SHIFT)(\w)/, '$1_$2')
 }
 
 module.exports = {
