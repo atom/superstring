@@ -74,6 +74,7 @@ public:
   friend class Snapshot;
   Snapshot *create_snapshot();
 
+  bool is_modified(const Snapshot *) const;
   Patch get_inverted_changes(const Snapshot *) const;
 
   size_t layer_count()  const;

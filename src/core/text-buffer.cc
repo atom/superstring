@@ -316,6 +316,24 @@ struct TextBuffer::Layer {
 
     return result;
   }
+
+  bool is_modified(const Layer *base_layer) {
+    if (size() != base_layer->size()) return true;
+
+    bool result = false;
+    uint32_t start_offset = 0;
+    for_each_chunk_in_range(Point(), extent(), [&](TextSlice chunk) {
+      if (chunk.text == &(*base_layer->text) ||
+          equal(chunk.begin(), chunk.end(), base_layer->text->begin() + start_offset)) {
+        start_offset += chunk.size();
+        return false;
+      }
+      result = true;
+      return true;
+    });
+
+    return result;
+  }
 };
 
 TextBuffer::TextBuffer(String &&text) :
@@ -339,12 +357,8 @@ TextBuffer::TextBuffer(const std::u16string &text) :
   TextBuffer{String{text.begin(), text.end()}} {}
 
 void TextBuffer::reset(Text &&new_base_text) {
-  top_layer = new Layer(top_layer);
-  top_layer->extent_ = new_base_text.extent();
-  top_layer->size_ = new_base_text.size();
-  top_layer->text = move(new_base_text);
-  base_layer = top_layer;
-  consolidate_layers();
+  set_text(String(new_base_text.content));
+  flush_changes();
 }
 
 Patch TextBuffer::get_inverted_changes(const Snapshot *snapshot) const {
@@ -525,21 +539,11 @@ optional<Range> TextBuffer::search(const Regex &regex) const {
 }
 
 bool TextBuffer::is_modified() const {
-  if (size() != base_layer->size()) return true;
+  return top_layer->is_modified(base_layer);
+}
 
-  bool result = false;
-  uint32_t start_offset = 0;
-  top_layer->for_each_chunk_in_range(Point(), extent(), [&](TextSlice chunk) {
-    if (chunk.text == &(*base_layer->text) ||
-        equal(chunk.begin(), chunk.end(), base_layer->text->begin() + start_offset)) {
-      start_offset += chunk.size();
-      return false;
-    }
-    result = true;
-    return true;
-  });
-
-  return result;
+bool TextBuffer::is_modified(const Snapshot *snapshot) const {
+  return top_layer->is_modified(&snapshot->base_layer);
 }
 
 string TextBuffer::get_dot_graph() const {

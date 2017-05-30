@@ -478,7 +478,7 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
         return;
       }
 
-      bool is_modified = buffer->is_modified();
+      bool is_modified = buffer->is_modified(snapshot);
       if (is_modified) {
         if (force) {
           Patch inverted_changes = buffer->get_inverted_changes(snapshot);
@@ -492,15 +492,16 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
         }
       }
 
-      delete snapshot;
-
-      bool has_changed = is_modified || buffer->base_text() != *loaded_text;
+      bool has_changed = is_modified || snapshot->base_text() != *loaded_text;
       if (progress_callback) {
         Local<Value> argv[] = {Nan::New<Number>(100), Nan::New<Boolean>(has_changed)};
         progress_callback->Call(2, argv);
       }
 
-      if (has_changed) buffer->reset(move(*loaded_text));
+      delete snapshot;
+      if (has_changed) {
+        buffer->reset(move(*loaded_text));
+      }
 
       Local<Value> argv[] = {Nan::Null(), PatchWrapper::from_patch(move(patch))};
       callback->Call(2, argv);
