@@ -307,6 +307,8 @@ TEST_CASE("TextBuffer::search") {
   REQUIRE(error_message == u"missing closing parenthesis");
 
   REQUIRE(buffer.search(Regex(u"", nullptr)) == (Range{{0, 0}, {0, 0}}));
+  REQUIRE(TextBuffer().search(Regex(u"", nullptr)) == (Range{{0, 0}, {0, 0}}));
+
   REQUIRE(buffer.search(Regex(u"ef*", nullptr)) == (Range{{1, 0}, {1, 2}}));
   REQUIRE(buffer.search(Regex(u"x", nullptr)) == optional<Range>{});
   REQUIRE(buffer.search(Regex(u"c.", nullptr)) == (Range{{0, 2}, {0, 4}}));

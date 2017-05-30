@@ -306,6 +306,14 @@ struct TextBuffer::Layer {
       return false;
     }, splay);
 
+    if (!result) {
+      static uint16_t EMPTY[] = {0};
+      MatchResult match_result = regex.match(EMPTY, 0, match_data, true);
+      if (match_result.type == MatchResult::Partial || match_result.type == MatchResult::Full) {
+        return Range{Point(), Point()};
+      }
+    }
+
     return result;
   }
 };
