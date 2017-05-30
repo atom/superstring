@@ -19,7 +19,7 @@ struct TextBuffer::Layer {
   Layer *previous_layer;
   Patch patch;
   optional<Text> text;
-  bool is_derived;
+  bool uses_patch;
 
   Point extent_;
   uint32_t size_;
@@ -28,7 +28,7 @@ struct TextBuffer::Layer {
   Layer(Text &&text) :
     previous_layer{nullptr},
     text{move(text)},
-    is_derived{false},
+    uses_patch{false},
     extent_{this->text->extent()},
     size_{this->text->size()},
     snapshot_count{0} {}
@@ -36,7 +36,7 @@ struct TextBuffer::Layer {
   Layer(Layer *previous_layer) :
     previous_layer{previous_layer},
     patch{Patch()},
-    is_derived{true},
+    uses_patch{true},
     extent_{previous_layer->extent()},
     size_{previous_layer->size()},
     snapshot_count{0} {}
@@ -55,7 +55,7 @@ struct TextBuffer::Layer {
   }
 
   uint16_t character_at(Point position) const {
-    if (!is_derived) return text->at(position);
+    if (!uses_patch) return text->at(position);
 
     auto change = patch.get_change_starting_before_new_position(position);
     if (!change) return previous_layer->character_at(position);
@@ -69,7 +69,7 @@ struct TextBuffer::Layer {
   }
 
   ClipResult clip_position(Point position, bool splay = false) {
-    if (!is_derived) return text->clip_position(position);
+    if (!uses_patch) return text->clip_position(position);
     if (snapshot_count > 0) splay = false;
 
     auto preceding_change = splay ?
@@ -142,7 +142,7 @@ struct TextBuffer::Layer {
     Point goal_position = clip_position(end, splay).position;
     Point current_position = clip_position(start, splay).position;
 
-    if (!is_derived) return callback(TextSlice(*text).slice({current_position, goal_position}));
+    if (!uses_patch) return callback(TextSlice(*text).slice({current_position, goal_position}));
     if (snapshot_count > 0) splay = false;
 
     Point base_position;
@@ -550,7 +550,7 @@ string TextBuffer::get_dot_graph() const {
     auto index = iter - begin;
     result << "graph { label=\"layer " << index << " (snapshot count " << layer->snapshot_count;
     if (layer == base_layer) result << ", base";
-    if (layer->is_derived) result << ", derived";
+    if (layer->uses_patch) result << ", uses_patch";
     result << "):\" }\n";
     if (layer->text) result << "graph { label=\"text:\n" << *layer->text << "\" }\n";
     if (index > 0) result << layer->patch.get_dot_graph();
@@ -655,11 +655,11 @@ void TextBuffer::consolidate_layers() {
         mutable_layers.clear();
       }
 
-      if (layer->text) layer->is_derived = false;
+      if (layer->text) layer->uses_patch = false;
       mutable_layers.push_back(layer);
     }
 
-    if (!layer->is_derived) needed_by_layer_above = false;
+    if (!layer->uses_patch) needed_by_layer_above = false;
     layer = layer->previous_layer;
   }
 
@@ -682,7 +682,7 @@ void TextBuffer::squash_layers(const vector<Layer *> &layers) {
           );
         }
         layer->text = move(layer->previous_layer->text);
-        layer->is_derived = false;
+        layer->uses_patch = false;
       }
     }
 
