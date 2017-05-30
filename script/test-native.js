@@ -26,7 +26,7 @@ switch (args[0]) {
   case '-v':
   case '--valgrind':
     args.shift()
-    run('valgrind', [testsPath, args[0]])
+    run('valgrind', ['--leak-check=full', testsPath, args[0]])
     break
 
   case '-s':
