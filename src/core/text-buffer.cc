@@ -679,31 +679,57 @@ void TextBuffer::consolidate_layers() {
 }
 
 void TextBuffer::squash_layers(const vector<Layer *> &layers) {
-  if (layers.size() < 2) return;
+  size_t layer_index = 0;
+  size_t layer_count = layers.size();
+  if (layer_count < 2) return;
 
-  bool left_to_right = true;
-  for (auto iter = layers.rbegin() + 1, end = layers.rend(); iter != end; ++iter) {
-    Layer *layer = *iter;
-    if (!layer->text) {
-      if (layer->previous_layer->text) {
-        for (auto change : layer->patch.get_changes()) {
-          layer->previous_layer->text->splice(
-            change.new_start,
-            change.old_end.traversal(change.old_start),
-            *change.new_text
-          );
-        }
-        layer->text = move(layer->previous_layer->text);
-        layer->uses_patch = false;
-      }
+  // Find the highest layer that has already computed its text.
+  optional<Text> text;
+  for (layer_index = 0; layer_index < layer_count; layer_index++) {
+    if (layers[layer_index]->text) {
+      text = move(*layers[layer_index]->text);
+      break;
     }
-
-    layer->previous_layer->patch.combine(layer->patch, left_to_right);
-    layer->patch = move(layer->previous_layer->patch);
   }
 
-  layers.front()->previous_layer = layers.back()->previous_layer;
-  for (auto iter = layers.begin() + 1, end = layers.end(); iter != end; ++iter) {
-    delete *iter;
+  // Incorporate into that text the patches from all the layers above.
+  if (text) {
+    layer_index--;
+    for (; layer_index + 1 > 0; layer_index--) {
+      for (auto change : layers[layer_index]->patch.get_changes()) {
+        text->splice(
+          change.new_start,
+          change.old_end.traversal(change.old_start),
+          *change.new_text
+        );
+      }
+    }
+  }
+
+  // If there is another layer below these layers, combine their patches into
+  // into one. Otherwise, this is the new base layer, so we don't need a patch.
+  Patch patch;
+  Layer *previous_layer = layers.back()->previous_layer;
+
+  if (previous_layer) {
+    layer_index = layer_count - 1;
+    patch = move(layers[layer_index]->patch);
+    layer_index--;
+
+    bool left_to_right = true;
+    for (; layer_index + 1 > 0; layer_index--) {
+      patch.combine(layers[layer_index]->patch, left_to_right);
+      left_to_right = !left_to_right;
+    }
+  } else {
+    assert(text);
+  }
+
+  layers[0]->previous_layer = previous_layer;
+  layers[0]->text = move(text);
+  layers[0]->patch = move(patch);
+
+  for (layer_index = 1; layer_index < layer_count; layer_index++) {
+    delete layers[layer_index];
   }
 }
