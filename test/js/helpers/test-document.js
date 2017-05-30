@@ -98,11 +98,13 @@ class TestDocument {
     const start = this.buildRandomPoint()
     let end = start
 
-    while (this.random(10) < 5) {
-      end = pointHelpers.traverse(end, {
-        row: this.random(3),
-        column: this.random(5)
-      })
+    if (this.random(10)) {
+      do {
+        end = pointHelpers.traverse(end, {
+          row: this.random(3),
+          column: this.random(5)
+        })
+      } while (this.random(2));
     }
 
     return {start, end: this.clipPosition(end)}
