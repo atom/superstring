@@ -63,6 +63,6 @@ EMSCRIPTEN_BINDINGS(TextBuffer) {
     .function("lineForRow", WRAP(&TextBuffer::line_for_row))
     .function("characterIndexForPosition", character_index_for_position)
     .function("positionForCharacterIndex", position_for_character_index)
-    .function("isModified", &TextBuffer::is_modified)
+    .function("isModified", WRAP_OVERLOAD(&TextBuffer::is_modified, bool (TextBuffer::*)() const))
     .function("searchSync", search_sync);
 }
