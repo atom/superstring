@@ -114,7 +114,7 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
 function normalizeEncoding(encoding) {
   return encoding.toUpperCase()
     .replace(/[^A-Z\d]/g, '')
-    .replace(/^(UTF|UCS|ISO|WINDOWS|KOI8)(\w)/, '$1-$2')
+    .replace(/^(UTF|UCS|ISO|WINDOWS|KOI8|EUC)(\w)/, '$1-$2')
     .replace(/^(ISO-8859)(\d)/, '$1-$2')
     .replace(/^(SHIFT)(\w)/, '$1_$2')
 }
