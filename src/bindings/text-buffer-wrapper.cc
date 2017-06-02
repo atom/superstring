@@ -181,11 +181,12 @@ void TextBufferWrapper::line_for_row(const Nan::FunctionCallbackInfo<Value> &inf
   if (maybe_row.IsJust()) {
     uint32_t row = maybe_row.FromJust();
     if (row <= text_buffer.extent().row) {
-      Local<String> result;
-      auto text = text_buffer.text_in_range({{row, 0}, {row, UINT32_MAX}});
-      if (Nan::New<String>(text.data(), text.size()).ToLocal(&result)) {
-        info.GetReturnValue().Set(result);
-      }
+      text_buffer.with_line_for_row(row, [&info](const uint16_t *data, uint32_t size) {
+        Local<String> result;
+        if (Nan::New<String>(data, size).ToLocal(&result)) {
+          info.GetReturnValue().Set(result);
+        }
+      });
     }
   }
 }

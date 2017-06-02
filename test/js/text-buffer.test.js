@@ -525,25 +525,32 @@ describe('TextBuffer', () => {
 
   describe('.lineForRow, .lineLengthForRow, and .lineEndingForRow', () => {
     it('returns the properties of the given line of text', () => {
-      const buffer = new TextBuffer('abc\r\ndefg\n\r\nhijkl')
+      const buffer = new TextBuffer('abc\r\ndefg\n\r\nhijkl\n\n')
+      buffer.setTextInRange(Range(Point(1, 1), Point(1, 2)), 'EEE')
 
       assert.equal(buffer.lineForRow(0), 'abc')
-      assert.equal(buffer.lineForRow(1), 'defg')
+      assert.equal(buffer.lineForRow(1), 'dEEEfg')
       assert.equal(buffer.lineForRow(2), '')
       assert.equal(buffer.lineForRow(3), 'hijkl')
-      assert.equal(buffer.lineForRow(4), undefined)
+      assert.equal(buffer.lineForRow(4), '')
+      assert.equal(buffer.lineForRow(5), '')
+      assert.equal(buffer.lineForRow(6), undefined)
 
       assert.equal(buffer.lineLengthForRow(0), 3)
-      assert.equal(buffer.lineLengthForRow(1), 4)
+      assert.equal(buffer.lineLengthForRow(1), 6)
       assert.equal(buffer.lineLengthForRow(2), 0)
       assert.equal(buffer.lineLengthForRow(3), 5)
-      assert.equal(buffer.lineLengthForRow(5), undefined)
+      assert.equal(buffer.lineLengthForRow(4), 0)
+      assert.equal(buffer.lineLengthForRow(5), 0)
+      assert.equal(buffer.lineLengthForRow(6), undefined)
 
       assert.equal(buffer.lineEndingForRow(0), '\r\n')
       assert.equal(buffer.lineEndingForRow(1), '\n')
       assert.equal(buffer.lineEndingForRow(2), '\r\n')
-      assert.equal(buffer.lineEndingForRow(3), '')
-      assert.equal(buffer.lineEndingForRow(5), undefined)
+      assert.equal(buffer.lineEndingForRow(3), '\n')
+      assert.equal(buffer.lineEndingForRow(4), '\n')
+      assert.equal(buffer.lineEndingForRow(5), '')
+      assert.equal(buffer.lineEndingForRow(6), undefined)
     })
   })
 

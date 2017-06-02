@@ -27,6 +27,8 @@ public:
   uint32_t size() const;
   Point extent() const;
   optional<Text::String> line_for_row(uint32_t row);
+  void with_line_for_row(uint32_t row, const std::function<void(const uint16_t *, uint32_t)> &);
+
   optional<uint32_t> line_length_for_row(uint32_t row);
   const uint16_t *line_ending_for_row(uint32_t row);
   ClipResult clip_position(Point);

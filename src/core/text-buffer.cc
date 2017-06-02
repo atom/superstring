@@ -452,6 +452,31 @@ const uint16_t *TextBuffer::line_ending_for_row(uint32_t row) {
   return result;
 }
 
+
+void TextBuffer::with_line_for_row(uint32_t row, const std::function<void(const uint16_t *, uint32_t)> &callback) {
+  Text::String result;
+  uint32_t column = 0;
+  uint32_t slice_count = 0;
+  Point line_end = clip_position({row, UINT32_MAX}).position;
+  top_layer->for_each_chunk_in_range({row, 0}, line_end, [&](TextSlice slice) -> bool {
+    auto begin = slice.begin(), end = slice.end();
+    size_t size = end - begin;
+    slice_count++;
+    column += size;
+    if (slice_count == 1 && column == line_end.column) {
+      callback(slice.data(), slice.size());
+      return true;
+    } else {
+      result.insert(result.end(), begin, end);
+      return false;
+    }
+  });
+
+  if (slice_count != 1) {
+    callback(result.data(), result.size());
+  }
+}
+
 optional<String> TextBuffer::line_for_row(uint32_t row) {
   if (row > extent().row) return optional<String>{};
   return text_in_range({{row, 0}, {row, UINT32_MAX}});
