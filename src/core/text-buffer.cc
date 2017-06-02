@@ -357,8 +357,16 @@ TextBuffer::TextBuffer(const std::u16string &text) :
   TextBuffer{String{text.begin(), text.end()}} {}
 
 void TextBuffer::reset(Text &&new_base_text) {
-  set_text(String(new_base_text.content));
-  flush_changes();
+  if (!top_layer->previous_layer && top_layer->snapshot_count == 0) {
+    top_layer->extent_ = new_base_text.extent();
+    top_layer->size_ = new_base_text.size();
+    top_layer->text = move(new_base_text);
+    top_layer->patch.clear();
+    top_layer->uses_patch = false;
+  } else {
+    set_text(String(new_base_text.content));
+    flush_changes();
+  }
 }
 
 Patch TextBuffer::get_inverted_changes(const Snapshot *snapshot) const {
