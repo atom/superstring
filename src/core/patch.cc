@@ -1400,7 +1400,7 @@ Patch::Node *Patch::splay_node_starting_before(Point target) {
 }
 
 void Patch::remove_noop_change() {
-  if (root->old_text && root->new_text && *root->old_text == *root->new_text) {
+  if (root && root->old_text && root->new_text && *root->old_text == *root->new_text) {
     splice_old(root->old_distance_from_left_ancestor, Point(), Point());
   }
 }
