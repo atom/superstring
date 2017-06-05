@@ -347,6 +347,25 @@ TEST_CASE("TextBuffer::search - partial matches at EOF") {
   REQUIRE(buffer.search(Regex(u"[^\r]\n", nullptr)) == optional<Range>());
 }
 
+TEST_CASE("TextBuffer::search_all") {
+  TextBuffer buffer{u"abc\ndefg\nhijkl"};
+  REQUIRE(buffer.search_all(Regex(u"\\w+", nullptr)) == vector<Range>({
+    Range{Point{0, 0}, Point{0, 3}},
+    Range{Point{1, 0}, Point{1, 4}},
+    Range{Point{2, 0}, Point{2, 5}},
+  }));
+
+  buffer.set_text_in_range({{1, 3}, {1, 3}}, u"34");
+  buffer.set_text_in_range({{1, 1}, {1, 1}}, u"12");
+  REQUIRE(buffer.text() == u"abc\nd12ef34g\nhijkl");
+
+  REQUIRE(buffer.search_all(Regex(u"\\w+", nullptr)) == vector<Range>({
+    Range{Point{0, 0}, Point{0, 3}},
+    Range{Point{1, 0}, Point{1, 8}},
+    Range{Point{2, 0}, Point{2, 5}},
+  }));
+}
+
 struct SnapshotData {
   Text base_text;
   String text;

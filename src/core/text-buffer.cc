@@ -230,90 +230,134 @@ struct TextBuffer::Layer {
     return result;
   }
 
-  optional<Range> search(const Regex &regex, bool splay = false) {
+  template <typename Callback>
+  void scan_in_range(const Regex &regex, Range range, const Callback &callback, bool splay = false) {
     Regex::MatchData match_data(regex);
+
+    uint32_t minimum_match_row = 0;
     optional<Range> result;
     Text chunk_continuation;
     TextSlice slice_to_search;
-    Point slice_to_search_start_position;
+    Point chunk_start_position = range.start;
+    Point last_search_end_position = range.start;
+    Point slice_to_search_start_position = range.start;
 
-    for_each_chunk_in_range(Point(), extent(), [&](TextSlice chunk) {
-      while (!chunk.empty()) {
+    for_each_chunk_in_range(range.start, range.end, [&](TextSlice chunk) {
+      Point chunk_end_position = chunk_start_position.traverse(chunk.extent());
+      while (last_search_end_position < chunk_end_position) {
+        TextSlice remaining_chunk = chunk
+          .suffix(last_search_end_position.traversal(chunk_start_position));
 
         // Once a result is found, we only continue if the match ends with a CR
         // at a chunk boundary. If this chunk starts with an LF, we decrement
         // the column because Points within CRLF line endings are not valid.
         if (result) {
-          if (!chunk.empty() && chunk.front() == '\n') result->end.column--;
-          return true;
+          if (!remaining_chunk.empty() && remaining_chunk.front() == '\n') {
+            chunk_continuation.splice(Point(), Point(), Text{u"\r"});
+            slice_to_search_start_position.column--;
+            result->end.column--;
+          }
+
+          if (callback(*result)) return true;
+          result = optional<Range>{};
         }
 
         if (!chunk_continuation.empty()) {
-          auto split = chunk.split(MAX_CHUNK_SIZE_TO_COPY);
-          chunk_continuation.append(split.first);
-          chunk = split.second;
+          chunk_continuation.append(remaining_chunk.prefix(MAX_CHUNK_SIZE_TO_COPY));
           slice_to_search = TextSlice(chunk_continuation);
         } else {
-          slice_to_search = chunk;
-          chunk = TextSlice();
+          slice_to_search = remaining_chunk;
         }
 
         MatchResult match_result = regex.match(
           slice_to_search.data(),
           slice_to_search.size(),
           match_data,
-          slice_to_search_start_position.traverse(slice_to_search.extent()) == extent()
+          slice_to_search_start_position.traverse(slice_to_search.extent()) == range.end
         );
+
         switch (match_result.type) {
           case MatchResult::Error:
             chunk_continuation.clear();
             return true;
 
           case MatchResult::None:
-            slice_to_search_start_position = slice_to_search_start_position.traverse(
-              slice_to_search.extent()
-            );
+            last_search_end_position = slice_to_search_start_position.traverse(slice_to_search.extent());
+            slice_to_search_start_position = last_search_end_position;
+            minimum_match_row = slice_to_search_start_position.row;
             chunk_continuation.clear();
             break;
 
           case MatchResult::Partial:
+            last_search_end_position = slice_to_search_start_position.traverse(slice_to_search.extent());
             if (chunk_continuation.empty() || match_result.start_offset > 0) {
-              Point partial_match_position = slice_to_search.position_for_offset(match_result.start_offset);
+              Point partial_match_position = slice_to_search.position_for_offset(match_result.start_offset,
+                minimum_match_row - slice_to_search_start_position.row
+              );
               slice_to_search_start_position = slice_to_search_start_position.traverse(partial_match_position);
+              minimum_match_row = slice_to_search_start_position.row;
               chunk_continuation.assign(slice_to_search.suffix(partial_match_position));
             }
             break;
 
           case MatchResult::Full:
+            Point match_start_position = slice_to_search.position_for_offset(
+              match_result.start_offset,
+              minimum_match_row - slice_to_search_start_position.row
+            );
+            Point match_end_position = slice_to_search.position_for_offset(match_result.end_offset,
+              minimum_match_row - slice_to_search_start_position.row
+            );
             result = Range{
-              slice_to_search_start_position.traverse(
-                slice_to_search.position_for_offset(match_result.start_offset)
-              ),
-              slice_to_search_start_position.traverse(
-                slice_to_search.position_for_offset(match_result.end_offset)
-              )
+              slice_to_search_start_position.traverse(match_start_position),
+              slice_to_search_start_position.traverse(match_end_position)
             };
+
+            minimum_match_row = result->end.row;
+            last_search_end_position = slice_to_search_start_position.traverse(match_end_position);
+            slice_to_search_start_position = last_search_end_position;
+            chunk_continuation.clear();
 
             // If the match ends with a CR at the end of a chunk, continue looking
             // at the next chunk, in case that chunk starts with an LF. Points
             // within CRLF line endings are not valid.
             if (match_result.end_offset == slice_to_search.size() && slice_to_search.back() == '\r') continue;
 
-            return true;
+            if (callback(*result)) return true;
+            result = optional<Range>{};
         }
       }
 
+      chunk_start_position = chunk_end_position;
       return false;
     }, splay);
 
-    if (!result) {
+    if (result) {
+      callback(*result);
+    } else {
       static uint16_t EMPTY[] = {0};
       MatchResult match_result = regex.match(EMPTY, 0, match_data, true);
       if (match_result.type == MatchResult::Partial || match_result.type == MatchResult::Full) {
-        return Range{Point(), Point()};
+        callback(Range{Point(), Point()});
       }
     }
+  }
 
+  optional<Range> search_in_range(const Regex &regex, Range range, bool splay = false) {
+    optional<Range> result;
+    scan_in_range(regex, range, [&result](Range match_range) -> bool {
+      result = match_range;
+      return true;
+    }, splay);
+    return result;
+  }
+
+  vector<Range> search_all_in_range(const Regex &regex, Range range, bool splay = false) {
+    vector<Range> result;
+    scan_in_range(regex, range, [&result](Range match_range) -> bool {
+      result.push_back(match_range);
+      return false;
+    }, splay);
     return result;
   }
 
@@ -460,7 +504,6 @@ const uint16_t *TextBuffer::line_ending_for_row(uint32_t row) {
   return result;
 }
 
-
 void TextBuffer::with_line_for_row(uint32_t row, const std::function<void(const uint16_t *, uint32_t)> &callback) {
   Text::String result;
   uint32_t column = 0;
@@ -568,7 +611,11 @@ void TextBuffer::set_text_in_range(Range old_range, const u16string &string) {
 }
 
 optional<Range> TextBuffer::search(const Regex &regex) const {
-  return top_layer->search(regex, true);
+  return top_layer->search_in_range(regex, Range{Point(), extent()}, false);
+}
+
+vector<Range> TextBuffer::search_all(const Regex &regex) const {
+  return top_layer->search_all_in_range(regex, Range{Point(), extent()}, false);
 }
 
 bool TextBuffer::is_modified() const {
@@ -656,7 +703,7 @@ vector<TextSlice> TextBuffer::Snapshot::chunks() const {
 }
 
 optional<Range> TextBuffer::Snapshot::search(const Regex &regex) const {
-  return layer.search(regex);
+  return layer.search_in_range(regex, Range{Point(), extent()}, false);
 }
 
 const Text &TextBuffer::Snapshot::base_text() const {

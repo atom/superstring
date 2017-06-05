@@ -68,8 +68,8 @@ Patch text_diff(const Text &old_text, const Text &new_text) {
 
         old_offset += diff.text.size();
         new_offset += diff.text.size();
-        old_position = old_text.position_for_offset(old_offset, false);
-        new_position = new_text.position_for_offset(new_offset, false);
+        old_position = old_text.position_for_offset(old_offset, 0, false);
+        new_position = new_text.position_for_offset(new_offset, 0, false);
 
         // If the next change starts between a CR and an LF, then expand that
         // change leftward to include the CR.
@@ -83,7 +83,7 @@ Patch text_diff(const Text &old_text, const Text &new_text) {
       case DiffBuilder::Operation::DELETE: {
         Text deleted_text{move(diff.text)};
         old_offset += diff.text.size();
-        Point next_old_position = old_text.position_for_offset(old_offset, false);
+        Point next_old_position = old_text.position_for_offset(old_offset, 0, false);
         result.splice(new_position, next_old_position.traversal(old_position), Point(), deleted_text, empty);
         old_position = next_old_position;
         break;
@@ -92,7 +92,7 @@ Patch text_diff(const Text &old_text, const Text &new_text) {
       case DiffBuilder::Operation::INSERT: {
         Text inserted_text{move(diff.text)};
         new_offset += diff.text.size();
-        Point next_new_position = new_text.position_for_offset(new_offset, false);
+        Point next_new_position = new_text.position_for_offset(new_offset, 0, false);
         result.splice(new_position, Point(), next_new_position.traversal(new_position), empty, inserted_text);
         new_position = next_new_position;
         break;

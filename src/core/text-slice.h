@@ -21,9 +21,10 @@ class TextSlice {
   std::pair<TextSlice, TextSlice> split(Point) const;
   std::pair<TextSlice, TextSlice> split(uint32_t) const;
   TextSlice prefix(Point) const;
+  TextSlice prefix(uint32_t) const;
   TextSlice suffix(Point) const;
   TextSlice slice(Range range) const;
-  Point position_for_offset(uint32_t offset) const;
+  Point position_for_offset(uint32_t offset, uint32_t min_row = 0) const;
   Point extent() const;
   uint16_t front() const;
   uint16_t back() const;

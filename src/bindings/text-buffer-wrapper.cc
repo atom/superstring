@@ -110,6 +110,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("baseTextDigest").ToLocalChecked(), Nan::New<FunctionTemplate>(base_text_digest));
   prototype_template->Set(Nan::New("search").ToLocalChecked(), Nan::New<FunctionTemplate>(search));
   prototype_template->Set(Nan::New("searchSync").ToLocalChecked(), Nan::New<FunctionTemplate>(search_sync));
+  prototype_template->Set(Nan::New("searchAllSync").ToLocalChecked(), Nan::New<FunctionTemplate>(search_all_sync));
   prototype_template->Set(Nan::New("getDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(dot_graph));
   RegexWrapper::init();
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
@@ -260,6 +261,20 @@ void TextBufferWrapper::search_sync(const Nan::FunctionCallbackInfo<Value> &info
     } else {
       info.GetReturnValue().Set(Nan::Null());
     }
+  }
+}
+
+void TextBufferWrapper::search_all_sync(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  const Regex *regex = RegexWrapper::regex_from_js(info[0]);
+  if (regex) {
+    auto matches = text_buffer.search_all(*regex);
+    auto length = matches.size() * 4;
+    auto buffer = v8::ArrayBuffer::New(v8::Isolate::GetCurrent(), length * sizeof(uint32_t));
+    auto result = v8::Uint32Array::New(buffer, 0, length);
+    auto data = buffer->GetContents().Data();
+    memcpy(data, matches.data(), length * sizeof(uint32_t));
+    info.GetReturnValue().Set(result);
   }
 }
 

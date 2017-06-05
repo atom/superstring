@@ -49,6 +49,7 @@ public:
   const Text &base_text() const;
 
   optional<Range> search(const Regex &) const;
+  std::vector<Range> search_all(const Regex &) const;
 
   class Snapshot {
     friend class TextBuffer;

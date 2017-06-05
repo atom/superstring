@@ -4,11 +4,21 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   binding = require('./browser');
 
   const {TextBuffer} = binding
-  const {search, searchSync} = TextBuffer.prototype
+  const {search, searchSync, searchAllSync} = TextBuffer.prototype
 
   TextBuffer.prototype.searchSync = function (pattern) {
     if (pattern.source) pattern = pattern.source
     const result = searchSync.call(this, pattern)
+    if (typeof result === 'string') {
+      throw new Error(result);
+    } else {
+      return result
+    }
+  }
+
+  TextBuffer.prototype.searchAllSync = function (pattern) {
+    if (pattern.source) pattern = pattern.source
+    const result = searchAllSync.call(this, pattern)
     if (typeof result === 'string') {
       throw new Error(result);
     } else {
@@ -32,7 +42,7 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   }
 
   const {TextBuffer, TextWriter, TextReader} = binding
-  const {load, reload, save, search} = TextBuffer.prototype
+  const {load, reload, save, search, searchAllSync} = TextBuffer.prototype
 
   for (const methodName of ['load', 'reload']) {
     const method = TextBuffer.prototype[methodName]
@@ -108,6 +118,19 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
           resolve(result)
       })
     })
+  }
+
+  TextBuffer.prototype.searchAllSync = function (pattern) {
+    const rawData = searchAllSync.call(this, pattern)
+    const result = new Array(rawData.length / 4)
+    let rawIndex = 0
+    for (let matchIndex = 0, n = result.length; matchIndex < n; matchIndex++) {
+      result[matchIndex] = {
+        start: {row: rawData[rawIndex++], column: rawData[rawIndex++]},
+        end: {row: rawData[rawIndex++], column: rawData[rawIndex++]}
+      }
+    }
+    return result
   }
 }
 

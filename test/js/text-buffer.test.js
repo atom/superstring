@@ -647,7 +647,7 @@ describe('TextBuffer', () => {
   })
 
   describe('.searchSync', () => {
-    it('returns the index of the first match with the given pattern', () => {
+    it('returns the range of the first match with the given pattern', () => {
       const buffer = new TextBuffer('abc\ndef')
       buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), '1')
       buffer.setTextInRange(Range(Point(0, 3), Point(0, 4)), '2')
@@ -664,8 +664,22 @@ describe('TextBuffer', () => {
     })
   })
 
+  describe('.searchAllSync', () => {
+    it('returns the ranges of all matches of the given pattern', () => {
+      const buffer = new TextBuffer('abcd')
+      buffer.setTextInRange(Range(Point(0, 1), Point(0, 1)), '1')
+      buffer.setTextInRange(Range(Point(0, 3), Point(0, 3)), '2')
+      assert.equal(buffer.getText(), 'a1b2cd')
+
+      assert.deepEqual(buffer.searchAllSync(/\d[a-z]/), [
+        Range(Point(0, 1), Point(0, 3)),
+        Range(Point(0, 3), Point(0, 5)),
+      ])
+    })
+  })
+
   describe('.search', () => {
-    it('resolves with the index of the first match with the given pattern', () => {
+    it('resolves with the range of the first match with the given pattern', () => {
       const buffer = new TextBuffer('abc\ndef')
       buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), '1')
       buffer.setTextInRange(Range(Point(0, 3), Point(0, 4)), '2')

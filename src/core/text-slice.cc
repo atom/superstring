@@ -38,11 +38,18 @@ std::pair<TextSlice, TextSlice> TextSlice::split(uint32_t split_offset) const {
   return split(position_for_offset(split_offset));
 }
 
-Point TextSlice::position_for_offset(uint32_t offset) const {
-  return text->position_for_offset(offset + start_offset()).traversal(start_position);
+Point TextSlice::position_for_offset(uint32_t offset, uint32_t min_row) const {
+  return text->position_for_offset(
+    offset + start_offset(),
+    start_position.row + min_row
+  ).traversal(start_position);
 }
 
 TextSlice TextSlice::prefix(Point prefix_end) const {
+  return split(prefix_end).first;
+}
+
+TextSlice TextSlice::prefix(uint32_t prefix_end) const {
   return split(prefix_end).first;
 }
 
