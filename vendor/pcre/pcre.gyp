@@ -36,6 +36,7 @@
             "defines": [
                 "HAVE_CONFIG_H",
                 "PCRE2_CODE_UNIT_WIDTH=16",
+                "SUPPORT_JIT",
             ],
             "cflags": [
                 "-Wno-unused-function"

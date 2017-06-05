@@ -29,7 +29,13 @@ Regex::Regex(const uint16_t *pattern, uint32_t pattern_length, u16string *error_
     uint16_t message_buffer[256];
     size_t length = pcre2_get_error_message(error_number, message_buffer, 256);
     error_message->assign(message_buffer, message_buffer + length);
+    return;
   }
+
+  pcre2_jit_compile(
+    code,
+    PCRE2_JIT_COMPLETE|PCRE2_JIT_PARTIAL_HARD|PCRE2_JIT_PARTIAL_SOFT
+  );
 }
 
 Regex::Regex(const u16string &pattern, u16string *error_message)
