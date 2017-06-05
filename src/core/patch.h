@@ -123,6 +123,7 @@ private:
   Node *build_node(Node *, Node *, Point, Point, Point, Point,
                   optional<Text> &&, optional<Text> &&, uint32_t old_text_size);
   void delete_node(Node **);
+  void remove_noop_change();
 };
 
 std::ostream &operator<<(std::ostream &, const Patch::Change &);

@@ -898,6 +898,7 @@ void Patch::combine(const Patch &other, bool left_to_right) {
              iter->old_text ? *iter->old_text : optional<Text>{},
              iter->new_text ? *iter->new_text : optional<Text>{},
              iter->old_text_size);
+      remove_noop_change();
     }
   } else {
     for (auto iter = changes.rbegin(), end = changes.rend(); iter != end;
@@ -907,6 +908,7 @@ void Patch::combine(const Patch &other, bool left_to_right) {
              iter->old_text ? *iter->old_text : optional<Text>{},
              iter->new_text ? *iter->new_text : optional<Text>{},
              iter->old_text_size);
+      remove_noop_change();
     }
   }
 }
@@ -1395,6 +1397,12 @@ Patch::Node *Patch::splay_node_starting_before(Point target) {
   }
 
   return splayed_node;
+}
+
+void Patch::remove_noop_change() {
+  if (root->old_text && root->new_text && *root->old_text == *root->new_text) {
+    splice_old(root->old_distance_from_left_ancestor, Point(), Point());
+  }
 }
 
 // Private - non-splaying reads

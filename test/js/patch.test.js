@@ -102,6 +102,22 @@ describe('Patch', function () {
     composedPatch.delete();
   })
 
+  it('removes noop changes when composing patches that cancel each other out', () => {
+    const patches = [new Patch(), new Patch()]
+    patches[0].splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, 'ciao', 'hello')
+    patches[0].splice({row: 1, column: 1}, {row: 0, column: 0}, {row: 0, column: 3}, '', 'hey')
+    patches[1].splice({row: 0, column: 3}, {row: 0, column: 5}, {row: 0, column: 4}, 'hello', 'ciao')
+
+    const composedPatch = Patch.compose(patches)
+    assert.deepEqual(JSON.parse(JSON.stringify(composedPatch.getChanges())), [
+      {
+        oldStart: {row: 1, column: 1}, oldEnd: {row: 1, column: 1},
+        newStart: {row: 1, column: 1}, newEnd: {row: 1, column: 4},
+        oldText: '', newText: 'hey'
+      },
+    ])
+  })
+
   it('can invert patches', function () {
     const patch = new Patch()
     patch.splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, 'ciao', 'hello')
