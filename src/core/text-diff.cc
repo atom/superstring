@@ -33,6 +33,17 @@ static Point previous_column(Point position) {
 
 Patch text_diff(const Text &old_text, const Text &new_text) {
   Patch result;
+  Text empty;
+  Text cr{u"\r"};
+  Text lf{u"\n"};
+
+  // When a buffer is intially loaded, this function is called with an empty
+  // `old_text`. In that case, we can avoid the overhead of converting the text
+  // to a u16string and back in order to compute the diff.
+  if (old_text.empty()) {
+    result.splice(Point(), Point(), new_text.extent(), empty, new_text);
+    return result;
+  }
 
   u16string old_string(old_text.content.begin(), old_text.content.end());
   u16string new_string(new_text.content.begin(), new_text.content.end());
@@ -45,10 +56,6 @@ Patch text_diff(const Text &old_text, const Text &new_text) {
   size_t new_offset = 0;
   Point old_position;
   Point new_position;
-
-  Text empty;
-  Text cr{u"\r"};
-  Text lf{u"\n"};
 
   for (DiffBuilder::Diff &diff : diffs) {
     switch (diff.operation) {
