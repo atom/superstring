@@ -147,6 +147,17 @@ describe('TextBuffer', () => {
       })
     })
 
+    it('resolves with an empty patch when the contents of the file have not changed', () => {
+      const buffer = new TextBuffer('cat\ndog\nelephant\nfox')
+      const {path: filePath} = temp.openSync()
+      fs.writeFileSync(filePath, 'cat\ndog\nelephant\nfox')
+
+      return buffer.load(filePath).then(patch => {
+        assert.deepEqual(patch.getChanges(), [])
+        assert.equal(buffer.getText(), 'cat\ndog\nelephant\nfox')
+      })
+    })
+
     it('can load a file in a non-UTF8 encoding', () => {
       const buffer = new TextBuffer()
 
@@ -288,6 +299,24 @@ describe('TextBuffer', () => {
       assert.ok(buffer.isModified())
 
       return loadPromise
+    })
+
+    it('marks the buffer as unmodified even if the reload does not change the text', () => {
+      const buffer = new TextBuffer('abcdef')
+
+      const {path: filePath} = temp.openSync()
+      const fileContent = '  abcdef'
+      fs.writeFileSync(filePath, fileContent)
+
+      buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), '  ')
+      assert.ok(buffer.isModified())
+      assert.equal(buffer.getText(), fileContent)
+
+      return buffer.reload(filePath).then(patch => {
+        assert.equal(patch.getChanges(), 0)
+        assert.equal(buffer.getText(), '  abcdef')
+        assert.notOk(buffer.isModified())
+      })
     })
   })
 
@@ -683,10 +712,36 @@ describe('TextBuffer', () => {
     })
   })
 
-  describe('random IO', function () {
+  describe('concurrent IO', function () {
     if (!TextBuffer.prototype.load) return;
 
     this.timeout(60 * 1000);
+
+    it('handles multiple calls to .load at a time', () => {
+      const buffer = new TextBuffer('abc')
+
+      const emptyFilePath = temp.openSync('atom').path
+      const smallFilePath = temp.openSync('atom').path
+      const largeFilePath = temp.openSync('atom').path
+      const smallContent = '123456789\n'.repeat(1024)
+      const largeContent = smallContent.repeat(10)
+      fs.writeFileSync(smallFilePath, smallContent)
+      fs.writeFileSync(largeFilePath, largeContent)
+
+      const load1 = buffer.load(emptyFilePath).then(() => {
+        assert.equal(buffer.getLength(), 0)
+      })
+
+      const load2 = buffer.load(smallFilePath).then(() => {
+        assert.equal(buffer.getLength(), smallContent.length)
+      })
+
+      const load3 = buffer.load(largeFilePath).then(() => {
+        assert.equal(buffer.getLength(), largeContent.length)
+      })
+
+      return Promise.all([load1, load2, load3])
+    })
 
     it('handles random concurrent IO calls', () => {
       const generateSeed = Random.create()
@@ -709,7 +764,7 @@ describe('TextBuffer', () => {
             const wasModified = buffer.isModified()
             fs.writeFileSync(filePath, text, 'utf8')
             promises.push(buffer.load(filePath).then(() => {
-              if (!wasModified && currentText === previousText) {
+              if (!wasModified && !buffer.isModified()) {
                 assert.equal(buffer.getText(), text)
                 assert.notOk(buffer.isModified())
                 currentText = text

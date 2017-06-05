@@ -479,21 +479,20 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
         return;
       }
 
-      bool is_modified = buffer->is_modified(snapshot);
-      if (is_modified) {
-        if (force) {
-          Patch inverted_changes = buffer->get_inverted_changes(snapshot);
-          inverted_changes.combine(patch);
-          patch = move(inverted_changes);
-        } else {
-          Local<Value> argv[] = {Nan::Null(), Nan::Null()};
-          callback->Call(2, argv);
-          delete snapshot;
-          return;
-        }
+      if (!force && buffer->is_modified()) {
+        Local<Value> argv[] = {Nan::Null(), Nan::Null()};
+        callback->Call(2, argv);
+        delete snapshot;
+        return;
       }
 
-      bool has_changed = is_modified || snapshot->base_text() != *loaded_text;
+      Patch inverted_changes = buffer->get_inverted_changes(snapshot);
+      if (inverted_changes.get_change_count() > 0) {
+        inverted_changes.combine(patch);
+        patch = move(inverted_changes);
+      }
+
+      bool has_changed = patch.get_change_count() > 0;
       if (progress_callback) {
         Local<Value> argv[] = {Nan::New<Number>(100), Nan::New<Boolean>(has_changed)};
         progress_callback->Call(2, argv);
@@ -502,6 +501,8 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
       delete snapshot;
       if (has_changed) {
         buffer->reset(move(*loaded_text));
+      } else {
+        buffer->flush_changes();
       }
 
       Local<Value> argv[] = {Nan::Null(), PatchWrapper::from_patch(move(patch))};
