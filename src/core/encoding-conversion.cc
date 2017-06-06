@@ -114,6 +114,7 @@ int EncodingConversion::convert(
 
     case UTF16_TO_UTF8: {
       auto converter = static_cast<UTF8Converter *>(data);
+      const char *input_start = *input;
       const char16_t *next_input;
       char *next_output;
       int result = converter->facet.out(
@@ -129,6 +130,13 @@ int EncodingConversion::convert(
       *output = next_output;
       switch (result) {
         case codecvt_base::ok:
+          // When using GCC and libstdc++, `codecvt_utf8_utf16::out` seems to
+          // incorrectly return `ok` when there is an incomplete multi-byte
+          // sequence at the end of the input chunk. But it correctly does
+          // not advance the input pointer, so we can distinguish this
+          // situation from an actual successful result.
+          if (*input == input_start && input_start < input_end) return InvalidTrailing;
+
           return Ok;
         case codecvt_base::partial:
           return (*input == input_end) ? Partial : InvalidTrailing;
