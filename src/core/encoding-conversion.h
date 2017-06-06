@@ -6,7 +6,10 @@
 
 class EncodingConversion {
   void *data;
-  EncodingConversion(void *);
+  int mode;
+
+  EncodingConversion(int, void *);
+  int convert(const char **, const char *, char **, char *) const;
 
  public:
   EncodingConversion(EncodingConversion &&);
