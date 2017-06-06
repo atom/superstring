@@ -212,8 +212,43 @@ describe('TextBuffer', () => {
       return loadPromise
     })
 
+    it('aborts if the progress callback returns false during the load', () => {
+      const buffer = new TextBuffer('abc')
+      const filePath = temp.openSync().path
+      fs.writeFileSync(filePath, '123456789\n'.repeat(100))
+
+      let progressCount = 0
+      function progressCallback() {
+        progressCount++
+        return false
+      }
+
+      return buffer.load(filePath, progressCallback).then((patch) => {
+        assert.notOk(patch)
+        assert.equal(progressCount, 1)
+        assert.equal(buffer.getText(), 'abc')
+        assert.notOk(buffer.isModified())
+      })
+    })
+
+    it('aborts if the final progress callback returns false', () => {
+      const buffer = new TextBuffer('abc')
+      const filePath = temp.openSync().path
+
+      function progressCallback(percentDone, hasChanged) {
+        if (hasChanged) return false
+      }
+
+      return buffer.load(filePath, progressCallback).then((patch) => {
+        assert.notOk(patch)
+        assert.equal(buffer.getText(), 'abc')
+        assert.notOk(buffer.isModified())
+      })
+    })
+
     it('can handle a variety of encodings', () => {
-      const {path: filePath} = temp.openSync()
+      const filePath = temp.openSync().path
+      fs.writeFileSync(filePath, 'abc', 'ascii')
 
       return Promise.all(encodings.map((encoding) =>
         new TextBuffer().load(filePath, encoding)

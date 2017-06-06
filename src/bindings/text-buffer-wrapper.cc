@@ -415,6 +415,7 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
     optional<int> error_number;
     Patch patch;
     bool force;
+    bool cancelled;
 
   public:
     Worker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
@@ -426,7 +427,8 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
       snapshot{snapshot},
       file_name{file_name},
       encoding_name(encoding_name),
-      force{force} {}
+      force{force},
+      cancelled{false} {}
 
     Worker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
            TextBuffer *buffer, TextBuffer::Snapshot *snapshot, Text &&text, bool force) :
@@ -435,7 +437,8 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
       buffer{buffer},
       snapshot{snapshot},
       loaded_text{move(text)},
-      force{force} {}
+      force{force},
+      cancelled{false} {}
 
     void Execute(const Nan::AsyncProgressWorkerBase<size_t>::ExecutionProgress &progress) {
       if (!loaded_text) {
@@ -479,25 +482,26 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
     }
 
     void HandleProgressCallback(const size_t *percent_done, size_t count) {
-      if (progress_callback && percent_done) {
+      if (!cancelled && progress_callback && percent_done) {
         Nan::HandleScope scope;
         Local<Value> argv[] = {Nan::New<Number>(static_cast<uint32_t>(*percent_done))};
-        progress_callback->Call(1, argv);
+        auto progress_result = progress_callback->Call(1, argv);
+        if (progress_result->IsFalse()) cancelled = true;
       }
     }
 
     void HandleOKCallback() {
       if (error_number) {
+        delete snapshot;
         Local<Value> argv[] = {error_for_number(*error_number, encoding_name, file_name)};
         callback->Call(1, argv);
-        delete snapshot;
         return;
       }
 
       if (!force && buffer->is_modified()) {
+        delete snapshot;
         Local<Value> argv[] = {Nan::Null(), Nan::Null()};
         callback->Call(2, argv);
-        delete snapshot;
         return;
       }
 
@@ -508,18 +512,26 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
       }
 
       bool has_changed = patch.get_change_count() > 0;
-      if (progress_callback) {
+      if (progress_callback && !cancelled) {
         Local<Value> argv[] = {Nan::New<Number>(100), Nan::New<Boolean>(has_changed)};
-        progress_callback->Call(2, argv);
+        auto progress_result = progress_callback->Call(2, argv);
+        if (progress_result->IsFalse()) cancelled = true;
       }
 
-      delete snapshot;
+      if (cancelled) {
+        delete snapshot;
+        Local<Value> argv[] = {Nan::Null(), Nan::Null()};
+        callback->Call(2, argv);
+        return;
+      };
+
       if (has_changed) {
         buffer->reset(move(*loaded_text));
       } else {
         buffer->flush_changes();
       }
 
+      delete snapshot;
       Local<Value> argv[] = {Nan::Null(), PatchWrapper::from_patch(move(patch))};
       callback->Call(2, argv);
     }
