@@ -35403,7 +35403,7 @@ module.exports = [
 'seaplane',
 'seaport',
 'seaquake',
-'search',
+'find',
 'searching',
 'searchlight',
 'seascape',

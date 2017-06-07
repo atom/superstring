@@ -48,8 +48,8 @@ public:
   bool deserialize_changes(Deserializer &);
   const Text &base_text() const;
 
-  optional<Range> search(const Regex &) const;
-  std::vector<Range> search_all(const Regex &) const;
+  optional<Range> find(const Regex &) const;
+  std::vector<Range> find_all(const Regex &) const;
 
   class Snapshot {
     friend class TextBuffer;
@@ -71,7 +71,7 @@ public:
     Text::String text() const;
     Text::String text_in_range(Range) const;
     const Text &base_text() const;
-    optional<Range> search(const Regex &) const;
+    optional<Range> find(const Regex &) const;
   };
 
   friend class Snapshot;

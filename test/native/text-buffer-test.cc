@@ -299,57 +299,57 @@ TEST_CASE("TextBuffer::reset") {
   REQUIRE(buffer.text() == u"456");
 }
 
-TEST_CASE("TextBuffer::search") {
+TEST_CASE("TextBuffer::find") {
   TextBuffer buffer{u"abcd\nef"};
 
   u16string error_message;
   Regex(u"(", &error_message);
   REQUIRE(error_message == u"missing closing parenthesis");
 
-  REQUIRE(buffer.search(Regex(u"", nullptr)) == (Range{{0, 0}, {0, 0}}));
-  REQUIRE(TextBuffer().search(Regex(u"", nullptr)) == (Range{{0, 0}, {0, 0}}));
+  REQUIRE(buffer.find(Regex(u"", nullptr)) == (Range{{0, 0}, {0, 0}}));
+  REQUIRE(TextBuffer().find(Regex(u"", nullptr)) == (Range{{0, 0}, {0, 0}}));
 
-  REQUIRE(buffer.search(Regex(u"ef*", nullptr)) == (Range{{1, 0}, {1, 2}}));
-  REQUIRE(buffer.search(Regex(u"x", nullptr)) == optional<Range>{});
-  REQUIRE(buffer.search(Regex(u"c.", nullptr)) == (Range{{0, 2}, {0, 4}}));
-  REQUIRE(buffer.search(Regex(u"d", nullptr)) == (Range{{0, 3}, {0, 4}}));
-  REQUIRE(buffer.search(Regex(u"\\n", nullptr)) == (Range{{0, 4}, {1, 0}}));
-  REQUIRE(buffer.search(Regex(u"\\be", nullptr)) == (Range{{1, 0}, {1, 1}}));
-  REQUIRE(buffer.search(Regex(u"^e", nullptr)) == (Range{{1, 0}, {1, 1}}));
-  REQUIRE(buffer.search(Regex(u"^(e|d)g?", nullptr)) == (Range{{1, 0}, {1, 1}}));
+  REQUIRE(buffer.find(Regex(u"ef*", nullptr)) == (Range{{1, 0}, {1, 2}}));
+  REQUIRE(buffer.find(Regex(u"x", nullptr)) == optional<Range>{});
+  REQUIRE(buffer.find(Regex(u"c.", nullptr)) == (Range{{0, 2}, {0, 4}}));
+  REQUIRE(buffer.find(Regex(u"d", nullptr)) == (Range{{0, 3}, {0, 4}}));
+  REQUIRE(buffer.find(Regex(u"\\n", nullptr)) == (Range{{0, 4}, {1, 0}}));
+  REQUIRE(buffer.find(Regex(u"\\be", nullptr)) == (Range{{1, 0}, {1, 1}}));
+  REQUIRE(buffer.find(Regex(u"^e", nullptr)) == (Range{{1, 0}, {1, 1}}));
+  REQUIRE(buffer.find(Regex(u"^(e|d)g?", nullptr)) == (Range{{1, 0}, {1, 1}}));
 
   buffer.reset(Text{u"a1b"});
-  REQUIRE(buffer.search(Regex(u"\\d", nullptr)) == (Range{{0, 1}, {0, 2}}));
+  REQUIRE(buffer.find(Regex(u"\\d", nullptr)) == (Range{{0, 1}, {0, 2}}));
 }
 
-TEST_CASE("TextBuffer::search - spanning edits") {
+TEST_CASE("TextBuffer::find - spanning edits") {
   TextBuffer buffer{u"abcd"};
   buffer.set_text_in_range({{0, 2}, {0, 2}}, u"12345");
   buffer.set_text_in_range({{0, 9}, {0, 9}}, u"67890");
 
   REQUIRE(buffer.text() == u"ab12345cd67890");
-  REQUIRE(buffer.search(Regex(u"b1234", nullptr)) == (Range{{0, 1}, {0, 6}}));
-  REQUIRE(buffer.search(Regex(u"b12345c", nullptr)) == (Range{{0, 1}, {0, 8}}));
-  REQUIRE(buffer.search(Regex(u"b12345cd6", nullptr)) == (Range{{0, 1}, {0, 10}}));
-  REQUIRE(buffer.search(Regex(u"345[a-z][a-z]", nullptr)) == (Range{{0, 4}, {0, 9}}));
-  REQUIRE(buffer.search(Regex(u"5cd6", nullptr)) == (Range{{0, 6}, {0, 10}}));
+  REQUIRE(buffer.find(Regex(u"b1234", nullptr)) == (Range{{0, 1}, {0, 6}}));
+  REQUIRE(buffer.find(Regex(u"b12345c", nullptr)) == (Range{{0, 1}, {0, 8}}));
+  REQUIRE(buffer.find(Regex(u"b12345cd6", nullptr)) == (Range{{0, 1}, {0, 10}}));
+  REQUIRE(buffer.find(Regex(u"345[a-z][a-z]", nullptr)) == (Range{{0, 4}, {0, 9}}));
+  REQUIRE(buffer.find(Regex(u"5cd6", nullptr)) == (Range{{0, 6}, {0, 10}}));
 
   buffer.reset(Text{u"abcdef"});
   buffer.set_text_in_range({{0, 2}, {0, 4}}, u"");
   REQUIRE(buffer.text() == u"abef");
-  REQUIRE(buffer.search(Regex(u"abe", nullptr)) == (Range{{0, 0}, {0, 3}}));
-  REQUIRE(buffer.search(Regex(u"bef", nullptr)) == (Range{{0, 1}, {0, 4}}));
-  REQUIRE(buffer.search(Regex(u"bc", nullptr)) == optional<Range>{});
+  REQUIRE(buffer.find(Regex(u"abe", nullptr)) == (Range{{0, 0}, {0, 3}}));
+  REQUIRE(buffer.find(Regex(u"bef", nullptr)) == (Range{{0, 1}, {0, 4}}));
+  REQUIRE(buffer.find(Regex(u"bc", nullptr)) == optional<Range>{});
 }
 
-TEST_CASE("TextBuffer::search - partial matches at EOF") {
+TEST_CASE("TextBuffer::find - partial matches at EOF") {
   TextBuffer buffer{u"abc\r\ndef\r\nghi\r\n"};
-  REQUIRE(buffer.search(Regex(u"[^\r]\n", nullptr)) == optional<Range>());
+  REQUIRE(buffer.find(Regex(u"[^\r]\n", nullptr)) == optional<Range>());
 }
 
-TEST_CASE("TextBuffer::search_all") {
+TEST_CASE("TextBuffer::find_all") {
   TextBuffer buffer{u"abc\ndefg\nhijkl"};
-  REQUIRE(buffer.search_all(Regex(u"\\w+", nullptr)) == vector<Range>({
+  REQUIRE(buffer.find_all(Regex(u"\\w+", nullptr)) == vector<Range>({
     Range{Point{0, 0}, Point{0, 3}},
     Range{Point{1, 0}, Point{1, 4}},
     Range{Point{2, 0}, Point{2, 5}},
@@ -359,13 +359,13 @@ TEST_CASE("TextBuffer::search_all") {
   buffer.set_text_in_range({{1, 1}, {1, 1}}, u"12");
   REQUIRE(buffer.text() == u"abc\nd12ef34g\nhijkl");
 
-  REQUIRE(buffer.search_all(Regex(u"\\w+", nullptr)) == vector<Range>({
+  REQUIRE(buffer.find_all(Regex(u"\\w+", nullptr)) == vector<Range>({
     Range{Point{0, 0}, Point{0, 3}},
     Range{Point{1, 0}, Point{1, 8}},
     Range{Point{2, 0}, Point{2, 5}},
   }));
 
-  REQUIRE(buffer.search_all(Regex(u"^\\w", nullptr)) == vector<Range>({
+  REQUIRE(buffer.find_all(Regex(u"^\\w", nullptr)) == vector<Range>({
     Range{Point{0, 0}, Point{0, 1}},
     Range{Point{1, 0}, Point{1, 1}},
     Range{Point{2, 0}, Point{2, 1}},
@@ -477,11 +477,11 @@ TEST_CASE("TextBuffer - random edits and queries") {
         if (subtext.empty()) subtext.append(Text{u"."});
         if (rand() % 2) subtext.append(Text{u"*"});
 
-        // cout << "search for: /" << subtext << "/\n";
+        // cout << "find for: /" << subtext << "/\n";
         Regex regex(subtext.content.data(), subtext.size(), nullptr);
         Regex::MatchData match_data(regex);
 
-        auto search_result = buffer.search(regex);
+        auto search_result = buffer.find(regex);
 
         MatchResult match_result = regex.match(mutated_text.data(), mutated_text.size(), match_data);
         if (match_result.type == MatchResult::Partial || match_result.type == MatchResult::Full) {

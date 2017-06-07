@@ -4,11 +4,11 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   binding = require('./browser');
 
   const {TextBuffer} = binding
-  const {search, searchSync, searchAllSync} = TextBuffer.prototype
+  const {find, findSync, findAllSync} = TextBuffer.prototype
 
-  TextBuffer.prototype.searchSync = function (pattern) {
+  TextBuffer.prototype.findSync = function (pattern) {
     if (pattern.source) pattern = pattern.source
-    const result = searchSync.call(this, pattern)
+    const result = findSync.call(this, pattern)
     if (typeof result === 'string') {
       throw new Error(result);
     } else {
@@ -16,9 +16,9 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
     }
   }
 
-  TextBuffer.prototype.searchAllSync = function (pattern) {
+  TextBuffer.prototype.findAllSync = function (pattern) {
     if (pattern.source) pattern = pattern.source
-    const result = searchAllSync.call(this, pattern)
+    const result = findAllSync.call(this, pattern)
     if (typeof result === 'string') {
       throw new Error(result);
     } else {
@@ -26,8 +26,8 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
     }
   }
 
-  TextBuffer.prototype.search = function (pattern) {
-    return new Promise(resolve => resolve(this.searchSync(pattern)))
+  TextBuffer.prototype.find = function (pattern) {
+    return new Promise(resolve => resolve(this.findSync(pattern)))
   }
 
 } else {
@@ -42,7 +42,7 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   }
 
   const {TextBuffer, TextWriter, TextReader} = binding
-  const {load, reload, save, search, searchAllSync} = TextBuffer.prototype
+  const {load, reload, save, find, findAllSync} = TextBuffer.prototype
 
   for (const methodName of ['load', 'reload']) {
     const method = TextBuffer.prototype[methodName]
@@ -110,9 +110,9 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
     })
   }
 
-  TextBuffer.prototype.search = function (pattern) {
+  TextBuffer.prototype.find = function (pattern) {
     return new Promise((resolve, reject) => {
-      search.call(this, pattern, (error, result) => {
+      find.call(this, pattern, (error, result) => {
         error ?
           reject(error) :
           resolve(result)
@@ -120,8 +120,8 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
     })
   }
 
-  TextBuffer.prototype.searchAllSync = function (pattern) {
-    const rawData = searchAllSync.call(this, pattern)
+  TextBuffer.prototype.findAllSync = function (pattern) {
+    const rawData = findAllSync.call(this, pattern)
     const result = new Array(rawData.length / 4)
     let rawIndex = 0
     for (let matchIndex = 0, n = result.length; matchIndex < n; matchIndex++) {

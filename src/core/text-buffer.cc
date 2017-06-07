@@ -363,7 +363,7 @@ struct TextBuffer::Layer {
     return result;
   }
 
-  vector<Range> search_all_in_range(const Regex &regex, Range range, bool splay = false) {
+  vector<Range> find_all_in_range(const Regex &regex, Range range, bool splay = false) {
     vector<Range> result;
     scan_in_range(regex, range, [&result](Range match_range) -> bool {
       result.push_back(match_range);
@@ -621,12 +621,12 @@ void TextBuffer::set_text_in_range(Range old_range, const u16string &string) {
   set_text_in_range(old_range, String(string.begin(), string.end()));
 }
 
-optional<Range> TextBuffer::search(const Regex &regex) const {
+optional<Range> TextBuffer::find(const Regex &regex) const {
   return top_layer->search_in_range(regex, Range{Point(), extent()}, false);
 }
 
-vector<Range> TextBuffer::search_all(const Regex &regex) const {
-  return top_layer->search_all_in_range(regex, Range{Point(), extent()}, false);
+vector<Range> TextBuffer::find_all(const Regex &regex) const {
+  return top_layer->find_all_in_range(regex, Range{Point(), extent()}, false);
 }
 
 bool TextBuffer::is_modified() const {
@@ -713,7 +713,7 @@ vector<TextSlice> TextBuffer::Snapshot::chunks() const {
   return layer.chunks_in_range({{0, 0}, extent()});
 }
 
-optional<Range> TextBuffer::Snapshot::search(const Regex &regex) const {
+optional<Range> TextBuffer::Snapshot::find(const Regex &regex) const {
   return layer.search_in_range(regex, Range{Point(), extent()}, false);
 }
 
