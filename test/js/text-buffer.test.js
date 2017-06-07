@@ -129,7 +129,14 @@ describe('TextBuffer', () => {
       const {path: filePath} = temp.openSync()
       fs.writeFileSync(filePath, 'bug\ncat\ndog\nelephant\nfox\ngoat')
 
-      return buffer.load(filePath).then(patch => {
+      let progressCallbackPatch
+      return buffer.load(filePath, (percentDone, patch) => {
+        progressCallbackPatch = patch
+      }).then(patch => {
+
+        // The patch is also passed to the progress callback on the final call.
+        assert.equal(progressCallbackPatch, patch)
+
         assert.deepEqual(toPlainObject(patch.getChanges()), [
           {
             oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
@@ -235,8 +242,8 @@ describe('TextBuffer', () => {
       const buffer = new TextBuffer('abc')
       const filePath = temp.openSync().path
 
-      function progressCallback(percentDone, hasChanged) {
-        if (hasChanged) return false
+      function progressCallback(percentDone, patch) {
+        if (patch) return false
       }
 
       return buffer.load(filePath, progressCallback).then((patch) => {

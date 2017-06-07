@@ -382,16 +382,17 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   );
 
   Text loaded_text{move(loaded_string)};
-  bool has_changed = text_buffer.base_text() != loaded_text;
+  Patch patch = text_diff(text_buffer.base_text(), loaded_text);
+  bool has_changed = patch.get_change_count() > 0;
+  Local<Value> patch_wrapper = PatchWrapper::from_patch(move(patch));
+
   if (progress_callback) {
-    Local<Value> argv[] = {Nan::New<Number>(100), Nan::New<Boolean>(has_changed)};
+    Local<Value> argv[] = {Nan::New<Number>(100), patch_wrapper};
     progress_callback->Call(2, argv);
   }
 
-  Patch patch = text_diff(text_buffer.base_text(), loaded_text);
   if (has_changed) text_buffer.reset(move(loaded_text));
-
-  info.GetReturnValue().Set(PatchWrapper::from_patch(move(patch)));
+  info.GetReturnValue().Set(patch_wrapper);
 }
 
 static const int INVALID_ENCODING = -1;
@@ -512,8 +513,9 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
       }
 
       bool has_changed = patch.get_change_count() > 0;
+      Local<Value> patch_wrapper = PatchWrapper::from_patch(move(patch));
       if (progress_callback && !cancelled) {
-        Local<Value> argv[] = {Nan::New<Number>(100), Nan::New<Boolean>(has_changed)};
+        Local<Value> argv[] = {Nan::New<Number>(100), patch_wrapper};
         auto progress_result = progress_callback->Call(2, argv);
         if (progress_result->IsFalse()) cancelled = true;
       }
@@ -532,7 +534,7 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
       }
 
       delete snapshot;
-      Local<Value> argv[] = {Nan::Null(), PatchWrapper::from_patch(move(patch))};
+      Local<Value> argv[] = {Nan::Null(), patch_wrapper};
       callback->Call(2, argv);
     }
   };
