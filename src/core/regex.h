@@ -40,7 +40,13 @@ class Regex {
     size_t end_offset;
   };
 
-  MatchResult match(const uint16_t *data, size_t length, MatchData &, bool is_last = false) const;
+  enum MatchOptions {
+    None = 0,
+    IsEndOfFile = 1,
+    IsBeginningOfLine = 2
+  };
+
+  MatchResult match(const uint16_t *data, size_t length, MatchData &, unsigned options = 0) const;
 };
 
 struct BuildRegexResult {

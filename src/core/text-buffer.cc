@@ -11,6 +11,7 @@ using std::string;
 using std::vector;
 using std::u16string;
 using String = Text::String;
+using MatchOptions = Regex::MatchOptions;
 using MatchResult = Regex::MatchResult;
 
 uint32_t TextBuffer::MAX_CHUNK_SIZE_TO_COPY = 1024;
@@ -269,11 +270,18 @@ struct TextBuffer::Layer {
           slice_to_search = remaining_chunk;
         }
 
+        Point slice_to_search_end_position =
+          slice_to_search_start_position.traverse(slice_to_search.extent());
+
+        int options = 0;
+        if (slice_to_search_end_position == range.end) options |= MatchOptions::IsEndOfFile;
+        if (slice_to_search_start_position.column == 0) options |= MatchOptions::IsBeginningOfLine;
+
         MatchResult match_result = regex.match(
           slice_to_search.data(),
           slice_to_search.size(),
           match_data,
-          slice_to_search_start_position.traverse(slice_to_search.extent()) == range.end
+          options
         );
 
         switch (match_result.type) {
@@ -315,6 +323,9 @@ struct TextBuffer::Layer {
 
             minimum_match_row = result->end.row;
             last_search_end_position = slice_to_search_start_position.traverse(match_end_position);
+            if (match_result.end_offset == match_result.start_offset) {
+              last_search_end_position.column++;
+            }
             slice_to_search_start_position = last_search_end_position;
             chunk_continuation.clear();
 

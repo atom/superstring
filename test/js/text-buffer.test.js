@@ -711,6 +711,51 @@ describe('TextBuffer', () => {
         Range(Point(0, 3), Point(0, 5)),
       ])
     })
+
+    it('returns the same results as a reference implementation', () => {
+      for (let i = 0; i < 3; i++) {
+        const generateSeed = Random.create()
+        let seed = generateSeed(MAX_INT32)
+        const random = new Random(seed)
+        console.log('Seed: ', seed);
+
+        const testDocument = new TestDocument(seed)
+        const buffer = new TextBuffer(testDocument.getText())
+
+        for (let j = 0; j < 5; j++) {
+          const {start, deletedExtent, insertedText} = testDocument.performRandomSplice()
+          buffer.setTextInRange(
+            {start, end: traverse(start, deletedExtent)},
+            insertedText
+          )
+        }
+
+        assert.equal(buffer.getText(), testDocument.getText())
+
+        const regexes = [
+          /^\w+/mg,
+          /[ \t]+$/mg,
+          /\w{3}\n\w/mg,
+          /[g-z]+\n\s*[a-f]+/mg,
+        ]
+
+        for (let j = 0; j < 10; j++) {
+          let regex
+          if (random(2)) {
+            regex = regexes[random(regexes.length)]
+          } else {
+            const {start, end} = testDocument.buildRandomRange()
+            let substring = testDocument.getTextInRange(start, end)
+            if (substring === '') substring += '.'
+            regex = new RegExp(substring, 'g')
+          }
+
+          const expectedRanges = testDocument.searchAll(regex)
+          const actualRanges = buffer.searchAllSync(regex)
+          assert.deepEqual(actualRanges, expectedRanges, `Regex: ${regex}, text: ${testDocument.getText()}`)
+        }
+      }
+    })
   })
 
   describe('.search', () => {

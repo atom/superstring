@@ -364,6 +364,12 @@ TEST_CASE("TextBuffer::search_all") {
     Range{Point{1, 0}, Point{1, 8}},
     Range{Point{2, 0}, Point{2, 5}},
   }));
+
+  REQUIRE(buffer.search_all(Regex(u"^\\w", nullptr)) == vector<Range>({
+    Range{Point{0, 0}, Point{0, 1}},
+    Range{Point{1, 0}, Point{1, 1}},
+    Range{Point{2, 0}, Point{2, 1}},
+  }));
 }
 
 struct SnapshotData {

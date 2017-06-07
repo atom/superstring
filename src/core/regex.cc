@@ -57,15 +57,19 @@ Regex::MatchData::~MatchData() {
 }
 
 MatchResult Regex::match(const uint16_t *string, size_t length,
-                         MatchData &match_data, bool is_last) const {
+                         MatchData &match_data, unsigned options) const {
   MatchResult result{MatchResult::None, 0, 0};
+
+  unsigned int pcre_options = 0;
+  if (!(options & MatchOptions::IsEndOfFile)) pcre_options |= PCRE2_PARTIAL_HARD;
+  if (!(options & MatchOptions::IsBeginningOfLine)) pcre_options |= PCRE2_NOTBOL;
 
   int status = pcre2_match(
     code,
     string,
     length,
     0,
-    is_last ? PCRE2_PARTIAL_SOFT : PCRE2_PARTIAL_HARD,
+    pcre_options,
     match_data.data,
     nullptr
   );
