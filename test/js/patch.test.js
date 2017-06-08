@@ -293,6 +293,17 @@ describe('Patch', function () {
 
         assert.deepEqual(originalDocumentCopy.getLines(), mutatedDocument.getLines(), seedMessage)
 
+        if (changes.length > 0) {
+          assert.deepEqual(JSON.parse(JSON.stringify(patch.getBounds())), JSON.parse(JSON.stringify(({
+            oldStart: changes[0].oldStart,
+            newStart: changes[0].newStart,
+            oldEnd: last(changes).oldEnd,
+            newEnd: last(changes).newEnd
+          }))))
+        } else {
+          assert.equal(patch.getBounds(), undefined)
+        }
+
         for (let k = 0; k < 5; k++) {
           let oldRange = originalDocument.buildRandomRange()
           assert.deepEqual(

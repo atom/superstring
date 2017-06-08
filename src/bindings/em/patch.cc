@@ -86,6 +86,7 @@ EMSCRIPTEN_BINDINGS(Patch) {
     .function("getChangeCount", WRAP(&Patch::get_change_count))
     .function("changeForOldPosition", WRAP(&Patch::grab_change_starting_before_old_position))
     .function("changeForNewPosition", WRAP(&Patch::grab_change_starting_before_new_position))
+    .function("getBounds", WRAP(&Patch::get_bounds))
     .function("rebalance", WRAP(&Patch::rebalance))
     .function("serialize", WRAP(&serialize))
     .class_function("compose", WRAP_STATIC(&compose), emscripten::allow_raw_pointers())

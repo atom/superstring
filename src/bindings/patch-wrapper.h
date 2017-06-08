@@ -24,6 +24,7 @@ class PatchWrapper : public Nan::ObjectWrap {
   static void get_dot_graph(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void get_json(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void get_change_count(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void get_bounds(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void rebalance(const Nan::FunctionCallbackInfo<v8::Value> &info);
 
   Patch patch;

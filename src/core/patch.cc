@@ -957,6 +957,33 @@ vector<Change> Patch::get_changes() const {
 
 size_t Patch::get_change_count() const { return change_count; }
 
+optional<Change> Patch::get_bounds() const {
+  if (!root) return optional<Change>{};
+
+  Node *node = root;
+  while (node->left) {
+    node = node->left;
+  }
+
+  Point old_start = node->old_distance_from_left_ancestor;
+  Point new_start = node->new_distance_from_left_ancestor;
+
+  node = root;
+  Point old_end, new_end;
+  while (node) {
+    old_end = old_end.traverse(node->old_distance_from_left_ancestor.traverse(node->old_extent));
+    new_end = new_end.traverse(node->new_distance_from_left_ancestor.traverse(node->new_extent));
+    node = node->right;
+  }
+
+  return Change{
+    old_start, old_end,
+    new_start, new_end,
+    nullptr, nullptr,
+    0, 0, 0
+  };
+}
+
 vector<Change> Patch::get_changes_in_old_range(Point start, Point end) const {
   return get_changes_in_range<OldCoordinates>(start, end, false);
 }

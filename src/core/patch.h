@@ -65,6 +65,7 @@ public:
   optional<Change> get_change_starting_before_old_position(Point position) const;
   optional<Change> get_change_starting_before_new_position(Point position) const;
   optional<Change> get_change_ending_after_new_position(Point position) const;
+  optional<Change> get_bounds() const;
   Point new_position_for_new_offset(uint32_t new_offset,
                                     std::function<uint32_t(Point)> old_offset_for_old_position,
                                     std::function<Point(uint32_t)> old_position_for_old_offset) const;

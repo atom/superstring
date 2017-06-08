@@ -126,6 +126,7 @@ void PatchWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("getJSON").ToLocalChecked(), Nan::New<FunctionTemplate>(get_json));
   prototype_template->Set(Nan::New("rebalance").ToLocalChecked(), Nan::New<FunctionTemplate>(rebalance));
   prototype_template->Set(Nan::New("getChangeCount").ToLocalChecked(), Nan::New<FunctionTemplate>(get_change_count));
+  prototype_template->Set(Nan::New("getBounds").ToLocalChecked(), Nan::New<FunctionTemplate>(get_bounds));
   patch_wrapper_constructor_template.Reset(constructor_template_local);
   patch_wrapper_constructor.Reset(constructor_template_local->GetFunction());
   exports->Set(Nan::New("Patch").ToLocalChecked(), Nan::New(patch_wrapper_constructor));
@@ -370,6 +371,14 @@ void PatchWrapper::get_change_count(const Nan::FunctionCallbackInfo<Value> &info
   Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
   uint32_t change_count = patch.get_change_count();
   info.GetReturnValue().Set(Nan::New<Number>(change_count));
+}
+
+void PatchWrapper::get_bounds(const Nan::FunctionCallbackInfo<Value> &info) {
+  Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(info.This())->patch;
+  auto bounds = patch.get_bounds();
+  if (bounds) {
+    info.GetReturnValue().Set(ChangeWrapper::FromChange(*bounds));
+  }
 }
 
 void PatchWrapper::rebalance(const Nan::FunctionCallbackInfo<Value> &info) {
