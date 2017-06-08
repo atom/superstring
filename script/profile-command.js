@@ -33,18 +33,26 @@ function profileCommand (command, containingFunctionName, callback) {
     console.log("Wrote stacks to", dtraceOutputFile.path);
 
     const dtraceOutput = fs.createReadStream(dtraceOutputFile.path, 'utf8')
-    dtraceOutput.on('data', (chunk) => {
-      bufferedDtraceContent += chunk.toString('utf8')
+    dtraceOutput.on('data', (cchange) => {
+      bufferedDtraceContent += cchange.toString('utf8')
 
       while (true) {
         const stackEndIndex = bufferedDtraceContent.indexOf('\n\n')
         if (stackEndIndex == -1) break
 
         const stack = bufferedDtraceContent.slice(0, stackEndIndex)
-        const containingFunctionIndex = stack.indexOf(containingFunctionName)
-        if (containingFunctionIndex != -1) {
-          const truncatedEndIndex = stack.indexOf('\n', containingFunctionIndex)
-          const truncatedStack = stack.slice(0, truncatedEndIndex) + stack.slice(stack.lastIndexOf('\n'))
+        let truncatedStack
+        if (containingFunctionName) {
+          const containingFunctionIndex = stack.indexOf(containingFunctionName)
+          if (containingFunctionIndex != -1) {
+            const truncatedEndIndex = stack.indexOf('\n', containingFunctionIndex)
+            truncatedStack = stack.slice(0, truncatedEndIndex) + stack.slice(stack.lastIndexOf('\n'))
+          }
+        } else {
+          truncatedStack = stack
+        }
+
+        if (truncatedStack) {
           stackvisProcess.stdin.write(truncatedStack + '\n')
         }
 

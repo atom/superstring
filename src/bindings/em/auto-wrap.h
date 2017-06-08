@@ -8,7 +8,6 @@
 #include "flat_set.h"
 #include "marker-index.h"
 #include "optional.h"
-#include "point-wrapper.h"
 #include "point.h"
 #include "text.h"
 
@@ -48,9 +47,6 @@ typename em_wrap_type<typename std::decay<LocalType>::type>::WireType em_transmi
 template <>
 struct em_wrap_type<void> : public em_wrap_type_base<void, void> {};
 
-template <>
-struct em_wrap_type<Point> : public em_wrap_type_simple<Point, PointWrapper> {};
-
 template <typename ValueType>
 struct em_wrap_type<std::vector<ValueType>> : public em_wrap_type_base<std::vector<ValueType>, emscripten::val> {
   static std::vector<ValueType> receive(emscripten::val const &value) {
@@ -65,6 +61,25 @@ struct em_wrap_type<std::vector<ValueType>> : public em_wrap_type_base<std::vect
     auto result = emscripten::val::array();
     for (auto const &element : input) {
       result.call<void>("push", em_transmit(element));
+    }
+    return result;
+  }
+};
+
+template <>
+struct em_wrap_type<std::vector<uint8_t>> : public em_wrap_type_base<std::vector<uint8_t>, emscripten::val> {
+  static std::vector<uint8_t> receive(emscripten::val const &value) {
+    std::vector<uint8_t> result;
+    for (auto i = 0u, length = value["length"].as<unsigned>(); i < length; ++i) {
+      result.push_back(value[i].as<uint8_t>());
+    }
+    return result;
+  }
+
+  static emscripten::val transmit(std::vector<uint8_t> const &input) {
+    auto result = emscripten::val::global("Uint8Array").new_(input.size());
+    for (uint32_t i = 0, n = input.size(); i < n; i++) {
+      result.set(i, input[i]);
     }
     return result;
   }
@@ -118,22 +133,6 @@ struct em_wrap_type<flat_set<ValueType>> : public em_wrap_type_base<flat_set<Val
 };
 
 template <>
-struct em_wrap_type<MarkerIndex::SpliceResult> : public em_wrap_type_base<MarkerIndex::SpliceResult, emscripten::val> {
-  static MarkerIndex::SpliceResult receive(emscripten::val const &value) {
-    throw std::runtime_error("Unimplemented");
-  }
-
-  static emscripten::val transmit(MarkerIndex::SpliceResult const &splice_result) {
-    auto result = emscripten::val::object();
-    result.set("touch", em_transmit(splice_result.touch));
-    result.set("inside", em_transmit(splice_result.inside));
-    result.set("overlap", em_transmit(splice_result.overlap));
-    result.set("surround", em_transmit(splice_result.surround));
-    return result;
-  }
-};
-
-template <>
 struct em_wrap_type<MarkerIndex::Boundary> : public em_wrap_type_base<MarkerIndex::Boundary, emscripten::val> {
   static MarkerIndex::Boundary receive(emscripten::val const &value) {
     throw std::runtime_error("Unimplemented");
@@ -174,14 +173,13 @@ struct em_wrap_type<Text> : public em_wrap_type_base<Text, std::string> {
 };
 
 template <>
-struct em_wrap_type<std::unique_ptr<Text>> : public em_wrap_type_base<std::unique_ptr<Text>, emscripten::val> {
-  static std::unique_ptr<Text> receive(emscripten::val const &value) {
-    return std::make_unique<Text>(em_wrap_type<Text>::receive(value.as<std::string>()));
+struct em_wrap_type<Text::String> : public em_wrap_type_base<Text::String, std::string> {
+  static Text::String receive(std::string const &str) {
+    return Text::String(str.begin(), str.end());
   }
 
-  static emscripten::val transmit(std::unique_ptr<Text> const &text) {
-    if (!text) return emscripten::val::undefined();
-    return emscripten::val(em_wrap_type<Text>::transmit(*text));
+  static std::string transmit(Text::String const &text) {
+    return std::string(text.begin(), text.end());
   }
 };
 

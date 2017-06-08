@@ -41,6 +41,31 @@ class TestDocument {
     }
   }
 
+  searchAll (regex) {
+    return this.searchAllInRange(
+      {start: {row: 0, column: 0}, end: this.getExtent()},
+      regex
+    )
+  }
+
+  searchAllInRange (range, regex) {
+    const ranges = []
+    const text = this.getTextInRange(range.start, range.end)
+    let match
+    while (match = regex.exec(text)) {
+      const start = textHelpers.getExtent(text.slice(0, match.index))
+      const extent = textHelpers.getExtent(match[0])
+      ranges.push({start, end: pointHelpers.traverse(start, extent)})
+      if (match[0].length === 0) regex.lastIndex++
+    }
+    return ranges
+  }
+
+  getExtent () {
+    const row = this.lines.length - 1
+    return {row, column: this.lines[row].length}
+  }
+
   performRandomSplice (upperCase) {
     let deletedRange = this.buildRandomRange()
     let start = deletedRange.start
@@ -98,11 +123,13 @@ class TestDocument {
     const start = this.buildRandomPoint()
     let end = start
 
-    while (this.random(10) < 5) {
-      end = pointHelpers.traverse(end, {
-        row: this.random(3),
-        column: this.random(5)
-      })
+    if (this.random(10)) {
+      do {
+        end = pointHelpers.traverse(end, {
+          row: this.random(3),
+          column: this.random(5)
+        })
+      } while (this.random(2));
     }
 
     return {start, end: this.clipPosition(end)}

@@ -2,6 +2,7 @@
 #define POINT_H_
 
 #include <ostream>
+#include "serializer.h"
 
 struct Point {
   unsigned row;
@@ -12,11 +13,13 @@ struct Point {
 
   Point();
   Point(unsigned row, unsigned column);
+  Point(Deserializer &input);
 
   int compare(const Point &other) const;
   bool is_zero() const;
   Point traverse(const Point &other) const;
   Point traversal(const Point &other) const;
+  void serialize(Serializer &output) const;
 
   bool operator==(const Point &other) const;
   bool operator<(const Point &other) const;

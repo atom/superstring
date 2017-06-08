@@ -8,6 +8,15 @@ static Nan::Persistent<String> row_string;
 static Nan::Persistent<String> column_string;
 static Nan::Persistent<v8::Function> constructor;
 
+static uint32_t number_from_js(Local<Integer> js_number) {
+  double number = js_number->NumberValue();
+  if (number > 0 && !std::isfinite(number)) {
+    return UINT32_MAX;
+  } else {
+    return std::max(0.0, number);
+  }
+}
+
 optional<Point> PointWrapper::point_from_js(Local<Value> value) {
   Nan::MaybeLocal<Object> maybe_object = Nan::To<Object>(value);
   Local<Object> object;
@@ -30,12 +39,7 @@ optional<Point> PointWrapper::point_from_js(Local<Value> value) {
     return optional<Point>{};
   }
 
-  double row = js_row->NumberValue();
-  double column = js_column->NumberValue();
-  return Point(
-    std::isfinite(row) ? row : UINT32_MAX,
-    std::isfinite(column) ? column : UINT32_MAX
-  );
+  return Point(number_from_js(js_row), number_from_js(js_column));
 }
 
 void PointWrapper::init() {

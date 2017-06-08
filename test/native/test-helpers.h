@@ -7,35 +7,56 @@
 #include <memory>
 #include <ostream>
 #include <vector>
+#include <random>
+#include "range.h"
+#include "text.h"
+#include <iostream>
 
-using std::vector;
+using std::cout;
+using std::cerr;
 
-bool text_eq(const Text *left, const Text *right) {
-  if (left == right)
-    return true;
-  if (!left && right)
-    return false;
-  if (left && !right)
-    return false;
-  return *left == *right;
-}
+class TextBuffer;
 
-bool operator==(const Patch::Hunk &left, const Patch::Hunk &right) {
-  return left.old_start == right.old_start &&
-         left.new_start == right.new_start && left.old_end == right.old_end &&
-         left.new_end == right.new_end &&
-         text_eq(left.old_text, right.old_text) &&
-         text_eq(left.new_text, right.new_text);
-}
+class Generator {
+  std::default_random_engine engine;
+  std::uniform_int_distribution<uint32_t> distribution;
 
-std::unique_ptr<Text> GetText(const char *string) {
-  size_t length = strlen(string);
-  vector<uint16_t> content;
-  content.reserve(length);
-  for (size_t i = 0; i < length; i++) {
-    content.push_back(static_cast<uint16_t>(string[i]));
+public:
+  Generator(uint32_t seed) : engine{seed} {}
+  uint32_t operator()() { return distribution(engine); }
+};
+
+bool operator==(const Patch::Change &left, const Patch::Change &right);
+std::unique_ptr<Text> get_text(const std::u16string content);
+std::u16string get_random_string(Generator &, uint32_t character_count = 20);
+Text get_random_text(Generator &);
+Range get_random_range(Generator &, const Text &);
+Range get_random_range(Generator &, TextBuffer &);
+
+namespace std {
+  inline std::ostream &operator<<(std::ostream &stream, const std::u16string &text) {
+    for (uint16_t character : text) {
+      if (character == '\r') {
+        stream << "\\\\r";
+      } else if (character < 255) {
+        stream << static_cast<char>(character);
+      } else {
+        stream << "\\u";
+        stream << character;
+      }
+    }
+
+    return stream;
   }
-  return std::unique_ptr<Text>(new Text(move(content)));
+}
+
+template <typename T>
+std::ostream &operator<<(std::ostream &stream, const optional<T> &value) {
+  if (value) {
+    return stream << *value;
+  } else {
+    return stream << "nullopt";
+  }
 }
 
 #endif // SUPERSTRING_TEST_HELPERS_H
