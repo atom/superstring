@@ -172,7 +172,7 @@ describe('TextBuffer', () => {
       const content = 'a\nb\nc\n'.repeat(10)
       fs.writeFileSync(filePath, content, 'utf16le')
 
-      return buffer.load(filePath, 'UTF-16LE').then(() =>
+      return buffer.load(filePath, {encoding: 'UTF-16LE'}).then(() =>
         assert.equal(buffer.getText(), content)
       )
     })
@@ -185,7 +185,7 @@ describe('TextBuffer', () => {
       fs.writeFileSync(filePath, content, 'utf16le')
 
       let rejection = null
-      return buffer.load(filePath, 'GARBAGE16')
+      return buffer.load(filePath, {encoding: 'GARBAGE16'})
         .catch(error => rejection = error)
         .then(() => assert.equal(rejection.message, 'Invalid encoding name: GARBAGE16'))
     })
@@ -258,8 +258,89 @@ describe('TextBuffer', () => {
       fs.writeFileSync(filePath, 'abc', 'ascii')
 
       return Promise.all(encodings.map((encoding) =>
-        new TextBuffer().load(filePath, encoding)
+        new TextBuffer().load(filePath, {encoding})
       ))
+    })
+
+    describe('when the `force` option is set to true', () => {
+      it('discards any modifications and incorporates that change into the resolved patch', () => {
+        const buffer = new TextBuffer('abcdef')
+        const {path: filePath} = temp.openSync()
+        fs.writeFileSync(filePath, '  abcdef')
+
+        buffer.setTextInRange(Range(Point(0, 3), Point(0, 3)), ' ')
+        assert.equal(buffer.getText(), 'abc def')
+        assert.ok(buffer.isModified())
+
+        const loadPromise = buffer.load(filePath, {force: true}).then(patch => {
+          assert.equal(buffer.getText(), '  abcdef')
+          assert.notOk(buffer.isModified())
+          assert.deepEqual(toPlainObject(patch.getChanges()), [
+            {
+              oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
+              newStart: {row: 0, column: 0}, newEnd: {row: 0, column: 2},
+              oldText: '',
+              newText: '  '
+            },
+            {
+              oldStart: {row: 0, column: 3}, oldEnd: {row: 0, column: 4},
+              newStart: {row: 0, column: 5}, newEnd: {row: 0, column: 5},
+              oldText: ' ',
+              newText: ''
+            },
+            {
+              oldStart: {row: 0, column: 7}, oldEnd: {row: 0, column: 8},
+              newStart: {row: 0, column: 8}, newEnd: {row: 0, column: 8},
+              oldText: ' ',
+              newText: ''
+            }
+          ])
+        })
+
+        buffer.setTextInRange(Range(Point(0, 7), Point(0, 7)), ' ')
+        assert.equal(buffer.getText(), 'abc def ')
+        assert.ok(buffer.isModified())
+
+        return loadPromise
+      })
+
+      it('marks the buffer as unmodified even if the reload does not change the text', () => {
+        const buffer = new TextBuffer('abcdef')
+
+        const {path: filePath} = temp.openSync()
+        const fileContent = '  abcdef'
+        fs.writeFileSync(filePath, fileContent)
+
+        buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), '  ')
+        assert.ok(buffer.isModified())
+        assert.equal(buffer.getText(), fileContent)
+
+        return buffer.load(filePath, {force: true}).then(patch => {
+          assert.equal(patch.getChanges(), 0)
+          assert.equal(buffer.getText(), '  abcdef')
+          assert.notOk(buffer.isModified())
+        })
+      })
+    })
+
+    describe('when the `patch` option is set to false', () => {
+      it('does not compute a Patch representing the changes', () => {
+        const buffer = new TextBuffer()
+
+        const filePath = temp.openSync().path
+        fs.writeFileSync(filePath, 'abc')
+
+        return buffer.load(filePath, {patch: false}).then((patch) => {
+          assert.equal(patch, null)
+          assert.equal(buffer.getText(), 'abc')
+
+          buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), '  ')
+          return buffer.load(filePath, {patch: false, force: true}).then((patch) => {
+            assert.equal(patch, null)
+            assert.equal(buffer.getText(), 'abc')
+          })
+        })
+      })
     })
 
     describe('error handling', () => {
@@ -295,69 +376,6 @@ describe('TextBuffer', () => {
             assert.equal(error.path, filePath)
             done()
           })
-      })
-    })
-  })
-
-  describe('.reload', () => {
-    if (!TextBuffer.prototype.reload) return;
-
-    it('discards any modifications and incorporates that change into the resolved patch', () => {
-      const buffer = new TextBuffer('abcdef')
-      const {path: filePath} = temp.openSync()
-      fs.writeFileSync(filePath, '  abcdef')
-
-      buffer.setTextInRange(Range(Point(0, 3), Point(0, 3)), ' ')
-      assert.equal(buffer.getText(), 'abc def')
-      assert.ok(buffer.isModified())
-
-      const loadPromise = buffer.reload(filePath).then(patch => {
-        assert.equal(buffer.getText(), '  abcdef')
-        assert.notOk(buffer.isModified())
-        assert.deepEqual(toPlainObject(patch.getChanges()), [
-          {
-            oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
-            newStart: {row: 0, column: 0}, newEnd: {row: 0, column: 2},
-            oldText: '',
-            newText: '  '
-          },
-          {
-            oldStart: {row: 0, column: 3}, oldEnd: {row: 0, column: 4},
-            newStart: {row: 0, column: 5}, newEnd: {row: 0, column: 5},
-            oldText: ' ',
-            newText: ''
-          },
-          {
-            oldStart: {row: 0, column: 7}, oldEnd: {row: 0, column: 8},
-            newStart: {row: 0, column: 8}, newEnd: {row: 0, column: 8},
-            oldText: ' ',
-            newText: ''
-          }
-        ])
-      })
-
-      buffer.setTextInRange(Range(Point(0, 7), Point(0, 7)), ' ')
-      assert.equal(buffer.getText(), 'abc def ')
-      assert.ok(buffer.isModified())
-
-      return loadPromise
-    })
-
-    it('marks the buffer as unmodified even if the reload does not change the text', () => {
-      const buffer = new TextBuffer('abcdef')
-
-      const {path: filePath} = temp.openSync()
-      const fileContent = '  abcdef'
-      fs.writeFileSync(filePath, fileContent)
-
-      buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), '  ')
-      assert.ok(buffer.isModified())
-      assert.equal(buffer.getText(), fileContent)
-
-      return buffer.reload(filePath).then(patch => {
-        assert.equal(patch.getChanges(), 0)
-        assert.equal(buffer.getText(), '  abcdef')
-        assert.notOk(buffer.isModified())
       })
     })
   })
@@ -880,7 +898,7 @@ describe('TextBuffer', () => {
             const text = testDocument.getText()
             const filePath = temp.openSync().path
             fs.writeFileSync(filePath, text, 'utf8')
-            promises.push(buffer.reload(filePath).then((patch) => {
+            promises.push(buffer.load(filePath, {force: true}).then((patch) => {
               assert.equal(buffer.getText(), text)
               assert.equal(applyPatch(currentText, patch), text)
               currentText = text

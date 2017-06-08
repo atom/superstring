@@ -42,38 +42,52 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   }
 
   const {TextBuffer, TextWriter, TextReader} = binding
-  const {load, reload, save, find, findAllSync} = TextBuffer.prototype
+  const {load, save, find, findAllSync} = TextBuffer.prototype
 
-  for (const methodName of ['load', 'reload']) {
-    const method = TextBuffer.prototype[methodName]
-    TextBuffer.prototype[methodName] = function (source, encoding, progressCallback) {
-      if (typeof encoding !== 'string') {
-        progressCallback = encoding
-        encoding = 'UTF8'
+  TextBuffer.prototype.load = function (source, options, progressCallback) {
+    if (typeof options !== 'object') {
+      progressCallback = options
+      options = {}
+    }
+
+    const computePatch = options.patch === false ? false : true
+    const discardChanges = options.force === true ? true : false
+    const encoding = normalizeEncoding(options.encoding || 'UTF-8')
+
+    return new Promise((resolve, reject) => {
+      const completionCallback = (error, result) => {
+        error ? reject(error) : resolve(result)
       }
 
-      encoding = normalizeEncoding(encoding)
-
-      return new Promise((resolve, reject) => {
-        const completionCallback = (error, result) => {
-          error ? reject(error) : resolve(result)
-        }
-
-        if (typeof source === 'string') {
-          const filePath = source
-          method.call(this, completionCallback, progressCallback, filePath, encoding)
-        } else {
-          const stream = source
-          const writer = new TextWriter(encoding)
-          stream.on('data', (data) => writer.write(data))
-          stream.on('error', reject)
-          stream.on('end', () => {
-            writer.end()
-            method.call(this, completionCallback, progressCallback, writer)
-          })
-        }
-      })
-    }
+      if (typeof source === 'string') {
+        const filePath = source
+        load.call(
+          this,
+          completionCallback,
+          progressCallback,
+          discardChanges,
+          computePatch,
+          filePath,
+          encoding
+        )
+      } else {
+        const stream = source
+        const writer = new TextWriter(encoding)
+        stream.on('data', (data) => writer.write(data))
+        stream.on('error', reject)
+        stream.on('end', () => {
+          writer.end()
+          load.call(
+            this,
+            completionCallback,
+            progressCallback,
+            discardChanges,
+            computePatch,
+            writer
+          )
+        })
+      }
+    })
   }
 
   TextBuffer.prototype.save = function (destination, encoding = 'UTF8') {
