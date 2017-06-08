@@ -114,7 +114,6 @@ int EncodingConversion::convert(
 
     case UTF16_TO_UTF8: {
       auto converter = static_cast<UTF8Converter *>(data);
-      const char *input_start = *input;
       const char16_t *next_input;
       char *next_output;
       int result = converter->facet.out(
@@ -131,11 +130,11 @@ int EncodingConversion::convert(
       switch (result) {
         case codecvt_base::ok:
           // When using GCC and libstdc++, `codecvt_utf8_utf16::out` seems to
-          // incorrectly return `ok` when there is an incomplete multi-byte
-          // sequence at the end of the input chunk. But it correctly does
-          // not advance the input pointer, so we can distinguish this
-          // situation from an actual successful result.
-          if (*input == input_start && input_start < input_end) return InvalidTrailing;
+          // return `ok` when there is an incomplete multi-byte sequence at the
+          // end of the input chunk. But it correctly does not advance the input
+          // pointer, so we can distinguish this situation from an actual
+          // successful result.
+          if (*input < input_end && *output < output_end) return InvalidTrailing;
 
           return Ok;
         case codecvt_base::partial:
@@ -171,7 +170,7 @@ int EncodingConversion::convert(
   return Error;
 }
 
-bool EncodingConversion::decode(String &string, std::istream &stream,
+bool EncodingConversion::decode(String &string, FILE *stream,
                                 vector<char> &input_vector,
                                 function<void(size_t)> progress_callback) {
   char *input_buffer = input_vector.data();
@@ -179,10 +178,9 @@ bool EncodingConversion::decode(String &string, std::istream &stream,
   size_t total_bytes_read = 0;
 
   for (;;) {
-    errno = 0;
-    stream.read(input_buffer + bytes_left_over, input_vector.size() - bytes_left_over);
-    if (!stream && errno != 0) return false;
-    size_t bytes_read = stream.gcount();
+    size_t bytes_to_read = input_vector.size() - bytes_left_over;
+    size_t bytes_read = fread(input_buffer + bytes_left_over, 1, bytes_to_read, stream);
+    if (bytes_read < bytes_to_read && ferror(stream)) return false;
     size_t bytes_to_append = bytes_left_over + bytes_read;
     if (bytes_to_append == 0) break;
 
@@ -271,13 +269,12 @@ size_t EncodingConversion::decode(String &string, const char *input_start,
 }
 
 bool EncodingConversion::encode(const String &string, size_t start_offset,
-                                size_t end_offset, std::ostream &stream,
+                                size_t end_offset, FILE *stream,
                                 vector<char> &output_vector) {
   char *output_buffer = output_vector.data();
-
   bool end = false;
-  for (;;) {
-    size_t output_bytes_written = encode(
+  while (start_offset < end_offset) {
+    size_t bytes_encoded = encode(
       string,
       &start_offset,
       end_offset,
@@ -285,11 +282,9 @@ bool EncodingConversion::encode(const String &string, size_t start_offset,
       output_vector.size(),
       end
     );
-    errno = 0;
-    stream.write(output_buffer, output_bytes_written);
-    if (end) break;
-    if (output_bytes_written == 0) end = true;
-    if (!stream && errno != 0) return false;
+    if (bytes_encoded == 0) end = true;
+    size_t bytes_written = fwrite(output_buffer, 1, bytes_encoded, stream);
+    if (bytes_written < bytes_encoded && ferror(stream)) return false;
   }
 
   return true;

@@ -1,5 +1,7 @@
 #include "text-buffer-wrapper.h"
-#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <stdio.h>
 #include "point-wrapper.h"
 #include "range-wrapper.h"
 #include "text-wrapper.h"
@@ -8,8 +10,25 @@
 #include "text-slice.h"
 #include "text-diff.h"
 #include "noop.h"
-#include <sstream>
-#include <iomanip>
+#include <sys/stat.h>
+
+#ifdef WIN32
+
+static size_t get_file_size(const char *name) {
+  struct _stat file_stats;
+  if (_stat(name, &file_stats) != 0) return -1;
+  return file_stats.st_size;
+}
+
+#else
+
+static size_t get_file_size(const char *name) {
+  struct stat file_stats;
+  if (stat(name, &file_stats) != 0) return -1;
+  return file_stats.st_size;
+}
+
+#endif
 
 using namespace v8;
 using std::move;
@@ -358,12 +377,10 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
 
   Nan::HandleScope scope;
 
-  std::ifstream file(file_path, std::ios_base::binary);
-  auto beginning = file.tellg();
-  file.seekg(0, std::ios::end);
-  auto end = file.tellg();
-  file.seekg(0);
-  size_t file_size = end - beginning;
+  FILE *file = fopen(file_path.c_str(), "rb");
+  fseek(file, 0L, SEEK_END);
+  size_t file_size = ftell(file);
+  rewind(file);
 
   vector<char> input_buffer(CHUNK_SIZE);
   Text::String loaded_string;
@@ -380,6 +397,7 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
       }
     }
   );
+  fclose(file);
 
   Text loaded_text{move(loaded_string)};
   Patch patch = text_diff(text_buffer.base_text(), loaded_text);
@@ -443,20 +461,21 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
 
     void Execute(const Nan::AsyncProgressWorkerBase<size_t>::ExecutionProgress &progress) {
       if (!loaded_text) {
-        std::ifstream file(file_name, std::ios_base::binary);
-        auto beginning = file.tellg();
-        file.seekg(0, std::ios::end);
-        auto end = file.tellg();
-        file.seekg(0);
-        size_t file_size = end - beginning;
-        if (!file) {
+        auto conversion = transcoding_from(encoding_name.c_str());
+        if (!conversion) {
+          error_number = INVALID_ENCODING;
+          return;
+        }
+
+        size_t file_size = get_file_size(file_name.c_str());
+        if (file_size == static_cast<size_t>(-1)) {
           error_number = errno;
           return;
         }
 
-        auto conversion = transcoding_from(encoding_name.c_str());
-        if (!conversion) {
-          error_number = INVALID_ENCODING;
+        FILE *file = fopen(file_name.c_str(), "rb");
+        if (!file) {
+          error_number = errno;
           return;
         }
 
@@ -472,10 +491,12 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
             progress.Send(&percent_done, 1);
           }
         )) {
+          fclose(file);
           error_number = errno;
           return;
         }
 
+        fclose(file);
         loaded_text = Text{move(loaded_string)};
       }
 
@@ -613,7 +634,12 @@ void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) 
     return;
   }
 
-  std::ofstream file(file_path, std::ios_base::binary);
+  FILE *file = fopen(file_path.c_str(), "w+b");
+  if (!file) {
+    info.GetReturnValue().Set(Nan::False());
+    return;
+  }
+
   vector<char> output_buffer(CHUNK_SIZE);
   for (TextSlice &chunk : text_buffer.chunks()) {
     if (!conversion->encode(
@@ -654,7 +680,7 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
         return;
       }
 
-      std::ofstream file(file_name, std::ios_base::binary);
+      FILE *file = fopen(file_name.c_str(), "wb+");
       if (!file) {
         error_number = errno;
         return;
@@ -670,9 +696,12 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
           output_buffer
         )) {
           error_number = errno;
+          fclose(file);
           return;
         }
       }
+
+      fclose(file);
     }
 
     void HandleOKCallback() {

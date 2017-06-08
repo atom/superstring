@@ -3,6 +3,7 @@
 
 #include "optional.h"
 #include "text.h"
+#include <stdio.h>
 
 class EncodingConversion {
   void *data;
@@ -17,10 +18,10 @@ class EncodingConversion {
   ~EncodingConversion();
 
   bool encode(const Text::String &, size_t start_offset, size_t end_offset,
-              std::ostream &stream, std::vector<char> &buffer);
+              FILE *stream, std::vector<char> &buffer);
   size_t encode(const Text::String &, size_t *start_offset, size_t end_offset,
                 char *buffer, size_t buffer_size, bool is_last = false);
-  bool decode(Text::String &, std::istream &stream, std::vector<char> &buffer,
+  bool decode(Text::String &, FILE *stream, std::vector<char> &buffer,
               std::function<void(size_t)> progress_callback);
   size_t decode(Text::String &, const char *buffer, size_t buffer_size,
                 bool is_last = false);
