@@ -507,6 +507,8 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
       }
 
       Patch inverted_changes = buffer->get_inverted_changes(snapshot);
+      delete snapshot;
+
       if (inverted_changes.get_change_count() > 0) {
         inverted_changes.combine(patch);
         patch = move(inverted_changes);
@@ -521,7 +523,6 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
       }
 
       if (cancelled) {
-        delete snapshot;
         Local<Value> argv[] = {Nan::Null(), Nan::Null()};
         callback->Call(2, argv);
         return;
@@ -533,7 +534,6 @@ void TextBufferWrapper::load_(const Nan::FunctionCallbackInfo<Value> &info, bool
         buffer->flush_changes();
       }
 
-      delete snapshot;
       Local<Value> argv[] = {Nan::Null(), patch_wrapper};
       callback->Call(2, argv);
     }
