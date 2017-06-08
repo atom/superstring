@@ -32,6 +32,7 @@ static size_t get_file_size(const char *name) {
 
 using namespace v8;
 using std::move;
+using std::pair;
 using std::string;
 using std::u16string;
 using std::vector;
@@ -39,7 +40,7 @@ using std::vector;
 static size_t CHUNK_SIZE = 10 * 1024;
 
 class RegexWrapper : public Nan::ObjectWrap {
-public:
+ public:
   Regex regex;
   static Nan::Persistent<Function> constructor;
   static void construct(const Nan::FunctionCallbackInfo<v8::Value> &info) {}
@@ -348,6 +349,174 @@ void TextBufferWrapper::is_modified(const Nan::FunctionCallbackInfo<Value> &info
   info.GetReturnValue().Set(Nan::New<Boolean>(text_buffer.is_modified()));
 }
 
+static const int INVALID_ENCODING = -1;
+
+static Local<Value> error_for_number(int error_number, string encoding_name, string file_name) {
+  if (error_number == INVALID_ENCODING) {
+    return Nan::Error(("Invalid encoding name: " + encoding_name).c_str());
+  } else {
+    return node::ErrnoException(v8::Isolate::GetCurrent(), error_number, nullptr, nullptr, file_name.c_str());
+  }
+}
+
+class LoadWorker : public Nan::AsyncProgressWorkerBase<size_t> {
+  Nan::Callback *progress_callback;
+  TextBuffer *buffer;
+  TextBuffer::Snapshot *snapshot;
+  string file_name;
+  string encoding_name;
+  optional<Text> loaded_text;
+  optional<int> error_number;
+  Patch patch;
+  bool force;
+  bool compute_patch;
+  bool cancelled;
+
+ public:
+  LoadWorker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
+         TextBuffer *buffer, TextBuffer::Snapshot *snapshot, string &&file_name,
+         string &&encoding_name, bool force, bool compute_patch) :
+    AsyncProgressWorkerBase(completion_callback),
+    progress_callback{progress_callback},
+    buffer{buffer},
+    snapshot{snapshot},
+    file_name{file_name},
+    encoding_name(encoding_name),
+    force{force},
+    compute_patch{compute_patch},
+    cancelled{false} {}
+
+  LoadWorker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
+         TextBuffer *buffer, TextBuffer::Snapshot *snapshot, Text &&text,
+         bool force, bool compute_patch) :
+    AsyncProgressWorkerBase(completion_callback),
+    progress_callback{progress_callback},
+    buffer{buffer},
+    snapshot{snapshot},
+    loaded_text{move(text)},
+    force{force},
+    compute_patch{compute_patch},
+    cancelled{false} {}
+
+  template <typename Callback>
+  void DoExecute(const Callback &callback) {
+    if (!loaded_text) {
+      auto conversion = transcoding_from(encoding_name.c_str());
+      if (!conversion) {
+        error_number = INVALID_ENCODING;
+        return;
+      }
+
+      size_t file_size = get_file_size(file_name.c_str());
+      if (file_size == static_cast<size_t>(-1)) {
+        error_number = errno;
+        return;
+      }
+
+      FILE *file = fopen(file_name.c_str(), "rb");
+      if (!file) {
+        error_number = errno;
+        return;
+      }
+
+      Text::String loaded_string;
+      vector<char> input_buffer(CHUNK_SIZE);
+      loaded_string.reserve(file_size);
+      if (!conversion->decode(
+        loaded_string,
+        file,
+        input_buffer,
+        [&callback, file_size](size_t bytes_read) {
+          size_t percent_done = file_size > 0 ? 100 * bytes_read / file_size : 100;
+          callback(percent_done);
+        }
+      )) {
+        fclose(file);
+        error_number = errno;
+        return;
+      }
+
+      fclose(file);
+      loaded_text = Text{move(loaded_string)};
+    }
+
+    if (compute_patch) patch = text_diff(snapshot->base_text(), *loaded_text);
+  }
+
+  void Execute(const Nan::AsyncProgressWorkerBase<size_t>::ExecutionProgress &progress) {
+    DoExecute([&progress](size_t percent_done) {
+      progress.Send(&percent_done, 1);
+    });
+  }
+
+  void ExecuteSync() {
+    DoExecute([this](size_t percent_done) {
+      HandleProgressCallback(&percent_done, 1);
+    });
+  }
+
+  void HandleProgressCallback(const size_t *percent_done, size_t count) {
+    if (!cancelled && progress_callback && percent_done) {
+      Nan::HandleScope scope;
+      Local<Value> argv[] = {Nan::New<Number>(static_cast<uint32_t>(*percent_done))};
+      auto progress_result = progress_callback->Call(1, argv);
+      if (progress_result->IsFalse()) cancelled = true;
+    }
+  }
+
+  pair<Local<Value>, Local<Value>> Finish() {
+    if (error_number) {
+      delete snapshot;
+      return {error_for_number(*error_number, encoding_name, file_name), Nan::Undefined()};
+    }
+
+    if (cancelled || (!force && buffer->is_modified())) {
+      delete snapshot;
+      return {Nan::Null(), Nan::Null()};
+    }
+
+    Patch inverted_changes = buffer->get_inverted_changes(snapshot);
+    delete snapshot;
+
+    if (compute_patch && inverted_changes.get_change_count() > 0) {
+      inverted_changes.combine(patch);
+      patch = move(inverted_changes);
+    }
+
+    bool has_changed;
+    Local<Value> patch_wrapper;
+    if (compute_patch) {
+      has_changed = !compute_patch || patch.get_change_count() > 0;
+      patch_wrapper = PatchWrapper::from_patch(move(patch));
+    } else {
+      has_changed = true;
+      patch_wrapper = Nan::Null();
+    }
+
+    if (progress_callback) {
+      Local<Value> argv[] = {Nan::New<Number>(100), patch_wrapper};
+      auto progress_result = progress_callback->Call(2, argv);
+      if (progress_result->IsFalse()) {
+        return {Nan::Null(), Nan::Null()};
+      }
+    }
+
+    if (has_changed) {
+      buffer->reset(move(*loaded_text));
+    } else {
+      buffer->flush_changes();
+    }
+
+    return {Nan::Null(), patch_wrapper};
+  }
+
+  void HandleOKCallback() {
+    auto results = Finish();
+    Local<Value> argv[] = {results.first, results.second};
+    callback->Call(2, argv);
+  }
+};
+
 void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
 
@@ -362,12 +531,7 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
 
   Local<String> js_encoding_name;
   if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
-  String::Utf8Value encoding_name(js_encoding_name);
-  auto conversion = transcoding_from(*encoding_name);
-  if (!conversion) {
-    Nan::ThrowError((string("Invalid encoding name: ") + *encoding_name).c_str());
-    return;
-  }
+  string encoding_name = *String::Utf8Value(js_encoding_name);
 
   Nan::Callback *progress_callback = nullptr;
   if (info[2]->IsFunction()) {
@@ -376,201 +540,27 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
 
   Nan::HandleScope scope;
 
-  FILE *file = fopen(file_path.c_str(), "rb");
-  fseek(file, 0L, SEEK_END);
-  size_t file_size = ftell(file);
-  rewind(file);
-
-  vector<char> input_buffer(CHUNK_SIZE);
-  Text::String loaded_string;
-  loaded_string.reserve(file_size);
-  conversion->decode(
-    loaded_string,
-    file,
-    input_buffer,
-    [&progress_callback, file_size](size_t bytes_read) {
-      if (progress_callback) {
-        size_t percent_done = file_size > 0 ? 100 * bytes_read / file_size : 100;
-        Local<Value> argv[] = {Nan::New<Number>(static_cast<uint32_t>(percent_done))};
-        progress_callback->Call(1, argv);
-      }
-    }
+  LoadWorker worker(
+    nullptr,
+    progress_callback,
+    &text_buffer,
+    text_buffer.create_snapshot(),
+    move(file_path),
+    move(encoding_name),
+    false,
+    true
   );
-  fclose(file);
 
-  Text loaded_text{move(loaded_string)};
-  Patch patch = text_diff(text_buffer.base_text(), loaded_text);
-  bool has_changed = patch.get_change_count() > 0;
-  Local<Value> patch_wrapper = PatchWrapper::from_patch(move(patch));
-
-  if (progress_callback) {
-    Local<Value> argv[] = {Nan::New<Number>(100), patch_wrapper};
-    progress_callback->Call(2, argv);
-  }
-
-  if (has_changed) text_buffer.reset(move(loaded_text));
-  info.GetReturnValue().Set(patch_wrapper);
-}
-
-static const int INVALID_ENCODING = -1;
-
-static Local<Value> error_for_number(int error_number, string encoding_name, string file_name) {
-  if (error_number == INVALID_ENCODING) {
-    return Nan::Error(("Invalid encoding name: " + encoding_name).c_str());
+  worker.ExecuteSync();
+  auto results = worker.Finish();
+  if (results.first->IsNull()) {
+    info.GetReturnValue().Set(results.second);
   } else {
-    return node::ErrnoException(v8::Isolate::GetCurrent(), error_number, nullptr, nullptr, file_name.c_str());
+    Nan::ThrowError(results.first);
   }
 }
 
 void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
-  class Worker : public Nan::AsyncProgressWorkerBase<size_t> {
-    Nan::Callback *progress_callback;
-    TextBuffer *buffer;
-    TextBuffer::Snapshot *snapshot;
-    string file_name;
-    string encoding_name;
-    optional<Text> loaded_text;
-    optional<int> error_number;
-    Patch patch;
-    bool force;
-    bool compute_patch;
-    bool cancelled;
-
-  public:
-    Worker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
-           TextBuffer *buffer, TextBuffer::Snapshot *snapshot, string &&file_name,
-           string &&encoding_name, bool force, bool compute_patch) :
-      AsyncProgressWorkerBase(completion_callback),
-      progress_callback{progress_callback},
-      buffer{buffer},
-      snapshot{snapshot},
-      file_name{file_name},
-      encoding_name(encoding_name),
-      force{force},
-      compute_patch{compute_patch},
-      cancelled{false} {}
-
-    Worker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
-           TextBuffer *buffer, TextBuffer::Snapshot *snapshot, Text &&text,
-           bool force, bool compute_patch) :
-      AsyncProgressWorkerBase(completion_callback),
-      progress_callback{progress_callback},
-      buffer{buffer},
-      snapshot{snapshot},
-      loaded_text{move(text)},
-      force{force},
-      compute_patch{compute_patch},
-      cancelled{false} {}
-
-    void Execute(const Nan::AsyncProgressWorkerBase<size_t>::ExecutionProgress &progress) {
-      if (!loaded_text) {
-        auto conversion = transcoding_from(encoding_name.c_str());
-        if (!conversion) {
-          error_number = INVALID_ENCODING;
-          return;
-        }
-
-        size_t file_size = get_file_size(file_name.c_str());
-        if (file_size == static_cast<size_t>(-1)) {
-          error_number = errno;
-          return;
-        }
-
-        FILE *file = fopen(file_name.c_str(), "rb");
-        if (!file) {
-          error_number = errno;
-          return;
-        }
-
-        Text::String loaded_string;
-        vector<char> input_buffer(CHUNK_SIZE);
-        loaded_string.reserve(file_size);
-        if (!conversion->decode(
-          loaded_string,
-          file,
-          input_buffer,
-          [&progress, file_size](size_t bytes_read) {
-            size_t percent_done = file_size > 0 ? 100 * bytes_read / file_size : 100;
-            progress.Send(&percent_done, 1);
-          }
-        )) {
-          fclose(file);
-          error_number = errno;
-          return;
-        }
-
-        fclose(file);
-        loaded_text = Text{move(loaded_string)};
-      }
-
-      if (compute_patch) patch = text_diff(snapshot->base_text(), *loaded_text);
-    }
-
-    void HandleProgressCallback(const size_t *percent_done, size_t count) {
-      if (!cancelled && progress_callback && percent_done) {
-        Nan::HandleScope scope;
-        Local<Value> argv[] = {Nan::New<Number>(static_cast<uint32_t>(*percent_done))};
-        auto progress_result = progress_callback->Call(1, argv);
-        if (progress_result->IsFalse()) cancelled = true;
-      }
-    }
-
-    void HandleOKCallback() {
-      if (error_number) {
-        delete snapshot;
-        Local<Value> argv[] = {error_for_number(*error_number, encoding_name, file_name)};
-        callback->Call(1, argv);
-        return;
-      }
-
-      if (!force && buffer->is_modified()) {
-        delete snapshot;
-        Local<Value> argv[] = {Nan::Null(), Nan::Null()};
-        callback->Call(2, argv);
-        return;
-      }
-
-      Patch inverted_changes = buffer->get_inverted_changes(snapshot);
-      delete snapshot;
-
-      if (compute_patch && inverted_changes.get_change_count() > 0) {
-        inverted_changes.combine(patch);
-        patch = move(inverted_changes);
-      }
-
-      bool has_changed;
-      Local<Value> patch_wrapper;
-      if (compute_patch) {
-        has_changed = !compute_patch || patch.get_change_count() > 0;
-        patch_wrapper = PatchWrapper::from_patch(move(patch));
-      } else {
-        has_changed = true;
-        patch_wrapper = Nan::Null();
-      }
-
-      if (progress_callback && !cancelled) {
-        Local<Value> argv[] = {Nan::New<Number>(100), patch_wrapper};
-        auto progress_result = progress_callback->Call(2, argv);
-        if (progress_result->IsFalse()) cancelled = true;
-      }
-
-      if (cancelled) {
-        Local<Value> argv[] = {Nan::Null(), Nan::Null()};
-        callback->Call(2, argv);
-        return;
-      };
-
-      if (has_changed) {
-        buffer->reset(move(*loaded_text));
-      } else {
-        buffer->flush_changes();
-      }
-
-      Local<Value> argv[] = {Nan::Null(), patch_wrapper};
-      callback->Call(2, argv);
-    }
-  };
-
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
 
   Nan::Callback *completion_callback = new Nan::Callback(info[0].As<Function>());
@@ -592,7 +582,7 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
     return;
   }
 
-  Worker *worker;
+  LoadWorker *worker;
   if (info[4]->IsString()) {
     Local<String> js_file_path;
     if (!Nan::To<String>(info[4]).ToLocal(&js_file_path)) return;
@@ -602,7 +592,7 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
     if (!Nan::To<String>(info[5]).ToLocal(&js_encoding_name)) return;
     string encoding_name = *String::Utf8Value(info[5].As<String>());
 
-    worker = new Worker(
+    worker = new LoadWorker(
       completion_callback,
       progress_callback,
       &text_buffer,
@@ -614,7 +604,7 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
     );
   } else {
     auto text_writer = Nan::ObjectWrap::Unwrap<TextWriter>(info[4]->ToObject());
-    worker = new Worker(
+    worker = new LoadWorker(
       completion_callback,
       progress_callback,
       &text_buffer,
@@ -628,6 +618,67 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
   Nan::AsyncQueueWorker(worker);
 }
 
+class SaveWorker : public Nan::AsyncWorker {
+  TextBuffer::Snapshot *snapshot;
+  string file_name;
+  string encoding_name;
+  optional<int> error_number;
+
+ public:
+  SaveWorker(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
+             string &&file_name, string &&encoding_name) :
+    AsyncWorker(completion_callback),
+    snapshot{snapshot},
+    file_name{file_name},
+    encoding_name(encoding_name) {}
+
+  void Execute() {
+    auto conversion = transcoding_to(encoding_name.c_str());
+    if (!conversion) {
+      error_number = INVALID_ENCODING;
+      return;
+    }
+
+    FILE *file = fopen(file_name.c_str(), "wb+");
+    if (!file) {
+      error_number = errno;
+      return;
+    }
+
+    vector<char> output_buffer(CHUNK_SIZE);
+    for (TextSlice &chunk : snapshot->chunks()) {
+      if (!conversion->encode(
+        chunk.text->content,
+        chunk.start_offset(),
+        chunk.end_offset(),
+        file,
+        output_buffer
+      )) {
+        error_number = errno;
+        fclose(file);
+        return;
+      }
+    }
+
+    fclose(file);
+  }
+
+  Local<Value> Finish() {
+    snapshot->flush_preceding_changes();
+    delete snapshot;
+    if (error_number) {
+      return error_for_number(*error_number, encoding_name, file_name);
+    } else {
+      return Nan::Null();
+    }
+  }
+
+  void HandleOKCallback() {
+    Local<Value> argv[] = {Finish()};
+    callback->Call(1, argv);
+  }
+};
+
 void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
 
@@ -639,95 +690,21 @@ void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) 
   if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
   string encoding_name = *String::Utf8Value(info[1].As<String>());
 
-  auto conversion = transcoding_to(encoding_name.c_str());
-  if (!conversion) {
-    info.GetReturnValue().Set(Nan::False());
-    return;
-  }
+  SaveWorker worker(
+    nullptr,
+    text_buffer.create_snapshot(),
+    move(file_path),
+    move(encoding_name)
+  );
 
-  FILE *file = fopen(file_path.c_str(), "w+b");
-  if (!file) {
-    info.GetReturnValue().Set(Nan::False());
-    return;
+  worker.Execute();
+  auto error = worker.Finish();
+  if (!error->IsNull()) {
+    Nan::ThrowError(error);
   }
-
-  vector<char> output_buffer(CHUNK_SIZE);
-  for (TextSlice &chunk : text_buffer.chunks()) {
-    if (!conversion->encode(
-      chunk.text->content,
-      chunk.start_offset(),
-      chunk.end_offset(),
-      file,
-      output_buffer
-    )) {
-      info.GetReturnValue().Set(Nan::False());
-      return;
-    }
-  }
-
-  text_buffer.flush_changes();
-  info.GetReturnValue().Set(Nan::True());
 }
 
 void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
-  class Worker : public Nan::AsyncWorker {
-    TextBuffer::Snapshot *snapshot;
-    string file_name;
-    string encoding_name;
-    optional<int> error_number;
-
-  public:
-    Worker(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
-           string &&file_name, string &&encoding_name) :
-      AsyncWorker(completion_callback),
-      snapshot{snapshot},
-      file_name{file_name},
-      encoding_name(encoding_name) {}
-
-    void Execute() {
-      auto conversion = transcoding_to(encoding_name.c_str());
-      if (!conversion) {
-        error_number = INVALID_ENCODING;
-        return;
-      }
-
-      FILE *file = fopen(file_name.c_str(), "wb+");
-      if (!file) {
-        error_number = errno;
-        return;
-      }
-
-      vector<char> output_buffer(CHUNK_SIZE);
-      for (TextSlice &chunk : snapshot->chunks()) {
-        if (!conversion->encode(
-          chunk.text->content,
-          chunk.start_offset(),
-          chunk.end_offset(),
-          file,
-          output_buffer
-        )) {
-          error_number = errno;
-          fclose(file);
-          return;
-        }
-      }
-
-      fclose(file);
-    }
-
-    void HandleOKCallback() {
-      snapshot->flush_preceding_changes();
-      delete snapshot;
-      if (error_number) {
-        Local<Value> argv[] = {error_for_number(*error_number, encoding_name, file_name)};
-        callback->Call(1, argv);
-      } else {
-        Local<Value> argv[] = {Nan::Null()};
-        callback->Call(1, argv);
-      }
-    }
-  };
-
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
 
   Local<String> js_file_path;
@@ -739,7 +716,7 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
   string encoding_name = *String::Utf8Value(info[1].As<String>());
 
   Nan::Callback *completion_callback = new Nan::Callback(info[2].As<Function>());
-  Nan::AsyncQueueWorker(new Worker(
+  Nan::AsyncQueueWorker(new SaveWorker(
     completion_callback,
     text_buffer.create_snapshot(),
     move(file_path),
