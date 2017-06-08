@@ -11,7 +11,6 @@
                 "src/bindings/patch-wrapper.cc",
                 "src/bindings/point-wrapper.cc",
                 "src/bindings/range-wrapper.cc",
-                "src/bindings/buffer-offset-index-wrapper.cc",
                 "src/bindings/text-buffer-wrapper.cc",
                 "src/bindings/text-reader.cc",
                 "src/bindings/text-wrapper.cc",
@@ -30,7 +29,6 @@
                 "superstring_core_diff"
             ],
             "sources": [
-                "src/core/buffer-offset-index.cc",
                 "src/core/encoding-conversion.cc",
                 "src/core/marker-index.cc",
                 "src/core/patch.cc",

@@ -1,5 +1,3 @@
-require('segfault-handler').registerHandler()
-
 const Random = require('random-seed')
 const {assert} = require('chai')
 const TestDocument = require('./helpers/test-document')

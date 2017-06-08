@@ -36,25 +36,6 @@ assert.deepEqual(patch.getChanges(), [
 ])
 ```
 
-### BufferOffsetIndex
-
-This data allows conversion between 2-dimensional row/column positions and 1-dimensional string indices.
-
-Example:
-
-```js
-const bufferIndex = new BufferOffsetIndex
-
-// Specify that there are three lines with lengths 1, 3, and 5:
-bufferIndex.splice(0, 0, [1, 3, 5]) // a|bcd|efghi
-
-// Convert a 1-dimensional string index to a row/column position:
-assert.deepEqual(bufferIndex.positionForCharacterIndex(0), {row: 0, column: 0})
-
-// Convert a row/column position to a 1-dimensional string index:
-assert.equal(bufferIndex.characterIndexForPosition({row: 0, column: 0}), 0)
-```
-
 ### MarkerIndex
 
 This data structure is used to track logical locations in a text buffer as the contents of the buffer are changed.

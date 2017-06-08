@@ -1,5 +1,4 @@
 #include "marker-index-wrapper.h"
-#include "buffer-offset-index-wrapper.h"
 #include "nan.h"
 #include "patch-wrapper.h"
 #include "range-wrapper.h"
@@ -15,7 +14,6 @@ void Init(Local<Object> exports) {
   RangeWrapper::init();
   PatchWrapper::init(exports);
   MarkerIndexWrapper::init(exports);
-  BufferOffsetIndexWrapper::init(exports);
   TextBufferWrapper::init(exports);
   TextWriter::init(exports);
   TextReader::init(exports);

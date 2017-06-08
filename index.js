@@ -160,5 +160,4 @@ module.exports = {
   TextBuffer: binding.TextBuffer,
   Patch: binding.Patch,
   MarkerIndex: binding.MarkerIndex,
-  BufferOffsetIndex: binding.BufferOffsetIndex,
 }
