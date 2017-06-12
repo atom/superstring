@@ -26,7 +26,6 @@
             "type": "static_library",
             "dependencies": [
                 "./vendor/pcre/pcre.gyp:pcre",
-                "superstring_core_diff"
             ],
             "sources": [
                 "src/core/encoding-conversion.cc",
@@ -38,6 +37,8 @@
                 "src/core/text.cc",
                 "src/core/text-buffer.cc",
                 "src/core/text-slice.cc",
+                "src/core/text-diff.cc",
+                "src/core/libmba-diff.cc",
             ],
             "conditions": [
                 ['OS=="mac"', {
@@ -58,24 +59,7 @@
                     ]
                 }],
             ],
-        },
-
-        # This file is built as a separate target because the library that it
-        # uses, diff-match-patch, requires exceptions to be enabled.
-        {
-            "target_name": "superstring_core_diff",
-            "type": "static_library",
-            "include_dirs": [
-                "./vendor/diff-match-patch"
-            ],
-            "sources": [
-                "src/core/text-diff.cc",
-            ],
-            'xcode_settings': {
-                "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
-            },
-            "cflags_cc!": ["-fno-exceptions"],
-        },
+        }
     ],
 
     "variables": {

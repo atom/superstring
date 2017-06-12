@@ -63,7 +63,7 @@ TEST_CASE("text_diff - randomized changes") {
     Generator rand(seed);
     cout << "seed: " << seed << "\n";
 
-    Text old_text{get_random_string(rand, 10)};
+    Text old_text{get_random_string(rand, 100)};
     Text new_text = old_text;
 
     // cout << "extent: " << new_text.extent() << " text:\n" << new_text << "\n\n";
