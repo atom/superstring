@@ -10,9 +10,9 @@ using String = Text::String;
 
 Text::Text() : line_offsets{0} {}
 
-Text::Text(vector<uint16_t> &&content) : content{content}, line_offsets{0} {
-  for (uint32_t offset = 0, size = content.size(); offset < size; offset++) {
-    if (content[offset] == '\n') {
+Text::Text(vector<uint16_t> &&content) : content{move(content)}, line_offsets{0} {
+  for (uint32_t offset = 0, size = this->content.size(); offset < size; offset++) {
+    if (this->content[offset] == '\n') {
       line_offsets.push_back(offset + 1);
     }
   }
