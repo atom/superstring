@@ -423,7 +423,7 @@ void TextBuffer::reset(Text &&new_base_text) {
   }
 
   if (has_snapshot) {
-    set_text(String(new_base_text.content));
+    set_text(move(new_base_text.content));
     flush_changes();
     return;
   }
