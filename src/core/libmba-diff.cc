@@ -12,6 +12,8 @@
  *    components.
  * 3. Some optional parameters to the function have been removed.
  * 4. The whitespace has been normalized.
+ * 5. Before computing the edit script, the common suffix is removed from th
+ *    two input strings.
  */
 
 /* diff - compute a shortest edit script (SES) given two sequences
