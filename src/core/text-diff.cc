@@ -1,29 +1,14 @@
 #include "text-diff.h"
-#include "diff_match_patch.h"
+#include "libmba-diff.h"
 #include "text-slice.h"
+#include <vector>
 #include <string.h>
-#include <string>
+#include <ostream>
 #include <cassert>
 
 using std::move;
-using std::u16string;
-
-struct StringAdapterTraits {
-  static bool is_alnum(char16_t c) { return std::iswalnum(c); }
-  static bool is_digit(char16_t c) { return std::iswdigit(c); }
-  static bool is_space(char16_t c) { return std::iswspace(c); }
-  static wchar_t to_wchar(char16_t c) { return c; }
-  static char16_t from_wchar(wchar_t c) { return c; }
-  static const char16_t eol = '\n';
-  static const char16_t tab = '\t';
-
-  // These functions are not used when computing diffs; the diff-match-patch
-  // library uses them in functions that we don't call.
-  static u16string cs(const wchar_t* s) { assert(false); return u16string(); }
-  static int to_int(const char16_t* s) { assert(false); return 0; }
-};
-
-using DiffBuilder = diff_match_patch<u16string, StringAdapterTraits>;
+using std::ostream;
+using std::vector;
 
 static Point previous_column(Point position) {
   assert(position.column > 0);
@@ -31,35 +16,37 @@ static Point previous_column(Point position) {
   return position;
 }
 
+static int MAX_EDIT_DISTANCE = 1024;
+
 Patch text_diff(const Text &old_text, const Text &new_text) {
   Patch result;
   Text empty;
   Text cr{u"\r"};
   Text lf{u"\n"};
 
-  // When a buffer is intially loaded, this function is called with an empty
-  // `old_text`. In that case, we can avoid the overhead of converting the text
-  // to a u16string and back in order to compute the diff.
-  if (old_text.empty()) {
-    result.splice(Point(), Point(), new_text.extent(), empty, new_text);
+  vector<diff_edit> edit_script;
+
+  if (diff(
+    old_text.content.data(),
+    old_text.content.size(),
+    new_text.content.data(),
+    new_text.content.size(),
+    MAX_EDIT_DISTANCE,
+    &edit_script
+  ) == -1) {
+    result.splice(Point(), old_text.extent(), new_text.extent(), old_text, new_text);
     return result;
   }
-
-  u16string old_string(old_text.content.begin(), old_text.content.end());
-  u16string new_string(new_text.content.begin(), new_text.content.end());
-
-  DiffBuilder diff_builder;
-  diff_builder.Diff_Timeout = 5;
-  DiffBuilder::Diffs diffs = diff_builder.diff_main(old_string, new_string);
 
   size_t old_offset = 0;
   size_t new_offset = 0;
   Point old_position;
   Point new_position;
 
-  for (DiffBuilder::Diff &diff : diffs) {
-    switch (diff.operation) {
-      case DiffBuilder::Operation::EQUAL:
+  for (struct diff_edit &edit : edit_script) {
+    switch (edit.op) {
+      case DIFF_MATCH:
+        if (edit.len == 0) continue;
 
         // If the previous change ended between a CR and an LF, then expand
         // that change downward to include the LF.
@@ -73,8 +60,8 @@ Patch text_diff(const Text &old_text, const Text &new_text) {
           new_position.column = 0;
         }
 
-        old_offset += diff.text.size();
-        new_offset += diff.text.size();
+        old_offset += edit.len;
+        new_offset += edit.len;
         old_position = old_text.position_for_offset(old_offset, 0, false);
         new_position = new_text.position_for_offset(new_offset, 0, false);
 
@@ -87,18 +74,20 @@ Patch text_diff(const Text &old_text, const Text &new_text) {
         }
         break;
 
-      case DiffBuilder::Operation::DELETE: {
-        Text deleted_text{move(diff.text)};
-        old_offset += diff.text.size();
+      case DIFF_DELETE: {
+        uint32_t deletion_end = old_offset + edit.len;
+        Text deleted_text{old_text.begin() + old_offset, old_text.begin() + deletion_end};
+        old_offset = deletion_end;
         Point next_old_position = old_text.position_for_offset(old_offset, 0, false);
         result.splice(new_position, next_old_position.traversal(old_position), Point(), deleted_text, empty);
         old_position = next_old_position;
         break;
       }
 
-      case DiffBuilder::Operation::INSERT: {
-        Text inserted_text{move(diff.text)};
-        new_offset += diff.text.size();
+      case DIFF_INSERT: {
+        uint32_t insertion_end = new_offset + edit.len;
+        Text inserted_text{new_text.begin() + new_offset, new_text.begin() + insertion_end};
+        new_offset = insertion_end;
         Point next_new_position = new_text.position_for_offset(new_offset, 0, false);
         result.splice(new_position, Point(), next_new_position.traversal(new_position), empty, inserted_text);
         new_position = next_new_position;

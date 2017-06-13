@@ -412,16 +412,36 @@ TextBuffer::TextBuffer(const std::u16string &text) :
   TextBuffer{String{text.begin(), text.end()}} {}
 
 void TextBuffer::reset(Text &&new_base_text) {
-  if (!top_layer->previous_layer && top_layer->snapshot_count == 0) {
-    top_layer->extent_ = new_base_text.extent();
-    top_layer->size_ = new_base_text.size();
-    top_layer->text = move(new_base_text);
-    top_layer->patch.clear();
-    top_layer->uses_patch = false;
-  } else {
-    set_text(String(new_base_text.content));
-    flush_changes();
+  bool has_snapshot = false;
+  auto layer = top_layer;
+  while (layer) {
+    if (layer->snapshot_count > 0) {
+      has_snapshot = true;
+      break;
+    }
+    layer = layer->previous_layer;
   }
+
+  if (has_snapshot) {
+    set_text(move(new_base_text.content));
+    flush_changes();
+    return;
+  }
+
+  layer = top_layer->previous_layer;
+  while (layer) {
+    Layer *previous_layer = layer->previous_layer;
+    delete layer;
+    layer = previous_layer;
+  }
+
+  top_layer->extent_ = new_base_text.extent();
+  top_layer->size_ = new_base_text.size();
+  top_layer->text = move(new_base_text);
+  top_layer->patch.clear();
+  top_layer->uses_patch = false;
+  base_layer = top_layer;
+  top_layer->previous_layer = nullptr;
 }
 
 Patch TextBuffer::get_inverted_changes(const Snapshot *snapshot) const {

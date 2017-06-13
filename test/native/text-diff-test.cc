@@ -56,6 +56,54 @@ TEST_CASE("text_diff - single line") {
   }));
 }
 
+TEST_CASE("text_diff - old text is empty") {
+  Text old_text{u""};
+  Text new_text{u"abc\ndef\nghi\njkl\n"};
+
+  Patch patch = text_diff(old_text, new_text);
+
+  REQUIRE(patch.get_changes() == vector<Change>({
+    Change{
+      Point{0, 0}, Point{0, 0},
+      Point{0, 0}, Point{4, 0},
+      get_text(u"").get(), get_text(u"abc\ndef\nghi\njkl\n").get(),
+      0, 0, 0
+    },
+  }));
+}
+
+TEST_CASE("text_diff - old text is a prefix of new text") {
+  Text old_text{u"abc\ndef\n"};
+  Text new_text{u"abc\ndef\nghi\njkl\n"};
+
+  Patch patch = text_diff(old_text, new_text);
+
+  REQUIRE(patch.get_changes() == vector<Change>({
+    Change{
+      Point{2, 0}, Point{2, 0},
+      Point{2, 0}, Point{4, 0},
+      get_text(u"").get(), get_text(u"ghi\njkl\n").get(),
+      0, 0, 0
+    },
+  }));
+}
+
+TEST_CASE("text_diff - old text is a suffix of new text") {
+  Text old_text{u"ghi\njkl\n"};
+  Text new_text{u"abc\ndef\nghi\njkl\n"};
+
+  Patch patch = text_diff(old_text, new_text);
+
+  REQUIRE(patch.get_changes() == vector<Change>({
+    Change{
+      Point{0, 0}, Point{0, 0},
+      Point{0, 0}, Point{2, 0},
+      get_text(u"").get(), get_text(u"abc\ndef\n").get(),
+      0, 0, 0
+    },
+  }));
+}
+
 TEST_CASE("text_diff - randomized changes") {
   auto t = time(nullptr);
   for (uint i = 0; i < 100; i++) {
@@ -63,7 +111,7 @@ TEST_CASE("text_diff - randomized changes") {
     Generator rand(seed);
     cout << "seed: " << seed << "\n";
 
-    Text old_text{get_random_string(rand, 10)};
+    Text old_text{get_random_string(rand, 100)};
     Text new_text = old_text;
 
     // cout << "extent: " << new_text.extent() << " text:\n" << new_text << "\n\n";
