@@ -168,13 +168,29 @@ void TextBufferWrapper::get_text_in_range(const Nan::FunctionCallbackInfo<Value>
   }
 }
 
+class StringResource : public String::ExternalStringResource {
+  Text::String content;
+
+ public:
+  StringResource(Text::String &&c) : content{move(c)} {}
+  virtual ~StringResource() = default;
+  virtual const uint16_t *data() const { return content.data(); }
+  virtual size_t length() const { return content.size(); }
+};
+
 void TextBufferWrapper::get_text(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
-  Local<String> result;
   auto text = text_buffer.text();
-  if (Nan::New<String>(text.data(), text.size()).ToLocal(&result)) {
-    info.GetReturnValue().Set(result);
+  v8::MaybeLocal<String> maybe_result;
+  if (text.size() > 1024 * 1024) {
+    auto string_resource = new StringResource(move(text));
+    maybe_result = String::NewExternalTwoByte(Isolate::GetCurrent(), string_resource);
+  } else {
+    maybe_result = Nan::New<String>(text.data(), text.size());
   }
+
+  Local<String> result;
+  if (maybe_result.ToLocal(&result)) info.GetReturnValue().Set(result);
 }
 
 void TextBufferWrapper::set_text_in_range(const Nan::FunctionCallbackInfo<Value> &info) {
