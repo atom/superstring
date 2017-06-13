@@ -16,7 +16,7 @@ static Point previous_column(Point position) {
   return position;
 }
 
-static int MAX_EDIT_DISTANCE = 1024;
+static int MAX_EDIT_DISTANCE = 4 * 1024;
 
 Patch text_diff(const Text &old_text, const Text &new_text) {
   Patch result;
@@ -26,14 +26,16 @@ Patch text_diff(const Text &old_text, const Text &new_text) {
 
   vector<diff_edit> edit_script;
 
-  if (diff(
+  int edit_distance = diff(
     old_text.content.data(),
     old_text.content.size(),
     new_text.content.data(),
     new_text.content.size(),
     MAX_EDIT_DISTANCE,
     &edit_script
-  ) == -1) {
+  );
+
+  if (edit_distance == -1 || edit_distance >= MAX_EDIT_DISTANCE) {
     result.splice(Point(), old_text.extent(), new_text.extent(), old_text, new_text);
     return result;
   }
