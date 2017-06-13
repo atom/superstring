@@ -16,7 +16,7 @@ static Point previous_column(Point position) {
   return position;
 }
 
-static int MAX_EDIT_DISTANCE = 10 * 1024;
+static int MAX_EDIT_DISTANCE = 1024;
 
 Patch text_diff(const Text &old_text, const Text &new_text) {
   Patch result;
