@@ -28,10 +28,8 @@ Patch text_diff(const Text &old_text, const Text &new_text) {
 
   if (diff(
     old_text.content.data(),
-    0,
     old_text.content.size(),
     new_text.content.data(),
-    0,
     new_text.content.size(),
     MAX_EDIT_DISTANCE,
     &edit_script

@@ -11,14 +11,14 @@ typedef enum {
 } diff_op;
 
 struct diff_edit {
-  short op;
-  int off; /* off into s1 if MATCH or DELETE but s2 if INSERT */
-  int len;
+  diff_op op;
+  uint32_t off; /* off into s1 if MATCH or DELETE but s2 if INSERT */
+  uint32_t len;
 };
 
 int diff(
-  const uint16_t *a, int aoff, int n,
-  const uint16_t *b, int boff, int m,
+  const uint16_t *old_text, uint32_t old_length,
+  const uint16_t *new_text, uint32_t new_length,
   int dmax, std::vector<diff_edit> *ses
 );
 

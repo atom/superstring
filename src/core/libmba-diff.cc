@@ -67,12 +67,12 @@ struct _ctx {
 };
 
 struct middle_snake {
-  int x, y, u, v;
+  uint32_t x, y, u, v;
 };
 
 static void _setv(struct _ctx *ctx, int k, int r, int val) {
   /* Pack -N to N into 0 to N * 2 */
-  unsigned j = k <= 0 ? -k * 4 + r : k * 4 + (r - 2);
+  uint32_t j = k <= 0 ? -k * 4 + r : k * 4 + (r - 2);
   if (ctx->buf.size() < j + 1) {
     ctx->buf.resize(j + 1);
   }
@@ -80,7 +80,7 @@ static void _setv(struct _ctx *ctx, int k, int r, int val) {
 }
 
 static int _v(struct _ctx *ctx, int k, int r) {
-  int j = k <= 0 ? -k * 4 + r : k * 4 + (r - 2);
+  uint32_t j = k <= 0 ? -k * 4 + r : k * 4 + (r - 2);
   return ctx->buf[j];
 }
 
@@ -166,7 +166,7 @@ static int _find_middle_snake(
   return -1;
 }
 
-static void _edit(struct _ctx *ctx, int op, int off, int len) {
+static void _edit(struct _ctx *ctx, diff_op op, int off, int len) {
   // Add an edit to the SES (or coalesce if the op is the same)
   auto *e = &ctx->ses->back();
   if (e->op != op) {
@@ -183,8 +183,8 @@ static void _edit(struct _ctx *ctx, int op, int off, int len) {
 }
 
 static int _ses(
-  const uint16_t *a, int aoff, int n,
-  const uint16_t *b, int boff, int m,
+  const uint16_t *a, uint32_t aoff, uint32_t n,
+  const uint16_t *b, uint32_t boff, uint32_t m,
   struct _ctx *ctx
 ) {
   struct middle_snake ms;
@@ -261,37 +261,46 @@ static int _ses(
   return d;
 }
 
-int diff(const uint16_t *a, int aoff, int n, const uint16_t *b, int boff, int m,
+int diff(const uint16_t *a, uint32_t n, const uint16_t *b, uint32_t m,
          int dmax, vector<diff_edit> *ses) {
-  int d, x, y;
-
   struct _ctx ctx;
   ctx.ses = ses;
   ctx.dmax = dmax ? dmax : INT_MAX;
+  ses->push_back(diff_edit{static_cast<diff_op>(0), 0, 0});
 
-  ses->push_back(diff_edit{0, 0, 0});
-
- /* The _ses function assumes the SES will begin or end with a delete
-  * or insert. The following will insure this is true by eating any
-  * beginning matches. This is also a quick to process sequences
-  * that match entirely.
-  */
-  x = y = 0;
-  const uint16_t *a0 = a + aoff;
-  const uint16_t *b0 = b + boff;
-  while (x < n && y < m && a0[x] == b0[y]) {
-    x++; y++;
-  }
-  _edit(&ctx, DIFF_MATCH, aoff, x);
-
-  if ((d = _ses(a, aoff + x, n - x, b, boff + y, m - y, &ctx)) == -1) {
-    return -1;
+  uint32_t common_prefix_length = 0;
+  while (common_prefix_length < n &&
+         common_prefix_length < m &&
+         a[common_prefix_length] == b[common_prefix_length]) {
+    common_prefix_length++;
   }
 
-  if (ses->front().op == 0) {
-    ses->pop_back();
+  _edit(&ctx, DIFF_MATCH, 0, common_prefix_length);
+
+  uint32_t common_suffix_length = 0;
+  while (n > common_prefix_length &&
+         m > common_prefix_length &&
+         a[n - 1] == b[m - 1]) {
+    n--;
+    m--;
+    common_suffix_length++;
   }
 
+  int d = _ses(
+    a,
+    common_prefix_length,
+    n - common_prefix_length,
+    b,
+    common_prefix_length,
+    m - common_prefix_length,
+    &ctx
+  );
+
+  if (d == -1) return -1;
+
+  _edit(&ctx, DIFF_MATCH, n, common_suffix_length);
+
+  if (ses->front().op == 0) ses->clear();
   return d;
 }
 
