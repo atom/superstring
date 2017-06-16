@@ -372,6 +372,15 @@ TEST_CASE("TextBuffer::find_all") {
   }));
 }
 
+TEST_CASE("TextBuffer::find_all - CRLF line endings") {
+  TextBuffer buffer{u"abc\ndef\r\nghi"};
+  REQUIRE(buffer.find_all(Regex(u"\\w$", nullptr)) == vector<Range>({
+    Range{Point{0, 2}, Point{0, 3}},
+    Range{Point{1, 2}, Point{1, 3}},
+    Range{Point{2, 2}, Point{2, 3}},
+  }));
+}
+
 struct SnapshotData {
   Text base_text;
   String text;
