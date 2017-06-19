@@ -1,10 +1,8 @@
 #include "encoding-conversion.h"
+#include "libcxx-components/utf8-conversions.h"
 #include <iconv.h>
-#include <codecvt>
 #include <string.h>
 
-using std::codecvt_base;
-using std::codecvt_utf8_utf16;
 using std::function;
 using std::vector;
 using String = Text::String;
@@ -28,16 +26,9 @@ enum ConversionResult {
   Error,
 };
 
-// In the common case of transcoding to/from UTF8, we can use the standard
-// library's transcoding routines, which are significantly faster than iconv.
-struct UTF8Converter {
-  codecvt_utf8_utf16<char16_t> facet;
-  std::mbstate_t state;
-};
-
 optional<EncodingConversion> transcoding_to(const char *name) {
   if (strcmp(name, "UTF-8") == 0) {
-    return EncodingConversion{UTF16_TO_UTF8, new UTF8Converter()};
+    return EncodingConversion{UTF16_TO_UTF8, nullptr};
   } else {
     iconv_t conversion = iconv_open(name, "UTF-16LE");
     return conversion == reinterpret_cast<iconv_t>(-1) ?
@@ -48,7 +39,7 @@ optional<EncodingConversion> transcoding_to(const char *name) {
 
 optional<EncodingConversion> transcoding_from(const char *name) {
   if (strcmp(name, "UTF-8") == 0) {
-    return EncodingConversion{UTF8_TO_UTF16, new UTF8Converter()};
+    return EncodingConversion{UTF8_TO_UTF16, nullptr};
   } else {
     iconv_t conversion = iconv_open("UTF-16LE", name);
     return conversion == reinterpret_cast<iconv_t>(-1) ?
@@ -70,76 +61,54 @@ EncodingConversion::EncodingConversion(int mode, void *data) :
   data{data}, mode{mode} {}
 
 EncodingConversion::~EncodingConversion() {
-  if (data) {
-    switch (mode) {
-      case GENERAL:
-        iconv_close(data);
-        break;
-
-      case UTF16_TO_UTF8:
-      case UTF8_TO_UTF16:
-        delete static_cast<UTF8Converter *>(data);
-        break;
-    }
-  }
+  if (data) iconv_close(data);
 }
 
 int EncodingConversion::convert(
   const char **input, const char *input_end, char **output, char *output_end) const {
   switch (mode) {
     case UTF8_TO_UTF16: {
-      auto converter = static_cast<UTF8Converter *>(data);
-      const char *next_input;
-      char16_t *next_output;
-      int result = converter->facet.in(
-        converter->state,
-        *input,
-        input_end,
+      const uint8_t *next_input;
+      uint16_t *next_output;
+      int result = utf8_to_utf16(
+        reinterpret_cast<const uint8_t *>(*input),
+        reinterpret_cast<const uint8_t *>(input_end),
         next_input,
-        reinterpret_cast<char16_t *>(*output),
-        reinterpret_cast<char16_t *>(output_end),
+        reinterpret_cast<uint16_t *>(*output),
+        reinterpret_cast<uint16_t *>(output_end),
         next_output
       );
-      *input = next_input;
+      *input = reinterpret_cast<const char *>(next_input);
       *output = reinterpret_cast<char *>(next_output);
       switch (result) {
-        case codecvt_base::ok:
+        case transcode_result::ok:
           return Ok;
-        case codecvt_base::partial:
+        case transcode_result::partial:
           return (*input == input_end) ? Partial : InvalidTrailing;
-        case codecvt_base::error:
+        case transcode_result::error:
           return Invalid;
       }
     }
 
     case UTF16_TO_UTF8: {
-      auto converter = static_cast<UTF8Converter *>(data);
-      const char16_t *next_input;
-      char *next_output;
-      int result = converter->facet.out(
-        converter->state,
-        reinterpret_cast<const char16_t *>(*input),
-        reinterpret_cast<const char16_t *>(input_end),
+      const uint16_t *next_input;
+      uint8_t *next_output;
+      int result = utf16_to_utf8(
+        reinterpret_cast<const uint16_t *>(*input),
+        reinterpret_cast<const uint16_t *>(input_end),
         next_input,
-        *output,
-        output_end,
+        reinterpret_cast<uint8_t *>(*output),
+        reinterpret_cast<uint8_t *>(output_end),
         next_output
       );
       *input = reinterpret_cast<const char *>(next_input);
-      *output = next_output;
+      *output = reinterpret_cast<char *>(next_output);
       switch (result) {
-        case codecvt_base::ok:
-          // When using GCC and libstdc++, `codecvt_utf8_utf16::out` seems to
-          // return `ok` when there is an incomplete multi-byte sequence at the
-          // end of the input chunk. But it correctly does not advance the input
-          // pointer, so we can distinguish this situation from an actual
-          // successful result.
-          if (*input < input_end && *output < output_end) return InvalidTrailing;
-
+        case transcode_result::ok:
           return Ok;
-        case codecvt_base::partial:
+        case transcode_result::partial:
           return (*input == input_end) ? Partial : InvalidTrailing;
-        case codecvt_base::error:
+        case transcode_result::error:
           return Invalid;
       }
     }
