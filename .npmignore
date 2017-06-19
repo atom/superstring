@@ -8,8 +8,7 @@
 !src/bindings/*.h
 !src/bindings/*.cc
 
-!vendor/diff-match-patch/diff_match_patch.h
-!vendor/diff-match-patch/LICENSE
+!vendor/libcxx/*
 
 !vendor/pcre/pcre.gyp
 !vendor/pcre/pcre2_chartables.c

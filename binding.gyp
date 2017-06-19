@@ -40,6 +40,9 @@
                 "src/core/text-diff.cc",
                 "src/core/libmba-diff.cc",
             ],
+            "include_dirs": [
+                "vendor/libcxx"
+            ],
             "conditions": [
                 ['OS=="mac"', {
                     'link_settings': {

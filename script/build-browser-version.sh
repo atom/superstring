@@ -42,6 +42,7 @@ em++                                    \
   -O3                                   \
   -I src/bindings/em                    \
   -I src/core                           \
+  -I vendor/libcxx                      \
   -I vendor/pcre/include                \
   -D PCRE2_CODE_UNIT_WIDTH=16           \
   -xc++                                 \
