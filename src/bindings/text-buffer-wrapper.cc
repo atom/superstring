@@ -12,30 +12,52 @@
 #include "noop.h"
 #include <sys/stat.h>
 
-#ifdef WIN32
-
-static size_t get_file_size(const char *name) {
-  struct _stat file_stats;
-  if (_stat(name, &file_stats) != 0) return -1;
-  return file_stats.st_size;
-}
-
-#else
-
-static size_t get_file_size(const char *name) {
-  struct stat file_stats;
-  if (stat(name, &file_stats) != 0) return -1;
-  return file_stats.st_size;
-}
-
-#endif
-
 using namespace v8;
 using std::move;
 using std::pair;
 using std::string;
 using std::u16string;
 using std::vector;
+using std::wstring;
+
+#ifdef WIN32
+
+static wstring ToUTF16(string input) {
+  wstring result;
+  int length = MultiByteToWideChar(CP_UTF8, 0, input.c_str(), input.length(), NULL, 0);
+  if (length > 0) {
+    result.resize(length);
+    MultiByteToWideChar(CP_UTF8, 0, input.c_str(), input.length(), &result[0], length);
+  }
+  return result;
+}
+
+static size_t get_file_size(const string &name) {
+  struct _stat file_stats;
+  if (_wstat(ToUTF16(name).c_str(), &file_stats) != 0) return -1;
+  return file_stats.st_size;
+}
+
+static FILE *open_file(const string &name, const char *flags) {
+  wchar_t wide_flags[6] = {0, 0, 0, 0, 0, 0};
+  size_t flag_count = strlen(flags);
+  MultiByteToWideChar(CP_UTF8, 0, flags, flag_count, wide_flags, flag_count);
+  return _wfopen(ToUTF16(name).c_str(), wide_flags);
+}
+
+#else
+
+static size_t get_file_size(const std::string &name) {
+  struct stat file_stats;
+  if (stat(name.c_str(), &file_stats) != 0) return -1;
+  return file_stats.st_size;
+}
+
+static FILE *open_file(const std::string &name, const char *flags) {
+  return fopen(name.c_str(), flags);
+}
+
+#endif
 
 static size_t CHUNK_SIZE = 10 * 1024;
 
@@ -407,13 +429,13 @@ class LoadWorker : public Nan::AsyncProgressWorkerBase<size_t> {
         return;
       }
 
-      size_t file_size = get_file_size(file_name.c_str());
+      size_t file_size = get_file_size(file_name);
       if (file_size == static_cast<size_t>(-1)) {
         error_number = errno;
         return;
       }
 
-      FILE *file = fopen(file_name.c_str(), "rb");
+      FILE *file = open_file(file_name, "rb");
       if (!file) {
         error_number = errno;
         return;
@@ -639,7 +661,7 @@ class SaveWorker : public Nan::AsyncWorker {
       return;
     }
 
-    FILE *file = fopen(file_name.c_str(), "wb+");
+    FILE *file = open_file(file_name, "wb+");
     if (!file) {
       error_number = errno;
       return;
