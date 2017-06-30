@@ -52,6 +52,10 @@ static uint32_t character_index_for_position(TextBuffer &buffer, Point position)
   return buffer.clip_position(position).offset;
 }
 
+static uint32_t get_line_count(TextBuffer &buffer) {
+  return buffer.extent().row + 1;
+}
+
 static Point position_for_character_index(TextBuffer &buffer, long index) {
   return index < 0 ?
     Point{0, 0} :
@@ -68,6 +72,7 @@ EMSCRIPTEN_BINDINGS(TextBuffer) {
     .function("setTextInRange", WRAP_OVERLOAD(&TextBuffer::set_text_in_range, void (TextBuffer::*)(Range, Text::String &&)))
     .function("getLength", &TextBuffer::size)
     .function("getExtent", &TextBuffer::extent)
+    .function("getLineCount", get_line_count)
     .function("reset", WRAP(&TextBuffer::reset))
     .function("lineLengthForRow", WRAP(&TextBuffer::line_length_for_row))
     .function("lineEndingForRow", line_ending_for_row)
