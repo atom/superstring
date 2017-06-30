@@ -262,6 +262,21 @@ describe('TextBuffer', () => {
       ))
     })
 
+    it('handles paths containing non-ascii characters', () => {
+      const directory = temp.mkdirSync()
+      const filePath = path.join(directory, 'русский.txt')
+      fs.writeFileSync(filePath, 'Hello')
+      const buffer = new TextBuffer()
+      return buffer.load(filePath).then(() => {
+        assert.equal(buffer.getText(), 'Hello')
+
+        buffer.setTextInRange(Range(Point(0, 5), Point(0, 5)), '!')
+        return buffer.save(filePath).then(() => {
+          assert.equal(fs.readFileSync(filePath), 'Hello!')
+        })
+      })
+    })
+
     describe('when the `force` option is set to true', () => {
       it('discards any modifications and incorporates that change into the resolved patch', () => {
         const buffer = new TextBuffer('abcdef')
