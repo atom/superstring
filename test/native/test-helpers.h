@@ -10,6 +10,7 @@
 #include <random>
 #include "range.h"
 #include "text.h"
+#include "text-buffer.h"
 #include <iostream>
 
 using std::cout;
@@ -47,6 +48,10 @@ namespace std {
     }
 
     return stream;
+  }
+
+  inline std::ostream &operator<<(std::ostream &stream, const TextBuffer::ApproximateMatch &match) {
+    return stream << "ApproximateMatch{ " <<  match.word << ", " << match.score << " }";
   }
 }
 

@@ -14,6 +14,7 @@ using std::vector;
 using std::u16string;
 using MatchResult = Regex::MatchResult;
 using String = Text::String;
+using ApproximateMatch = TextBuffer::ApproximateMatch;
 
 TEST_CASE("TextBuffer::set_text_in_range - basic") {
   TextBuffer buffer{u"abc\ndef\nghi"};
@@ -369,6 +370,15 @@ TEST_CASE("TextBuffer::find_all") {
     Range{Point{0, 0}, Point{0, 1}},
     Range{Point{1, 0}, Point{1, 1}},
     Range{Point{2, 0}, Point{2, 1}},
+  }));
+}
+
+TEST_CASE("TextBuffer::find_words_with_subsequence") {
+  TextBuffer buffer{u"banana band bandana banana"};
+
+  REQUIRE(buffer.find_words_with_subsequence(u"bna", u"") == vector<ApproximateMatch>({
+    {u"banana", {Point{0, 0}, Point{0, 20}}, {}, 0},
+    {u"bandana", {Point{0, 12}}, {}, 0}
   }));
 }
 

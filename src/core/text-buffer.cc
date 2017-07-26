@@ -2,17 +2,21 @@
 #include "text-buffer.h"
 #include "regex.h"
 #include <cassert>
-#include <vector>
+#include <cwctype>
 #include <sstream>
+#include <map>
+#include <vector>
 
 using std::equal;
 using std::move;
+using std::pair;
 using std::string;
-using std::vector;
 using std::u16string;
+using std::vector;
 using String = Text::String;
 using MatchOptions = Regex::MatchOptions;
 using MatchResult = Regex::MatchResult;
+using ApproximateMatch = TextBuffer::ApproximateMatch;
 
 uint32_t TextBuffer::MAX_CHUNK_SIZE_TO_COPY = 1024;
 
@@ -372,6 +376,66 @@ struct TextBuffer::Layer {
     return result;
   }
 
+  struct ApproximateMatchVariant {
+    int16_t score;
+    size_t query_index;
+    std::vector<size_t> match_indices;
+  };
+
+  vector<ApproximateMatch> find_words_with_subsequence_in_range(const u16string &query, const u16string &extra_word_characters, size_t max_count, Range range) {
+    size_t query_index = 0;
+    Point position;
+    Point current_word_start;
+    u16string current_word;
+
+    std::map<u16string, vector<Point>> substring_matches;
+
+    for_each_chunk_in_range(range.start, range.end, [&] (TextSlice chunk) -> bool {
+      for (uint16_t c : chunk) {
+        bool is_word_character =
+          std::iswalnum(c) ||
+          std::find(extra_word_characters.begin(), extra_word_characters.end(), c) != extra_word_characters.end();
+
+        if (is_word_character) {
+          if (current_word.empty()) current_word_start = position;
+          current_word += c;
+          if (query_index < query.size() && towlower(c) == towlower(query[query_index])) {
+            query_index++;
+          }
+        } else {
+          if (!current_word.empty()) {
+            if (query_index == query.size()) {
+              substring_matches[current_word].push_back(current_word_start);
+            }
+            query_index = 0;
+            current_word.clear();
+          }
+        }
+
+        if (c == '\n') {
+          position.row++;
+          position.column = 0;
+        } else {
+          position.column++;
+        }
+      }
+
+      return false;
+    });
+
+    if (!current_word.empty() && query_index == query.size()) {
+      substring_matches[current_word].push_back(current_word_start);
+    }
+
+    vector<ApproximateMatch> matches;
+
+    for (auto entry : substring_matches) {
+      matches.push_back({entry.first, entry.second, {}, 0});
+    }
+
+    return matches;
+  }
+
   bool is_modified(const Layer *base_layer) {
     if (size() != base_layer->size()) return true;
 
@@ -647,6 +711,19 @@ optional<Range> TextBuffer::find(const Regex &regex) const {
 
 vector<Range> TextBuffer::find_all(const Regex &regex) const {
   return top_layer->find_all_in_range(regex, Range{Point(), extent()}, false);
+}
+
+bool TextBuffer::ApproximateMatch::operator==(const ApproximateMatch &other) const {
+  return (
+    word == other.word &&
+    positions == other.positions &&
+    match_indices == other.match_indices &&
+    score == other.score
+  );
+}
+
+vector<ApproximateMatch> TextBuffer::find_words_with_subsequence(const u16string &query, const u16string &non_word_characters, size_t max_count) const {
+  return top_layer->find_words_with_subsequence_in_range(query, non_word_characters, max_count, Range{Point(), extent()});
 }
 
 bool TextBuffer::is_modified() const {
