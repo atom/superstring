@@ -59,7 +59,7 @@ public:
     bool operator==(const SubsequenceMatch &) const;
   };
 
-  std::vector<SubsequenceMatch> find_words_with_subsequence(const std::u16string &, const std::u16string &, size_t max_count = 0) const;
+  std::vector<SubsequenceMatch> find_words_with_subsequence(const std::u16string &, const std::u16string &) const;
 
   class Snapshot {
     friend class TextBuffer;

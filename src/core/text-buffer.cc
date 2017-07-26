@@ -382,7 +382,7 @@ struct TextBuffer::Layer {
     std::vector<size_t> match_indices;
   };
 
-  vector<SubsequenceMatch> find_words_with_subsequence_in_range(const u16string &query, const u16string &extra_word_characters, size_t max_count, Range range) {
+  vector<SubsequenceMatch> find_words_with_subsequence_in_range(const u16string &query, const u16string &extra_word_characters, Range range) {
     size_t query_index = 0;
     Point position;
     Point current_word_start;
@@ -722,8 +722,8 @@ bool TextBuffer::SubsequenceMatch::operator==(const SubsequenceMatch &other) con
   );
 }
 
-vector<SubsequenceMatch> TextBuffer::find_words_with_subsequence(const u16string &query, const u16string &non_word_characters, size_t max_count) const {
-  return top_layer->find_words_with_subsequence_in_range(query, non_word_characters, max_count, Range{Point(), extent()});
+vector<SubsequenceMatch> TextBuffer::find_words_with_subsequence(const u16string &query, const u16string &non_word_characters) const {
+  return top_layer->find_words_with_subsequence_in_range(query, non_word_characters, Range{Point(), extent()});
 }
 
 bool TextBuffer::is_modified() const {
