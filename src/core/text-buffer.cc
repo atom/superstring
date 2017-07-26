@@ -16,7 +16,7 @@ using std::vector;
 using String = Text::String;
 using MatchOptions = Regex::MatchOptions;
 using MatchResult = Regex::MatchResult;
-using ApproximateMatch = TextBuffer::ApproximateMatch;
+using SubsequenceMatch = TextBuffer::SubsequenceMatch;
 
 uint32_t TextBuffer::MAX_CHUNK_SIZE_TO_COPY = 1024;
 
@@ -376,13 +376,13 @@ struct TextBuffer::Layer {
     return result;
   }
 
-  struct ApproximateMatchVariant {
+  struct SubsequenceMatchVariant {
     int16_t score;
     size_t query_index;
     std::vector<size_t> match_indices;
   };
 
-  vector<ApproximateMatch> find_words_with_subsequence_in_range(const u16string &query, const u16string &extra_word_characters, size_t max_count, Range range) {
+  vector<SubsequenceMatch> find_words_with_subsequence_in_range(const u16string &query, const u16string &extra_word_characters, size_t max_count, Range range) {
     size_t query_index = 0;
     Point position;
     Point current_word_start;
@@ -427,7 +427,7 @@ struct TextBuffer::Layer {
       substring_matches[current_word].push_back(current_word_start);
     }
 
-    vector<ApproximateMatch> matches;
+    vector<SubsequenceMatch> matches;
 
     for (auto entry : substring_matches) {
       matches.push_back({entry.first, entry.second, {}, 0});
@@ -713,7 +713,7 @@ vector<Range> TextBuffer::find_all(const Regex &regex) const {
   return top_layer->find_all_in_range(regex, Range{Point(), extent()}, false);
 }
 
-bool TextBuffer::ApproximateMatch::operator==(const ApproximateMatch &other) const {
+bool TextBuffer::SubsequenceMatch::operator==(const SubsequenceMatch &other) const {
   return (
     word == other.word &&
     positions == other.positions &&
@@ -722,7 +722,7 @@ bool TextBuffer::ApproximateMatch::operator==(const ApproximateMatch &other) con
   );
 }
 
-vector<ApproximateMatch> TextBuffer::find_words_with_subsequence(const u16string &query, const u16string &non_word_characters, size_t max_count) const {
+vector<SubsequenceMatch> TextBuffer::find_words_with_subsequence(const u16string &query, const u16string &non_word_characters, size_t max_count) const {
   return top_layer->find_words_with_subsequence_in_range(query, non_word_characters, max_count, Range{Point(), extent()});
 }
 

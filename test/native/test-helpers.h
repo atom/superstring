@@ -50,8 +50,8 @@ namespace std {
     return stream;
   }
 
-  inline std::ostream &operator<<(std::ostream &stream, const TextBuffer::ApproximateMatch &match) {
-    return stream << "ApproximateMatch{ " <<  match.word << ", " << match.score << " }";
+  inline std::ostream &operator<<(std::ostream &stream, const TextBuffer::SubsequenceMatch &match) {
+    return stream << "SubsequenceMatch{ " <<  match.word << ", " << match.score << " }";
   }
 }
 

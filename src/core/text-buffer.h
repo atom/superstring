@@ -51,15 +51,15 @@ public:
   optional<Range> find(const Regex &) const;
   std::vector<Range> find_all(const Regex &) const;
 
-  struct ApproximateMatch {
+  struct SubsequenceMatch {
     std::u16string word;
     std::vector<Point> positions;
     std::vector<uint32_t> match_indices;
     int32_t score;
-    bool operator==(const ApproximateMatch &) const;
+    bool operator==(const SubsequenceMatch &) const;
   };
 
-  std::vector<ApproximateMatch> find_words_with_subsequence(const std::u16string &, const std::u16string &, size_t max_count = 0) const;
+  std::vector<SubsequenceMatch> find_words_with_subsequence(const std::u16string &, const std::u16string &, size_t max_count = 0) const;
 
   class Snapshot {
     friend class TextBuffer;
