@@ -173,12 +173,12 @@ struct em_wrap_type<Text> : public em_wrap_type_base<Text, std::string> {
 };
 
 template <>
-struct em_wrap_type<Text::String> : public em_wrap_type_base<Text::String, std::string> {
-  static Text::String receive(std::string const &str) {
-    return Text::String(str.begin(), str.end());
+struct em_wrap_type<std::u16string> : public em_wrap_type_base<std::u16string, std::string> {
+  static std::u16string receive(std::string const &str) {
+    return std::u16string(str.begin(), str.end());
   }
 
-  static std::string transmit(Text::String const &text) {
+  static std::string transmit(std::u16string const &text) {
     return std::string(text.begin(), text.end());
   }
 };

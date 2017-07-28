@@ -29,7 +29,7 @@ class TextSlice {
   uint16_t front() const;
   uint16_t back() const;
 
-  const uint16_t *data() const;
+  const char16_t *data() const;
   uint32_t size() const;
   bool empty() const;
 

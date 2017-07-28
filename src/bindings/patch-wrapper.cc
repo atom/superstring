@@ -4,11 +4,12 @@
 #include <sstream>
 #include <vector>
 #include "point-wrapper.h"
-#include "text-wrapper.h"
+#include "string-conversion.h"
 
 using namespace v8;
 using std::move;
 using std::vector;
+using std::u16string;
 
 static Nan::Persistent<String> new_text_string;
 static Nan::Persistent<String> old_text_string;
@@ -42,10 +43,16 @@ class ChangeWrapper : public Nan::ObjectWrap {
     if (Nan::NewInstance(Nan::New(change_wrapper_constructor)).ToLocal(&result)) {
       (new ChangeWrapper(change))->Wrap(result);
       if (change.new_text) {
-        result->Set(Nan::New(new_text_string), TextWrapper::text_to_js(*change.new_text));
+        result->Set(
+          Nan::New(new_text_string),
+          string_conversion::string_to_js(change.new_text->content)
+        );
       }
       if (change.old_text) {
-        result->Set(Nan::New(old_text_string), TextWrapper::text_to_js(*change.old_text));
+        result->Set(
+          Nan::New(old_text_string),
+          string_conversion::string_to_js(change.old_text->content)
+        );
       }
       return result;
     } else {
@@ -171,13 +178,15 @@ void PatchWrapper::splice(const Nan::FunctionCallbackInfo<Value> &info) {
     optional<Text> inserted_text;
 
     if (info.Length() >= 4) {
-      deleted_text = TextWrapper::text_from_js(info[3]);
-      if (!deleted_text) return;
+      auto deleted_string = string_conversion::string_from_js(info[3]);
+      if (!deleted_string) return;
+      deleted_text = Text{move(*deleted_string)};
     }
 
     if (info.Length() >= 5) {
-      inserted_text = TextWrapper::text_from_js(info[4]);
-      if (!inserted_text) return;
+      auto inserted_string = string_conversion::string_from_js(info[4]);
+      if (!inserted_string) return;
+      inserted_text = Text{move(*inserted_string)};
     }
 
     patch.splice(

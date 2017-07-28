@@ -2,6 +2,7 @@
 
 using std::string;
 using std::move;
+using std::u16string;
 using namespace v8;
 
 void TextWriter::init(Local<Object> exports) {
@@ -37,7 +38,12 @@ void TextWriter::write(const Nan::FunctionCallbackInfo<Value> &info) {
     Local<String> js_chunk = info[0]->ToString();
     size_t size = writer->content.size();
     writer->content.resize(size + js_chunk->Length());
-    js_chunk->Write(writer->content.data() + size, 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
+    js_chunk->Write(
+      reinterpret_cast<uint16_t *>(&writer->content[0]) + size,
+      0,
+      -1,
+      String::WriteOptions::NO_NULL_TERMINATION
+    );
   } else if (info[0]->IsUint8Array()) {
     auto *data = node::Buffer::Data(info[0]);
     size_t length = node::Buffer::Length(info[0]);
@@ -75,6 +81,6 @@ void TextWriter::end(const Nan::FunctionCallbackInfo<Value> &info) {
   }
 }
 
-Text::String TextWriter::get_text() {
+u16string TextWriter::get_text() {
   return move(content);
 }

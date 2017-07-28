@@ -20,24 +20,24 @@ public:
   static uint32_t MAX_CHUNK_SIZE_TO_COPY;
 
   TextBuffer();
-  TextBuffer(Text::String &&text);
+  TextBuffer(std::u16string &&);
   TextBuffer(const std::u16string &text);
   ~TextBuffer();
 
   uint32_t size() const;
   Point extent() const;
-  optional<Text::String> line_for_row(uint32_t row);
-  void with_line_for_row(uint32_t row, const std::function<void(const uint16_t *, uint32_t)> &);
+  optional<std::u16string> line_for_row(uint32_t row);
+  void with_line_for_row(uint32_t row, const std::function<void(const char16_t *, uint32_t)> &);
 
   optional<uint32_t> line_length_for_row(uint32_t row);
   const uint16_t *line_ending_for_row(uint32_t row);
   ClipResult clip_position(Point);
   Point position_for_offset(uint32_t offset);
-  Text::String text();
-  Text::String text_in_range(Range range);
-  void set_text(Text::String &&);
+  std::u16string text();
+  std::u16string text_in_range(Range range);
+  void set_text(std::u16string &&);
   void set_text(const std::u16string &);
-  void set_text_in_range(Range old_range, Text::String &&);
+  void set_text_in_range(Range old_range, std::u16string &&);
   void set_text_in_range(Range old_range, const std::u16string &);
   bool is_modified() const;
   std::vector<TextSlice> chunks() const;
@@ -68,8 +68,8 @@ public:
     uint32_t line_length_for_row(uint32_t) const;
     std::vector<TextSlice> chunks() const;
     std::vector<TextSlice> chunks_in_range(Range) const;
-    Text::String text() const;
-    Text::String text_in_range(Range) const;
+    std::u16string text() const;
+    std::u16string text_in_range(Range) const;
     const Text &base_text() const;
     optional<Range> find(const Regex &) const;
   };

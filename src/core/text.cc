@@ -6,11 +6,11 @@ using std::function;
 using std::move;
 using std::ostream;
 using std::vector;
-using String = Text::String;
+using std::u16string;
 
 Text::Text() : line_offsets{0} {}
 
-Text::Text(vector<uint16_t> &&content) : content{move(content)}, line_offsets{0} {
+Text::Text(u16string &&content) : content{move(content)}, line_offsets{0} {
   for (uint32_t offset = 0, size = this->content.size(); offset < size; offset++) {
     if (this->content[offset] == '\n') {
       line_offsets.push_back(offset + 1);
@@ -19,7 +19,7 @@ Text::Text(vector<uint16_t> &&content) : content{move(content)}, line_offsets{0}
 }
 
 Text::Text(const std::u16string &string) :
-  Text(vector<uint16_t>{string.begin(), string.end()}) {}
+  Text(u16string{string.begin(), string.end()}) {}
 
 Text::Text(TextSlice slice) :
   content{
@@ -39,7 +39,7 @@ Text::Text(TextSlice slice) :
   }
 }
 
-Text::Text(const vector<uint16_t> &&content, const vector<uint32_t> &&line_offsets) :
+Text::Text(const u16string &&content, const vector<uint32_t> &&line_offsets) :
   content{move(content)}, line_offsets{move(line_offsets)} {}
 
 Text::Text(Deserializer &deserializer) : line_offsets{0} {
@@ -94,9 +94,9 @@ void Text::clear() {
 
 template<typename T>
 void splice_vector(
-  std::vector<T> &vector, uint32_t splice_start, uint32_t deletion_size,
-  typename std::vector<T>::const_iterator inserted_begin,
-  typename std::vector<T>::const_iterator inserted_end
+  T &vector, uint32_t splice_start, uint32_t deletion_size,
+  typename T::const_iterator inserted_begin,
+  typename T::const_iterator inserted_end
 ) {
   uint32_t original_size = vector.size();
   uint32_t insertion_size = inserted_end - inserted_begin;
@@ -231,7 +231,7 @@ uint32_t Text::size() const {
   return content.size();
 }
 
-const uint16_t *Text::data() const {
+const char16_t *Text::data() const {
   return content.data();
 }
 

@@ -4,8 +4,8 @@
 #include <string.h>
 
 using std::function;
+using std::u16string;
 using std::vector;
-using String = Text::String;
 
 static const uint32_t bytes_per_character = (sizeof(uint16_t) / sizeof(char));
 static const uint16_t replacement_character = 0xFFFD;
@@ -139,7 +139,7 @@ int EncodingConversion::convert(
   return Error;
 }
 
-bool EncodingConversion::decode(String &string, FILE *stream,
+bool EncodingConversion::decode(u16string &string, FILE *stream,
                                 vector<char> &input_vector,
                                 function<void(size_t)> progress_callback) {
   char *input_buffer = input_vector.data();
@@ -173,7 +173,7 @@ bool EncodingConversion::decode(String &string, FILE *stream,
   return true;
 }
 
-size_t EncodingConversion::decode(String &string, const char *input_start,
+size_t EncodingConversion::decode(u16string &string, const char *input_start,
                                   size_t input_length, bool is_last_chunk) {
   size_t previous_size = string.size();
   string.resize(previous_size + input_length);
@@ -181,7 +181,7 @@ size_t EncodingConversion::decode(String &string, const char *input_start,
   size_t new_size = previous_size;
   const char *input_pointer = input_start;
   const char *input_end = input_start + input_length;
-  char *output_start = reinterpret_cast<char *>(string.data());
+  char *output_start = reinterpret_cast<char *>(&string[0]);
   char *output_pointer = output_start + previous_size * bytes_per_character;
   char *output_end = output_pointer + input_length * bytes_per_character;
   bool incomplete_sequence_at_chunk_end = false;
@@ -226,7 +226,7 @@ size_t EncodingConversion::decode(String &string, const char *input_start,
         size_t old_size = string.size();
         size_t new_size = old_size * buffer_growth_factor;
         string.resize(new_size);
-        output_start = reinterpret_cast<char *>(string.data());
+        output_start = reinterpret_cast<char *>(&string[0]);
         output_pointer = output_start + old_size;
         output_end = output_start + new_size;
         break;
@@ -237,7 +237,7 @@ size_t EncodingConversion::decode(String &string, const char *input_start,
   return input_pointer - input_start;
 }
 
-bool EncodingConversion::encode(const String &string, size_t start_offset,
+bool EncodingConversion::encode(const u16string &string, size_t start_offset,
                                 size_t end_offset, FILE *stream,
                                 vector<char> &output_vector) {
   char *output_buffer = output_vector.data();
@@ -259,7 +259,7 @@ bool EncodingConversion::encode(const String &string, size_t start_offset,
   return true;
 }
 
-size_t EncodingConversion::encode(const String &string, size_t *start_offset,
+size_t EncodingConversion::encode(const u16string &string, size_t *start_offset,
                                   size_t end_offset, char *output_buffer,
                                   size_t output_length, bool is_at_end) {
   const char *input_start = reinterpret_cast<const char *>(string.data() + *start_offset);

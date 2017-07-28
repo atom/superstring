@@ -14,7 +14,7 @@ class Regex {
 
  public:
   Regex();
-  Regex(const uint16_t *, uint32_t, std::u16string *error_message);
+  Regex(const char16_t *, uint32_t, std::u16string *error_message);
   Regex(const std::u16string &, std::u16string *error_message);
   Regex(Regex &&);
   ~Regex();
@@ -46,7 +46,7 @@ class Regex {
     IsBeginningOfLine = 2
   };
 
-  MatchResult match(const uint16_t *data, size_t length, MatchData &, unsigned options = 0) const;
+  MatchResult match(const char16_t *data, size_t length, MatchData &, unsigned options = 0) const;
 };
 
 struct BuildRegexResult {
