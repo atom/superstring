@@ -8,16 +8,16 @@ const char16_t EMPTY_PATTERN[] = u".{0}";
 
 Regex::Regex() : code{nullptr} {}
 
-Regex::Regex(const uint16_t *pattern, uint32_t pattern_length, u16string *error_message) {
+Regex::Regex(const char16_t *pattern, uint32_t pattern_length, u16string *error_message) {
   if (pattern_length == 0) {
-    pattern = reinterpret_cast<const uint16_t *>(EMPTY_PATTERN);
+    pattern = EMPTY_PATTERN;
     pattern_length = 4;
   }
 
   int error_number = 0;
   size_t error_offset = 0;
   code = pcre2_compile(
-    pattern,
+    reinterpret_cast<const uint16_t *>(pattern),
     pattern_length,
     PCRE2_MULTILINE,
     &error_number,
@@ -39,7 +39,7 @@ Regex::Regex(const uint16_t *pattern, uint32_t pattern_length, u16string *error_
 }
 
 Regex::Regex(const u16string &pattern, u16string *error_message)
-  : Regex(reinterpret_cast<const uint16_t *>(pattern.data()), pattern.size(), error_message) {}
+  : Regex(pattern.data(), pattern.size(), error_message) {}
 
 Regex::Regex(Regex &&other) : code{other.code} {
   other.code = nullptr;
@@ -56,7 +56,7 @@ Regex::MatchData::~MatchData() {
   pcre2_match_data_free(data);
 }
 
-MatchResult Regex::match(const uint16_t *string, size_t length,
+MatchResult Regex::match(const char16_t *string, size_t length,
                          MatchData &match_data, unsigned options) const {
   MatchResult result{MatchResult::None, 0, 0};
 
@@ -66,7 +66,7 @@ MatchResult Regex::match(const uint16_t *string, size_t length,
 
   int status = pcre2_match(
     code,
-    string,
+    reinterpret_cast<const uint16_t *>(string),
     length,
     0,
     pcre_options,

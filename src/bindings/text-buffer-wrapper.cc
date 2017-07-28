@@ -89,14 +89,10 @@ class RegexWrapper : public Nan::ObjectWrap {
     }
 
     u16string error_message;
-    vector<uint16_t> pattern(js_pattern->Length());
-    js_pattern->Write(pattern.data(), 0, -1, String::WriteOptions::NO_NULL_TERMINATION);
-    Regex regex(pattern.data(), pattern.size(), &error_message);
+    optional<u16string> pattern = TextWrapper::string_from_js(js_pattern);
+    Regex regex(*pattern, &error_message);
     if (!error_message.empty()) {
-      Nan::ThrowError(Nan::New<String>(
-        reinterpret_cast<const uint16_t *>(error_message.c_str()),
-        error_message.size()
-      ).ToLocalChecked());
+      Nan::ThrowError(TextWrapper::string_to_js(error_message));
       return nullptr;
     }
 
@@ -190,20 +186,13 @@ void TextBufferWrapper::get_text_in_range(const Nan::FunctionCallbackInfo<Value>
   auto range = RangeWrapper::range_from_js(info[0]);
   if (range) {
     Local<String> result;
-    auto text = text_buffer.text_in_range(*range);
-    if (Nan::New<String>(text.data(), text.size()).ToLocal(&result)) {
-      info.GetReturnValue().Set(result);
-    }
+    info.GetReturnValue().Set(TextWrapper::string_to_js(text_buffer.text_in_range(*range)));
   }
 }
 
 void TextBufferWrapper::get_text(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
-  Local<String> result;
-  auto text = text_buffer.text();
-  if (Nan::New<String>(text.data(), text.size()).ToLocal(&result)) {
-    info.GetReturnValue().Set(result);
-  }
+  info.GetReturnValue().Set(TextWrapper::string_to_js(text_buffer.text()));
 }
 
 void TextBufferWrapper::set_text_in_range(const Nan::FunctionCallbackInfo<Value> &info) {
@@ -230,9 +219,9 @@ void TextBufferWrapper::line_for_row(const Nan::FunctionCallbackInfo<Value> &inf
   if (maybe_row.IsJust()) {
     uint32_t row = maybe_row.FromJust();
     if (row <= text_buffer.extent().row) {
-      text_buffer.with_line_for_row(row, [&info](const uint16_t *data, uint32_t size) {
+      text_buffer.with_line_for_row(row, [&info](const char16_t *data, uint32_t size) {
         Local<String> result;
-        if (Nan::New<String>(data, size).ToLocal(&result)) {
+        if (Nan::New<String>(reinterpret_cast<const uint16_t *>(data), size).ToLocal(&result)) {
           info.GetReturnValue().Set(result);
         }
       });
@@ -267,10 +256,8 @@ void TextBufferWrapper::get_lines(const Nan::FunctionCallbackInfo<Value> &info) 
   auto result = Nan::New<Array>();
 
   for (uint32_t row = 0, row_count = text_buffer.extent().row + 1; row < row_count; row++) {
-    Local<String> line;
     auto text = text_buffer.text_in_range({{row, 0}, {row, UINT32_MAX}});
-    if (!Nan::New<String>(text.data(), text.size()).ToLocal(&line)) return;
-    result->Set(row, line);
+    result->Set(row, TextWrapper::string_to_js(text));
   }
 
   info.GetReturnValue().Set(result);
@@ -389,26 +376,26 @@ static Local<Value> error_for_number(int error_number, string encoding_name, str
 }
 
 template <typename Callback>
-static Text::String load_file(const string &file_name, const string &encoding_name, optional<int> *error_number, const Callback &callback) {
+static u16string load_file(const string &file_name, const string &encoding_name, optional<int> *error_number, const Callback &callback) {
   auto conversion = transcoding_from(encoding_name.c_str());
   if (!conversion) {
     *error_number = INVALID_ENCODING;
-    return Text::String();
+    return u"";
   }
 
   size_t file_size = get_file_size(file_name);
   if (file_size == static_cast<size_t>(-1)) {
     *error_number = errno;
-    return Text::String();
+    return u"";
   }
 
   FILE *file = open_file(file_name, "rb");
   if (!file) {
     *error_number = errno;
-    return Text::String();
+    return u"";
   }
 
-  Text::String loaded_string;
+  u16string loaded_string;
   vector<char> input_buffer(CHUNK_SIZE);
   loaded_string.reserve(file_size);
   if (!conversion->decode(
@@ -666,7 +653,7 @@ class BaseTextComparisonWorker : public Nan::AsyncWorker {
     result{false} {}
 
   void Execute() {
-    Text::String file_contents = load_file(file_name, encoding_name, &error_number, [](size_t progress) {});
+    u16string file_contents = load_file(file_name, encoding_name, &error_number, [](size_t progress) {});
     result = std::equal(file_contents.begin(), file_contents.end(), snapshot->base_text().begin());
   }
 

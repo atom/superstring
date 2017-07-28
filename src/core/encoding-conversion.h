@@ -17,13 +17,13 @@ class EncodingConversion {
   EncodingConversion();
   ~EncodingConversion();
 
-  bool encode(const Text::String &, size_t start_offset, size_t end_offset,
+  bool encode(const std::u16string &, size_t start_offset, size_t end_offset,
               FILE *stream, std::vector<char> &buffer);
-  size_t encode(const Text::String &, size_t *start_offset, size_t end_offset,
+  size_t encode(const std::u16string &, size_t *start_offset, size_t end_offset,
                 char *buffer, size_t buffer_size, bool is_last = false);
-  bool decode(Text::String &, FILE *stream, std::vector<char> &buffer,
+  bool decode(std::u16string &, FILE *stream, std::vector<char> &buffer,
               std::function<void(size_t)> progress_callback);
-  size_t decode(Text::String &, const char *buffer, size_t buffer_size,
+  size_t decode(std::u16string &, const char *buffer, size_t buffer_size,
                 bool is_last = false);
 
   friend optional<EncodingConversion> transcoding_to(const char *);
