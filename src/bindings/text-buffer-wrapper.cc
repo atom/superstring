@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "point-wrapper.h"
 #include "range-wrapper.h"
-#include "text-wrapper.h"
+#include "string-conversion.h"
 #include "patch-wrapper.h"
 #include "text-writer.h"
 #include "text-slice.h"
@@ -89,10 +89,10 @@ class RegexWrapper : public Nan::ObjectWrap {
     }
 
     u16string error_message;
-    optional<u16string> pattern = TextWrapper::string_from_js(js_pattern);
+    optional<u16string> pattern = string_conversion::string_from_js(js_pattern);
     Regex regex(*pattern, &error_message);
     if (!error_message.empty()) {
-      Nan::ThrowError(TextWrapper::string_to_js(error_message));
+      Nan::ThrowError(string_conversion::string_to_js(error_message));
       return nullptr;
     }
 
@@ -158,7 +158,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
 void TextBufferWrapper::construct(const Nan::FunctionCallbackInfo<Value> &info) {
   TextBufferWrapper *wrapper = new TextBufferWrapper();
   if (info.Length() > 0 && info[0]->IsString()) {
-    auto text = TextWrapper::string_from_js(info[0]);
+    auto text = string_conversion::string_from_js(info[0]);
     if (text) {
       wrapper->text_buffer.reset(move(*text));
     }
@@ -186,19 +186,19 @@ void TextBufferWrapper::get_text_in_range(const Nan::FunctionCallbackInfo<Value>
   auto range = RangeWrapper::range_from_js(info[0]);
   if (range) {
     Local<String> result;
-    info.GetReturnValue().Set(TextWrapper::string_to_js(text_buffer.text_in_range(*range)));
+    info.GetReturnValue().Set(string_conversion::string_to_js(text_buffer.text_in_range(*range)));
   }
 }
 
 void TextBufferWrapper::get_text(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
-  info.GetReturnValue().Set(TextWrapper::string_to_js(text_buffer.text()));
+  info.GetReturnValue().Set(string_conversion::string_to_js(text_buffer.text()));
 }
 
 void TextBufferWrapper::set_text_in_range(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
   auto range = RangeWrapper::range_from_js(info[0]);
-  auto text = TextWrapper::string_from_js(info[1]);
+  auto text = string_conversion::string_from_js(info[1]);
   if (range && text) {
     text_buffer.set_text_in_range(*range, move(*text));
   }
@@ -206,7 +206,7 @@ void TextBufferWrapper::set_text_in_range(const Nan::FunctionCallbackInfo<Value>
 
 void TextBufferWrapper::set_text(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
-  auto text = TextWrapper::string_from_js(info[0]);
+  auto text = string_conversion::string_from_js(info[0]);
   if (text) {
     text_buffer.set_text(move(*text));
   }
@@ -257,7 +257,7 @@ void TextBufferWrapper::get_lines(const Nan::FunctionCallbackInfo<Value> &info) 
 
   for (uint32_t row = 0, row_count = text_buffer.extent().row + 1; row < row_count; row++) {
     auto text = text_buffer.text_in_range({{row, 0}, {row, UINT32_MAX}});
-    result->Set(row, TextWrapper::string_to_js(text));
+    result->Set(row, string_conversion::string_to_js(text));
   }
 
   info.GetReturnValue().Set(result);
@@ -828,7 +828,7 @@ void TextBufferWrapper::deserialize_changes(const Nan::FunctionCallbackInfo<Valu
 
 void TextBufferWrapper::reset(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
-  auto text = TextWrapper::string_from_js(info[0]);
+  auto text = string_conversion::string_from_js(info[0]);
   if (text) {
     text_buffer.reset(move(*text));
   }
