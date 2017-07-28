@@ -395,6 +395,46 @@ describe('TextBuffer', () => {
     })
   })
 
+  describe('.baseTextMatchesFile', () => {
+    if (!TextBuffer.prototype.baseTextMatchesFile) return;
+
+    it('indicates whether the base text matches the contents of the given file path', () => {
+      const content = 'abc'
+
+      const buffer = new TextBuffer(content)
+
+      const {path: filePath} = temp.openSync()
+      fs.writeFileSync(filePath, content)
+
+      return buffer.baseTextMatchesFile(filePath).then((result) => {
+        assert.ok(result)
+      }).then(() => {
+        fs.writeFileSync(filePath, content + '!')
+        return buffer.baseTextMatchesFile(filePath)
+      }).then((result) => {
+        assert.notOk(result)
+      })
+    })
+
+    it('indicates whether the base text matches the contents of the given stream', () => {
+      const content = 'abc'
+
+      const buffer = new TextBuffer(content)
+
+      const {path: filePath} = temp.openSync()
+      fs.writeFileSync(filePath, content)
+
+      return buffer.baseTextMatchesFile(fs.createReadStream(filePath)).then((result) => {
+        assert.ok(result)
+      }).then(() => {
+        fs.writeFileSync(filePath, content + '!')
+        return buffer.baseTextMatchesFile(fs.createReadStream(filePath))
+      }).then((result) => {
+        assert.notOk(result)
+      })
+    })
+  })
+
   describe('.loadSync', () => {
     if (!TextBuffer.prototype.loadSync) return;
 

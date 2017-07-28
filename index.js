@@ -42,7 +42,7 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   }
 
   const {TextBuffer, TextWriter, TextReader} = binding
-  const {load, save, find, findAllSync} = TextBuffer.prototype
+  const {load, save, find, findAllSync, baseTextMatchesFile} = TextBuffer.prototype
 
   TextBuffer.prototype.load = function (source, options, progressCallback) {
     if (typeof options !== 'object') {
@@ -145,6 +145,31 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
       }
     }
     return result
+  }
+
+  TextBuffer.prototype.baseTextMatchesFile = function (source, encoding = 'UTF8') {
+    return new Promise((resolve, reject) => {
+      const callback = (error, result) => {
+        if (error) {
+          reject(error)
+        } else {
+          resolve(result)
+        }
+      }
+
+      if (typeof source === 'string') {
+        baseTextMatchesFile.call(this, callback, source, encoding)
+      } else {
+        const stream = source
+        const writer = new TextWriter(encoding)
+        stream.on('data', (data) => writer.write(data))
+        stream.on('error', reject)
+        stream.on('end', () => {
+          writer.end()
+          baseTextMatchesFile.call(this, callback, writer)
+        })
+      }
+    })
   }
 }
 
