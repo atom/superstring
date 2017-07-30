@@ -1,6 +1,7 @@
 #include "text-slice.h"
 #include "text-buffer.h"
 #include "regex.h"
+#include <algorithm>
 #include <cassert>
 #include <cwctype>
 #include <sstream>
@@ -377,17 +378,21 @@ struct TextBuffer::Layer {
   }
 
   struct SubsequenceMatchVariant {
-    int16_t score;
-    size_t query_index;
-    std::vector<size_t> match_indices;
+    size_t query_index = 0;
+    std::vector<uint32_t> match_indices;
+    int16_t score = 0;
   };
 
-  vector<SubsequenceMatch> find_words_with_subsequence(const u16string &query, const u16string &extra_word_characters) {
+  vector<SubsequenceMatch> find_words_with_subsequence(u16string query, const u16string &extra_word_characters) {
     size_t query_index = 0;
     Point position;
     Point current_word_start;
     u16string current_word;
 
+    std::transform(query.begin(), query.end(), query.begin(), std::towlower);
+
+    // First, find the start position of all words matching the given
+    // subsequence.
     std::map<u16string, vector<Point>> substring_matches;
 
     for_each_chunk_in_range(Point(), extent(), [&] (TextSlice chunk) -> bool {
@@ -399,7 +404,7 @@ struct TextBuffer::Layer {
         if (is_word_character) {
           if (current_word.empty()) current_word_start = position;
           current_word += c;
-          if (query_index < query.size() && towlower(c) == towlower(query[query_index])) {
+          if (query_index < query.size() && towlower(c) == query[query_index]) {
             query_index++;
           }
         } else {
@@ -427,10 +432,74 @@ struct TextBuffer::Layer {
       substring_matches[current_word].push_back(current_word_start);
     }
 
+    // Next, calculate a score for each word indicating the quality of the
+    // match against the query.
+
+    const uint consecutive_bonus = 5;
+    const uint subword_start_bonus = 10;
+    const uint mismatch_penalty = 1;
+    const uint leading_mismatch_penalty = 3;
+
     vector<SubsequenceMatch> matches;
 
     for (auto entry : substring_matches) {
-      matches.push_back({entry.first, entry.second, {}, 0});
+      const u16string &word = entry.first;
+      const vector<Point> &start_positions = entry.second;
+
+      vector<SubsequenceMatchVariant> match_variants {{}};
+
+      for (size_t i = 0; i < word.size(); i++) {
+        uint16_t c = towlower(word[i]);
+
+        for (size_t j = 0, size = match_variants.size(); j < size; j++) {
+          SubsequenceMatchVariant &match_variant = match_variants[j];
+
+          if (match_variant.query_index < query.size()) {
+            // If the current word character matches the next character of
+            // the query for this match variant, create a *new* match variant
+            // that consumes the matching character.
+            if (c == query[match_variant.query_index]) {
+              SubsequenceMatchVariant new_match = match_variant;
+              new_match.query_index++;
+
+              if (i == 0 ||
+                  !std::iswalnum(word[i - 1]) ||
+                  (std::iswlower(word[i - 1]) && std::iswupper(word[i]))) {
+                new_match.score += subword_start_bonus;
+              }
+
+              if (!new_match.match_indices.empty() && new_match.match_indices.back() == i - 1) {
+                new_match.score += consecutive_bonus;
+              }
+
+              new_match.match_indices.push_back(i);
+
+              match_variants.push_back(new_match);
+            }
+
+            // For the current match variant, treat the current character as
+            // a mismatch regardless of whether it matched above. This
+            // reserves the chance for the next character to be consumed by a
+            // match with higher overall value.
+            if (i < 3) {
+              match_variant.score -= leading_mismatch_penalty;
+            } else {
+              match_variant.score -= mismatch_penalty;
+            }
+          }
+        }
+      }
+
+      SubsequenceMatchVariant *best_match = nullptr;
+      for (auto &match_variant : match_variants) {
+        if (match_variant.query_index == query.size()) {
+          if (!best_match || best_match->score < match_variant.score) {
+            best_match = &match_variant;
+          }
+        }
+      }
+
+      matches.push_back(SubsequenceMatch{word, start_positions, best_match->match_indices, best_match->score});
     }
 
     return matches;
