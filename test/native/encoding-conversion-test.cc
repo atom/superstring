@@ -7,19 +7,18 @@ using std::string;
 using std::stringstream;
 using std::vector;
 using std::u16string;
-using String = Text::String;
 
 TEST_CASE("EncodingConversion::decode - basic UTF-8") {
   auto conversion = transcoding_from("UTF-8");
   string input("abγdefg\nhijklmnop");
 
-  String string;
+  u16string string;
   conversion->decode(string, input.data(), input.size());
   REQUIRE(string == u"abγdefg\nhijklmnop");
 
   // This first chunk ends in the middle of the multi-byte 'γ' character, so
   // decoding stops before that character.
-  String string2;
+  u16string string2;
   size_t bytes_read = conversion->decode(string2, input.data(), 3);
   REQUIRE(bytes_read == 2);
 
@@ -32,7 +31,7 @@ TEST_CASE("EncodingConversion::decode - basic ISO-8859-1") {
   auto conversion = transcoding_from("ISO-8859-1");
   string input("qrst" "\xfc" "v"); // qrstüv
 
-  String string;
+  u16string string;
   conversion->decode(string, input.data(), input.size());
   REQUIRE(string == u"qrstüv");
 }
@@ -41,7 +40,7 @@ TEST_CASE("EncodingConversion::decode - invalid byte sequences in the middle of 
   auto conversion = transcoding_from("UTF-8");
   string input("ab" "\xc0" "\xc1" "de");
 
-  String string;
+  u16string string;
   conversion->decode(string, input.data(), input.size());
   REQUIRE(string == u"ab" "\ufffd" "\ufffd" "de");
 }
@@ -50,7 +49,7 @@ TEST_CASE("EncodingConversion::decode - invalid byte sequences at the end of the
   auto conversion = transcoding_from("UTF-8");
   string input("ab" "\xf0\x9f"); // incomplete 4-byte code point for '😁' at the end of the stream
 
-  String string;
+  u16string string;
   size_t bytes_encoded = conversion->decode(string, input.data(), input.size());
   REQUIRE(bytes_encoded == 2);
   REQUIRE(string == u"ab");
@@ -66,15 +65,14 @@ TEST_CASE("EncodingConversion::decode - four-byte UTF-16 characters") {
   auto conversion = transcoding_from("UTF-8");
   string input("ab" "\xf0\x9f" "\x98\x81" "cd"); // 'ab😁cd'
 
-  String string;
+  u16string string;
   conversion->decode(string, input.data(), input.size());
   REQUIRE(string == u"ab" "\xd83d" "\xde01" "cd");
 }
 
 TEST_CASE("EncodingConversion::encode - basic") {
   auto conversion = transcoding_to("UTF-8");
-  u16string content = u"abγdefg\nhijklmnop";
-  String string(content.begin(), content.end());
+  u16string string = u"abγdefg\nhijklmnop";
 
   vector<char> output(3);
   size_t bytes_encoded = 0, start = 0;
@@ -95,8 +93,7 @@ TEST_CASE("EncodingConversion::encode - basic") {
 
 TEST_CASE("EncodingConversion::encode - four-byte UTF-16 characters") {
   auto conversion = transcoding_to("UTF-8");
-  u16string content = u"ab" "\xd83d" "\xde01" "cd";  // 'ab😁cd'
-  String string(content.begin(), content.end());
+  u16string string = u"ab" "\xd83d" "\xde01" "cd";  // 'ab😁cd'
 
   vector<char> output(10);
   size_t bytes_encoded = 0, start = 0;
@@ -119,8 +116,7 @@ TEST_CASE("EncodingConversion::encode - four-byte UTF-16 characters") {
 
 TEST_CASE("EncodingConversion::encode - invalid characters in the middle of the string") {
   auto conversion = transcoding_to("UTF-8");
-  u16string content = u"abc" "\xD800" "def";
-  String string(content.begin(), content.end());
+  u16string string = u"abc" "\xD800" "def";
 
   vector<char> output(10);
   size_t bytes_encoded = 0, start = 0;
@@ -140,8 +136,7 @@ TEST_CASE("EncodingConversion::encode - invalid characters in the middle of the 
 
 TEST_CASE("EncodingConversion::encode - invalid characters at the end of the string") {
   auto conversion = transcoding_to("UTF-8");
-  u16string content = u"abc" "\xD800";
-  String string(content.begin(), content.end());
+  u16string string = u"abc" "\xD800";
 
   vector<char> output(10);
   size_t bytes_encoded = 0, start = 0;

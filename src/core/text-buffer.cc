@@ -14,7 +14,6 @@ using std::pair;
 using std::string;
 using std::u16string;
 using std::vector;
-using String = Text::String;
 using MatchOptions = Regex::MatchOptions;
 using MatchResult = Regex::MatchResult;
 using SubsequenceMatch = TextBuffer::SubsequenceMatch;
@@ -218,8 +217,8 @@ struct TextBuffer::Layer {
 
   uint32_t size() const { return size_; }
 
-  String text_in_range(Range range, bool splay = false) {
-    String result;
+  u16string text_in_range(Range range, bool splay = false) {
+    u16string result;
     for_each_chunk_in_range(range.start, range.end, [&result](TextSlice slice) {
       result.insert(result.end(), slice.begin(), slice.end());
       return false;
@@ -351,7 +350,7 @@ struct TextBuffer::Layer {
     if (result) {
       callback(*result);
     } else {
-      static uint16_t EMPTY[] = {0};
+      static char16_t EMPTY[] = {0};
       MatchResult match_result = regex.match(EMPTY, 0, match_data, true);
       if (match_result.type == MatchResult::Partial || match_result.type == MatchResult::Full) {
         callback(Range{Point(), Point()});
@@ -528,7 +527,7 @@ struct TextBuffer::Layer {
   }
 };
 
-TextBuffer::TextBuffer(String &&text) :
+TextBuffer::TextBuffer(u16string &&text) :
   base_layer{new Layer(move(text))},
   top_layer{base_layer} {}
 
@@ -546,7 +545,7 @@ TextBuffer::~TextBuffer() {
 }
 
 TextBuffer::TextBuffer(const std::u16string &text) :
-  TextBuffer{String{text.begin(), text.end()}} {}
+  TextBuffer{u16string{text.begin(), text.end()}} {}
 
 void TextBuffer::reset(Text &&new_base_text) {
   bool has_snapshot = false;
@@ -672,8 +671,8 @@ const uint16_t *TextBuffer::line_ending_for_row(uint32_t row) {
   return result;
 }
 
-void TextBuffer::with_line_for_row(uint32_t row, const std::function<void(const uint16_t *, uint32_t)> &callback) {
-  Text::String result;
+void TextBuffer::with_line_for_row(uint32_t row, const std::function<void(const char16_t *, uint32_t)> &callback) {
+  u16string result;
   uint32_t column = 0;
   uint32_t slice_count = 0;
   Point line_end = clip_position({row, UINT32_MAX}).position;
@@ -692,12 +691,12 @@ void TextBuffer::with_line_for_row(uint32_t row, const std::function<void(const 
   });
 
   if (slice_count != 1) {
-    callback(result.data(), result.size());
+    callback(result.c_str(), result.size());
   }
 }
 
-optional<String> TextBuffer::line_for_row(uint32_t row) {
-  if (row > extent().row) return optional<String>{};
+optional<u16string> TextBuffer::line_for_row(uint32_t row) {
+  if (row > extent().row) return optional<u16string>{};
   return text_in_range({{row, 0}, {row, UINT32_MAX}});
 }
 
@@ -709,11 +708,11 @@ Point TextBuffer::position_for_offset(uint32_t offset) {
   return top_layer->position_for_offset(offset);
 }
 
-String TextBuffer::text() {
+u16string TextBuffer::text() {
   return top_layer->text_in_range(Range{Point(), extent()});
 }
 
-String TextBuffer::text_in_range(Range range) {
+u16string TextBuffer::text_in_range(Range range) {
   return top_layer->text_in_range(range, true);
 }
 
@@ -721,15 +720,15 @@ vector<TextSlice> TextBuffer::chunks() const {
   return top_layer->chunks_in_range({{0, 0}, extent()});
 }
 
-void TextBuffer::set_text(String &&new_text) {
+void TextBuffer::set_text(u16string &&new_text) {
   set_text_in_range(Range{Point(0, 0), extent()}, move(new_text));
 }
 
-void TextBuffer::set_text(const u16string &string) {
-  set_text(String(string.begin(), string.end()));
+void TextBuffer::set_text(const u16string &new_text) {
+  set_text_in_range(Range{Point(0, 0), extent()}, u16string(new_text));
 }
 
-void TextBuffer::set_text_in_range(Range old_range, String &&string) {
+void TextBuffer::set_text_in_range(Range old_range, u16string &&string) {
   if (top_layer == base_layer || top_layer->snapshot_count > 0) {
     top_layer = new Layer(top_layer);
   }
@@ -772,10 +771,6 @@ void TextBuffer::set_text_in_range(Range old_range, String &&string) {
       top_layer->patch.splice_old(change->old_start, Point(), Point());
     }
   }
-}
-
-void TextBuffer::set_text_in_range(Range old_range, const u16string &string) {
-  set_text_in_range(old_range, String(string.begin(), string.end()));
 }
 
 optional<Range> TextBuffer::find(const Regex &regex) const {
@@ -867,11 +862,11 @@ uint32_t TextBuffer::Snapshot::line_length_for_row(uint32_t row) const {
   return layer.clip_position(Point{row, UINT32_MAX}).position.column;
 }
 
-String TextBuffer::Snapshot::text_in_range(Range range) const {
+u16string TextBuffer::Snapshot::text_in_range(Range range) const {
   return layer.text_in_range(range);
 }
 
-String TextBuffer::Snapshot::text() const {
+u16string TextBuffer::Snapshot::text() const {
   return layer.text_in_range({{0, 0}, extent()});
 }
 

@@ -17,8 +17,8 @@ struct diff_edit {
 };
 
 int diff(
-  const uint16_t *old_text, uint32_t old_length,
-  const uint16_t *new_text, uint32_t new_length,
+  const char16_t *old_text, uint32_t old_length,
+  const char16_t *new_text, uint32_t new_length,
   int dmax, std::vector<diff_edit> *ses
 );
 

@@ -28,9 +28,8 @@ private:
   static void find_sync(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void find_all_sync(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void is_modified(const Nan::FunctionCallbackInfo<v8::Value> &info);
-  static void load_(const Nan::FunctionCallbackInfo<v8::Value> &info, bool force);
   static void load(const Nan::FunctionCallbackInfo<v8::Value> &info);
-  static void reload(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void base_text_matches_file(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void save(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void load_sync(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void save_sync(const Nan::FunctionCallbackInfo<v8::Value> &info);

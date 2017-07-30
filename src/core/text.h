@@ -20,23 +20,21 @@ class Text {
   friend class TextSlice;
 
  public:
-  typedef std::vector<uint16_t> String;
-
   static Point extent(const std::u16string &);
 
-  String content;
+  std::u16string content;
   std::vector<uint32_t> line_offsets;
-  Text(const std::vector<uint16_t> &&, const std::vector<uint32_t> &&);
+  Text(const std::u16string &&, const std::vector<uint32_t> &&);
 
-  using const_iterator = std::vector<uint16_t>::const_iterator;
+  using const_iterator = std::u16string::const_iterator;
 
   Text();
-  Text(const std::u16string &string);
-  Text(String &&content);
+  Text(const std::u16string &);
+  Text(std::u16string &&);
   Text(TextSlice slice);
   Text(Deserializer &deserializer);
   template<typename Iter>
-  Text(Iter begin, Iter end) : Text(String{begin, end}) {}
+  Text(Iter begin, Iter end) : Text(std::u16string{begin, end}) {}
 
   static Text concat(TextSlice a, TextSlice b);
   static Text concat(TextSlice a, TextSlice b, TextSlice c);
@@ -58,7 +56,7 @@ class Text {
   void assign(TextSlice);
   void serialize(Serializer &) const;
   uint32_t size() const;
-  const uint16_t *data() const;
+  const char16_t *data() const;
   size_t digest() const;
   void clear();
 
@@ -67,13 +65,5 @@ class Text {
 
   friend std::ostream &operator<<(std::ostream &, const Text &);
 };
-
-inline bool operator==(const Text::String &string, const char16_t *other) {
-  return std::u16string(string.begin(), string.end()) == std::u16string(other);
-}
-
-inline bool operator==(const Text::String &string, const std::u16string &other) {
-  return std::u16string(string.begin(), string.end()) == other;
-}
 
 #endif // SUPERSTRING_TEXT_H_

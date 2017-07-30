@@ -4,7 +4,7 @@
  *
  * It has been modified in the following ways:
  *
- * 1. The parameters have been changed from `void *` to `uint16_t *`;
+ * 1. The parameters have been changed from `void *` to `char16_t *`;
  *    the algorithm is now hard-coded to work on UTF16 input.
  * 2. The edit script and the internal buffer are now stored as `std::vector`
  *    instead of `libmba`'s custom C array type `varray`. This change speeds up
@@ -87,8 +87,8 @@ static int _v(struct _ctx *ctx, int k, int r) {
 }
 
 static int _find_middle_snake(
-  const uint16_t *a, int aoff, int n,
-  const uint16_t *b, int boff, int m,
+  const char16_t *a, int aoff, int n,
+  const char16_t *b, int boff, int m,
   struct _ctx *ctx, struct middle_snake *ms
 ) {
   int delta, odd, mid, d;
@@ -118,8 +118,8 @@ static int _find_middle_snake(
 
       ms->x = x;
       ms->y = y;
-      const uint16_t *a0 = a + aoff;
-      const uint16_t *b0 = b + boff;
+      const char16_t *a0 = a + aoff;
+      const char16_t *b0 = b + boff;
       while (x < n && y < m && a0[x] == b0[y]) {
         x++; y++;
       }
@@ -146,8 +146,8 @@ static int _find_middle_snake(
 
       ms->u = x;
       ms->v = y;
-      const uint16_t *a0 = a + aoff;
-      const uint16_t *b0 = b + boff;
+      const char16_t *a0 = a + aoff;
+      const char16_t *b0 = b + boff;
       while (x > 0 && y > 0 && a0[x - 1] == b0[y - 1]) {
         x--; y--;
       }
@@ -185,8 +185,8 @@ static void _edit(struct _ctx *ctx, diff_op op, int off, int len) {
 }
 
 static int _ses(
-  const uint16_t *a, uint32_t aoff, uint32_t n,
-  const uint16_t *b, uint32_t boff, uint32_t m,
+  const char16_t *a, uint32_t aoff, uint32_t n,
+  const char16_t *b, uint32_t boff, uint32_t m,
   struct _ctx *ctx
 ) {
   struct middle_snake ms;
@@ -263,7 +263,7 @@ static int _ses(
   return d;
 }
 
-int diff(const uint16_t *a, uint32_t n, const uint16_t *b, uint32_t m,
+int diff(const char16_t *a, uint32_t n, const char16_t *b, uint32_t m,
          int dmax, vector<diff_edit> *ses) {
   struct _ctx ctx;
   ctx.ses = ses;
@@ -305,4 +305,3 @@ int diff(const uint16_t *a, uint32_t n, const uint16_t *b, uint32_t m,
   if (ses->front().op == 0) ses->clear();
   return d;
 }
-

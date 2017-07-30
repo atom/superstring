@@ -13,7 +13,6 @@ using std::stringstream;
 using std::vector;
 using std::u16string;
 using MatchResult = Regex::MatchResult;
-using String = Text::String;
 using SubsequenceMatch = TextBuffer::SubsequenceMatch;
 
 TEST_CASE("TextBuffer::set_text_in_range - basic") {
@@ -228,7 +227,7 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
     REQUIRE(snapshot2->text() == u"aBCdef");
     REQUIRE(!buffer.is_modified());
 
-    TextBuffer copy_buffer{String{buffer.base_text().content}};
+    TextBuffer copy_buffer{buffer.base_text().content};
     Serializer serializer(bytes);
     buffer.serialize_changes(serializer);
     Deserializer deserializer(bytes);
@@ -252,7 +251,7 @@ TEST_CASE("Snapshot::flush_preceding_changes") {
     REQUIRE(snapshot2->text() == u"aBCdef");
     REQUIRE(buffer.is_modified());
 
-    TextBuffer copy_buffer{String{buffer.base_text().content}};
+    TextBuffer copy_buffer{buffer.base_text().content};
     Serializer serializer(bytes);
     buffer.serialize_changes(serializer);
     Deserializer deserializer(bytes);
@@ -396,7 +395,7 @@ TEST_CASE("TextBuffer::find_words_with_subsequence") {
 
 struct SnapshotData {
   Text base_text;
-  String text;
+  u16string text;
   Point extent;
   vector<Point> line_end_positions;
 };
@@ -414,7 +413,7 @@ void query_random_ranges(TextBuffer &buffer, Generator &rand, Text &mutated_text
     // cout << "query random range " << range << "\n";
 
     TextSlice slice = TextSlice(mutated_text).slice(range);
-    String expected_text{slice.begin(), slice.end()};
+    u16string expected_text{slice.begin(), slice.end()};
     REQUIRE(buffer.text_in_range(range) == expected_text);
     REQUIRE(buffer.position_for_offset(buffer.clip_position(range.start).offset) == range.start);
     REQUIRE(buffer.position_for_offset(buffer.clip_position(range.end).offset) == range.end);
@@ -431,7 +430,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
     cout << "seed: " << seed << "\n";
 
     Text original_text = get_random_text(rand);
-    TextBuffer buffer{String(original_text.content)};
+    TextBuffer buffer{original_text.content};
     vector<SnapshotTask> snapshot_tasks;
     Text mutated_text(original_text);
 
@@ -500,7 +499,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
         if (rand() % 2) subtext.append(Text{u"*"});
 
         // cout << "find for: /" << subtext << "/\n";
-        Regex regex(subtext.content.data(), subtext.size(), nullptr);
+        Regex regex(subtext.content.c_str(), subtext.size(), nullptr);
         Regex::MatchData match_data(regex);
 
         auto search_result = buffer.find(regex);
