@@ -5,7 +5,7 @@
 #include <cassert>
 #include <cwctype>
 #include <sstream>
-#include <map>
+#include <unordered_map>
 #include <vector>
 
 using std::equal;
@@ -393,7 +393,7 @@ struct TextBuffer::Layer {
 
     // First, find the start position of all words matching the given
     // subsequence.
-    std::map<u16string, vector<Point>> substring_matches;
+    std::unordered_map<u16string, vector<Point>> substring_matches;
 
     for_each_chunk_in_range(Point(), extent(), [&] (TextSlice chunk) -> bool {
       for (uint16_t c : chunk) {
@@ -501,6 +501,10 @@ struct TextBuffer::Layer {
 
       matches.push_back(SubsequenceMatch{word, start_positions, best_match->match_indices, best_match->score});
     }
+
+    std::sort(matches.begin(), matches.end(), [] (const SubsequenceMatch &a, const SubsequenceMatch &b) {
+      return a.score > b.score;
+    });
 
     return matches;
   }
