@@ -574,9 +574,21 @@ describe('TextBuffer', () => {
 
       const {path: filePath} = temp.openSync()
       const stream = fs.createWriteStream(filePath)
-      const savePromise = buffer.save(stream)
 
-      return savePromise.then(() => {
+      return buffer.save(stream).then(() => {
+        assert.equal(fs.readFileSync(filePath, 'utf8'), buffer.getText())
+      })
+    })
+
+    it('can save to a stream when the buffer has deletions (regression)', () => {
+      const buffer = new TextBuffer('abc')
+      buffer.setTextInRange(Range(Point(0, 1), Point(0, 2)), '')
+      assert.equal(buffer.getText(), 'ac')
+
+      const {path: filePath} = temp.openSync()
+      const stream = fs.createWriteStream(filePath)
+
+      return buffer.save(stream).then(() => {
         assert.equal(fs.readFileSync(filePath, 'utf8'), buffer.getText())
       })
     })
