@@ -568,6 +568,19 @@ describe('TextBuffer', () => {
       ))
     })
 
+    it('can save to a stream when the buffer has been cleared (regression)', () => {
+      const buffer = new TextBuffer('abc')
+      buffer.setText('')
+
+      const {path: filePath} = temp.openSync()
+      const stream = fs.createWriteStream(filePath)
+      const savePromise = buffer.save(stream)
+
+      return savePromise.then(() => {
+        assert.equal(fs.readFileSync(filePath, 'utf8'), buffer.getText())
+      })
+    })
+
     describe('error handling', () => {
       it('rejects with an error if the path points to a directory', (done) => {
         const buffer = new TextBuffer('hello')

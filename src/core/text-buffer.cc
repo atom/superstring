@@ -15,6 +15,8 @@ using MatchResult = Regex::MatchResult;
 
 uint32_t TextBuffer::MAX_CHUNK_SIZE_TO_COPY = 1024;
 
+static Text EMPTY_TEXT;
+
 struct TextBuffer::Layer {
   Layer *previous_layer;
   Patch patch;
@@ -153,7 +155,7 @@ struct TextBuffer::Layer {
       base_position = current_position;
     } else if (current_position < change->new_end) {
       TextSlice slice = TextSlice(*change->new_text).slice({
-        Point::min(change->new_end, current_position).traversal(change->new_start),
+        current_position.traversal(change->new_start),
         goal_position.traversal(change->new_start)
       });
       if (callback(slice)) return true;
@@ -227,6 +229,7 @@ struct TextBuffer::Layer {
       result.push_back(slice);
       return false;
     });
+    if (result.empty()) result.push_back(TextSlice(EMPTY_TEXT));
     return result;
   }
 

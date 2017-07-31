@@ -96,6 +96,25 @@ TEST_CASE("TextBuffer::create_snapshot") {
   }
 }
 
+TEST_CASE("TextBuffer::chunks()") {
+  TextBuffer buffer{u"abc"};
+  buffer.set_text_in_range({{0, 2}, {0, 3}}, u"C");
+
+  {
+    vector<u16string> chunk_strings;
+    for (auto &slice : buffer.chunks()) chunk_strings.push_back(u16string(slice.data(), slice.size()));
+    REQUIRE(chunk_strings == vector<u16string>({u"ab", u"C"}));
+  }
+
+  buffer.set_text(u"");
+
+  {
+    vector<u16string> chunk_strings;
+    for (auto &slice : buffer.chunks()) chunk_strings.push_back(u16string(slice.data(), slice.size()));
+    REQUIRE(chunk_strings == vector<u16string>({u""}));
+  }
+}
+
 TEST_CASE("TextBuffer::get_inverted_changes") {
   TextBuffer buffer{u"ab\ndef"};
   auto snapshot1 = buffer.create_snapshot();
