@@ -15,6 +15,8 @@ using MatchResult = Regex::MatchResult;
 
 uint32_t TextBuffer::MAX_CHUNK_SIZE_TO_COPY = 1024;
 
+static Text EMPTY_TEXT;
+
 struct TextBuffer::Layer {
   Layer *previous_layer;
   Patch patch;
@@ -142,7 +144,11 @@ struct TextBuffer::Layer {
     Point goal_position = clip_position(end, splay).position;
     Point current_position = clip_position(start, splay).position;
 
-    if (!uses_patch) return callback(TextSlice(*text).slice({current_position, goal_position}));
+    if (!uses_patch) {
+      TextSlice slice = TextSlice(*text).slice({current_position, goal_position});
+      return !slice.empty() && callback(slice);
+    }
+
     if (snapshot_count > 0) splay = false;
 
     Point base_position;
@@ -153,10 +159,10 @@ struct TextBuffer::Layer {
       base_position = current_position;
     } else if (current_position < change->new_end) {
       TextSlice slice = TextSlice(*change->new_text).slice({
-        Point::min(change->new_end, current_position).traversal(change->new_start),
+        current_position.traversal(change->new_start),
         goal_position.traversal(change->new_start)
       });
-      if (callback(slice)) return true;
+      if (!slice.empty() && callback(slice)) return true;
       base_position = change->old_end;
       current_position = change->new_end;
     } else {
@@ -175,7 +181,7 @@ struct TextBuffer::Layer {
 
       TextSlice slice = TextSlice(*change.new_text)
         .prefix(Point::min(change.new_end, goal_position).traversal(change.new_start));
-      if (callback(slice)) return true;
+      if (!slice.empty() && callback(slice)) return true;
 
       base_position = change.old_end;
       current_position = change.new_end;
@@ -227,6 +233,7 @@ struct TextBuffer::Layer {
       result.push_back(slice);
       return false;
     });
+    if (result.empty()) result.push_back(TextSlice(EMPTY_TEXT));
     return result;
   }
 

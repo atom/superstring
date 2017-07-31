@@ -568,6 +568,31 @@ describe('TextBuffer', () => {
       ))
     })
 
+    it('can save to a stream when the buffer has been cleared (regression)', () => {
+      const buffer = new TextBuffer('abc')
+      buffer.setText('')
+
+      const {path: filePath} = temp.openSync()
+      const stream = fs.createWriteStream(filePath)
+
+      return buffer.save(stream).then(() => {
+        assert.equal(fs.readFileSync(filePath, 'utf8'), buffer.getText())
+      })
+    })
+
+    it('can save to a stream when the buffer has deletions (regression)', () => {
+      const buffer = new TextBuffer('abc')
+      buffer.setTextInRange(Range(Point(0, 1), Point(0, 2)), '')
+      assert.equal(buffer.getText(), 'ac')
+
+      const {path: filePath} = temp.openSync()
+      const stream = fs.createWriteStream(filePath)
+
+      return buffer.save(stream).then(() => {
+        assert.equal(fs.readFileSync(filePath, 'utf8'), buffer.getText())
+      })
+    })
+
     describe('error handling', () => {
       it('rejects with an error if the path points to a directory', (done) => {
         const buffer = new TextBuffer('hello')
