@@ -126,7 +126,7 @@ public:
   static Nan::Persistent<Function> constructor;
 
   SubsequenceMatchWrapper(SubsequenceMatch &&match) :
-    match{std::move(match)} {}
+    match(std::move(match)) {}
 
   static void init() {
     Local<FunctionTemplate> constructor_template = Nan::New<FunctionTemplate>();
