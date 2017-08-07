@@ -29,7 +29,6 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   TextBuffer.prototype.find = function (pattern) {
     return new Promise(resolve => resolve(this.findSync(pattern)))
   }
-
 } else {
   try {
     binding = require('./build/Release/superstring.node')
@@ -42,7 +41,7 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   }
 
   const {TextBuffer, TextWriter, TextReader} = binding
-  const {load, save, find, findAllSync, baseTextMatchesFile} = TextBuffer.prototype
+  const {load, save, find, findAllSync, findWordsWithSubsequence, baseTextMatchesFile} = TextBuffer.prototype
 
   TextBuffer.prototype.load = function (source, options, progressCallback) {
     if (typeof options !== 'object') {
@@ -145,6 +144,10 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
       }
     }
     return result
+  }
+
+  TextBuffer.prototype.findWordsWithSubsequence = function (query, extraWordCharacters, maxCount) {
+    return new Promise(resolve => findWordsWithSubsequence.call(this, query, extraWordCharacters, maxCount, resolve))
   }
 
   TextBuffer.prototype.baseTextMatchesFile = function (source, encoding = 'UTF8') {

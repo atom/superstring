@@ -878,6 +878,40 @@ describe('TextBuffer', () => {
     })
   })
 
+  describe('.findWordsWithSubsequence', () => {
+    it('resolves with all words matching the given query', () => {
+      const buffer = new TextBuffer('banana bandana ban_ana bandaid band bNa\nbanana')
+      return buffer.findWordsWithSubsequence('bna', '_', 4).then((result) => {
+        assert.deepEqual(result, [
+          {
+            score: 30,
+            matchIndices: [0, 1, 2 ],
+            positions: [{row: 0, column: 36}],
+            word: "bNa"
+          },
+          {
+            score: 16,
+            matchIndices: [0, 2, 4],
+            positions: [{row: 0, column: 15}],
+            word: "ban_ana"
+          },
+          {
+            score: 12,
+            matchIndices: [0, 2, 3],
+            positions: [{row: 0, column: 0}, {row: 1, column: 0}],
+            word: "banana"
+          },
+          {
+            score: 10,
+            matchIndices: [0, 5, 6],
+            positions: [{row: 0, column: 7}],
+            word: "bandana"
+          }
+        ])
+      })
+    })
+  })
+
   describe('.reset', () => {
     it('sets the buffer\'s text and does not consider it modified', () => {
       const buffer = new TextBuffer('abc')
