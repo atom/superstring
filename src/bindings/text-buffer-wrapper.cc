@@ -141,6 +141,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("load").ToLocalChecked(), Nan::New<FunctionTemplate>(load));
   prototype_template->Set(Nan::New("baseTextMatchesFile").ToLocalChecked(), Nan::New<FunctionTemplate>(base_text_matches_file));
   prototype_template->Set(Nan::New("save").ToLocalChecked(), Nan::New<FunctionTemplate>(save));
+  prototype_template->Set(Nan::New("saveToFileDescriptor").ToLocalChecked(), Nan::New<FunctionTemplate>(save_to_file_descriptor));
   prototype_template->Set(Nan::New("loadSync").ToLocalChecked(), Nan::New<FunctionTemplate>(load_sync));
   prototype_template->Set(Nan::New("saveSync").ToLocalChecked(), Nan::New<FunctionTemplate>(save_sync));
   prototype_template->Set(Nan::New("serializeChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(serialize_changes));
@@ -700,6 +701,7 @@ class SaveWorker : public Nan::AsyncWorker {
   TextBuffer::Snapshot *snapshot;
   string file_name;
   string encoding_name;
+  FILE *file;
   optional<int> error_number;
 
  public:
@@ -708,7 +710,16 @@ class SaveWorker : public Nan::AsyncWorker {
     AsyncWorker(completion_callback),
     snapshot{snapshot},
     file_name{file_name},
-    encoding_name(encoding_name) {}
+    encoding_name(encoding_name),
+    file{open_file(file_name, "wb+")} {}
+
+  SaveWorker(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
+             int file_descriptor, string &&encoding_name) :
+    AsyncWorker(completion_callback),
+    snapshot{snapshot},
+    file_name{"<file descriptor " + std::to_string(file_descriptor) + ">"},
+    encoding_name(encoding_name),
+    file{fdopen(file_descriptor, "wb+")} {}
 
   void Execute() {
     auto conversion = transcoding_to(encoding_name.c_str());
@@ -717,7 +728,6 @@ class SaveWorker : public Nan::AsyncWorker {
       return;
     }
 
-    FILE *file = open_file(file_name, "wb+");
     if (!file) {
       error_number = errno;
       return;
@@ -798,6 +808,26 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
     completion_callback,
     text_buffer.create_snapshot(),
     move(file_path),
+    move(encoding_name)
+  ));
+}
+
+void TextBufferWrapper::save_to_file_descriptor(const Nan::FunctionCallbackInfo<v8::Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+
+  Local<Integer> js_file_descriptor;
+  if (!Nan::To<Integer>(info[0]).ToLocal(&js_file_descriptor)) return;
+  int file_descriptor = js_file_descriptor->IntegerValue();
+
+  Local<String> js_encoding_name;
+  if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
+  string encoding_name = *String::Utf8Value(info[1].As<String>());
+
+  Nan::Callback *completion_callback = new Nan::Callback(info[2].As<Function>());
+  Nan::AsyncQueueWorker(new SaveWorker(
+    completion_callback,
+    text_buffer.create_snapshot(),
+    file_descriptor,
     move(encoding_name)
   ));
 }

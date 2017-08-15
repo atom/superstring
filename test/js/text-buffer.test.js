@@ -484,6 +484,26 @@ describe('TextBuffer', () => {
       })
     })
 
+    it('can write the buffer\'s contents to a file descriptor', () => {
+      const buffer = new TextBuffer('abcdefghijklmnopqrstuvwxyz')
+
+      // Perform some edits just to exercise the saving logic
+      buffer.setTextInRange(Range(Point(0, 3), Point(0, 3)), '123')
+      buffer.setTextInRange(Range(Point(0, 7), Point(0, 7)), '456')
+      assert.equal(buffer.getText(), 'abc123d456efghijklmnopqrstuvwxyz')
+
+      const {path: filePath, fd} = temp.openSync()
+      const savePromise = buffer.save(fd)
+
+      buffer.setTextInRange(Range(Point(0, 11), Point(0, 11)), '789')
+      assert.equal(buffer.getText(), 'abc123d456e789fghijklmnopqrstuvwxyz')
+
+      return savePromise.then(() => {
+        assert.equal(fs.readFileSync(filePath, 'utf8'), 'abc123d456efghijklmnopqrstuvwxyz')
+        assert.equal(buffer.getText(), 'abc123d456e789fghijklmnopqrstuvwxyz')
+      })
+    })
+
     it('can write the buffer\'s content to a given stream', () => {
       const buffer = new TextBuffer('abcdefghijklmnopqrstuvwxyz')
 
