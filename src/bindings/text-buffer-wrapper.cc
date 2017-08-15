@@ -700,8 +700,8 @@ void TextBufferWrapper::base_text_matches_file(const Nan::FunctionCallbackInfo<V
 class SaveWorker : public Nan::AsyncWorker {
   TextBuffer::Snapshot *snapshot;
   string file_name;
+  optional<int> file_descriptor;
   string encoding_name;
-  FILE *file;
   optional<int> error_number;
 
  public:
@@ -710,16 +710,15 @@ class SaveWorker : public Nan::AsyncWorker {
     AsyncWorker(completion_callback),
     snapshot{snapshot},
     file_name{file_name},
-    encoding_name(encoding_name),
-    file{open_file(file_name, "wb+")} {}
+    encoding_name(encoding_name) {}
 
   SaveWorker(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
              int file_descriptor, string &&encoding_name) :
     AsyncWorker(completion_callback),
     snapshot{snapshot},
     file_name{"<file descriptor " + std::to_string(file_descriptor) + ">"},
-    encoding_name(encoding_name),
-    file{fdopen(file_descriptor, "wb+")} {}
+    file_descriptor{optional<int>{file_descriptor}},
+    encoding_name(encoding_name) {}
 
   void Execute() {
     auto conversion = transcoding_to(encoding_name.c_str());
@@ -727,6 +726,10 @@ class SaveWorker : public Nan::AsyncWorker {
       error_number = INVALID_ENCODING;
       return;
     }
+
+    FILE *file = file_descriptor
+      ? fdopen(*file_descriptor, "wb+")
+      : open_file(file_name, "wb+");
 
     if (!file) {
       error_number = errno;
