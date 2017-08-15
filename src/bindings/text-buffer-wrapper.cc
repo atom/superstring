@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iomanip>
 #include <stdio.h>
+#include <stdlib.h>
 #include "point-wrapper.h"
 #include "range-wrapper.h"
 #include "string-conversion.h"
@@ -21,6 +22,10 @@ using std::vector;
 using std::wstring;
 
 #ifdef WIN32
+
+#include <io.h>
+
+#define dup _dup
 
 static wstring ToUTF16(string input) {
   wstring result;
@@ -46,6 +51,8 @@ static FILE *open_file(const string &name, const char *flags) {
 }
 
 #else
+
+#include <unistd.h>
 
 static size_t get_file_size(const std::string &name) {
   struct stat file_stats;
@@ -728,7 +735,7 @@ class SaveWorker : public Nan::AsyncWorker {
     }
 
     FILE *file = file_descriptor
-      ? fdopen(*file_descriptor, "wb+")
+      ? fdopen(dup(*file_descriptor), "wb+")
       : open_file(file_name, "wb+");
 
     if (!file) {
