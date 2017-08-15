@@ -501,6 +501,12 @@ describe('TextBuffer', () => {
       return savePromise.then(() => {
         assert.equal(fs.readFileSync(filePath, 'utf8'), 'abc123d456efghijklmnopqrstuvwxyz')
         assert.equal(buffer.getText(), 'abc123d456e789fghijklmnopqrstuvwxyz')
+        fs.write(fd, ' - and we can still write to the file descriptor', () => {
+          assert.equal(
+            fs.readFileSync(filePath, 'utf8'),
+            'abc123d456efghijklmnopqrstuvwxyz - and we can still write to the file descriptor'
+          )
+        })
       })
     })
 
