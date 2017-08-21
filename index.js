@@ -107,26 +107,19 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
         const buffer = Buffer.allocUnsafe(CHUNK_SIZE)
         writeToStream(null)
 
+        stream.on('error', (error) => {
+          reader.destroy()
+          reject(error)
+        })
+
         function writeToStream () {
           const bytesRead = reader.read(buffer)
           if (bytesRead > 0) {
             stream.write(buffer.slice(0, bytesRead), (error) => {
-              if (error) {
-                reader.destroy()
-                reject(error)
-                return
-              }
-
-              writeToStream()
+              if (!error) writeToStream()
             })
           } else {
-            stream.end((error) => {
-              if (error) {
-                reader.destroy()
-                reject(error)
-                return
-              }
-
+            stream.end(() => {
               reader.end()
               resolve()
             })

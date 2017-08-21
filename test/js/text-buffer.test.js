@@ -655,15 +655,47 @@ describe('TextBuffer', () => {
           }
         })
 
-        // Prevent the write error from being thrown
-        stream.on('error', () => {})
-
         buffer.save(stream)
           .then(() => {
             done(new Error('Expected a rejection'))
           })
           .catch((error) => {
             assert.equal(error.message, 'Could not write to stream')
+            assert.ok(buffer.isModified())
+            done()
+          })
+      })
+
+      it('rejects with an error if closing the stream fails', (done) => {
+        const tempDir = temp.mkdirSync()
+        const filePath = path.join(tempDir, 'one')
+        const otherPath = path.join(tempDir, 'two')
+        fs.symlinkSync(filePath, otherPath)
+        fs.symlinkSync(otherPath, filePath)
+
+        const buffer = new TextBuffer('abcd')
+        buffer.setText('efg')
+        assert.ok(buffer.isModified())
+
+        const stream = new Writable({
+          write(chunk, encoding, callback) {
+            callback()
+          }
+        })
+
+        stream.end = function () {
+          process.nextTick(() => {
+            this.emit('error', new Error('Could not close stream'))
+            this.emit('finish')
+          })
+        }
+
+        buffer.save(stream)
+          .then(() => {
+            done(new Error('Expected a rejection'))
+          })
+          .catch((error) => {
+            assert.equal(error.message, 'Could not close stream')
             assert.ok(buffer.isModified())
             done()
           })
