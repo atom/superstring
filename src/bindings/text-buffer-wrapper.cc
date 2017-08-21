@@ -742,11 +742,12 @@ class SaveWorker : public Nan::AsyncWorker {
   }
 
   Local<Value> Finish() {
-    snapshot->flush_preceding_changes();
-    delete snapshot;
     if (error_number) {
+      delete snapshot;
       return error_for_number(*error_number, encoding_name, file_name);
     } else {
+      snapshot->flush_preceding_changes();
+      delete snapshot;
       return Nan::Null();
     }
   }

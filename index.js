@@ -103,18 +103,30 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
         })
       } else {
         const stream = destination
-        stream.on('error', reject)
-
         const reader = new TextReader(this, encoding)
         const buffer = Buffer.allocUnsafe(CHUNK_SIZE)
-        writeToStream()
+        writeToStream(null)
 
         function writeToStream () {
           const bytesRead = reader.read(buffer)
           if (bytesRead > 0) {
-            stream.write(buffer.slice(0, bytesRead), writeToStream)
+            stream.write(buffer.slice(0, bytesRead), (error) => {
+              if (error) {
+                reader.destroy()
+                reject(error)
+                return
+              }
+
+              writeToStream()
+            })
           } else {
-            stream.end(() => {
+            stream.end((error) => {
+              if (error) {
+                reader.destroy()
+                reject(error)
+                return
+              }
+
               reader.end()
               resolve()
             })

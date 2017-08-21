@@ -14,6 +14,7 @@ void TextReader::init(Local<Object> exports) {
   const auto &prototype_template = constructor_template->PrototypeTemplate();
   prototype_template->Set(Nan::New("read").ToLocalChecked(), Nan::New<FunctionTemplate>(read));
   prototype_template->Set(Nan::New("end").ToLocalChecked(), Nan::New<FunctionTemplate>(end));
+  prototype_template->Set(Nan::New("destroy").ToLocalChecked(), Nan::New<FunctionTemplate>(destroy));
   exports->Set(Nan::New("TextReader").ToLocalChecked(), constructor_template->GetFunction());
 }
 
@@ -29,7 +30,7 @@ TextReader::TextReader(Local<Object> js_buffer,
 }
 
 TextReader::~TextReader() {
-  delete snapshot;
+  if (snapshot) delete snapshot;
 }
 
 void TextReader::construct(const Nan::FunctionCallbackInfo<Value> &info) {
@@ -87,5 +88,17 @@ void TextReader::read(const Nan::FunctionCallbackInfo<Value> &info) {
 
 void TextReader::end(const Nan::FunctionCallbackInfo<Value> &info) {
   TextReader *reader = Nan::ObjectWrap::Unwrap<TextReader>(info.This()->ToObject());
-  reader->snapshot->flush_preceding_changes();
+  if (reader->snapshot) {
+    reader->snapshot->flush_preceding_changes();
+    delete reader->snapshot;
+    reader->snapshot = nullptr;
+  }
+}
+
+void TextReader::destroy(const Nan::FunctionCallbackInfo<Value> &info) {
+  TextReader *reader = Nan::ObjectWrap::Unwrap<TextReader>(info.This()->ToObject());
+  if (reader->snapshot) {
+    delete reader->snapshot;
+    reader->snapshot = nullptr;
+  }
 }
