@@ -5,9 +5,9 @@ const textHelpers = require('./text-helpers')
 
 module.exports =
 class TestDocument {
-  constructor (randomSeed, text) {
+  constructor (randomSeed, maxLineCount = 50) {
     this.random = new Random(randomSeed)
-    this.lines = this.buildRandomLines(1, 50)
+    this.lines = this.buildRandomLines(1, maxLineCount)
   }
 
   clone () {

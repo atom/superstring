@@ -457,7 +457,14 @@ Patch TextBuffer::get_inverted_changes(const Snapshot *snapshot) const {
     patches.insert(patches.begin(), &layer->patch);
     layer = layer->previous_layer;
   }
-  Patch combination(patches);
+
+  Patch combination;
+  bool left_to_right = true;
+  for (const Patch *patch : patches) {
+    combination.combine(*patch, left_to_right);
+    left_to_right = !left_to_right;
+  }
+
   TextSlice base{*snapshot->base_layer.text};
   Patch result;
   for (auto change : combination.get_changes()) {
@@ -492,7 +499,14 @@ void TextBuffer::serialize_changes(Serializer &serializer) {
     patches.insert(patches.begin(), &layer->patch);
     layer = layer->previous_layer;
   }
-  Patch(patches).serialize(serializer);
+
+  Patch combination;
+  bool left_to_right = true;
+  for (const Patch *patch : patches) {
+    combination.combine(*patch, left_to_right);
+    left_to_right = !left_to_right;
+  }
+  combination.serialize(serializer);
 }
 
 bool TextBuffer::deserialize_changes(Deserializer &deserializer) {

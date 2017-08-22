@@ -17,6 +17,8 @@ static Nan::Persistent<v8::Function> change_wrapper_constructor;
 static Nan::Persistent<v8::FunctionTemplate> patch_wrapper_constructor_template;
 static Nan::Persistent<v8::Function> patch_wrapper_constructor;
 
+static const char *InvalidSpliceMessage = "Patch does not apply";
+
 class ChangeWrapper : public Nan::ObjectWrap {
  public:
   static void init() {
@@ -189,13 +191,15 @@ void PatchWrapper::splice(const Nan::FunctionCallbackInfo<Value> &info) {
       inserted_text = Text{move(*inserted_string)};
     }
 
-    patch.splice(
+    if (!patch.splice(
       *start,
       *deletion_extent,
       *insertion_extent,
       move(deleted_text),
       move(inserted_text)
-    );
+    )) {
+      Nan::ThrowError(InvalidSpliceMessage);
+    }
   }
 }
 
@@ -346,7 +350,8 @@ void PatchWrapper::compose(const Nan::FunctionCallbackInfo<Value> &info) {
       return;
     }
 
-    vector<const Patch *> patches;
+    Patch combination;
+    bool left_to_right = true;
     for (uint32_t i = 0, n = js_patches->Length(); i < n; i++) {
       if (!js_patches->Get(i)->IsObject()) {
         Nan::ThrowTypeError("Patch.compose must be called with an array of patches");
@@ -360,11 +365,14 @@ void PatchWrapper::compose(const Nan::FunctionCallbackInfo<Value> &info) {
       }
 
       Patch &patch = Nan::ObjectWrap::Unwrap<PatchWrapper>(js_patch)->patch;
-      patches.push_back(&patch);
+      if (!combination.combine(patch, left_to_right)) {
+        Nan::ThrowTypeError(InvalidSpliceMessage);
+        return;
+      }
+      left_to_right = !left_to_right;
     }
 
-    auto wrapper = new PatchWrapper{Patch{patches}};
-    wrapper->Wrap(result);
+    (new PatchWrapper{move(combination)})->Wrap(result);
     info.GetReturnValue().Set(result);
   }
 }

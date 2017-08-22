@@ -3,7 +3,7 @@ let binding
 if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   binding = require('./browser');
 
-  const {TextBuffer} = binding
+  const {TextBuffer, Patch} = binding
   const {find, findSync, findAllSync} = TextBuffer.prototype
 
   TextBuffer.prototype.findSync = function (pattern) {
@@ -30,6 +30,20 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
     return new Promise(resolve => resolve(this.findSync(pattern)))
   }
 
+  const {compose} = Patch
+  const {splice} = Patch.prototype
+
+  Patch.compose = function (patches) {
+    const result = compose.call(this, patches)
+    if (!result) throw new Error('Patch does not apply')
+    return result
+  }
+
+  Patch.prototype.splice = Object.assign(function () {
+    if (!splice.apply(this, arguments)) {
+      throw new Error('Patch does not apply')
+    }
+  }, splice)
 } else {
   try {
     binding = require('./build/Release/superstring.node')
