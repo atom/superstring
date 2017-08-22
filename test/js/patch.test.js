@@ -1,6 +1,7 @@
 const Random = require('random-seed')
 const {assert} = require('chai')
 const TestDocument = require('./helpers/test-document')
+const textHelpers = require('./helpers/text-helpers')
 const {
   traverse, traversalDistance, compare, format: formatPoint
 } = require('./helpers/point-helpers')
@@ -59,61 +60,79 @@ describe('Patch', function () {
     patch.delete();
   })
 
-  it('can compose multiple patches together', function () {
-    const patches = [new Patch(), new Patch(), new Patch()]
-    patches[0].splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, 'ciao', 'hello')
-    patches[0].splice({row: 1, column: 1}, {row: 0, column: 0}, {row: 0, column: 3}, '', 'hey')
-    patches[1].splice({row: 0, column: 15}, {row: 0, column: 10}, {row: 0, column: 0}, '0123456789', '')
-    patches[1].splice({row: 0, column: 0}, {row: 0, column: 0}, {row: 3, column: 0}, '', '\n\n\n')
-    patches[2].splice({row: 4, column: 2}, {row: 0, column: 2}, {row: 0, column: 2}, 'so', 'ho')
+  describe('.compose', () => {
+    it('combines the given patches into one', () => {
+      const patches = [new Patch(), new Patch(), new Patch()]
+      patches[0].splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, 'ciao', 'hello')
+      patches[0].splice({row: 1, column: 1}, {row: 0, column: 0}, {row: 0, column: 3}, '', 'hey')
+      patches[1].splice({row: 0, column: 15}, {row: 0, column: 10}, {row: 0, column: 0}, '0123456789', '')
+      patches[1].splice({row: 0, column: 0}, {row: 0, column: 0}, {row: 3, column: 0}, '', '\n\n\n')
+      patches[2].splice({row: 4, column: 2}, {row: 0, column: 2}, {row: 0, column: 2}, 'so', 'ho')
 
-    const composedPatch = Patch.compose(patches)
-    assert.deepEqual(JSON.parse(JSON.stringify(composedPatch.getChanges())), [
+      const composedPatch = Patch.compose(patches)
+      assert.deepEqual(JSON.parse(JSON.stringify(composedPatch.getChanges())), [
+        {
+          oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
+          newStart: {row: 0, column: 0}, newEnd: {row: 3, column: 0},
+          oldText: '', newText: '\n\n\n'
+        },
+        {
+          oldStart: {row: 0, column: 3}, oldEnd: {row: 0, column: 7},
+          newStart: {row: 3, column: 3}, newEnd: {row: 3, column: 8},
+          oldText: 'ciao', newText: 'hello'
+        },
+        {
+          oldStart: {row: 0, column: 14}, oldEnd: {row: 0, column: 24},
+          newStart: {row: 3, column: 15}, newEnd: {row: 3, column: 15},
+          oldText: '0123456789', newText: ''
+        },
+        {
+          oldStart: {row: 1, column: 1}, oldEnd: {row: 1, column: 1},
+          newStart: {row: 4, column: 1}, newEnd: {row: 4, column: 4},
+          oldText: '', newText: 'hho'
+        }
+      ])
+
+      assert.throws(() => Patch.compose([{}, {}]))
+      assert.throws(() => Patch.compose([1, 'a']))
+
+      for (let patch of patches)
+        patch.delete();
+
+      composedPatch.delete();
+    })
+
+    it('throws an Error if the patches do not apply', () => {
       {
-        oldStart: {row: 0, column: 0}, oldEnd: {row: 0, column: 0},
-        newStart: {row: 0, column: 0}, newEnd: {row: 3, column: 0},
-        oldText: '', newText: '\n\n\n'
-      },
-      {
-        oldStart: {row: 0, column: 3}, oldEnd: {row: 0, column: 7},
-        newStart: {row: 3, column: 3}, newEnd: {row: 3, column: 8},
-        oldText: 'ciao', newText: 'hello'
-      },
-      {
-        oldStart: {row: 0, column: 14}, oldEnd: {row: 0, column: 24},
-        newStart: {row: 3, column: 15}, newEnd: {row: 3, column: 15},
-        oldText: '0123456789', newText: ''
-      },
-      {
-        oldStart: {row: 1, column: 1}, oldEnd: {row: 1, column: 1},
-        newStart: {row: 4, column: 1}, newEnd: {row: 4, column: 4},
-        oldText: '', newText: 'hho'
+        const patches = [new Patch(), new Patch()]
+        patches[0].splice({row: 0, column: 3}, {row: 0, column: 3}, {row: 1, column: 2}, 'abc', 'de\nfg')
+        patches[1].splice({row: 0, column: 4}, {row: 0, column: 5}, {row: 0, column: 1}, 'hijkl', 'm')
+        assert.throws(() => Patch.compose(patches), 'Patch does not apply')
       }
-    ])
 
-    assert.throws(() => Patch.compose([{}, {}]))
-    assert.throws(() => Patch.compose([1, 'a']))
-
-    for (let patch of patches)
-      patch.delete();
-
-    composedPatch.delete();
-  })
-
-  it('removes noop changes when composing patches that cancel each other out', () => {
-    const patches = [new Patch(), new Patch()]
-    patches[0].splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, 'ciao', 'hello')
-    patches[0].splice({row: 1, column: 1}, {row: 0, column: 0}, {row: 0, column: 3}, '', 'hey')
-    patches[1].splice({row: 0, column: 3}, {row: 0, column: 5}, {row: 0, column: 4}, 'hello', 'ciao')
-
-    const composedPatch = Patch.compose(patches)
-    assert.deepEqual(JSON.parse(JSON.stringify(composedPatch.getChanges())), [
       {
-        oldStart: {row: 1, column: 1}, oldEnd: {row: 1, column: 1},
-        newStart: {row: 1, column: 1}, newEnd: {row: 1, column: 4},
-        oldText: '', newText: 'hey'
-      },
-    ])
+        const patches = [new Patch(), new Patch()]
+        patches[0].splice({row: 0, column: 3}, {row: 0, column: 3}, {row: 0, column: 5}, 'abc', 'defgh')
+        patches[1].splice({row: 0, column: 2}, {row: 1, column: 1}, {row: 0, column: 1}, 'h\ni', 'j')
+        assert.throws(() => Patch.compose(patches), 'Patch does not apply')
+      }
+    })
+
+    it('removes noop changes when the given patches cancel each other out', () => {
+      const patches = [new Patch(), new Patch()]
+      patches[0].splice({row: 0, column: 3}, {row: 0, column: 4}, {row: 0, column: 5}, 'ciao', 'hello')
+      patches[0].splice({row: 1, column: 1}, {row: 0, column: 0}, {row: 0, column: 3}, '', 'hey')
+      patches[1].splice({row: 0, column: 3}, {row: 0, column: 5}, {row: 0, column: 4}, 'hello', 'ciao')
+
+      const composedPatch = Patch.compose(patches)
+      assert.deepEqual(JSON.parse(JSON.stringify(composedPatch.getChanges())), [
+        {
+          oldStart: {row: 1, column: 1}, oldEnd: {row: 1, column: 1},
+          newStart: {row: 1, column: 1}, newEnd: {row: 1, column: 4},
+          oldText: '', newText: 'hey'
+        },
+      ])
+    })
   })
 
   it('can invert patches', function () {
@@ -351,6 +370,39 @@ describe('Patch', function () {
       }
 
       patch.delete();
+    }
+  })
+
+  it('does not crash when inconsistent splices are applied', () => {
+    this.timeout(Infinity)
+
+    for (let i = 0; i < 100; i++) {
+      let seed = Date.now()
+      const seedMessage = `Random seed: ${seed}`
+      const random = new Random(seed)
+      const document = new TestDocument(seed, 10)
+
+      const patch = new Patch()
+
+      for (let j = 0; j < 5; j++) {
+        const start = document.buildRandomPoint()
+        const insertedText = document.buildRandomLines(1, 4, true).join('\n')
+        const deletedText = document.buildRandomLines(1, 4).join('\n')
+        const deletedExtent = textHelpers.getExtent(deletedText)
+        const insertedExtent = textHelpers.getExtent(insertedText)
+
+        try {
+          patch.splice(
+            start,
+            deletedExtent,
+            insertedExtent,
+            deletedText,
+            insertedText
+          )
+        } catch (error) {
+          assert.equal(error.message, 'Patch does not apply')
+        }
+      }
     }
   })
 })

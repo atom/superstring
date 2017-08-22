@@ -196,6 +196,24 @@ TEST_CASE("Patch::splice - deleted_text_size") {
   REQUIRE(patch.get_changes().back().preceding_old_text_size == 8);
 }
 
+TEST_CASE("Patch::splice - inconsistent old text") {
+  Patch patch;
+  auto result = patch.splice(Point{0, 0}, Point{0, 0}, Point{1, 4}, Text{u""}, Text{u"\n    "}, 0);
+  REQUIRE(result == true);
+
+  result = patch.splice(Point{1, 0}, Point{1, 0}, Point{0, 0}, Text{u"  \n"}, Text{u""}, 3);
+  REQUIRE(result == false);
+  REQUIRE(patch.get_changes() == vector<Patch::Change>({
+    Change{
+      Point{0, 0}, Point{0, 0},
+      Point{0, 0}, Point{1, 4},
+      get_text(u"").get(),
+      get_text(u"\n    ").get(),
+      0, 0, 0
+    },
+  }));
+}
+
 TEST_CASE("Patch::find_changes_in_new_range") {
   Patch patch;
 

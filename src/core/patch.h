@@ -36,7 +36,6 @@ public:
 
   // Construction and destruction
   Patch(bool merges_adjacent_changes = true);
-  Patch(const std::vector<const Patch *> &);
   Patch(Patch &&);
   Patch(Deserializer &input);
   Patch &operator=(Patch &&);
@@ -47,13 +46,13 @@ public:
   Patch invert();
 
   // Mutations
-  void splice(Point new_splice_start,
+  bool splice(Point new_splice_start,
               Point new_deletion_extent, Point new_insertion_extent,
-              optional<Text> &&deleted_text = optional<Text> {},
-              optional<Text> &&inserted_text = optional<Text> {},
+              optional<Text> &&deleted_text = optional<Text>{},
+              optional<Text> &&inserted_text = optional<Text>{},
               uint32_t deleted_text_size = 0);
   void splice_old(Point start, Point deletion_extent, Point insertion_extent);
-  void combine(const Patch &other, bool left_to_right = true);
+  bool combine(const Patch &other, bool left_to_right = true);
   void clear();
   void rebalance();
 
@@ -113,7 +112,7 @@ private:
 
   Change change_for_root_node();
 
-  optional<Text> compute_old_text(optional<Text> &&, Point, Point);
+  std::pair<optional<Text>, bool> compute_old_text(optional<Text> &&, Point, Point);
   uint32_t compute_old_text_size(uint32_t, Point, Point);
 
   void splay_node(Node *);

@@ -72,7 +72,8 @@ void MarkerIndexWrapper::init(Local<Object> exports) {
 }
 
 void MarkerIndexWrapper::construct(const Nan::FunctionCallbackInfo<Value> &info) {
-  MarkerIndexWrapper *marker_index = new MarkerIndexWrapper(Local<Number>::Cast(info[0]));
+  auto seed = Nan::To<unsigned>(info[0]);
+  MarkerIndexWrapper *marker_index = new MarkerIndexWrapper(seed.IsJust() ? seed.FromJust() : 0u);
   marker_index->Wrap(info.This());
 }
 
@@ -365,5 +366,4 @@ void MarkerIndexWrapper::dump(const Nan::FunctionCallbackInfo<Value> &info) {
   info.GetReturnValue().Set(snapshot_to_js(snapshot));
 }
 
-MarkerIndexWrapper::MarkerIndexWrapper(v8::Local<v8::Number> seed)
-    : marker_index{static_cast<unsigned>(seed->Int32Value())} {}
+MarkerIndexWrapper::MarkerIndexWrapper(unsigned seed) : marker_index{seed} {}
