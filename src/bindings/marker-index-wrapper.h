@@ -35,6 +35,6 @@ private:
   static void find_ending_at(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void find_boundaries_after(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void dump(const Nan::FunctionCallbackInfo<v8::Value> &info);
-  MarkerIndexWrapper(v8::Local<v8::Number> seed);
+  MarkerIndexWrapper(unsigned seed);
   MarkerIndex marker_index;
 };

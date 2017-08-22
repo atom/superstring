@@ -348,6 +348,11 @@ void PatchWrapper::compose(const Nan::FunctionCallbackInfo<Value> &info) {
 
     vector<const Patch *> patches;
     for (uint32_t i = 0, n = js_patches->Length(); i < n; i++) {
+      if (!js_patches->Get(i)->IsObject()) {
+        Nan::ThrowTypeError("Patch.compose must be called with an array of patches");
+        return;
+      }
+
       Local<Object> js_patch = Local<Object>::Cast(js_patches->Get(i));
       if (!Nan::New(patch_wrapper_constructor_template)->HasInstance(js_patch)) {
         Nan::ThrowTypeError("Patch.compose must be called with an array of patches");
