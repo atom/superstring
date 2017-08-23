@@ -40,7 +40,9 @@ bool TextSlice::is_valid() const {
     if (end_offset >= text->line_offsets[end_position.row + 1]) {
       return false;
     }
-  } else if (end_offset > text->size()) {
+  }
+
+  if (end_offset > text->size()) {
     return false;
   }
 

@@ -516,43 +516,31 @@ bool Patch::splice(Point new_splice_start,
     Point lower_bound_new_start = lower_bound->new_distance_from_left_ancestor;
     Point upper_bound_old_start = upper_bound->old_distance_from_left_ancestor;
     Point upper_bound_new_start = upper_bound->new_distance_from_left_ancestor;
-    Point lower_bound_old_end =
-        lower_bound_old_start.traverse(lower_bound->old_extent);
-    Point lower_bound_new_end =
-        lower_bound_new_start.traverse(lower_bound->new_extent);
-    Point upper_bound_old_end =
-        upper_bound_old_start.traverse(upper_bound->old_extent);
-    Point upper_bound_new_end =
-        upper_bound_new_start.traverse(upper_bound->new_extent);
+    Point lower_bound_old_end = lower_bound_old_start.traverse(lower_bound->old_extent);
+    Point lower_bound_new_end = lower_bound_new_start.traverse(lower_bound->new_extent);
+    Point upper_bound_old_end = upper_bound_old_start.traverse(upper_bound->old_extent);
+    Point upper_bound_new_end = upper_bound_new_start.traverse(upper_bound->new_extent);
 
     bool overlaps_lower_bound, overlaps_upper_bound;
     if (merges_adjacent_changes) {
       overlaps_lower_bound = new_splice_start <= lower_bound_new_end;
       overlaps_upper_bound = new_deletion_end >= upper_bound_new_start;
     } else {
-      overlaps_lower_bound = new_splice_start < lower_bound_new_end &&
-                             new_deletion_end > lower_bound_new_start;
-      overlaps_upper_bound = new_splice_start < upper_bound_new_end &&
-                             new_deletion_end > upper_bound_new_start;
+      overlaps_lower_bound =
+        new_splice_start < lower_bound_new_end && new_deletion_end > lower_bound_new_start;
+      overlaps_upper_bound =
+        new_splice_start < upper_bound_new_end && new_deletion_end > upper_bound_new_start;
     }
 
     if (overlaps_lower_bound && overlaps_upper_bound) {
-      Point new_extent_prefix =
-          new_splice_start.traversal(lower_bound_new_start);
+      Point new_extent_prefix = new_splice_start.traversal(lower_bound_new_start);
       Point new_extent_suffix = upper_bound_new_end.traversal(new_deletion_end);
 
-      upper_bound->old_extent =
-          upper_bound_old_end.traversal(lower_bound_old_start);
-      upper_bound->new_extent = new_extent_prefix.traverse(new_insertion_extent)
-                                    .traverse(new_extent_suffix);
-      upper_bound->old_distance_from_left_ancestor = lower_bound_old_start;
-      upper_bound->new_distance_from_left_ancestor = lower_bound_new_start;
-
       if (inserted_text && lower_bound->new_text && upper_bound->new_text) {
-        TextSlice new_text_prefix =
-            TextSlice(*lower_bound->new_text).prefix(new_extent_prefix);
+        TextSlice new_text_prefix = TextSlice(*lower_bound->new_text).prefix(new_extent_prefix);
         TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).suffix(
-            new_deletion_end.traversal(upper_bound_new_start));
+          new_deletion_end.traversal(upper_bound_new_start)
+        );
         if (!new_text_suffix.is_valid()) return false;
         upper_bound->set_new_text(
           Text::concat(new_text_prefix, *inserted_text, new_text_suffix)
@@ -562,6 +550,12 @@ bool Patch::splice(Point new_splice_start,
       }
 
       upper_bound->set_old_text(move(old_text), old_text_size);
+      upper_bound->old_extent =
+        upper_bound_old_end.traversal(lower_bound_old_start);
+      upper_bound->new_extent =
+        new_extent_prefix.traverse(new_insertion_extent).traverse(new_extent_suffix);
+      upper_bound->old_distance_from_left_ancestor = lower_bound_old_start;
+      upper_bound->new_distance_from_left_ancestor = lower_bound_new_start;
 
       if (lower_bound == upper_bound) {
         if (root->old_extent.is_zero() && root->new_extent.is_zero()) {
@@ -573,65 +567,56 @@ bool Patch::splice(Point new_splice_start,
         lower_bound->left = nullptr;
         delete_node(&lower_bound);
       }
-
     } else if (overlaps_upper_bound) {
-      Point old_splice_start = lower_bound_old_end.traverse(
-          new_splice_start.traversal(lower_bound_new_end));
-      Point new_extent_suffix = upper_bound_new_end.traversal(new_deletion_end);
-
-      upper_bound->old_distance_from_left_ancestor = old_splice_start;
-      upper_bound->new_distance_from_left_ancestor = new_splice_start;
-      upper_bound->old_extent = upper_bound_old_end.traversal(old_splice_start);
-      upper_bound->new_extent =
-          new_insertion_extent.traverse(new_extent_suffix);
+      Point old_splice_start =
+        lower_bound_old_end.traverse(new_splice_start.traversal(lower_bound_new_end));
+      Point new_extent_suffix =
+        upper_bound_new_end.traversal(new_deletion_end);
 
       if (inserted_text && upper_bound->new_text) {
         TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).suffix(
-            new_deletion_end.traversal(upper_bound_new_start));
-        if (!new_text_suffix.is_valid()) return false;
-        upper_bound->set_new_text(
-          Text::concat(*inserted_text, new_text_suffix)
+          new_deletion_end.traversal(upper_bound_new_start)
         );
+        if (!new_text_suffix.is_valid()) return false;
+        upper_bound->set_new_text(Text::concat(*inserted_text, new_text_suffix));
       } else {
         upper_bound->set_new_text(optional<Text>{});
       }
 
       upper_bound->set_old_text(move(old_text), old_text_size);
+      upper_bound->old_distance_from_left_ancestor = old_splice_start;
+      upper_bound->new_distance_from_left_ancestor = new_splice_start;
+      upper_bound->old_extent = upper_bound_old_end.traversal(old_splice_start);
+      upper_bound->new_extent = new_insertion_extent.traverse(new_extent_suffix);
 
       delete_node(&lower_bound->right);
       if (upper_bound->left != lower_bound) {
         delete_node(&upper_bound->left);
       }
-
     } else if (overlaps_lower_bound) {
       Point rightmost_child_old_end, rightmost_child_new_end;
-      lower_bound->get_subtree_end(&rightmost_child_old_end,
-                                 &rightmost_child_new_end);
-      Point old_deletion_end = rightmost_child_old_end.traverse(
-          new_deletion_end.traversal(rightmost_child_new_end));
+      lower_bound->get_subtree_end(&rightmost_child_old_end, &rightmost_child_new_end);
+      Point old_deletion_end =
+        rightmost_child_old_end.traverse(new_deletion_end.traversal(rightmost_child_new_end));
       Point new_extent_prefix =
-          new_splice_start.traversal(lower_bound_new_start);
+        new_splice_start.traversal(lower_bound_new_start);
 
-      upper_bound->new_distance_from_left_ancestor = new_insertion_end.traverse(
-          upper_bound_new_start.traversal(new_deletion_end));
+      upper_bound->new_distance_from_left_ancestor =
+        new_insertion_end.traverse(upper_bound_new_start.traversal(new_deletion_end));
       lower_bound->old_extent =
           old_deletion_end.traversal(lower_bound_old_start);
       lower_bound->new_extent =
           new_extent_prefix.traverse(new_insertion_extent);
       if (inserted_text && lower_bound->new_text) {
-        TextSlice new_text_prefix =
-            TextSlice(*lower_bound->new_text).prefix(new_extent_prefix);
+        TextSlice new_text_prefix = TextSlice(*lower_bound->new_text).prefix(new_extent_prefix);
         lower_bound->set_new_text(Text::concat(new_text_prefix, *inserted_text));
       } else {
         lower_bound->set_new_text(optional<Text>{});
       }
 
       lower_bound->set_old_text(move(old_text), old_text_size);
-
       delete_node(&lower_bound->right);
       rotate_node_right(lower_bound, upper_bound, nullptr);
-
-      // Splice doesn't overlap either bound
     } else {
       // If bounds are the same node, this is an insertion at the beginning of
       // that node with merges_adjacent_changes set to false.
@@ -640,28 +625,31 @@ bool Patch::splice(Point new_splice_start,
         assert(new_deletion_extent.is_zero());
         assert(new_splice_start == upper_bound_new_start);
 
-        root = build_node(upper_bound->left, upper_bound, upper_bound_old_start,
-                         upper_bound_new_start, Point(),
-                         new_insertion_extent, move(old_text),
-                         move(inserted_text), old_text_size);
+        root = build_node(
+          upper_bound->left, upper_bound,
+          upper_bound_old_start, upper_bound_new_start,
+          Point(), new_insertion_extent,
+          move(old_text), move(inserted_text),
+          old_text_size
+        );
 
         upper_bound->left = nullptr;
         upper_bound->old_distance_from_left_ancestor = Point();
         upper_bound->new_distance_from_left_ancestor = Point();
       } else {
         Point rightmost_child_old_end, rightmost_child_new_end;
-        lower_bound->get_subtree_end(&rightmost_child_old_end,
-                                   &rightmost_child_new_end);
-        Point old_splice_start = lower_bound_old_end.traverse(
-            new_splice_start.traversal(lower_bound_new_end));
-        Point old_deletion_end = rightmost_child_old_end.traverse(
-            new_deletion_end.traversal(rightmost_child_new_end));
-
+        lower_bound->get_subtree_end(&rightmost_child_old_end, &rightmost_child_new_end);
+        Point old_splice_start =
+          lower_bound_old_end.traverse(new_splice_start.traversal(lower_bound_new_end));
+        Point old_deletion_end =
+          rightmost_child_old_end.traverse(new_deletion_end.traversal(rightmost_child_new_end));
         root = build_node(
-            lower_bound, upper_bound, old_splice_start, new_splice_start,
-            old_deletion_end.traversal(old_splice_start), new_insertion_extent,
-            move(old_text), move(inserted_text), old_text_size);
-
+          lower_bound, upper_bound,
+          old_splice_start, new_splice_start,
+          old_deletion_end.traversal(old_splice_start), new_insertion_extent,
+          move(old_text), move(inserted_text),
+          old_text_size
+        );
         delete_node(&lower_bound->right);
         upper_bound->left = nullptr;
         upper_bound->old_distance_from_left_ancestor =
@@ -670,33 +658,26 @@ bool Patch::splice(Point new_splice_start,
             upper_bound_new_start.traversal(new_deletion_end);
       }
     }
-
   } else if (lower_bound) {
     Point lower_bound_old_start = lower_bound->old_distance_from_left_ancestor;
     Point lower_bound_new_start = lower_bound->new_distance_from_left_ancestor;
     Point lower_bound_new_end =
-        lower_bound_new_start.traverse(lower_bound->new_extent);
+      lower_bound_new_start.traverse(lower_bound->new_extent);
     Point lower_bound_old_end =
-        lower_bound_old_start.traverse(lower_bound->old_extent);
+      lower_bound_old_start.traverse(lower_bound->old_extent);
     Point rightmost_child_old_end, rightmost_child_new_end;
-    lower_bound->get_subtree_end(&rightmost_child_old_end,
-                               &rightmost_child_new_end);
-    Point old_deletion_end = rightmost_child_old_end.traverse(
-        new_deletion_end.traversal(rightmost_child_new_end));
+    lower_bound->get_subtree_end(&rightmost_child_old_end, &rightmost_child_new_end);
+    Point old_deletion_end =
+      rightmost_child_old_end.traverse(new_deletion_end.traversal(rightmost_child_new_end));
     bool overlaps_lower_bound =
-        new_splice_start < lower_bound_new_end ||
-        (merges_adjacent_changes && new_splice_start == lower_bound_new_end);
-
-    delete_node(&lower_bound->right);
+      new_splice_start < lower_bound_new_end ||
+      (merges_adjacent_changes && new_splice_start == lower_bound_new_end);
 
     if (overlaps_lower_bound) {
-      lower_bound->old_extent =
-          old_deletion_end.traversal(lower_bound_old_start);
-      lower_bound->new_extent =
-          new_insertion_end.traversal(lower_bound_new_start);
       if (inserted_text && lower_bound->new_text) {
         TextSlice new_text_prefix = TextSlice(*lower_bound->new_text).prefix(
-            new_splice_start.traversal(lower_bound_new_start));
+          new_splice_start.traversal(lower_bound_new_start)
+        );
         if (!new_text_prefix.is_valid()) return false;
         lower_bound->set_new_text(Text::concat(new_text_prefix, *inserted_text));
       } else {
@@ -704,49 +685,46 @@ bool Patch::splice(Point new_splice_start,
       }
 
       lower_bound->set_old_text(move(old_text), old_text_size);
+      lower_bound->old_extent = old_deletion_end.traversal(lower_bound_old_start);
+      lower_bound->new_extent = new_insertion_end.traversal(lower_bound_new_start);
     } else {
       Point old_splice_start = lower_bound_old_end.traverse(
-          new_splice_start.traversal(lower_bound_new_end));
-      root =
-          build_node(lower_bound, nullptr, old_splice_start, new_splice_start,
-                    old_deletion_end.traversal(old_splice_start),
-                    new_insertion_extent, move(old_text), move(inserted_text),
-                    old_text_size);
+        new_splice_start.traversal(lower_bound_new_end)
+      );
+      root = build_node(
+        lower_bound, nullptr,
+        old_splice_start, new_splice_start,
+        old_deletion_end.traversal(old_splice_start), new_insertion_extent,
+        move(old_text), move(inserted_text),
+        old_text_size
+      );
     }
 
+    delete_node(&lower_bound->right);
   } else if (upper_bound) {
     Point upper_bound_new_start = upper_bound->new_distance_from_left_ancestor;
     Point upper_bound_old_start = upper_bound->old_distance_from_left_ancestor;
     Point upper_bound_new_end =
-        upper_bound_new_start.traverse(upper_bound->new_extent);
+      upper_bound_new_start.traverse(upper_bound->new_extent);
     bool overlaps_upper_bound =
-        new_deletion_end > upper_bound_new_start ||
-        (merges_adjacent_changes && new_deletion_end == upper_bound_new_start);
+      new_deletion_end > upper_bound_new_start ||
+      (merges_adjacent_changes && new_deletion_end == upper_bound_new_start);
 
     Point old_deletion_end;
     if (upper_bound->left) {
       Point rightmost_child_old_end, rightmost_child_new_end;
-      upper_bound->left->get_subtree_end(&rightmost_child_old_end,
-                                       &rightmost_child_new_end);
-      old_deletion_end = rightmost_child_old_end.traverse(
-          new_deletion_end.traversal(rightmost_child_new_end));
+      upper_bound->left->get_subtree_end(&rightmost_child_old_end, &rightmost_child_new_end);
+      old_deletion_end =
+        rightmost_child_old_end.traverse(new_deletion_end.traversal(rightmost_child_new_end));
     } else {
       old_deletion_end = new_deletion_end;
     }
 
-    delete_node(&upper_bound->left);
     if (overlaps_upper_bound) {
-      upper_bound->old_distance_from_left_ancestor = new_splice_start;
-      upper_bound->new_distance_from_left_ancestor = new_splice_start;
-      upper_bound->old_extent =
-          upper_bound_old_start.traversal(new_splice_start)
-              .traverse(upper_bound->old_extent);
-      upper_bound->new_extent = new_insertion_extent.traverse(
-          upper_bound_new_end.traversal(new_deletion_end));
-
       if (inserted_text && upper_bound->new_text) {
         TextSlice new_text_suffix = TextSlice(*upper_bound->new_text).suffix(
-            new_deletion_end.traversal(upper_bound_new_start));
+          new_deletion_end.traversal(upper_bound_new_start)
+        );
         if (!new_text_suffix.is_valid()) return false;
         upper_bound->set_new_text(Text::concat(*inserted_text, new_text_suffix));
       } else {
@@ -754,30 +732,42 @@ bool Patch::splice(Point new_splice_start,
       }
 
       upper_bound->set_old_text(move(old_text), old_text_size);
+      upper_bound->old_distance_from_left_ancestor = new_splice_start;
+      upper_bound->new_distance_from_left_ancestor = new_splice_start;
+      upper_bound->old_extent =
+        upper_bound_old_start.traversal(new_splice_start).traverse(upper_bound->old_extent);
+      upper_bound->new_extent =
+        new_insertion_extent.traverse(upper_bound_new_end.traversal(new_deletion_end));
     } else {
-      root =
-          build_node(nullptr, upper_bound, new_splice_start, new_splice_start,
-                    old_deletion_end.traversal(new_splice_start),
-                    new_insertion_extent, move(old_text), move(inserted_text),
-                    old_text_size);
+      root = build_node(
+        nullptr, upper_bound,
+        new_splice_start, new_splice_start,
+        old_deletion_end.traversal(new_splice_start), new_insertion_extent,
+        move(old_text), move(inserted_text),
+        old_text_size
+      );
       Point distance_from_end_of_root_to_start_of_upper_bound =
-          upper_bound_new_start.traversal(new_deletion_end);
+        upper_bound_new_start.traversal(new_deletion_end);
       upper_bound->old_distance_from_left_ancestor =
-          distance_from_end_of_root_to_start_of_upper_bound;
+        distance_from_end_of_root_to_start_of_upper_bound;
       upper_bound->new_distance_from_left_ancestor =
-          distance_from_end_of_root_to_start_of_upper_bound;
+        distance_from_end_of_root_to_start_of_upper_bound;
     }
 
+    delete_node(&upper_bound->left);
   } else {
     Point rightmost_child_old_end, rightmost_child_new_end;
     root->get_subtree_end(&rightmost_child_old_end, &rightmost_child_new_end);
     Point old_deletion_end = rightmost_child_old_end.traverse(
-        new_deletion_end.traversal(rightmost_child_new_end));
+      new_deletion_end.traversal(rightmost_child_new_end));
     delete_node(&root);
-    root = build_node(nullptr, nullptr, new_splice_start, new_splice_start,
-                     old_deletion_end.traversal(new_splice_start),
-                     new_insertion_extent, move(old_text), move(inserted_text),
-                     old_text_size);
+    root = build_node(
+      nullptr, nullptr,
+      new_splice_start, new_splice_start,
+      old_deletion_end.traversal(new_splice_start), new_insertion_extent,
+      move(old_text), move(inserted_text),
+      old_text_size
+    );
   }
 
   if (lower_bound) lower_bound->compute_subtree_text_sizes();

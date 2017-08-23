@@ -384,12 +384,13 @@ describe('Patch', function () {
 
       const patch = new Patch()
 
-      for (let j = 0; j < 5; j++) {
+      for (let j = 0; j < 10; j++) {
         const start = document.buildRandomPoint()
         const insertedText = document.buildRandomLines(1, 4, true).join('\n')
         const deletedText = document.buildRandomLines(1, 4).join('\n')
         const deletedExtent = textHelpers.getExtent(deletedText)
         const insertedExtent = textHelpers.getExtent(insertedText)
+        const currentChanges = patch.getChanges()
 
         try {
           patch.splice(
@@ -401,6 +402,7 @@ describe('Patch', function () {
           )
         } catch (error) {
           assert.equal(error.message, 'Patch does not apply')
+          assert.deepEqual(patch.getChanges(), currentChanges, seedMessage)
         }
       }
     }
