@@ -33,8 +33,8 @@ static wstring ToUTF16(string input) {
 }
 
 static size_t get_file_size(const string &name) {
-  struct _stat file_stats;
-  if (_wstat(ToUTF16(name).c_str(), &file_stats) != 0) return -1;
+  struct _stat64 file_stats;
+  if (_wstat64(ToUTF16(name).c_str(), &file_stats) != 0) return -1;
   return file_stats.st_size;
 }
 
