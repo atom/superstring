@@ -369,7 +369,10 @@ describe('TextBuffer', () => {
             done(new Error('Expected an error'))
           })
           .catch((error) => {
-            if (!isWindows) assert.equal(error.code, 'EISDIR')
+            if (!isWindows) {
+              assert.include(error.message, ' read ')
+              assert.equal(error.code, 'EISDIR')
+            }
             assert.equal(error.path, filePath)
             done()
           })
@@ -388,7 +391,10 @@ describe('TextBuffer', () => {
             done(new Error('Expected an error'))
           })
           .catch((error) => {
-            if (!isWindows) assert.equal(error.code, 'ELOOP')
+            if (!isWindows) {
+              assert.include(error.message, ' stat ')
+              assert.equal(error.code, 'ELOOP')
+            }
             assert.equal(error.path, filePath)
             done()
           })
@@ -607,6 +613,7 @@ describe('TextBuffer', () => {
             done(new Error('Expected an error'))
           })
           .catch((error) => {
+            assert.include(error.message, ' open ')
             assert.equal(error.code, isWindows ? 'EACCES' : 'EISDIR')
             assert.equal(error.path, filePath)
             assert.ok(buffer.isModified())
@@ -631,6 +638,7 @@ describe('TextBuffer', () => {
             done(new Error('Expected an error'))
           })
           .catch((error) => {
+            assert.include(error.message, ' open ')
             assert.equal(error.code, isWindows ? 'EINVAL' : 'ELOOP')
             assert.equal(error.path, filePath)
             assert.ok(buffer.isModified())
