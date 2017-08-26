@@ -31,6 +31,7 @@ private:
   static void load(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void base_text_matches_file(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void save(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void save_to_file_descriptor(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void load_sync(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void save_sync(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void serialize_changes(const Nan::FunctionCallbackInfo<v8::Value> &info);

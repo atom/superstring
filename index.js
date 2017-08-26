@@ -56,7 +56,7 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   }
 
   const {TextBuffer, TextWriter, TextReader} = binding
-  const {load, save, find, findAllSync, baseTextMatchesFile} = TextBuffer.prototype
+  const {load, save, saveToFileDescriptor, find, findAllSync, baseTextMatchesFile} = TextBuffer.prototype
 
   TextBuffer.prototype.load = function (source, options, progressCallback) {
     if (typeof options !== 'object') {
@@ -113,6 +113,11 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
       if (typeof destination === 'string') {
         const filePath = destination
         save.call(this, filePath, encoding, (error) => {
+          error ? reject(error) : resolve()
+        })
+      } else if (typeof destination === 'number') {
+        const fileDescriptor = destination
+        saveToFileDescriptor.call(this, fileDescriptor, encoding, (error) => {
           error ? reject(error) : resolve()
         })
       } else {

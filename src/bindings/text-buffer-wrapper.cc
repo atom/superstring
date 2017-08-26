@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iomanip>
 #include <stdio.h>
+#include <stdlib.h>
 #include "point-wrapper.h"
 #include "range-wrapper.h"
 #include "string-conversion.h"
@@ -21,6 +22,10 @@ using std::vector;
 using std::wstring;
 
 #ifdef WIN32
+
+#include <io.h>
+
+#define dup _dup
 
 static wstring ToUTF16(string input) {
   wstring result;
@@ -46,6 +51,8 @@ static FILE *open_file(const string &name, const char *flags) {
 }
 
 #else
+
+#include <unistd.h>
 
 static size_t get_file_size(const std::string &name) {
   struct stat file_stats;
@@ -141,6 +148,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("load").ToLocalChecked(), Nan::New<FunctionTemplate>(load));
   prototype_template->Set(Nan::New("baseTextMatchesFile").ToLocalChecked(), Nan::New<FunctionTemplate>(base_text_matches_file));
   prototype_template->Set(Nan::New("save").ToLocalChecked(), Nan::New<FunctionTemplate>(save));
+  prototype_template->Set(Nan::New("saveToFileDescriptor").ToLocalChecked(), Nan::New<FunctionTemplate>(save_to_file_descriptor));
   prototype_template->Set(Nan::New("loadSync").ToLocalChecked(), Nan::New<FunctionTemplate>(load_sync));
   prototype_template->Set(Nan::New("saveSync").ToLocalChecked(), Nan::New<FunctionTemplate>(save_sync));
   prototype_template->Set(Nan::New("serializeChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(serialize_changes));
@@ -711,6 +719,7 @@ void TextBufferWrapper::base_text_matches_file(const Nan::FunctionCallbackInfo<V
 class SaveWorker : public Nan::AsyncWorker {
   TextBuffer::Snapshot *snapshot;
   string file_name;
+  optional<int> file_descriptor;
   string encoding_name;
   optional<Error> error;
 
@@ -722,6 +731,14 @@ class SaveWorker : public Nan::AsyncWorker {
     file_name{file_name},
     encoding_name(encoding_name) {}
 
+  SaveWorker(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
+             int file_descriptor, string &&encoding_name) :
+    AsyncWorker(completion_callback),
+    snapshot{snapshot},
+    file_name{"<file descriptor " + std::to_string(file_descriptor) + ">"},
+    file_descriptor{optional<int>{file_descriptor}},
+    encoding_name(encoding_name) {}
+
   void Execute() {
     auto conversion = transcoding_to(encoding_name.c_str());
     if (!conversion) {
@@ -729,7 +746,10 @@ class SaveWorker : public Nan::AsyncWorker {
       return;
     }
 
-    FILE *file = open_file(file_name, "wb+");
+    FILE *file = file_descriptor
+      ? fdopen(dup(*file_descriptor), "wb+")
+      : open_file(file_name, "wb+");
+
     if (!file) {
       error = Error{errno, "open"};
       return;
@@ -811,6 +831,26 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
     completion_callback,
     text_buffer.create_snapshot(),
     move(file_path),
+    move(encoding_name)
+  ));
+}
+
+void TextBufferWrapper::save_to_file_descriptor(const Nan::FunctionCallbackInfo<v8::Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+
+  Local<Integer> js_file_descriptor;
+  if (!Nan::To<Integer>(info[0]).ToLocal(&js_file_descriptor)) return;
+  int file_descriptor = js_file_descriptor->IntegerValue();
+
+  Local<String> js_encoding_name;
+  if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
+  string encoding_name = *String::Utf8Value(info[1].As<String>());
+
+  Nan::Callback *completion_callback = new Nan::Callback(info[2].As<Function>());
+  Nan::AsyncQueueWorker(new SaveWorker(
+    completion_callback,
+    text_buffer.create_snapshot(),
+    file_descriptor,
     move(encoding_name)
   ));
 }
