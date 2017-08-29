@@ -392,7 +392,7 @@ describe('TextBuffer', () => {
           })
           .catch((error) => {
             if (!isWindows) {
-              assert.include(error.message, ' stat ')
+              assert.include(error.message, ' open ')
               assert.equal(error.code, 'ELOOP')
             }
             assert.equal(error.path, filePath)

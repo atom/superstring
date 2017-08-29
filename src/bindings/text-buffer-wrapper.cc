@@ -22,6 +22,9 @@ using std::wstring;
 
 #ifdef WIN32
 
+#include <windows.h>
+#include <io.h>
+
 static wstring ToUTF16(string input) {
   wstring result;
   int length = MultiByteToWideChar(CP_UTF8, 0, input.c_str(), input.length(), NULL, 0);
@@ -32,10 +35,13 @@ static wstring ToUTF16(string input) {
   return result;
 }
 
-static size_t get_file_size(const string &name) {
-  struct _stat64 file_stats;
-  if (_wstat64(ToUTF16(name).c_str(), &file_stats) != 0) return -1;
-  return file_stats.st_size;
+static size_t get_file_size(FILE *file) {
+  LARGE_INTEGER result;
+  if (!GetFileSizeEx((HANDLE)_get_osfhandle(fileno(file)), &result)) {
+    errno = GetLastError();
+    return -1;
+  }
+  return static_cast<size_t>(result.QuadPart);
 }
 
 static FILE *open_file(const string &name, const char *flags) {
@@ -47,9 +53,9 @@ static FILE *open_file(const string &name, const char *flags) {
 
 #else
 
-static size_t get_file_size(const std::string &name) {
+static size_t get_file_size(FILE *file) {
   struct stat file_stats;
-  if (stat(name.c_str(), &file_stats) != 0) return -1;
+  if (fstat(fileno(file), &file_stats) != 0) return -1;
   return file_stats.st_size;
 }
 
@@ -395,15 +401,15 @@ static u16string load_file(
     return u"";
   }
 
-  size_t file_size = get_file_size(file_name);
-  if (file_size == static_cast<size_t>(-1)) {
-    *error = Error{errno, "stat"};
-    return u"";
-  }
-
   FILE *file = open_file(file_name, "rb");
   if (!file) {
     *error = Error{errno, "open"};
+    return u"";
+  }
+
+  size_t file_size = get_file_size(file);
+  if (file_size == static_cast<size_t>(-1)) {
+    *error = Error{errno, "stat"};
     return u"";
   }
 
