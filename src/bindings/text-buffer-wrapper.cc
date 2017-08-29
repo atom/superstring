@@ -25,6 +25,9 @@ using SubsequenceMatch = TextBuffer::SubsequenceMatch;
 
 #ifdef WIN32
 
+#include <windows.h>
+#include <io.h>
+
 static wstring ToUTF16(string input) {
   wstring result;
   int length = MultiByteToWideChar(CP_UTF8, 0, input.c_str(), input.length(), NULL, 0);
@@ -35,10 +38,13 @@ static wstring ToUTF16(string input) {
   return result;
 }
 
-static size_t get_file_size(const string &name) {
-  struct _stat file_stats;
-  if (_wstat(ToUTF16(name).c_str(), &file_stats) != 0) return -1;
-  return file_stats.st_size;
+static size_t get_file_size(FILE *file) {
+  LARGE_INTEGER result;
+  if (!GetFileSizeEx((HANDLE)_get_osfhandle(fileno(file)), &result)) {
+    errno = GetLastError();
+    return -1;
+  }
+  return static_cast<size_t>(result.QuadPart);
 }
 
 static FILE *open_file(const string &name, const char *flags) {
@@ -50,9 +56,9 @@ static FILE *open_file(const string &name, const char *flags) {
 
 #else
 
-static size_t get_file_size(const std::string &name) {
+static size_t get_file_size(FILE *file) {
   struct stat file_stats;
-  if (stat(name.c_str(), &file_stats) != 0) return -1;
+  if (fstat(fileno(file), &file_stats) != 0) return -1;
   return file_stats.st_size;
 }
 
@@ -494,31 +500,43 @@ void TextBufferWrapper::is_modified(const Nan::FunctionCallbackInfo<Value> &info
 
 static const int INVALID_ENCODING = -1;
 
-static Local<Value> error_for_number(int error_number, string encoding_name, string file_name) {
-  if (error_number == INVALID_ENCODING) {
+struct Error {
+  int number;
+  const char *syscall;
+};
+
+static Local<Value> error_to_js(Error error, string encoding_name, string file_name) {
+  if (error.number == INVALID_ENCODING) {
     return Nan::Error(("Invalid encoding name: " + encoding_name).c_str());
   } else {
-    return node::ErrnoException(v8::Isolate::GetCurrent(), error_number, nullptr, nullptr, file_name.c_str());
+    return node::ErrnoException(
+      v8::Isolate::GetCurrent(), error.number, error.syscall, error.syscall, file_name.c_str()
+    );
   }
 }
 
 template <typename Callback>
-static u16string load_file(const string &file_name, const string &encoding_name, optional<int> *error_number, const Callback &callback) {
+static u16string load_file(
+  const string &file_name,
+  const string &encoding_name,
+  optional<Error> *error,
+  const Callback &callback
+) {
   auto conversion = transcoding_from(encoding_name.c_str());
   if (!conversion) {
-    *error_number = INVALID_ENCODING;
-    return u"";
-  }
-
-  size_t file_size = get_file_size(file_name);
-  if (file_size == static_cast<size_t>(-1)) {
-    *error_number = errno;
+    *error = Error{INVALID_ENCODING, nullptr};
     return u"";
   }
 
   FILE *file = open_file(file_name, "rb");
   if (!file) {
-    *error_number = errno;
+    *error = Error{errno, "open"};
+    return u"";
+  }
+
+  size_t file_size = get_file_size(file);
+  if (file_size == static_cast<size_t>(-1)) {
+    *error = Error{errno, "stat"};
     return u"";
   }
 
@@ -534,7 +552,7 @@ static u16string load_file(const string &file_name, const string &encoding_name,
       callback(percent_done);
     }
   )) {
-    *error_number = errno;
+    *error = Error{errno, "read"};
   }
 
   fclose(file);
@@ -548,7 +566,7 @@ class LoadWorker : public Nan::AsyncProgressWorkerBase<size_t> {
   string file_name;
   string encoding_name;
   optional<Text> loaded_text;
-  optional<int> error_number;
+  optional<Error> error;
   Patch patch;
   bool force;
   bool compute_patch;
@@ -583,21 +601,21 @@ class LoadWorker : public Nan::AsyncProgressWorkerBase<size_t> {
   void Execute(const Nan::AsyncProgressWorkerBase<size_t>::ExecutionProgress &progress) {
     if (!loaded_text) {
       loaded_text = Text{
-        load_file(file_name, encoding_name, &error_number, [&progress](size_t percent_done) {
+        load_file(file_name, encoding_name, &error, [&progress](size_t percent_done) {
           progress.Send(&percent_done, 1);
         })
       };
     }
-    if (!error_number && compute_patch) patch = text_diff(snapshot->base_text(), *loaded_text);
+    if (!error && compute_patch) patch = text_diff(snapshot->base_text(), *loaded_text);
   }
 
   void ExecuteSync() {
     loaded_text = Text{
-      load_file(file_name, encoding_name, &error_number, [this](size_t percent_done) {
+      load_file(file_name, encoding_name, &error, [this](size_t percent_done) {
         HandleProgressCallback(&percent_done, 1);
       })
     };
-    if (!error_number && compute_patch) patch = text_diff(snapshot->base_text(), *loaded_text);
+    if (!error && compute_patch) patch = text_diff(snapshot->base_text(), *loaded_text);
   }
 
   void HandleProgressCallback(const size_t *percent_done, size_t count) {
@@ -610,9 +628,9 @@ class LoadWorker : public Nan::AsyncProgressWorkerBase<size_t> {
   }
 
   pair<Local<Value>, Local<Value>> Finish() {
-    if (error_number) {
+    if (error) {
       delete snapshot;
-      return {error_for_number(*error_number, encoding_name, file_name), Nan::Undefined()};
+      return {error_to_js(*error, encoding_name, file_name), Nan::Undefined()};
     }
 
     if (cancelled || (!force && buffer->is_modified())) {
@@ -767,7 +785,7 @@ class BaseTextComparisonWorker : public Nan::AsyncWorker {
   TextBuffer::Snapshot *snapshot;
   string file_name;
   string encoding_name;
-  optional<int> error_number;
+  optional<Error> error;
   bool result;
 
  public:
@@ -780,14 +798,14 @@ class BaseTextComparisonWorker : public Nan::AsyncWorker {
     result{false} {}
 
   void Execute() {
-    u16string file_contents = load_file(file_name, encoding_name, &error_number, [](size_t progress) {});
+    u16string file_contents = load_file(file_name, encoding_name, &error, [](size_t progress) {});
     result = std::equal(file_contents.begin(), file_contents.end(), snapshot->base_text().begin());
   }
 
   void HandleOKCallback() {
     delete snapshot;
-    if (error_number) {
-      Local<Value> argv[] = {error_for_number(*error_number, encoding_name, file_name)};
+    if (error) {
+      Local<Value> argv[] = {error_to_js(*error, encoding_name, file_name)};
       callback->Call(1, argv);
     } else {
       Local<Value> argv[] = {Nan::Null(), Nan::New<Boolean>(result)};
@@ -827,7 +845,7 @@ class SaveWorker : public Nan::AsyncWorker {
   TextBuffer::Snapshot *snapshot;
   string file_name;
   string encoding_name;
-  optional<int> error_number;
+  optional<Error> error;
 
  public:
   SaveWorker(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
@@ -840,13 +858,13 @@ class SaveWorker : public Nan::AsyncWorker {
   void Execute() {
     auto conversion = transcoding_to(encoding_name.c_str());
     if (!conversion) {
-      error_number = INVALID_ENCODING;
+      error = Error{INVALID_ENCODING, nullptr};
       return;
     }
 
     FILE *file = open_file(file_name, "wb+");
     if (!file) {
-      error_number = errno;
+      error = Error{errno, "open"};
       return;
     }
 
@@ -859,7 +877,7 @@ class SaveWorker : public Nan::AsyncWorker {
         file,
         output_buffer
       )) {
-        error_number = errno;
+        error = Error{errno, "write"};
         fclose(file);
         return;
       }
@@ -869,11 +887,12 @@ class SaveWorker : public Nan::AsyncWorker {
   }
 
   Local<Value> Finish() {
-    snapshot->flush_preceding_changes();
-    delete snapshot;
-    if (error_number) {
-      return error_for_number(*error_number, encoding_name, file_name);
+    if (error) {
+      delete snapshot;
+      return error_to_js(*error, encoding_name, file_name);
     } else {
+      snapshot->flush_preceding_changes();
+      delete snapshot;
       return Nan::Null();
     }
   }

@@ -41,7 +41,16 @@ vector<uint8_t> serialize(Patch &patch) {
 }
 
 Patch *compose(vector<Patch const *> const &patches) {
-  return new Patch(patches);
+  auto result = new Patch();
+  bool left_to_right = true;
+  for (const Patch *patch : patches) {
+    if (!result->combine(*patch, left_to_right)) {
+      delete result;
+      return nullptr;
+    }
+    left_to_right = !left_to_right;
+  }
+  return result;
 }
 
 Patch *deserialize(const vector<uint8_t> &bytes) {
@@ -49,17 +58,17 @@ Patch *deserialize(const vector<uint8_t> &bytes) {
   return new Patch(deserializer);
 }
 
-void splice(Patch &patch, Point start, Point deleted_extent, Point inserted_extent) {
-  patch.splice(
+bool splice(Patch &patch, Point start, Point deleted_extent, Point inserted_extent) {
+  return patch.splice(
     start,
     deleted_extent,
     inserted_extent
   );
 }
 
-void splice_with_text(Patch &patch, Point start, Point deleted_extent, Point inserted_extent,
+bool splice_with_text(Patch &patch, Point start, Point deleted_extent, Point inserted_extent,
                       const string &deleted_text, const string &inserted_text) {
-  patch.splice(
+  return patch.splice(
     start,
     deleted_extent,
     inserted_extent,

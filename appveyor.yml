@@ -10,12 +10,16 @@ platform:
 install:
   - ps: Install-Product node $env:nodejs_version
   - git submodule update --init
+  - node --version
+  - npm --version
   - npm install
 
 test_script:
-  - node --version
-  - npm --version
   - npm run standard
   - npm run test:node
 
 build: off
+
+branches:
+  only:
+    - master

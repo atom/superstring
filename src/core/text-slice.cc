@@ -22,6 +22,33 @@ size_t TextSlice::end_offset() const {
   return text->line_offsets[end_position.row] + end_position.column;
 }
 
+bool TextSlice::is_valid() const {
+  uint32_t start_offset = this->start_offset();
+  uint32_t end_offset = this->end_offset();
+
+  if (start_offset > end_offset) {
+    return false;
+  }
+
+  if (start_position.row + 1 < text->line_offsets.size()) {
+    if (start_offset >= text->line_offsets[start_position.row + 1]) {
+      return false;
+    }
+  }
+
+  if (end_position.row + 1 < text->line_offsets.size()) {
+    if (end_offset >= text->line_offsets[end_position.row + 1]) {
+      return false;
+    }
+  }
+
+  if (end_offset > text->size()) {
+    return false;
+  }
+
+  return true;
+}
+
 std::pair<TextSlice, TextSlice> TextSlice::split(Point split_point) const {
   Point absolute_split_point = Point::min(
     end_position,

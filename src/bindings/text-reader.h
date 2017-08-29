@@ -18,6 +18,7 @@ private:
   static void construct(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void read(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void end(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void destroy(const Nan::FunctionCallbackInfo<v8::Value> &info);
 
   v8::Persistent<v8::Object> js_text_buffer;
   TextBuffer::Snapshot *snapshot;

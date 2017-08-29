@@ -3,7 +3,7 @@ let binding
 if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   binding = require('./browser');
 
-  const {TextBuffer} = binding
+  const {TextBuffer, Patch} = binding
   const {find, findSync, findAllSync} = TextBuffer.prototype
 
   TextBuffer.prototype.findSync = function (pattern) {
@@ -29,6 +29,21 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   TextBuffer.prototype.find = function (pattern) {
     return new Promise(resolve => resolve(this.findSync(pattern)))
   }
+
+  const {compose} = Patch
+  const {splice} = Patch.prototype
+
+  Patch.compose = function (patches) {
+    const result = compose.call(this, patches)
+    if (!result) throw new Error('Patch does not apply')
+    return result
+  }
+
+  Patch.prototype.splice = Object.assign(function () {
+    if (!splice.apply(this, arguments)) {
+      throw new Error('Patch does not apply')
+    }
+  }, splice)
 } else {
   try {
     binding = require('./build/Release/superstring.node')
@@ -102,16 +117,21 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
         })
       } else {
         const stream = destination
-        stream.on('error', reject)
-
         const reader = new TextReader(this, encoding)
         const buffer = Buffer.allocUnsafe(CHUNK_SIZE)
-        writeToStream()
+        writeToStream(null)
+
+        stream.on('error', (error) => {
+          reader.destroy()
+          reject(error)
+        })
 
         function writeToStream () {
           const bytesRead = reader.read(buffer)
           if (bytesRead > 0) {
-            stream.write(buffer.slice(0, bytesRead), writeToStream)
+            stream.write(buffer.slice(0, bytesRead), (error) => {
+              if (!error) writeToStream()
+            })
           } else {
             stream.end(() => {
               reader.end()

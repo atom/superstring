@@ -97,6 +97,38 @@ TEST_CASE("TextBuffer::create_snapshot") {
   }
 }
 
+TEST_CASE("TextBuffer::chunks()") {
+  TextBuffer buffer{u"abc"};
+  buffer.set_text_in_range({{0, 2}, {0, 2}}, u"1");
+
+  {
+    vector<u16string> chunk_strings;
+    for (auto &slice : buffer.chunks()) chunk_strings.push_back(u16string(slice.data(), slice.size()));
+    REQUIRE(chunk_strings == vector<u16string>({u"ab", u"1", u"c"}));
+  }
+
+  buffer.set_text_in_range({{0, 2}, {0, 3}}, u"");
+  {
+    vector<u16string> chunk_strings;
+    for (auto &slice : buffer.chunks()) chunk_strings.push_back(u16string(slice.data(), slice.size()));
+    REQUIRE(chunk_strings == vector<u16string>({u"abc"}));
+  }
+
+  buffer.set_text_in_range({{0, 1}, {0, 2}}, u"");
+  {
+    vector<u16string> chunk_strings;
+    for (auto &slice : buffer.chunks()) chunk_strings.push_back(u16string(slice.data(), slice.size()));
+    REQUIRE(chunk_strings == vector<u16string>({u"a", u"c"}));
+  }
+
+  buffer.set_text(u"");
+  {
+    vector<u16string> chunk_strings;
+    for (auto &slice : buffer.chunks()) chunk_strings.push_back(u16string(slice.data(), slice.size()));
+    REQUIRE(chunk_strings == vector<u16string>({u""}));
+  }
+}
+
 TEST_CASE("TextBuffer::get_inverted_changes") {
   TextBuffer buffer{u"ab\ndef"};
   auto snapshot1 = buffer.create_snapshot();

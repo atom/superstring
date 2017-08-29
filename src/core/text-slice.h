@@ -28,6 +28,7 @@ class TextSlice {
   Point extent() const;
   uint16_t front() const;
   uint16_t back() const;
+  bool is_valid() const;
 
   const char16_t *data() const;
   uint32_t size() const;

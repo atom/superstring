@@ -1,6 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const temp = require('temp').track()
+const {Writable} = require('stream')
 const {assert} = require('chai')
 const {TextBuffer} = require('../..')
 const Random = require('random-seed')
@@ -368,7 +369,10 @@ describe('TextBuffer', () => {
             done(new Error('Expected an error'))
           })
           .catch((error) => {
-            if (!isWindows) assert.equal(error.code, 'EISDIR')
+            if (!isWindows) {
+              assert.include(error.message, ' read ')
+              assert.equal(error.code, 'EISDIR')
+            }
             assert.equal(error.path, filePath)
             done()
           })
@@ -387,7 +391,10 @@ describe('TextBuffer', () => {
             done(new Error('Expected an error'))
           })
           .catch((error) => {
-            if (!isWindows) assert.equal(error.code, 'ELOOP')
+            if (!isWindows) {
+              assert.include(error.message, ' open ')
+              assert.equal(error.code, 'ELOOP')
+            }
             assert.equal(error.path, filePath)
             done()
           })
@@ -514,9 +521,9 @@ describe('TextBuffer', () => {
 
       const {path: filePath} = temp.openSync()
       const stream = fs.createWriteStream(filePath)
-      const savePromise = buffer.save(stream)
 
-      return savePromise.then(() => {
+      return buffer.save(stream).then(() => {
+        assert.notOk(buffer.isModified())
         assert.equal(fs.readFileSync(filePath, 'utf8'), buffer.getText())
       })
     })
@@ -568,18 +575,48 @@ describe('TextBuffer', () => {
       ))
     })
 
+    it('can save to a stream when the buffer has been cleared (regression)', () => {
+      const buffer = new TextBuffer('abc')
+      buffer.setText('')
+
+      const {path: filePath} = temp.openSync()
+      const stream = fs.createWriteStream(filePath)
+
+      return buffer.save(stream).then(() => {
+        assert.equal(fs.readFileSync(filePath, 'utf8'), buffer.getText())
+      })
+    })
+
+    it('can save to a stream when the buffer has deletions (regression)', () => {
+      const buffer = new TextBuffer('abc')
+      buffer.setTextInRange(Range(Point(0, 1), Point(0, 2)), '')
+      assert.equal(buffer.getText(), 'ac')
+
+      const {path: filePath} = temp.openSync()
+      const stream = fs.createWriteStream(filePath)
+
+      return buffer.save(stream).then(() => {
+        assert.equal(fs.readFileSync(filePath, 'utf8'), buffer.getText())
+      })
+    })
+
     describe('error handling', () => {
       it('rejects with an error if the path points to a directory', (done) => {
-        const buffer = new TextBuffer('hello')
+        const buffer = new TextBuffer()
         const filePath = temp.mkdirSync()
+
+        buffer.setText('hello')
+        assert.ok(buffer.isModified())
 
         return buffer.save(filePath)
           .then(() => {
             done(new Error('Expected an error'))
           })
           .catch((error) => {
+            assert.include(error.message, ' open ')
             assert.equal(error.code, isWindows ? 'EACCES' : 'EISDIR')
             assert.equal(error.path, filePath)
+            assert.ok(buffer.isModified())
             done()
           })
       })
@@ -591,14 +628,83 @@ describe('TextBuffer', () => {
         fs.symlinkSync(filePath, otherPath)
         fs.symlinkSync(otherPath, filePath)
 
-        const buffer = new TextBuffer('hello')
+        const buffer = new TextBuffer()
+
+        buffer.setText('hello')
+        assert.ok(buffer.isModified())
+
         return buffer.save(filePath)
           .then(() => {
             done(new Error('Expected an error'))
           })
           .catch((error) => {
+            assert.include(error.message, ' open ')
             assert.equal(error.code, isWindows ? 'EINVAL' : 'ELOOP')
             assert.equal(error.path, filePath)
+            assert.ok(buffer.isModified())
+            done()
+          })
+      })
+
+      it('rejects with an error if writing to a stream fails', (done) => {
+        const tempDir = temp.mkdirSync()
+        const filePath = path.join(tempDir, 'one')
+        const otherPath = path.join(tempDir, 'two')
+        fs.symlinkSync(filePath, otherPath)
+        fs.symlinkSync(otherPath, filePath)
+
+        const buffer = new TextBuffer('abcd')
+        buffer.setText('efg')
+        assert.ok(buffer.isModified())
+
+        const stream = new Writable({
+          write(chunk, encoding, callback) {
+            process.nextTick(() => callback(new Error('Could not write to stream')))
+          }
+        })
+
+        buffer.save(stream)
+          .then(() => {
+            done(new Error('Expected a rejection'))
+          })
+          .catch((error) => {
+            assert.equal(error.message, 'Could not write to stream')
+            assert.ok(buffer.isModified())
+            done()
+          })
+      })
+
+      it('rejects with an error if closing the stream fails', (done) => {
+        const tempDir = temp.mkdirSync()
+        const filePath = path.join(tempDir, 'one')
+        const otherPath = path.join(tempDir, 'two')
+        fs.symlinkSync(filePath, otherPath)
+        fs.symlinkSync(otherPath, filePath)
+
+        const buffer = new TextBuffer('abcd')
+        buffer.setText('efg')
+        assert.ok(buffer.isModified())
+
+        const stream = new Writable({
+          write(chunk, encoding, callback) {
+            callback()
+          }
+        })
+
+        stream.end = function () {
+          process.nextTick(() => {
+            this.emit('error', new Error('Could not close stream'))
+            this.emit('finish')
+          })
+        }
+
+        buffer.save(stream)
+          .then(() => {
+            done(new Error('Expected a rejection'))
+          })
+          .catch((error) => {
+            assert.equal(error.message, 'Could not close stream')
+            assert.ok(buffer.isModified())
             done()
           })
       })
