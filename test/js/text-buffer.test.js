@@ -985,6 +985,18 @@ describe('TextBuffer', () => {
   })
 
   describe('.findWordsWithSubsequence', () => {
+    it('doesn\'t crash intermittently', () => {
+      let buffer;
+      let promises = []
+      for (let k = 0; k < 100; k++) {
+        buffer = new TextBuffer('abc')
+        promises.push(
+          buffer.findWordsWithSubsequence('a', '', 10)
+        )
+      }
+      return Promise.all(promises)
+    })
+
     it('resolves with all words matching the given query', () => {
       const buffer = new TextBuffer('banana bandana ban_ana bandaid band bNa\nbanana')
       return buffer.findWordsWithSubsequence('bna', '_', 4).then((result) => {
