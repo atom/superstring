@@ -410,7 +410,7 @@ TEST_CASE("TextBuffer::find_words_with_subsequence") {
 
     REQUIRE(buffer.find_words_with_subsequence(u"bna", u"") == vector<SubsequenceMatch>({
       {u"banana", {Point{0, 0}, Point{0, 20}}, {0, 2, 3}, 12},
-      {u"bandana", {Point{0, 12}}, {0, 5, 6}, 10}
+      {u"bandana", {Point{0, 12}}, {0, 5, 6}, 7}
     }));
   }
 
