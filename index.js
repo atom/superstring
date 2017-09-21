@@ -167,7 +167,9 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   }
 
   TextBuffer.prototype.findWordsWithSubsequence = function (query, extraWordCharacters, maxCount) {
-    return new Promise(resolve => findWordsWithSubsequence.call(this, query, extraWordCharacters, maxCount, resolve))
+    return new Promise(resolve =>
+      findWordsWithSubsequence.call(this, query, extraWordCharacters, maxCount, result => resolve(result))
+    )
   }
 
   TextBuffer.prototype.baseTextMatchesFile = function (source, encoding = 'UTF8') {
