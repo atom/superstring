@@ -438,6 +438,7 @@ void TextBufferWrapper::find(const Nan::FunctionCallbackInfo<Value> &info) {
 
 void TextBufferWrapper::find_words_with_subsequence(const Nan::FunctionCallbackInfo<v8::Value> &info) {
   class FindWordsWithSubsequenceWorker : public Nan::AsyncWorker {
+    Nan::Persistent<Object> buffer;
     const TextBuffer::Snapshot *snapshot;
     const u16string query;
     const u16string extra_word_characters;
@@ -445,16 +446,19 @@ void TextBufferWrapper::find_words_with_subsequence(const Nan::FunctionCallbackI
     vector<TextBuffer::SubsequenceMatch> result;
 
   public:
-    FindWordsWithSubsequenceWorker(Nan::Callback *completion_callback,
-                                   const TextBuffer::Snapshot *snapshot,
+    FindWordsWithSubsequenceWorker(Local<Object> buffer,
+                                   Nan::Callback *completion_callback,
                                    const u16string query,
                                    const u16string extra_word_characters,
                                    const size_t max_count) :
       AsyncWorker(completion_callback),
-      snapshot{snapshot},
       query{query},
       extra_word_characters{extra_word_characters},
-      max_count{max_count} {}
+      max_count{max_count} {
+      this->buffer.Reset(buffer);
+      auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(buffer)->text_buffer;
+      snapshot = text_buffer.create_snapshot();
+    }
 
     void Execute() {
       result = snapshot->find_words_with_subsequence(query, extra_word_characters);
@@ -473,7 +477,6 @@ void TextBufferWrapper::find_words_with_subsequence(const Nan::FunctionCallbackI
     }
   };
 
-  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
 
   auto query = string_conversion::string_from_js(info[0]);
   auto extra_word_characters = string_conversion::string_from_js(info[1]);
@@ -482,8 +485,8 @@ void TextBufferWrapper::find_words_with_subsequence(const Nan::FunctionCallbackI
 
   if (query && extra_word_characters && max_count && callback) {
     Nan::AsyncQueueWorker(new FindWordsWithSubsequenceWorker(
+      info.This(),
       callback,
-      text_buffer.create_snapshot(),
       *query,
       *extra_word_characters,
       *max_count
