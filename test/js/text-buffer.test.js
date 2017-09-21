@@ -1020,7 +1020,7 @@ describe('TextBuffer', () => {
             word: "banana"
           },
           {
-            score: 10,
+            score: 7,
             matchIndices: [0, 5, 6],
             positions: [{row: 0, column: 7}],
             word: "bandana"

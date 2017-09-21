@@ -458,14 +458,12 @@ struct TextBuffer::Layer {
         uint16_t c = towlower(word[i]);
 
         for (size_t j = 0, size = match_variants.size(); j < size; j++) {
-          SubsequenceMatchVariant &match_variant = match_variants[j];
-
-          if (match_variant.query_index < query.size()) {
+          if (match_variants[j].query_index < query.size()) {
             // If the current word character matches the next character of
             // the query for this match variant, create a *new* match variant
             // that consumes the matching character.
-            if (c == query[match_variant.query_index]) {
-              SubsequenceMatchVariant new_match = match_variant;
+            if (c == query[match_variants[j].query_index]) {
+              SubsequenceMatchVariant new_match = match_variants[j];
               new_match.query_index++;
 
               if (i == 0 ||
@@ -488,9 +486,9 @@ struct TextBuffer::Layer {
             // reserves the chance for the next character to be consumed by a
             // match with higher overall value.
             if (i < 3) {
-              match_variant.score -= leading_mismatch_penalty;
+              match_variants[j].score -= leading_mismatch_penalty;
             } else {
-              match_variant.score -= mismatch_penalty;
+              match_variants[j].score -= mismatch_penalty;
             }
           }
         }
