@@ -4,7 +4,7 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   binding = require('./browser');
 
   const {TextBuffer, Patch} = binding
-  const {find, findSync, findAllSync} = TextBuffer.prototype
+  const {find, findSync, findAllSync, findWordsWithSubsequence} = TextBuffer.prototype
 
   TextBuffer.prototype.findSync = function (pattern) {
     if (pattern.source) pattern = pattern.source
@@ -28,6 +28,12 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
 
   TextBuffer.prototype.find = function (pattern) {
     return new Promise(resolve => resolve(this.findSync(pattern)))
+  }
+
+  TextBuffer.prototype.findWordsWithSubsequence = function (query, extraWordCharacters, maxCount) {
+    return Promise.resolve(
+      findWordsWithSubsequence.call(this, query, extraWordCharacters).slice(0, maxCount)
+    )
   }
 
   const {compose} = Patch
