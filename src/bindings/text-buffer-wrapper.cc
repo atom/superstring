@@ -457,7 +457,7 @@ void TextBufferWrapper::find_words_with_subsequence_in_range(const Nan::Function
       query{query},
       extra_word_characters{extra_word_characters},
       max_count{max_count},
-      range{range} {
+      range(range) {
       this->buffer.Reset(buffer);
       auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(buffer)->text_buffer;
       snapshot = text_buffer.create_snapshot();
