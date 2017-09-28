@@ -404,11 +404,11 @@ TEST_CASE("TextBuffer::find_all") {
   }));
 }
 
-TEST_CASE("TextBuffer::find_words_with_subsequence") {
+TEST_CASE("TextBuffer::find_words_with_subsequence_in_range") {
   {
     TextBuffer buffer{u"banana band bandana banana"};
 
-    REQUIRE(buffer.find_words_with_subsequence(u"bna", u"") == vector<SubsequenceMatch>({
+    REQUIRE(buffer.find_words_with_subsequence_in_range(u"bna", u"", Range{Point{0, 0}, Point{0, UINT32_MAX}}) == vector<SubsequenceMatch>({
       {u"banana", {Point{0, 0}, Point{0, 20}}, {0, 2, 3}, 12},
       {u"bandana", {Point{0, 12}}, {0, 5, 6}, 7}
     }));
@@ -417,7 +417,7 @@ TEST_CASE("TextBuffer::find_words_with_subsequence") {
   {
     TextBuffer buffer{u"a_b_c abc aBc"};
 
-    REQUIRE(buffer.find_words_with_subsequence(u"abc", u"_") == vector<SubsequenceMatch>({
+    REQUIRE(buffer.find_words_with_subsequence_in_range(u"abc", u"_", Range{Point{0, 0}, Point{0, UINT32_MAX}}) == vector<SubsequenceMatch>({
       {u"aBc", {Point{0, 10}}, {0, 1, 2}, 30},
       {u"a_b_c", {Point{0, 0}}, {0, 2, 4}, 26},
       {u"abc", {Point{0, 6}}, {0, 1, 2}, 20},

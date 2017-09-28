@@ -59,7 +59,7 @@ public:
     bool operator==(const SubsequenceMatch &) const;
   };
 
-  std::vector<SubsequenceMatch> find_words_with_subsequence(const std::u16string &, const std::u16string &) const;
+  std::vector<SubsequenceMatch> find_words_with_subsequence_in_range(const std::u16string &, const std::u16string &, Range) const;
 
   class Snapshot {
     friend class TextBuffer;
@@ -82,7 +82,7 @@ public:
     std::u16string text_in_range(Range) const;
     const Text &base_text() const;
     optional<Range> find(const Regex &) const;
-    std::vector<SubsequenceMatch> find_words_with_subsequence(std::u16string query, const std::u16string &extra_word_characters) const;
+    std::vector<SubsequenceMatch> find_words_with_subsequence_in_range(std::u16string query, const std::u16string &extra_word_characters, Range range) const;
   };
 
   friend class Snapshot;

@@ -389,7 +389,7 @@ struct TextBuffer::Layer {
     int16_t score = 0;
   };
 
-  vector<SubsequenceMatch> find_words_with_subsequence(u16string query, const u16string &extra_word_characters) {
+  vector<SubsequenceMatch> find_words_with_subsequence_in_range(u16string query, const u16string &extra_word_characters, Range range) {
     size_t query_index = 0;
     Point position;
     Point current_word_start;
@@ -401,7 +401,7 @@ struct TextBuffer::Layer {
     // subsequence.
     std::unordered_map<u16string, vector<Point>> substring_matches;
 
-    for_each_chunk_in_range(Point(), extent(), [&] (TextSlice chunk) -> bool {
+    for_each_chunk_in_range(range.start, range.end, [&] (TextSlice chunk) -> bool {
       for (uint16_t c : chunk) {
         bool is_word_character =
           std::iswalnum(c) ||
@@ -809,8 +809,8 @@ bool TextBuffer::SubsequenceMatch::operator==(const SubsequenceMatch &other) con
   );
 }
 
-vector<SubsequenceMatch> TextBuffer::find_words_with_subsequence(const u16string &query, const u16string &non_word_characters) const {
-  return top_layer->find_words_with_subsequence(query, non_word_characters);
+vector<SubsequenceMatch> TextBuffer::find_words_with_subsequence_in_range(const u16string &query, const u16string &non_word_characters, Range range) const {
+  return top_layer->find_words_with_subsequence_in_range(query, non_word_characters, range);
 }
 
 bool TextBuffer::is_modified() const {
@@ -901,8 +901,8 @@ optional<Range> TextBuffer::Snapshot::find(const Regex &regex) const {
   return layer.search_in_range(regex, Range{Point(), extent()}, false);
 }
 
-vector<SubsequenceMatch> TextBuffer::Snapshot::find_words_with_subsequence(std::u16string query, const std::u16string &extra_word_characters) const {
-  return layer.find_words_with_subsequence(query, extra_word_characters);
+vector<SubsequenceMatch> TextBuffer::Snapshot::find_words_with_subsequence_in_range(std::u16string query, const std::u16string &extra_word_characters, Range range) const {
+  return layer.find_words_with_subsequence_in_range(query, extra_word_characters, range);
 }
 
 const Text &TextBuffer::Snapshot::base_text() const {
