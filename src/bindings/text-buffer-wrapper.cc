@@ -224,7 +224,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("find").ToLocalChecked(), Nan::New<FunctionTemplate>(find));
   prototype_template->Set(Nan::New("findSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_sync));
   prototype_template->Set(Nan::New("findAllSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_all_sync));
-  prototype_template->Set(Nan::New("findWordsWithSubsequence").ToLocalChecked(), Nan::New<FunctionTemplate>(find_words_with_subsequence));
+  prototype_template->Set(Nan::New("findWordsWithSubsequenceInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(find_words_with_subsequence_in_range));
   prototype_template->Set(Nan::New("getDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(dot_graph));
   RegexWrapper::init();
   SubsequenceMatchWrapper::init();
@@ -436,32 +436,35 @@ void TextBufferWrapper::find(const Nan::FunctionCallbackInfo<Value> &info) {
   }
 }
 
-void TextBufferWrapper::find_words_with_subsequence(const Nan::FunctionCallbackInfo<v8::Value> &info) {
-  class FindWordsWithSubsequenceWorker : public Nan::AsyncWorker {
+void TextBufferWrapper::find_words_with_subsequence_in_range(const Nan::FunctionCallbackInfo<v8::Value> &info) {
+  class FindWordsWithSubsequenceInRangeWorker : public Nan::AsyncWorker {
     Nan::Persistent<Object> buffer;
     const TextBuffer::Snapshot *snapshot;
     const u16string query;
     const u16string extra_word_characters;
     const size_t max_count;
+    const Range range;
     vector<TextBuffer::SubsequenceMatch> result;
 
   public:
-    FindWordsWithSubsequenceWorker(Local<Object> buffer,
+    FindWordsWithSubsequenceInRangeWorker(Local<Object> buffer,
                                    Nan::Callback *completion_callback,
                                    const u16string query,
                                    const u16string extra_word_characters,
-                                   const size_t max_count) :
+                                   const size_t max_count,
+                                   const Range range) :
       AsyncWorker(completion_callback),
       query{query},
       extra_word_characters{extra_word_characters},
-      max_count{max_count} {
+      max_count{max_count},
+      range{range} {
       this->buffer.Reset(buffer);
       auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(buffer)->text_buffer;
       snapshot = text_buffer.create_snapshot();
     }
 
     void Execute() {
-      result = snapshot->find_words_with_subsequence(query, extra_word_characters);
+      result = snapshot->find_words_with_subsequence_in_range(query, extra_word_characters, range);
     }
 
     void HandleOKCallback() {
@@ -481,15 +484,17 @@ void TextBufferWrapper::find_words_with_subsequence(const Nan::FunctionCallbackI
   auto query = string_conversion::string_from_js(info[0]);
   auto extra_word_characters = string_conversion::string_from_js(info[1]);
   auto max_count = number_conversion::number_from_js<size_t>(info[2]);
-  auto callback = new Nan::Callback(info[3].As<Function>());
+  auto range = RangeWrapper::range_from_js(info[3]);
+  auto callback = new Nan::Callback(info[4].As<Function>());
 
-  if (query && extra_word_characters && max_count && callback) {
-    Nan::AsyncQueueWorker(new FindWordsWithSubsequenceWorker(
+  if (query && extra_word_characters && max_count && range && callback) {
+    Nan::AsyncQueueWorker(new FindWordsWithSubsequenceInRangeWorker(
       info.This(),
       callback,
       *query,
       *extra_word_characters,
-      *max_count
+      *max_count,
+      *range
     ));
   } else {
     Nan::ThrowError("Invalid arguments");

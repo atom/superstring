@@ -984,7 +984,7 @@ describe('TextBuffer', () => {
     })
   })
 
-  describe('.findWordsWithSubsequence', () => {
+  describe('.findWordsWithSubsequence and .findWordsWithSubsequenceInRange', () => {
     it('doesn\'t crash intermittently', () => {
       let buffer;
       let promises = []
@@ -1017,6 +1017,33 @@ describe('TextBuffer', () => {
             score: 12,
             matchIndices: [0, 2, 3],
             positions: [{row: 0, column: 0}, {row: 1, column: 0}],
+            word: "banana"
+          },
+          {
+            score: 7,
+            matchIndices: [0, 5, 6],
+            positions: [{row: 0, column: 7}],
+            word: "bandana"
+          }
+        ])
+      })
+    })
+
+    it('resolves with all words matching the given query and range', () => {
+      const buffer = new TextBuffer('banana bandana ban_ana bandaid band bNa\nbanana')
+      const range = {start: {column: 0, row: 0}, end: {column: 22, row: 0}}
+      return buffer.findWordsWithSubsequenceInRange('bna', '_', 4, range).then((result) => {
+        assert.deepEqual(result, [
+          {
+            score: 16,
+            matchIndices: [0, 2, 4],
+            positions: [{row: 0, column: 15}],
+            word: "ban_ana"
+          },
+          {
+            score: 12,
+            matchIndices: [0, 2, 3],
+            positions: [{row: 0, column: 0}],
             word: "banana"
           },
           {
