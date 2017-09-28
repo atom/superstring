@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iomanip>
 #include <stdio.h>
+#include "number-conversion.h"
 #include "point-wrapper.h"
 #include "range-wrapper.h"
 #include "string-conversion.h"
@@ -19,6 +20,8 @@ using std::string;
 using std::u16string;
 using std::vector;
 using std::wstring;
+
+using SubsequenceMatch = TextBuffer::SubsequenceMatch;
 
 #ifdef WIN32
 
@@ -124,6 +127,71 @@ class RegexWrapper : public Nan::ObjectWrap {
 
 Nan::Persistent<Function> RegexWrapper::constructor;
 
+class SubsequenceMatchWrapper : public Nan::ObjectWrap {
+public:
+  static Nan::Persistent<Function> constructor;
+
+  SubsequenceMatchWrapper(SubsequenceMatch &&match) :
+    match(std::move(match)) {}
+
+  static void init() {
+    Local<FunctionTemplate> constructor_template = Nan::New<FunctionTemplate>();
+    constructor_template->SetClassName(Nan::New<String>("SubsequenceMatch").ToLocalChecked());
+    constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
+    const auto &instance_template = constructor_template->InstanceTemplate();
+
+    Nan::SetAccessor(instance_template, Nan::New("word").ToLocalChecked(), get_word);
+    Nan::SetAccessor(instance_template, Nan::New("positions").ToLocalChecked(), get_positions);
+    Nan::SetAccessor(instance_template, Nan::New("matchIndices").ToLocalChecked(), get_match_indices);
+    Nan::SetAccessor(instance_template, Nan::New("score").ToLocalChecked(), get_score);
+
+    constructor.Reset(constructor_template->GetFunction());
+  }
+
+  static Local<Value> from_subsequence_match(SubsequenceMatch match) {
+    Local<Object> result;
+    if (Nan::NewInstance(Nan::New(constructor)).ToLocal(&result)) {
+      (new SubsequenceMatchWrapper(std::move(match)))->Wrap(result);
+      return result;
+    } else {
+      return Nan::Null();
+    }
+  }
+
+ private:
+  static void get_word(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
+    SubsequenceMatch &match = Nan::ObjectWrap::Unwrap<SubsequenceMatchWrapper>(info.This())->match;
+    info.GetReturnValue().Set(string_conversion::string_to_js(match.word));
+  }
+
+  static void get_positions(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
+    SubsequenceMatch &match = Nan::ObjectWrap::Unwrap<SubsequenceMatchWrapper>(info.This())->match;
+    Local<Array> js_result = Nan::New<Array>();
+    for (size_t i = 0; i < match.positions.size(); i++) {
+      js_result->Set(i, PointWrapper::from_point(match.positions[i]));
+    }
+    info.GetReturnValue().Set(js_result);
+  }
+
+  static void get_match_indices(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
+    SubsequenceMatch &match = Nan::ObjectWrap::Unwrap<SubsequenceMatchWrapper>(info.This())->match;
+    Local<Array> js_result = Nan::New<Array>();
+    for (size_t i = 0; i < match.match_indices.size(); i++) {
+      js_result->Set(i, Nan::New<Integer>(match.match_indices[i]));
+    }
+    info.GetReturnValue().Set(js_result);
+  }
+
+  static void get_score(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
+    SubsequenceMatch &match = Nan::ObjectWrap::Unwrap<SubsequenceMatchWrapper>(info.This())->match;
+    info.GetReturnValue().Set(Nan::New<Integer>(match.score));
+  }
+
+  TextBuffer::SubsequenceMatch match;
+};
+
+Nan::Persistent<Function> SubsequenceMatchWrapper::constructor;
+
 void TextBufferWrapper::init(Local<Object> exports) {
   Local<FunctionTemplate> constructor_template = Nan::New<FunctionTemplate>(construct);
   constructor_template->SetClassName(Nan::New<String>("TextBuffer").ToLocalChecked());
@@ -156,8 +224,10 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("find").ToLocalChecked(), Nan::New<FunctionTemplate>(find));
   prototype_template->Set(Nan::New("findSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_sync));
   prototype_template->Set(Nan::New("findAllSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_all_sync));
+  prototype_template->Set(Nan::New("findWordsWithSubsequenceInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(find_words_with_subsequence_in_range));
   prototype_template->Set(Nan::New("getDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(dot_graph));
   RegexWrapper::init();
+  SubsequenceMatchWrapper::init();
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
 }
 
@@ -363,6 +433,71 @@ void TextBufferWrapper::find(const Nan::FunctionCallbackInfo<Value> &info) {
       regex,
       info[0]
     ));
+  }
+}
+
+void TextBufferWrapper::find_words_with_subsequence_in_range(const Nan::FunctionCallbackInfo<v8::Value> &info) {
+  class FindWordsWithSubsequenceInRangeWorker : public Nan::AsyncWorker {
+    Nan::Persistent<Object> buffer;
+    const TextBuffer::Snapshot *snapshot;
+    const u16string query;
+    const u16string extra_word_characters;
+    const size_t max_count;
+    const Range range;
+    vector<TextBuffer::SubsequenceMatch> result;
+
+  public:
+    FindWordsWithSubsequenceInRangeWorker(Local<Object> buffer,
+                                   Nan::Callback *completion_callback,
+                                   const u16string query,
+                                   const u16string extra_word_characters,
+                                   const size_t max_count,
+                                   const Range range) :
+      AsyncWorker(completion_callback),
+      query{query},
+      extra_word_characters{extra_word_characters},
+      max_count{max_count},
+      range{range} {
+      this->buffer.Reset(buffer);
+      auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(buffer)->text_buffer;
+      snapshot = text_buffer.create_snapshot();
+    }
+
+    void Execute() {
+      result = snapshot->find_words_with_subsequence_in_range(query, extra_word_characters, range);
+    }
+
+    void HandleOKCallback() {
+      delete snapshot;
+      Local<Array> js_result = Nan::New<Array>();
+
+      for (size_t i = 0; i < result.size() && i < max_count; i++) {
+        js_result->Set(i, SubsequenceMatchWrapper::from_subsequence_match(result[i]));
+      }
+
+      Local<Value> argv[] = {js_result};
+      callback->Call(1, argv);
+    }
+  };
+
+
+  auto query = string_conversion::string_from_js(info[0]);
+  auto extra_word_characters = string_conversion::string_from_js(info[1]);
+  auto max_count = number_conversion::number_from_js<size_t>(info[2]);
+  auto range = RangeWrapper::range_from_js(info[3]);
+  auto callback = new Nan::Callback(info[4].As<Function>());
+
+  if (query && extra_word_characters && max_count && range && callback) {
+    Nan::AsyncQueueWorker(new FindWordsWithSubsequenceInRangeWorker(
+      info.This(),
+      callback,
+      *query,
+      *extra_word_characters,
+      *max_count,
+      *range
+    ));
+  } else {
+    Nan::ThrowError("Invalid arguments");
   }
 }
 

@@ -4,7 +4,7 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   binding = require('./browser');
 
   const {TextBuffer, Patch} = binding
-  const {find, findSync, findAllSync} = TextBuffer.prototype
+  const {find, findSync, findAllSync, findWordsWithSubsequenceInRange} = TextBuffer.prototype
 
   TextBuffer.prototype.findSync = function (pattern) {
     if (pattern.source) pattern = pattern.source
@@ -28,6 +28,19 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
 
   TextBuffer.prototype.find = function (pattern) {
     return new Promise(resolve => resolve(this.findSync(pattern)))
+  }
+
+  TextBuffer.prototype.findWordsWithSubsequence = function (query, extraWordCharacters, maxCount) {
+    const range = {start: {row: 0, column: 0}, end: this.getExtent()}
+    return Promise.resolve(
+      findWordsWithSubsequenceInRange.call(this, query, extraWordCharacters, range).slice(0, maxCount)
+    )
+  }
+
+  TextBuffer.prototype.findWordsWithSubsequenceInRange = function (query, extraWordCharacters, maxCount, range) {
+    return Promise.resolve(
+      findWordsWithSubsequenceInRange.call(this, query, extraWordCharacters, range).slice(0, maxCount)
+    )
   }
 
   const {compose} = Patch
@@ -56,7 +69,7 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   }
 
   const {TextBuffer, TextWriter, TextReader} = binding
-  const {load, save, find, findAllSync, baseTextMatchesFile} = TextBuffer.prototype
+  const {load, save, find, findAllSync, findWordsWithSubsequenceInRange, baseTextMatchesFile} = TextBuffer.prototype
 
   TextBuffer.prototype.load = function (source, options, progressCallback) {
     if (typeof options !== 'object') {
@@ -164,6 +177,19 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
       }
     }
     return result
+  }
+
+  TextBuffer.prototype.findWordsWithSubsequence = function (query, extraWordCharacters, maxCount) {
+    const range = {start: {row: 0, column: 0}, end: this.getExtent()}
+    return new Promise(resolve =>
+      findWordsWithSubsequenceInRange.call(this, query, extraWordCharacters, maxCount, range, resolve)
+    )
+  }
+
+  TextBuffer.prototype.findWordsWithSubsequenceInRange = function (query, extraWordCharacters, maxCount, range) {
+    return new Promise(resolve =>
+      findWordsWithSubsequenceInRange.call(this, query, extraWordCharacters, maxCount, range, resolve)
+    )
   }
 
   TextBuffer.prototype.baseTextMatchesFile = function (source, encoding = 'UTF8') {

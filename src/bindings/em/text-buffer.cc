@@ -81,5 +81,12 @@ EMSCRIPTEN_BINDINGS(TextBuffer) {
     .function("positionForCharacterIndex", position_for_character_index)
     .function("isModified", WRAP_OVERLOAD(&TextBuffer::is_modified, bool (TextBuffer::*)() const))
     .function("findSync", find_sync)
-    .function("findAllSync", find_all_sync);
+    .function("findAllSync", find_all_sync)
+    .function("findWordsWithSubsequenceInRange", WRAP(&TextBuffer::find_words_with_subsequence_in_range));
+
+  emscripten::value_object<TextBuffer::SubsequenceMatch>("SubsequenceMatch")
+    .field("word", WRAP_FIELD(TextBuffer::SubsequenceMatch, word))
+    .field("positions", WRAP_FIELD(TextBuffer::SubsequenceMatch, positions))
+    .field("matchIndices", WRAP_FIELD(TextBuffer::SubsequenceMatch, match_indices))
+    .field("score", WRAP_FIELD(TextBuffer::SubsequenceMatch, score));
 }

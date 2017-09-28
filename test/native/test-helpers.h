@@ -10,6 +10,7 @@
 #include <random>
 #include "range.h"
 #include "text.h"
+#include "text-buffer.h"
 #include <iostream>
 
 using std::cout;
@@ -45,6 +46,26 @@ namespace std {
         stream << character;
       }
     }
+
+    return stream;
+  }
+
+  inline std::ostream &operator<<(std::ostream &stream, const TextBuffer::SubsequenceMatch &match) {
+    stream << "SubsequenceMatch{ word: " <<  match.word << ", positions: [";
+
+    for (size_t i = 0; i < match.positions.size(); i++) {
+      stream << match.positions[i];
+      if (i < match.positions.size() - 1) stream << ", ";
+    }
+
+    stream << "], match_indices: [";
+
+    for (size_t i = 0; i < match.match_indices.size(); i++) {
+      stream << match.match_indices[i];
+      if (i < match.match_indices.size() - 1) stream << ", ";
+    }
+
+    stream << "], score: " << match.score << " }";
 
     return stream;
   }
