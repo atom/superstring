@@ -901,6 +901,10 @@ optional<Range> TextBuffer::Snapshot::find(const Regex &regex) const {
   return layer.search_in_range(regex, Range{Point(), extent()}, false);
 }
 
+vector<Range> TextBuffer::Snapshot::find_all(const Regex &regex) const {
+  return layer.find_all_in_range(regex, Range{Point(), extent()}, false);
+}
+
 vector<SubsequenceMatch> TextBuffer::Snapshot::find_words_with_subsequence_in_range(std::u16string query, const std::u16string &extra_word_characters, Range range) const {
   return layer.find_words_with_subsequence_in_range(query, extra_word_characters, range);
 }

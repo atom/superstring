@@ -26,6 +26,7 @@ private:
   static void position_for_character_index(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void find(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void find_sync(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void find_all(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void find_all_sync(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void find_words_with_subsequence_in_range(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void is_modified(const Nan::FunctionCallbackInfo<v8::Value> &info);
