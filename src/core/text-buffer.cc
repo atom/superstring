@@ -336,7 +336,7 @@ struct TextBuffer::Layer {
 
             minimum_match_row = result->end.row;
             last_search_end_position = slice_to_search_start_position.traverse(match_end_position);
-            if (match_result.end_offset == match_result.start_offset) {
+            if (match_end_position == match_start_position) {
               last_search_end_position.column++;
             }
             slice_to_search_start_position = last_search_end_position;

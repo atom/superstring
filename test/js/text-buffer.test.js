@@ -959,6 +959,15 @@ describe('TextBuffer', () => {
       ])
     })
 
+    it('handles empty matches before CRLF line endings (regression)', () => {
+      const buffer = new TextBuffer('abc def\r\n\r\nghi jkl\r\n\r\n')
+
+      assert.deepEqual(buffer.findAllSync(/^[ \t\r]*$/), [
+        Range(Point(1, 0), Point(1, 0)),
+        Range(Point(3, 0), Point(3, 0))
+      ])
+    })
+
     it('returns the same results as a reference implementation', () => {
       for (let i = 0; i < 3; i++) {
         const generateSeed = Random.create()
