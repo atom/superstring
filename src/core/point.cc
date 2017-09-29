@@ -10,6 +10,10 @@ Point Point::max(const Point &left, const Point &right) {
   return left >= right ? left : right;
 }
 
+Point Point::max() {
+  return Point(UINT32_MAX, UINT32_MAX);
+}
+
 Point::Point() : Point(0, 0) {}
 
 Point::Point(unsigned row, unsigned column) : row{row}, column{column} {}

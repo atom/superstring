@@ -4,11 +4,12 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   binding = require('./browser');
 
   const {TextBuffer, Patch} = binding
-  const {find, findSync, findAllSync, findWordsWithSubsequenceInRange} = TextBuffer.prototype
+  const {findSync, findAllSync, findWordsWithSubsequenceInRange} = TextBuffer.prototype
+  const DEFAULT_RANGE = Object.freeze({start: {row: 0, column: 0}, end: {row: Infinity, column: Infinity}})
 
-  TextBuffer.prototype.findSync = function (pattern) {
+  TextBuffer.prototype.findInRangeSync = function (pattern, range) {
     if (pattern.source) pattern = pattern.source
-    const result = findSync.call(this, pattern)
+    const result = findSync.call(this, pattern, range)
     if (typeof result === 'string') {
       throw new Error(result);
     } else {
@@ -16,18 +17,38 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
     }
   }
 
-  TextBuffer.prototype.findAllSync = function (pattern) {
+  TextBuffer.prototype.findSync = function (pattern, range) {
+    return this.findInRangeSync(pattern, DEFAULT_RANGE)
+  }
+
+  TextBuffer.prototype.findAllInRangeSync = function (pattern, range) {
     if (pattern.source) pattern = pattern.source
-    const result = findAllSync.call(this, pattern)
+    const result = findAllSync.call(this, pattern, range)
     if (typeof result === 'string') {
       throw new Error(result);
     } else {
       return result
     }
+  }
+
+  TextBuffer.prototype.findAllSync = function (pattern, range) {
+    return this.findAllInRangeSync(pattern, DEFAULT_RANGE)
   }
 
   TextBuffer.prototype.find = function (pattern) {
     return new Promise(resolve => resolve(this.findSync(pattern)))
+  }
+
+  TextBuffer.prototype.findInRange = function (pattern, range) {
+    return new Promise(resolve => resolve(this.findInRangeSync(pattern, range)))
+  }
+
+  TextBuffer.prototype.findAll = function (pattern) {
+    return new Promise(resolve => resolve(this.findAllSync(pattern)))
+  }
+
+  TextBuffer.prototype.findAllInRange = function (pattern, range) {
+    return new Promise(resolve => resolve(this.findAllInRangeSync(pattern, range)))
   }
 
   TextBuffer.prototype.findWordsWithSubsequence = function (query, extraWordCharacters, maxCount) {
@@ -69,7 +90,10 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   }
 
   const {TextBuffer, TextWriter, TextReader} = binding
-  const {load, save, find, findAllSync, findWordsWithSubsequenceInRange, baseTextMatchesFile} = TextBuffer.prototype
+  const {
+    load, save, baseTextMatchesFile,
+    find, findAll, findSync, findAllSync, findWordsWithSubsequenceInRange
+  } = TextBuffer.prototype
 
   TextBuffer.prototype.load = function (source, options, progressCallback) {
     if (typeof options !== 'object') {
@@ -157,26 +181,44 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   }
 
   TextBuffer.prototype.find = function (pattern) {
+    return this.findInRange(pattern, null)
+  }
+
+  TextBuffer.prototype.findInRange = function (pattern, range) {
     return new Promise((resolve, reject) => {
       find.call(this, pattern, (error, result) => {
-        error ?
-          reject(error) :
-          resolve(result)
-      })
+        error ? reject(error) : resolve(result.length > 0 ? interpretRange(result) : null)
+      }, range)
     })
   }
 
+  TextBuffer.prototype.findAll = function (pattern) {
+    return this.findAllInRange(pattern, null)
+  }
+
+  TextBuffer.prototype.findAllInRange = function (pattern, range) {
+    return new Promise((resolve, reject) => {
+      findAll.call(this, pattern, (error, result) => {
+        error ? reject(error) : resolve(interpretRangeArray(result))
+      }, range)
+    })
+  }
+
+  TextBuffer.prototype.findSync = function (pattern) {
+    return this.findInRangeSync(pattern, null)
+  }
+
+  TextBuffer.prototype.findInRangeSync = function (pattern, range) {
+    const result = findSync.call(this, pattern, range)
+    return result.length > 0 ? interpretRange(result) : null
+  }
+
   TextBuffer.prototype.findAllSync = function (pattern) {
-    const rawData = findAllSync.call(this, pattern)
-    const result = new Array(rawData.length / 4)
-    let rawIndex = 0
-    for (let matchIndex = 0, n = result.length; matchIndex < n; matchIndex++) {
-      result[matchIndex] = {
-        start: {row: rawData[rawIndex++], column: rawData[rawIndex++]},
-        end: {row: rawData[rawIndex++], column: rawData[rawIndex++]}
-      }
-    }
-    return result
+    return interpretRangeArray(findAllSync.call(this, pattern, null))
+  }
+
+  TextBuffer.prototype.findAllInRangeSync = function (pattern, range) {
+    return interpretRangeArray(findAllSync.call(this, pattern, range))
   }
 
   TextBuffer.prototype.findWordsWithSubsequence = function (query, extraWordCharacters, maxCount) {
@@ -215,6 +257,30 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
         })
       }
     })
+  }
+
+  function interpretRangeArray (rawData) {
+    const rangeCount = rawData.length / 4
+    const ranges = new Array(rangeCount)
+    let rawIndex = 0
+    for (let rangeIndex = 0; rangeIndex < rangeCount; rangeIndex++) {
+      ranges[rangeIndex] = interpretRange(rawData, rawIndex)
+      rawIndex += 4
+    }
+    return ranges
+  }
+
+  function interpretRange (rawData, index = 0) {
+    return {
+      start: {
+        row: rawData[index],
+        column: rawData[index + 1]
+      },
+      end: {
+        row: rawData[index + 2],
+        column: rawData[index + 3]
+      }
+    }
   }
 }
 

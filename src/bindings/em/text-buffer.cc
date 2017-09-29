@@ -9,7 +9,7 @@ static TextBuffer *construct(const std::string &text) {
   return new TextBuffer(u16string(text.begin(), text.end()));
 }
 
-static emscripten::val find_sync(TextBuffer &buffer, std::string js_pattern) {
+static emscripten::val find_sync(TextBuffer &buffer, std::string js_pattern, Range range) {
   u16string pattern(js_pattern.begin(), js_pattern.end());
   u16string error_message;
   Regex regex(pattern, &error_message);
@@ -17,7 +17,7 @@ static emscripten::val find_sync(TextBuffer &buffer, std::string js_pattern) {
     return emscripten::val(string(error_message.begin(), error_message.end()));
   }
 
-  auto result = buffer.find(regex);
+  auto result = buffer.find(regex, range);
   if (result) {
     return emscripten::val(*result);
   }
@@ -25,7 +25,7 @@ static emscripten::val find_sync(TextBuffer &buffer, std::string js_pattern) {
   return emscripten::val::null();
 }
 
-static emscripten::val find_all_sync(TextBuffer &buffer, std::string js_pattern) {
+static emscripten::val find_all_sync(TextBuffer &buffer, std::string js_pattern, Range range) {
   u16string pattern(js_pattern.begin(), js_pattern.end());
   u16string error_message;
   Regex regex(pattern, &error_message);
@@ -33,7 +33,7 @@ static emscripten::val find_all_sync(TextBuffer &buffer, std::string js_pattern)
     return emscripten::val(string(error_message.begin(), error_message.end()));
   }
 
-  return em_transmit(buffer.find_all(regex));
+  return em_transmit(buffer.find_all(regex, range));
 }
 
 static emscripten::val line_ending_for_row(TextBuffer &buffer, uint32_t row) {

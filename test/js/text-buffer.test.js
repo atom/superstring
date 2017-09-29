@@ -872,8 +872,8 @@ describe('TextBuffer', () => {
     })
   })
 
-  describe('.findSync', () => {
-    it('returns the range of the first match with the given pattern', () => {
+  describe('.find (sync and async)', () => {
+    it('returns the range of the first match with the given pattern', async () => {
       const buffer = new TextBuffer('abc\ndef')
       buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), '1')
       buffer.setTextInRange(Range(Point(0, 3), Point(0, 4)), '2')
@@ -882,22 +882,78 @@ describe('TextBuffer', () => {
       assert.deepEqual(buffer.findSync('b2'), Range(Point(0, 2), Point(0, 4)))
       assert.deepEqual(buffer.findSync('bc'), null)
       assert.deepEqual(buffer.findSync('^d'), Range(Point(1, 0), Point(1, 1)))
+
+      assert.deepEqual(await buffer.find('b2'), Range(Point(0, 2), Point(0, 4)))
+      assert.deepEqual(await buffer.find('bc'), null)
+      assert.deepEqual(await buffer.find('^d'), Range(Point(1, 0), Point(1, 1)))
     })
 
-    it('throws an exception if an invalid pattern is passed', () => {
+    it('throws an exception if an invalid pattern is passed', async () => {
       const buffer = new TextBuffer('abc\ndef')
-      assert.throws(() => buffer.findSync('['), /missing terminating ] for character class/)
+
+      try {
+        buffer.findSync('[')
+        assert(false, 'Expected an exceptoin')
+      } catch (error) {
+        assert.match(error.message, /missing terminating ] for character class/)
+      }
+
+      try {
+        await buffer.find('[')
+        assert(false, 'Expected an exceptoin')
+      } catch (error) {
+        assert.match(error.message, /missing terminating ] for character class/)
+      }
+    })
+
+    it('can be called repeatedly with the same RegExp to avoid recompiling the RegExp', async () => {
+      const buffer = new TextBuffer('abc\ndef')
+
+      const regex = /b/
+      assert.deepEqual(buffer.findSync(regex), Range(Point(0, 1), Point(0, 2)))
+      assert.deepEqual(await buffer.find(regex), Range(Point(0, 1), Point(0, 2)))
+
+      buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), ' ')
+      assert.deepEqual(buffer.findSync(regex), Range(Point(0, 2), Point(0, 3)))
+      assert.deepEqual(await buffer.find(regex), Range(Point(0, 2), Point(0, 3)))
+
+      buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), ' ')
+      assert.deepEqual(buffer.findSync(regex), Range(Point(0, 3), Point(0, 4)))
+      assert.deepEqual(await buffer.find(regex), Range(Point(0, 3), Point(0, 4)))
     })
   })
 
-  describe('.findAllSync', () => {
-    it('returns the ranges of all matches of the given pattern', () => {
+  describe('.findInRange (sync and async)', () => {
+    it('returns the range of the first match in the given range', async () => {
+      const buffer = new TextBuffer('abc def\nghi jkl\n')
+
+      assert.deepEqual(
+        buffer.findInRangeSync(/\w+/, Range(Point(0, 1), Point(1, 2))),
+        Range(Point(0, 1), Point(0, 3)))
+      assert.deepEqual(
+        await buffer.findInRange(/\w+/, Range(Point(0, 1), Point(1, 2))),
+        Range(Point(0, 1), Point(0, 3)))
+      assert.deepEqual(
+        buffer.findInRangeSync(/j\w*/, Range(Point(0, 0), Point(1, 6))),
+        Range(Point(1, 4), Point(1, 6)))
+      assert.deepEqual(
+        await buffer.findInRange(/j\w*/, Range(Point(0, 0), Point(1, 6))),
+        Range(Point(1, 4), Point(1, 6)))
+    })
+  })
+
+  describe('.findAll (sync and async)', () => {
+    it('returns the ranges of all matches of the given pattern', async () => {
       const buffer = new TextBuffer('abcd')
       buffer.setTextInRange(Range(Point(0, 1), Point(0, 1)), '1')
       buffer.setTextInRange(Range(Point(0, 3), Point(0, 3)), '2')
       assert.equal(buffer.getText(), 'a1b2cd')
 
       assert.deepEqual(buffer.findAllSync(/\d[a-z]/), [
+        Range(Point(0, 1), Point(0, 3)),
+        Range(Point(0, 3), Point(0, 5)),
+      ])
+      assert.deepEqual(await buffer.findAll(/\d[a-z]/), [
         Range(Point(0, 1), Point(0, 3)),
         Range(Point(0, 3), Point(0, 5)),
       ])
@@ -949,38 +1005,20 @@ describe('TextBuffer', () => {
     })
   })
 
-  describe('.find', () => {
-    it('resolves with the range of the first match with the given pattern', () => {
-      const buffer = new TextBuffer('abc\ndef')
-      buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), '1')
-      buffer.setTextInRange(Range(Point(0, 3), Point(0, 4)), '2')
-      assert.equal(buffer.getText(), '1ab2\ndef')
+  describe('.findAllInRange (sync and async)', () => {
+    it('returns the ranges of all matches of the given pattern within the given range', async () => {
+      const buffer = new TextBuffer('abc def\nghi jkl\n')
 
-      return Promise.all([
-        buffer.find('b2').then(value => assert.deepEqual(value, Range(Point(0, 2), Point(0, 4)))),
-        buffer.find('bc').then(value => assert.deepEqual(value, null)),
-        buffer.find('^d').then(value => assert.deepEqual(value, Range(Point(1, 0), Point(1, 1))))
+      assert.deepEqual(buffer.findAllInRangeSync(/\w+/, Range(Point(0, 1), Point(1, 2))), [
+        Range(Point(0, 1), Point(0, 3)),
+        Range(Point(0, 4), Point(0, 7)),
+        Range(Point(1, 0), Point(1, 2))
       ])
-    })
-
-    it('rejects the promise if an invalid pattern is given', () => {
-      const buffer = new TextBuffer('abc\ndef')
-      return buffer.find('[')
-        .then(() => assert(false))
-        .catch((error) => assert.match(error.message, /missing terminating ] for character class/))
-    })
-
-    it('can find for a RegExp or a string', () => {
-      const buffer = new TextBuffer('abc\ndef')
-      const regex = /b/
-      return buffer.find(regex)
-        .then((result) => assert.deepEqual(result, Range(Point(0, 1), Point(0, 2))))
-        .then(() => buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), ' '))
-        .then(() => buffer.find(regex))
-        .then((result) => assert.deepEqual(result, Range(Point(0, 2), Point(0, 3))))
-        .then(() => buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), ' '))
-        .then(() => buffer.find(regex))
-        .then((result) => assert.deepEqual(result, Range(Point(0, 3), Point(0, 4))))
+      assert.deepEqual(await buffer.findAllInRange(/\w+/, Range(Point(0, 1), Point(1, 2))), [
+        Range(Point(0, 1), Point(0, 3)),
+        Range(Point(0, 4), Point(0, 7)),
+        Range(Point(1, 0), Point(1, 2))
+      ])
     })
   })
 

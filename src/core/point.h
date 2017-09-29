@@ -10,6 +10,7 @@ struct Point {
 
   static Point min(const Point &left, const Point &right);
   static Point max(const Point &left, const Point &right);
+  static Point max();
 
   Point();
   Point(unsigned row, unsigned column);

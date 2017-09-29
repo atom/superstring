@@ -223,6 +223,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("baseTextDigest").ToLocalChecked(), Nan::New<FunctionTemplate>(base_text_digest));
   prototype_template->Set(Nan::New("find").ToLocalChecked(), Nan::New<FunctionTemplate>(find));
   prototype_template->Set(Nan::New("findSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_sync));
+  prototype_template->Set(Nan::New("findAll").ToLocalChecked(), Nan::New<FunctionTemplate>(find_all));
   prototype_template->Set(Nan::New("findAllSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_all_sync));
   prototype_template->Set(Nan::New("findWordsWithSubsequenceInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(find_words_with_subsequence_in_range));
   prototype_template->Set(Nan::New("getDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(dot_graph));
@@ -362,16 +363,73 @@ void TextBufferWrapper::position_for_character_index(const Nan::FunctionCallback
   }
 }
 
+template <bool single_result>
+class TextBufferSearcher : public Nan::AsyncWorker {
+  const TextBuffer::Snapshot *snapshot;
+  const Regex *regex;
+  Range search_range;
+  vector<Range> matches;
+  Nan::Persistent<Value> argument;
+
+public:
+  TextBufferSearcher(Nan::Callback *completion_callback,
+                     const TextBuffer::Snapshot *snapshot,
+                     const Regex *regex,
+                     const Range &search_range,
+                     Local<Value> arg) :
+    AsyncWorker(completion_callback),
+    snapshot{snapshot},
+    regex{regex},
+    search_range(search_range) {
+    argument.Reset(arg);
+  }
+
+  void Execute() {
+    if (single_result) {
+      auto find_result = snapshot->find(*regex, search_range);
+      if (find_result) {
+        matches.push_back(*find_result);
+      }
+    } else {
+      matches = snapshot->find_all(*regex, search_range);
+    }
+  }
+
+  Local<Value> Finish() {
+    delete snapshot;
+    auto length = matches.size() * 4;
+    auto buffer = v8::ArrayBuffer::New(v8::Isolate::GetCurrent(), length * sizeof(uint32_t));
+    auto result = v8::Uint32Array::New(buffer, 0, length);
+    auto data = buffer->GetContents().Data();
+    memcpy(data, matches.data(), length * sizeof(uint32_t));
+    return result;
+  }
+
+  void HandleOKCallback() {
+    Local<Value> argv[] = {Nan::Null(), Finish()};
+    callback->Call(2, argv);
+  }
+};
+
 void TextBufferWrapper::find_sync(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
   const Regex *regex = RegexWrapper::regex_from_js(info[0]);
   if (regex) {
-    auto result = text_buffer.find(*regex);
-    if (result) {
-      info.GetReturnValue().Set(RangeWrapper::from_range(*result));
-    } else {
-      info.GetReturnValue().Set(Nan::Null());
+    optional<Range> search_range;
+    if (info[1]->IsObject()) {
+      search_range = RangeWrapper::range_from_js(info[1]);
+      if (!search_range) return;
     }
+
+    TextBufferSearcher<true> searcher(
+      nullptr,
+      text_buffer.create_snapshot(),
+      regex,
+      search_range ? *search_range : Range::all_inclusive(),
+      info[0]
+    );
+    searcher.Execute();
+    info.GetReturnValue().Set(searcher.Finish());
   }
 }
 
@@ -379,58 +437,58 @@ void TextBufferWrapper::find_all_sync(const Nan::FunctionCallbackInfo<Value> &in
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
   const Regex *regex = RegexWrapper::regex_from_js(info[0]);
   if (regex) {
-    auto matches = text_buffer.find_all(*regex);
-    auto length = matches.size() * 4;
-    auto buffer = v8::ArrayBuffer::New(v8::Isolate::GetCurrent(), length * sizeof(uint32_t));
-    auto result = v8::Uint32Array::New(buffer, 0, length);
-    auto data = buffer->GetContents().Data();
-    memcpy(data, matches.data(), length * sizeof(uint32_t));
-    info.GetReturnValue().Set(result);
+    optional<Range> search_range;
+    if (info[1]->IsObject()) {
+      search_range = RangeWrapper::range_from_js(info[1]);
+      if (!search_range) return;
+    }
+    TextBufferSearcher<false> searcher(
+      nullptr,
+      text_buffer.create_snapshot(),
+      regex,
+      search_range ? *search_range : Range::all_inclusive(),
+      info[0]
+    );
+    searcher.Execute();
+    info.GetReturnValue().Set(searcher.Finish());
   }
 }
 
 void TextBufferWrapper::find(const Nan::FunctionCallbackInfo<Value> &info) {
-  class TextBufferSearcher : public Nan::AsyncWorker {
-    const TextBuffer::Snapshot *snapshot;
-    const Regex *regex;
-    optional<Range> result;
-    Nan::Persistent<Value> argument;
-
-  public:
-    TextBufferSearcher(Nan::Callback *completion_callback,
-                       const TextBuffer::Snapshot *snapshot,
-                       const Regex *regex,
-                       Local<Value> arg) :
-      AsyncWorker(completion_callback),
-      snapshot{snapshot},
-      regex{regex} {
-      argument.Reset(arg);
-    }
-
-    void Execute() {
-      result = snapshot->find(*regex);
-    }
-
-    void HandleOKCallback() {
-      delete snapshot;
-      if (result) {
-        Local<Value> argv[] = {Nan::Null(), RangeWrapper::from_range(*result)};
-        callback->Call(2, argv);
-      } else {
-        Local<Value> argv[] = {Nan::Null(), Nan::Null()};
-        callback->Call(2, argv);
-      }
-    }
-  };
-
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
   auto callback = new Nan::Callback(info[1].As<Function>());
   const Regex *regex = RegexWrapper::regex_from_js(info[0]);
   if (regex) {
-    Nan::AsyncQueueWorker(new TextBufferSearcher(
+    optional<Range> search_range;
+    if (info[2]->IsObject()) {
+      search_range = RangeWrapper::range_from_js(info[2]);
+      if (!search_range) return;
+    }
+    Nan::AsyncQueueWorker(new TextBufferSearcher<true>(
       callback,
       text_buffer.create_snapshot(),
       regex,
+      search_range ? *search_range : Range::all_inclusive(),
+      info[0]
+    ));
+  }
+}
+
+void TextBufferWrapper::find_all(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  auto callback = new Nan::Callback(info[1].As<Function>());
+  const Regex *regex = RegexWrapper::regex_from_js(info[0]);
+  if (regex) {
+    optional<Range> search_range;
+    if (info[2]->IsObject()) {
+      search_range = RangeWrapper::range_from_js(info[2]);
+      if (!search_range) return;
+    }
+    Nan::AsyncQueueWorker(new TextBufferSearcher<false>(
+      callback,
+      text_buffer.create_snapshot(),
+      regex,
+      search_range ? *search_range : Range::all_inclusive(),
       info[0]
     ));
   }

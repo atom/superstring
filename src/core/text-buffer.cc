@@ -254,7 +254,9 @@ struct TextBuffer::Layer {
     Point last_search_end_position = range.start;
     Point slice_to_search_start_position = range.start;
 
-    for_each_chunk_in_range(range.start, range.end, [&](TextSlice chunk) {
+    Point end = clip_position(range.end).position;
+
+    for_each_chunk_in_range(range.start, end, [&](TextSlice chunk) {
       Point chunk_end_position = chunk_start_position.traverse(chunk.extent());
       while (last_search_end_position < chunk_end_position) {
         TextSlice remaining_chunk = chunk
@@ -285,7 +287,7 @@ struct TextBuffer::Layer {
           slice_to_search_start_position.traverse(slice_to_search.extent());
 
         int options = 0;
-        if (slice_to_search_end_position == range.end) options |= MatchOptions::IsEndOfFile;
+        if (slice_to_search_end_position == end) options |= MatchOptions::IsEndOfFile;
         if (slice_to_search_start_position.column == 0) options |= MatchOptions::IsBeginningOfLine;
 
         MatchResult match_result = regex.match(
@@ -365,7 +367,7 @@ struct TextBuffer::Layer {
     }
   }
 
-  optional<Range> search_in_range(const Regex &regex, Range range, bool splay = false) {
+  optional<Range> find_in_range(const Regex &regex, Range range, bool splay = false) {
     optional<Range> result;
     scan_in_range(regex, range, [&result](Range match_range) -> bool {
       result = match_range;
@@ -792,12 +794,12 @@ void TextBuffer::set_text_in_range(Range old_range, u16string &&string) {
   }
 }
 
-optional<Range> TextBuffer::find(const Regex &regex) const {
-  return top_layer->search_in_range(regex, Range{Point(), extent()}, false);
+optional<Range> TextBuffer::find(const Regex &regex, Range range) const {
+  return top_layer->find_in_range(regex, range, false);
 }
 
-vector<Range> TextBuffer::find_all(const Regex &regex) const {
-  return top_layer->find_all_in_range(regex, Range{Point(), extent()}, false);
+vector<Range> TextBuffer::find_all(const Regex &regex, Range range) const {
+  return top_layer->find_all_in_range(regex, range, false);
 }
 
 bool TextBuffer::SubsequenceMatch::operator==(const SubsequenceMatch &other) const {
@@ -897,8 +899,12 @@ vector<TextSlice> TextBuffer::Snapshot::chunks() const {
   return layer.chunks_in_range({{0, 0}, extent()});
 }
 
-optional<Range> TextBuffer::Snapshot::find(const Regex &regex) const {
-  return layer.search_in_range(regex, Range{Point(), extent()}, false);
+optional<Range> TextBuffer::Snapshot::find(const Regex &regex, Range range) const {
+  return layer.find_in_range(regex, range, false);
+}
+
+vector<Range> TextBuffer::Snapshot::find_all(const Regex &regex, Range range) const {
+  return layer.find_all_in_range(regex, range, false);
 }
 
 vector<SubsequenceMatch> TextBuffer::Snapshot::find_words_with_subsequence_in_range(std::u16string query, const std::u16string &extra_word_characters, Range range) const {
