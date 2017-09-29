@@ -1029,6 +1029,40 @@ describe('TextBuffer', () => {
         Range(Point(1, 0), Point(1, 2))
       ])
     })
+
+    it('handles the ^ and $ anchors properly', () => {
+      const buffer = new TextBuffer('abc\ndefg\nhijkl')
+
+      assert.deepEqual(buffer.findAllInRangeSync(/^\w/, Range(Point(0, 1), Point(1, 2))), [
+        Range(Point(1, 0), Point(1, 1))
+      ])
+      assert.deepEqual(buffer.findAllInRangeSync(/\w$/, Range(Point(0, 1), Point(1, 2))), [
+        Range(Point(0, 2), Point(0, 3))
+      ])
+      assert.deepEqual(buffer.findAllInRangeSync(/\w$/, Range(Point(2, 1), Point(2, 5))), [
+        Range(Point(2, 4), Point(2, 5))
+      ])
+      assert.deepEqual(buffer.findAllInRangeSync(/\w$/, Range(Point(2, 1), Point(2, Infinity))), [
+        Range(Point(2, 4), Point(2, 5))
+      ])
+    })
+
+    it('handles the ^ and $ anchors properly (CRLF line endings)', () => {
+      const buffer = new TextBuffer('abc\r\ndefg\r\nhijkl')
+
+      assert.deepEqual(buffer.findAllInRangeSync(/^\w/, Range(Point(0, 1), Point(1, 2))), [
+        Range(Point(1, 0), Point(1, 1))
+      ])
+      assert.deepEqual(buffer.findAllInRangeSync(/\w\r?$/, Range(Point(0, 1), Point(1, 2))), [
+        Range(Point(0, 2), Point(0, 3))
+      ])
+      assert.deepEqual(buffer.findAllInRangeSync(/\w\r?$/, Range(Point(2, 1), Point(2, 5))), [
+        Range(Point(2, 4), Point(2, 5))
+      ])
+      assert.deepEqual(buffer.findAllInRangeSync(/\w\r?$/, Range(Point(2, 1), Point(2, Infinity))), [
+        Range(Point(2, 4), Point(2, 5))
+      ])
+    })
   })
 
   describe('.findWordsWithSubsequence and .findWordsWithSubsequenceInRange', () => {

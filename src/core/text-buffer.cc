@@ -145,12 +145,22 @@ struct TextBuffer::Layer {
   }
 
   template <typename Callback>
-  bool for_each_chunk_in_range(Point start, Point end, const Callback &callback, bool splay = false) {
-    Point goal_position = clip_position(end, splay).position;
+  inline bool for_each_chunk_in_range(Point start, Point end,
+                                      const Callback &callback, bool splay = false) {
+    Point goal_position = end;
+    return for_each_chunk_in_range(start, &goal_position, callback, splay);
+  }
+
+  // This version of `for_each_chunk_in_range` mutates the goal position parameter so that the
+  // caller can find out the clipped value without having to re-clip it.
+  template <typename Callback>
+  inline bool for_each_chunk_in_range(Point start, Point *goal_position,
+                                      const Callback &callback, bool splay = false) {
+    *goal_position = clip_position(*goal_position, splay).position;
     Point current_position = clip_position(start, splay).position;
 
     if (!uses_patch) {
-      TextSlice slice = TextSlice(*text).slice({current_position, goal_position});
+      TextSlice slice = TextSlice(*text).slice({current_position, *goal_position});
       return !slice.empty() && callback(slice);
     }
 
@@ -165,7 +175,7 @@ struct TextBuffer::Layer {
     } else if (current_position < change->new_end) {
       TextSlice slice = TextSlice(*change->new_text).slice({
         current_position.traversal(change->new_start),
-        goal_position.traversal(change->new_start)
+        goal_position->traversal(change->new_start)
       });
       if (!slice.empty() && callback(slice)) return true;
       base_position = change->old_end;
@@ -175,8 +185,8 @@ struct TextBuffer::Layer {
     }
 
     auto changes = splay ?
-      patch.grab_changes_in_new_range(current_position, goal_position) :
-      patch.get_changes_in_new_range(current_position, goal_position);
+      patch.grab_changes_in_new_range(current_position, *goal_position) :
+      patch.get_changes_in_new_range(current_position, *goal_position);
     for (const auto &change : changes) {
       if (base_position < change.old_start) {
         if (previous_layer->for_each_chunk_in_range(base_position, change.old_start, callback)) {
@@ -185,17 +195,17 @@ struct TextBuffer::Layer {
       }
 
       TextSlice slice = TextSlice(*change.new_text)
-        .prefix(Point::min(change.new_end, goal_position).traversal(change.new_start));
+        .prefix(Point::min(change.new_end, *goal_position).traversal(change.new_start));
       if (!slice.empty() && callback(slice)) return true;
 
       base_position = change.old_end;
       current_position = change.new_end;
     }
 
-    if (current_position < goal_position) {
+    if (current_position < *goal_position) {
       return previous_layer->for_each_chunk_in_range(
         base_position,
-        base_position.traverse(goal_position.traversal(current_position)),
+        base_position.traverse(goal_position->traversal(current_position)),
         callback
       );
     }
@@ -254,9 +264,7 @@ struct TextBuffer::Layer {
     Point last_search_end_position = range.start;
     Point slice_to_search_start_position = range.start;
 
-    Point end = clip_position(range.end).position;
-
-    for_each_chunk_in_range(range.start, end, [&](TextSlice chunk) {
+    for_each_chunk_in_range(range.start, &range.end, [&](TextSlice chunk) {
       Point chunk_end_position = chunk_start_position.traverse(chunk.extent());
       while (last_search_end_position < chunk_end_position) {
         TextSlice remaining_chunk = chunk
@@ -287,8 +295,13 @@ struct TextBuffer::Layer {
           slice_to_search_start_position.traverse(slice_to_search.extent());
 
         int options = 0;
-        if (slice_to_search_end_position == end) options |= MatchOptions::IsEndOfFile;
         if (slice_to_search_start_position.column == 0) options |= MatchOptions::IsBeginningOfLine;
+        if (slice_to_search_end_position == range.end) {
+          options |= MatchOptions::IsEndSearch;
+          if (slice_to_search_end_position == extent()) {
+            options |= MatchOptions::IsEndOfLine;
+          }
+        }
 
         MatchResult match_result = regex.match(
           slice_to_search.data(),

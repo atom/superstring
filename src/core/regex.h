@@ -42,8 +42,9 @@ class Regex {
 
   enum MatchOptions {
     None = 0,
-    IsEndOfFile = 1,
-    IsBeginningOfLine = 2
+    IsBeginningOfLine = 1,
+    IsEndOfLine = 2,
+    IsEndSearch = 4,
   };
 
   MatchResult match(const char16_t *data, size_t length, MatchData &, unsigned options = 0) const;

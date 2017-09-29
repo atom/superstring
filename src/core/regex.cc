@@ -61,8 +61,9 @@ MatchResult Regex::match(const char16_t *string, size_t length,
   MatchResult result{MatchResult::None, 0, 0};
 
   unsigned int pcre_options = 0;
-  if (!(options & MatchOptions::IsEndOfFile)) pcre_options |= PCRE2_PARTIAL_HARD;
+  if (!(options & MatchOptions::IsEndSearch)) pcre_options |= PCRE2_PARTIAL_HARD;
   if (!(options & MatchOptions::IsBeginningOfLine)) pcre_options |= PCRE2_NOTBOL;
+  if (!(options & MatchOptions::IsEndOfLine)) pcre_options |= PCRE2_NOTEOL;
 
   int status = pcre2_match(
     code,
