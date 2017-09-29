@@ -48,8 +48,8 @@ public:
   bool deserialize_changes(Deserializer &);
   const Text &base_text() const;
 
-  optional<Range> find(const Regex &) const;
-  std::vector<Range> find_all(const Regex &) const;
+  optional<Range> find(const Regex &, Range range = Range::all_inclusive()) const;
+  std::vector<Range> find_all(const Regex &, Range range = Range::all_inclusive()) const;
 
   struct SubsequenceMatch {
     std::u16string word;
@@ -81,8 +81,8 @@ public:
     std::u16string text() const;
     std::u16string text_in_range(Range) const;
     const Text &base_text() const;
-    optional<Range> find(const Regex &) const;
-    std::vector<Range> find_all(const Regex &) const;
+    optional<Range> find(const Regex &, Range range = Range::all_inclusive()) const;
+    std::vector<Range> find_all(const Regex &, Range range = Range::all_inclusive()) const;
     std::vector<SubsequenceMatch> find_words_with_subsequence_in_range(std::u16string query, const std::u16string &extra_word_characters, Range range) const;
   };
 

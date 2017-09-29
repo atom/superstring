@@ -923,6 +923,25 @@ describe('TextBuffer', () => {
     })
   })
 
+  describe('.findInRange (sync and async)', () => {
+    it('returns the range of the first match in the given range', async () => {
+      const buffer = new TextBuffer('abc def\nghi jkl\n')
+
+      assert.deepEqual(
+        buffer.findInRangeSync(/\w+/, Range(Point(0, 1), Point(1, 2))),
+        Range(Point(0, 1), Point(0, 3)))
+      assert.deepEqual(
+        await buffer.findInRange(/\w+/, Range(Point(0, 1), Point(1, 2))),
+        Range(Point(0, 1), Point(0, 3)))
+      assert.deepEqual(
+        buffer.findInRangeSync(/j\w*/, Range(Point(0, 0), Point(1, 6))),
+        Range(Point(1, 4), Point(1, 6)))
+      assert.deepEqual(
+        await buffer.findInRange(/j\w*/, Range(Point(0, 0), Point(1, 6))),
+        Range(Point(1, 4), Point(1, 6)))
+    })
+  })
+
   describe('.findAll (sync and async)', () => {
     it('returns the ranges of all matches of the given pattern', async () => {
       const buffer = new TextBuffer('abcd')
@@ -983,6 +1002,23 @@ describe('TextBuffer', () => {
           assert.deepEqual(actualRanges, expectedRanges, `Regex: ${regex}, text: ${testDocument.getText()}`)
         }
       }
+    })
+  })
+
+  describe('.findAllInRange (sync and async)', () => {
+    it('returns the ranges of all matches of the given pattern within the given range', async () => {
+      const buffer = new TextBuffer('abc def\nghi jkl\n')
+
+      assert.deepEqual(buffer.findAllInRangeSync(/\w+/, Range(Point(0, 1), Point(1, 2))), [
+        Range(Point(0, 1), Point(0, 3)),
+        Range(Point(0, 4), Point(0, 7)),
+        Range(Point(1, 0), Point(1, 2))
+      ])
+      assert.deepEqual(await buffer.findAllInRange(/\w+/, Range(Point(0, 1), Point(1, 2))), [
+        Range(Point(0, 1), Point(0, 3)),
+        Range(Point(0, 4), Point(0, 7)),
+        Range(Point(1, 0), Point(1, 2))
+      ])
     })
   })
 

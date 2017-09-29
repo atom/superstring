@@ -8,6 +8,8 @@ struct Range {
   Point start;
   Point end;
 
+  static Range all_inclusive();
+
   Point extent() const;
 
   bool operator==(const Range &other) const {
