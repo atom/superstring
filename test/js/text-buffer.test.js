@@ -1056,6 +1056,9 @@ describe('TextBuffer', () => {
       assert.deepEqual(buffer.findAllInRangeSync(/\w$/, Range(Point(2, 1), Point(2, Infinity))), [
         Range(Point(2, 4), Point(2, 5))
       ])
+      assert.deepEqual(buffer.findAllInRangeSync(/\w*$/, Range(Point(1, 0), Point(1, Infinity))), [
+        Range(Point(1, 0), Point(1, 4))
+      ])
     })
 
     it('handles the ^ and $ anchors properly (CRLF line endings)', () => {

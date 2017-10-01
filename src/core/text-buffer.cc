@@ -298,7 +298,7 @@ struct TextBuffer::Layer {
         if (slice_to_search_start_position.column == 0) options |= MatchOptions::IsBeginningOfLine;
         if (slice_to_search_end_position == range.end) {
           options |= MatchOptions::IsEndSearch;
-          if (slice_to_search_end_position == extent()) {
+          if (range.end.column == clip_position(Point{range.end.row, UINT32_MAX}).position.column) {
             options |= MatchOptions::IsEndOfLine;
           }
         }
