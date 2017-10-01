@@ -926,6 +926,8 @@ describe('TextBuffer', () => {
   describe('.findInRange (sync and async)', () => {
     it('returns the range of the first match in the given range', async () => {
       const buffer = new TextBuffer('abc def\nghi jkl\n')
+      buffer.setTextInRange(Range(Point(0, 1), Point(0, 2)), 'B')
+      buffer.setTextInRange(Range(Point(1, 2), Point(1, 3)), 'F')
 
       assert.deepEqual(
         buffer.findInRangeSync(/\w+/, Range(Point(0, 1), Point(1, 2))),
@@ -978,7 +980,7 @@ describe('TextBuffer', () => {
         const testDocument = new TestDocument(seed)
         const buffer = new TextBuffer(testDocument.getText())
 
-        for (let j = 0; j < 5; j++) {
+        for (let j = 0; j < 10; j++) {
           const {start, deletedExtent, insertedText} = testDocument.performRandomSplice()
           buffer.setTextInRange(
             {start, end: traverse(start, deletedExtent)},
@@ -1006,9 +1008,18 @@ describe('TextBuffer', () => {
             regex = new RegExp(substring, 'g')
           }
 
-          const expectedRanges = testDocument.searchAll(regex)
-          const actualRanges = buffer.findAllSync(regex)
-          assert.deepEqual(actualRanges, expectedRanges, `Regex: ${regex}, text: ${testDocument.getText()}`)
+          if (random(2)) {
+            const expectedRanges = testDocument.searchAll(regex)
+            const actualRanges = buffer.findAllSync(regex)
+            assert.deepEqual(actualRanges, expectedRanges, `Regex: ${regex}, text: ${testDocument.getText()}`)
+          } else {
+            const rowCount = testDocument.getExtent().row
+            const [startRow, endRow] = [random(rowCount), random(rowCount)].sort((a, b) => a - b)
+            const searchRange = {start: {row: startRow, column: 0}, end: {row: endRow, column: Infinity}}
+            const expectedRanges = testDocument.searchAllInRange(searchRange, regex)
+            const actualRanges = buffer.findAllInRangeSync(regex, searchRange)
+            assert.deepEqual(actualRanges, expectedRanges, `Regex: ${regex}, range: ${JSON.stringify(searchRange)}, text: ${testDocument.getText()}`)
+          }
         }
       }
     })

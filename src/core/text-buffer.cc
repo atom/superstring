@@ -256,7 +256,7 @@ struct TextBuffer::Layer {
   void scan_in_range(const Regex &regex, Range range, const Callback &callback, bool splay = false) {
     Regex::MatchData match_data(regex);
 
-    uint32_t minimum_match_row = 0;
+    uint32_t minimum_match_row = range.start.row;
     optional<Range> result;
     Text chunk_continuation;
     TextSlice slice_to_search;

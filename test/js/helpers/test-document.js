@@ -53,7 +53,7 @@ class TestDocument {
     const text = this.getTextInRange(range.start, range.end)
     let match
     while (match = regex.exec(text)) {
-      const start = textHelpers.getExtent(text.slice(0, match.index))
+      const start = pointHelpers.traverse(range.start, textHelpers.getExtent(text.slice(0, match.index)))
       const extent = textHelpers.getExtent(match[0])
       ranges.push({start, end: pointHelpers.traverse(start, extent)})
       if (match[0].length === 0) regex.lastIndex++
