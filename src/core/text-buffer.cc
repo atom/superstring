@@ -522,7 +522,10 @@ struct TextBuffer::Layer {
     }
 
     std::sort(matches.begin(), matches.end(), [] (const SubsequenceMatch &a, const SubsequenceMatch &b) {
-      return a.score > b.score;
+      // Doing it this way helps us avoid sorting ambiguity keeping the ordering the same across platforms.
+      if (a.score > b.score) return true;
+      if (b.score > a.score) return false;
+      return a.word < b.word;
     });
 
     return matches;
