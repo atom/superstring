@@ -409,6 +409,7 @@ struct TextBuffer::Layer {
     Point position;
     Point current_word_start;
     u16string current_word;
+    u16string raw_query = query;
 
     std::transform(query.begin(), query.end(), query.begin(), std::towlower);
 
@@ -457,7 +458,8 @@ struct TextBuffer::Layer {
     // match against the query.
 
     static const unsigned consecutive_bonus = 5;
-    static const unsigned subword_start_bonus = 10;
+    static const unsigned subword_start_with_case_match_bonus = 10;
+    static const unsigned subword_start_with_case_mismatch_bonus = 9;
     static const unsigned mismatch_penalty = 1;
     static const unsigned leading_mismatch_penalty = 3;
 
@@ -484,7 +486,9 @@ struct TextBuffer::Layer {
               if (i == 0 ||
                   !std::iswalnum(word[i - 1]) ||
                   (std::iswlower(word[i - 1]) && std::iswupper(word[i]))) {
-                new_match.score += subword_start_bonus;
+                new_match.score += word[i] == raw_query[match_variants[j].query_index]
+                  ? subword_start_with_case_match_bonus
+                  : subword_start_with_case_mismatch_bonus;
               }
 
               if (!new_match.match_indices.empty() && new_match.match_indices.back() == i - 1) {

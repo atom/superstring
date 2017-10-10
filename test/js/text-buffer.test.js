@@ -1097,7 +1097,7 @@ describe('TextBuffer', () => {
       return buffer.findWordsWithSubsequence('bna', '_', 4).then((result) => {
         assert.deepEqual(result, [
           {
-            score: 30,
+            score: 29,
             matchIndices: [0, 1, 2 ],
             positions: [{row: 0, column: 36}],
             word: "bNa"
