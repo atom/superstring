@@ -418,9 +418,18 @@ TEST_CASE("TextBuffer::find_words_with_subsequence_in_range") {
     TextBuffer buffer{u"a_b_c abc aBc"};
 
     REQUIRE(buffer.find_words_with_subsequence_in_range(u"abc", u"_", Range{Point{0, 0}, Point{0, UINT32_MAX}}) == vector<SubsequenceMatch>({
-      {u"aBc", {Point{0, 10}}, {0, 1, 2}, 30},
+      {u"aBc", {Point{0, 10}}, {0, 1, 2}, 29},
       {u"a_b_c", {Point{0, 0}}, {0, 2, 4}, 26},
       {u"abc", {Point{0, 6}}, {0, 1, 2}, 20},
+    }));
+  }
+
+  {
+    TextBuffer buffer{u"abc Abc"};
+
+    REQUIRE(buffer.find_words_with_subsequence_in_range(u"Abc", u"", Range{Point{0, 0}, Point{0, UINT32_MAX}}) == vector<SubsequenceMatch>({
+      {u"Abc", {Point{0, 4}}, {0, 1, 2}, 20},
+      {u"abc", {Point{0, 0}}, {0, 1, 2}, 19}
     }));
   }
 }
