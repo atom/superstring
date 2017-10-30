@@ -405,6 +405,7 @@ struct TextBuffer::Layer {
   };
 
   vector<SubsequenceMatch> find_words_with_subsequence_in_range(u16string query, const u16string &extra_word_characters, Range range) {
+    const size_t MAX_WORD_LENGTH = 80;
     size_t query_index = 0;
     Point position;
     Point current_word_start;
@@ -431,7 +432,7 @@ struct TextBuffer::Layer {
           }
         } else {
           if (!current_word.empty()) {
-            if (query_index == query.size()) {
+            if (query_index == query.size() && current_word.size() <= MAX_WORD_LENGTH) {
               substring_matches[current_word].push_back(current_word_start);
             }
             query_index = 0;
@@ -450,7 +451,7 @@ struct TextBuffer::Layer {
       return false;
     });
 
-    if (!current_word.empty() && query_index == query.size()) {
+    if (!current_word.empty() && query_index == query.size() && current_word.size() <= MAX_WORD_LENGTH) {
       substring_matches[current_word].push_back(current_word_start);
     }
 
