@@ -1151,7 +1151,7 @@ describe('TextBuffer', () => {
       })
     })
 
-    it.only('does not compute matches for words longer than 80 characters', () => {
+    it('does not compute matches for words longer than 80 characters', () => {
       const buffer = new TextBuffer('eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL2xpYi9jb252ZXJ0LmpzIl0sIm5hbWVzIjpbImxzi')
       const buffer2 = new TextBuffer('eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL2xpYi9jb252ZXJ0LmpzIl0sIm5hbWVzIjpbImxz')
       return buffer.findWordsWithSubsequence('eyJ', '', 1).then(results => {
