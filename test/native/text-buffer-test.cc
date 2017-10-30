@@ -432,6 +432,14 @@ TEST_CASE("TextBuffer::find_words_with_subsequence_in_range") {
       {u"abc", {Point{0, 0}}, {0, 1, 2}, 19}
     }));
   }
+
+  {
+    // Does not match words longer than 80 characters
+    TextBuffer buffer{u"eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL2xpYi9jb252ZXJ0LmpzIl0sIm5hbWVzIjpbImxzi"};
+
+    REQUIRE(buffer.find_words_with_subsequence_in_range(u"eyJ", u"", Range{Point{0, 0}, Point{0, UINT32_MAX}}) == vector<SubsequenceMatch>({
+    }));
+  }
 }
 
 struct SnapshotData {
