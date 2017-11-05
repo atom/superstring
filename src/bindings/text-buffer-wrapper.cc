@@ -132,7 +132,8 @@ public:
   static Nan::Persistent<Function> constructor;
 
   SubsequenceMatchWrapper(SubsequenceMatch &&match) :
-    match(std::move(match)) {}
+    match(std::move(match)),
+    positions_(Nan::New<Array>()) {}
 
   static void init() {
     Local<FunctionTemplate> constructor_template = Nan::New<FunctionTemplate>();
@@ -165,11 +166,16 @@ public:
   }
 
   static void get_positions(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    SubsequenceMatch &match = Nan::ObjectWrap::Unwrap<SubsequenceMatchWrapper>(info.This())->match;
+    SubsequenceMatchWrapper *match_wrapper = Nan::ObjectWrap::Unwrap<SubsequenceMatchWrapper>(info.This());
+    if (match_wrapper->positions_->Length() != 0) {
+      return info.GetReturnValue().Set(match_wrapper->positions_);
+    }
+    SubsequenceMatch &match = match_wrapper->match;
     Local<Array> js_result = Nan::New<Array>();
     for (size_t i = 0; i < match.positions.size(); i++) {
       js_result->Set(i, PointWrapper::from_point(match.positions[i]));
     }
+    match_wrapper->positions_ = js_result;
     info.GetReturnValue().Set(js_result);
   }
 
@@ -188,6 +194,7 @@ public:
   }
 
   TextBuffer::SubsequenceMatch match;
+  Local<Array> positions_;
 };
 
 Nan::Persistent<Function> SubsequenceMatchWrapper::constructor;
