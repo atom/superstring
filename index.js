@@ -222,15 +222,23 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   }
 
   TextBuffer.prototype.findWordsWithSubsequence = function (query, extraWordCharacters, maxCount) {
-    const range = {start: {row: 0, column: 0}, end: this.getExtent()}
-    return new Promise(resolve =>
-      findWordsWithSubsequenceInRange.call(this, query, extraWordCharacters, maxCount, range, resolve)
-    )
+    return this.findWordsWithSubsequenceInRange(query, extraWordCharacters, maxCount, {
+      start: {row: 0, column: 0},
+      end: this.getExtent()
+    })
   }
 
   TextBuffer.prototype.findWordsWithSubsequenceInRange = function (query, extraWordCharacters, maxCount, range) {
     return new Promise(resolve =>
-      findWordsWithSubsequenceInRange.call(this, query, extraWordCharacters, maxCount, range, resolve)
+      findWordsWithSubsequenceInRange.call(this, query, extraWordCharacters, maxCount, range, (matches, positions) => {
+        let positionArrayIndex = 0
+        for (let i = 0, n = matches.length; i < n; i++) {
+          let positionCount = positions[positionArrayIndex++]
+          matches[i].positions = interpretPointArray(positions, positionArrayIndex, positionCount)
+          positionArrayIndex += 2 * positionCount
+        }
+        resolve(matches)
+      })
     )
   }
 
@@ -257,6 +265,14 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
         })
       }
     })
+  }
+
+  function interpretPointArray (rawData, startIndex, pointCount) {
+    const points = []
+    for (let i = 0; i < pointCount; i++) {
+      points.push({row: rawData[startIndex++], column: rawData[startIndex++]})
+    }
+    return points
   }
 
   function interpretRangeArray (rawData) {

@@ -132,8 +132,7 @@ public:
   static Nan::Persistent<Function> constructor;
 
   SubsequenceMatchWrapper(SubsequenceMatch &&match) :
-    match(std::move(match)),
-    positions_(Nan::New<Array>()) {}
+    match(std::move(match)) {}
 
   static void init() {
     Local<FunctionTemplate> constructor_template = Nan::New<FunctionTemplate>();
@@ -142,7 +141,6 @@ public:
     const auto &instance_template = constructor_template->InstanceTemplate();
 
     Nan::SetAccessor(instance_template, Nan::New("word").ToLocalChecked(), get_word);
-    Nan::SetAccessor(instance_template, Nan::New("positions").ToLocalChecked(), get_positions);
     Nan::SetAccessor(instance_template, Nan::New("matchIndices").ToLocalChecked(), get_match_indices);
     Nan::SetAccessor(instance_template, Nan::New("score").ToLocalChecked(), get_score);
 
@@ -165,20 +163,6 @@ public:
     info.GetReturnValue().Set(string_conversion::string_to_js(match.word));
   }
 
-  static void get_positions(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
-    SubsequenceMatchWrapper *match_wrapper = Nan::ObjectWrap::Unwrap<SubsequenceMatchWrapper>(info.This());
-    if (match_wrapper->positions_->Length() != 0) {
-      return info.GetReturnValue().Set(match_wrapper->positions_);
-    }
-    SubsequenceMatch &match = match_wrapper->match;
-    Local<Array> js_result = Nan::New<Array>();
-    for (size_t i = 0; i < match.positions.size(); i++) {
-      js_result->Set(i, PointWrapper::from_point(match.positions[i]));
-    }
-    match_wrapper->positions_ = js_result;
-    info.GetReturnValue().Set(js_result);
-  }
-
   static void get_match_indices(v8::Local<v8::String> property, const Nan::PropertyCallbackInfo<v8::Value> &info) {
     SubsequenceMatch &match = Nan::ObjectWrap::Unwrap<SubsequenceMatchWrapper>(info.This())->match;
     Local<Array> js_result = Nan::New<Array>();
@@ -194,7 +178,6 @@ public:
   }
 
   TextBuffer::SubsequenceMatch match;
-  Local<Array> positions_;
 };
 
 Nan::Persistent<Function> SubsequenceMatchWrapper::constructor;
@@ -534,14 +517,33 @@ void TextBufferWrapper::find_words_with_subsequence_in_range(const Nan::Function
 
     void HandleOKCallback() {
       delete snapshot;
-      Local<Array> js_result = Nan::New<Array>();
+      Local<Array> js_matches_array = Nan::New<Array>();
 
-      for (size_t i = 0; i < result.size() && i < max_count; i++) {
-        js_result->Set(i, SubsequenceMatchWrapper::from_subsequence_match(result[i]));
+      uint32_t positions_buffer_size = 0;
+      for (const auto &subsequence_match : result) {
+        positions_buffer_size += sizeof(uint32_t) + subsequence_match.positions.size() * sizeof(Point);
       }
 
-      Local<Value> argv[] = {js_result};
-      callback->Call(1, argv);
+      auto positions_buffer = v8::ArrayBuffer::New(v8::Isolate::GetCurrent(), positions_buffer_size);
+      uint32_t *positions_data = reinterpret_cast<uint32_t *>(positions_buffer->GetContents().Data());
+
+      uint32_t positions_array_index = 0;
+      for (size_t i = 0; i < result.size() && i < max_count; i++) {
+        const SubsequenceMatch &match = result[i];
+        positions_data[positions_array_index++] = match.positions.size();
+        uint32_t bytes_to_copy = match.positions.size() * sizeof(Point);
+        memcpy(
+          reinterpret_cast<char *>(positions_data + positions_array_index),
+          match.positions.data(),
+          bytes_to_copy
+        );
+        positions_array_index += bytes_to_copy / sizeof(uint32_t);
+        js_matches_array->Set(i, SubsequenceMatchWrapper::from_subsequence_match(match));
+      }
+
+      auto positions_array = v8::Uint32Array::New(positions_buffer, 0, positions_buffer_size / sizeof(uint32_t));
+      Local<Value> argv[] = {js_matches_array, positions_array};
+      callback->Call(2, argv);
     }
   };
 
