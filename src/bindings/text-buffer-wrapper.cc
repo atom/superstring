@@ -533,7 +533,7 @@ void TextBufferWrapper::find_words_with_subsequence_in_range(const Nan::Function
         positions_data[positions_array_index++] = match.positions.size();
         uint32_t bytes_to_copy = match.positions.size() * sizeof(Point);
         memcpy(
-          reinterpret_cast<char *>(positions_data + positions_array_index),
+          positions_data + positions_array_index,
           match.positions.data(),
           bytes_to_copy
         );
