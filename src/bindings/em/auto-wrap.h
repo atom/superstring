@@ -162,31 +162,31 @@ struct em_wrap_type<MarkerIndex::BoundaryQueryResult> : public em_wrap_type_base
 };
 
 template <>
-struct em_wrap_type<Text> : public em_wrap_type_base<Text, std::string> {
-  static Text receive(std::string const &str) {
+struct em_wrap_type<Text> : public em_wrap_type_base<Text, std::wstring> {
+  static Text receive(std::wstring const &str) {
     return Text(str.begin(), str.end());
   }
 
-  static std::string transmit(Text const &text) {
-    return std::string(text.begin(), text.end());
+  static std::wstring transmit(Text const &text) {
+    return std::wstring(text.begin(), text.end());
   }
 };
 
 template <>
-struct em_wrap_type<std::u16string> : public em_wrap_type_base<std::u16string, std::string> {
-  static std::u16string receive(std::string const &str) {
+struct em_wrap_type<std::u16string> : public em_wrap_type_base<std::u16string, std::wstring> {
+  static std::u16string receive(std::wstring const &str) {
     return std::u16string(str.begin(), str.end());
   }
 
-  static std::string transmit(std::u16string const &text) {
-    return std::string(text.begin(), text.end());
+  static std::wstring transmit(std::u16string const &text) {
+    return std::wstring(text.begin(), text.end());
   }
 };
 
 template <>
 struct em_wrap_type<Text *> : public em_wrap_type_base<Text *, emscripten::val> {
   static Text * receive(emscripten::val const &value) {
-    return new Text(em_wrap_type<Text>::receive(value.as<std::string>()));
+    return new Text(em_wrap_type<Text>::receive(value.as<std::wstring>()));
   }
 
   static emscripten::val transmit(Text *text) {

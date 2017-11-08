@@ -5,11 +5,11 @@
 using std::string;
 using std::u16string;
 
-static TextBuffer *construct(const std::string &text) {
+static TextBuffer *construct(const std::wstring &text) {
   return new TextBuffer(u16string(text.begin(), text.end()));
 }
 
-static emscripten::val find_sync(TextBuffer &buffer, std::string js_pattern, Range range) {
+static emscripten::val find_sync(TextBuffer &buffer, std::wstring js_pattern, Range range) {
   u16string pattern(js_pattern.begin(), js_pattern.end());
   u16string error_message;
   Regex regex(pattern, &error_message);
@@ -25,7 +25,7 @@ static emscripten::val find_sync(TextBuffer &buffer, std::string js_pattern, Ran
   return emscripten::val::null();
 }
 
-static emscripten::val find_all_sync(TextBuffer &buffer, std::string js_pattern, Range range) {
+static emscripten::val find_all_sync(TextBuffer &buffer, std::wstring js_pattern, Range range) {
   u16string pattern(js_pattern.begin(), js_pattern.end());
   u16string error_message;
   Regex regex(pattern, &error_message);
