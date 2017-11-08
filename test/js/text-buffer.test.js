@@ -893,14 +893,14 @@ describe('TextBuffer', () => {
 
       try {
         buffer.findSync('[')
-        assert(false, 'Expected an exceptoin')
+        assert(false, 'Expected an exception')
       } catch (error) {
         assert.match(error.message, /missing terminating ] for character class/)
       }
 
       try {
         await buffer.find('[')
-        assert(false, 'Expected an exceptoin')
+        assert(false, 'Expected an exception')
       } catch (error) {
         assert.match(error.message, /missing terminating ] for character class/)
       }
@@ -920,6 +920,21 @@ describe('TextBuffer', () => {
       buffer.setTextInRange(Range(Point(0, 0), Point(0, 0)), ' ')
       assert.deepEqual(buffer.findSync(regex), Range(Point(0, 3), Point(0, 4)))
       assert.deepEqual(await buffer.find(regex), Range(Point(0, 3), Point(0, 4)))
+    })
+
+    it('supports regexes with unicode escape sequences', () => {
+      const buffer = new TextBuffer('åå é')
+      assert.equal('\u00e5', 'å')
+      assert.deepEqual(buffer.findSync('\u00e5+'), Range(Point(0, 0), Point(0, 2)))
+      assert.deepEqual(buffer.findSync(/\u00e5+/), Range(Point(0, 0), Point(0, 2)))
+
+      // Like with JS regexes, invalid unicode escape sequences just match their literal content.
+      assert.equal(buffer.findSync(/\uxxxx/), null)
+      buffer.setText('a \\uxxxx b')
+      assert.deepEqual(buffer.findSync(/\uxxxx/), Range(Point(0, 2), Point(0, 8)))
+
+      assert.deepEqual(buffer.findSync(/\uxxx/), Range(Point(0, 2), Point(0, 7)))
+      assert.deepEqual(buffer.findSync(/\uxx/), Range(Point(0, 2), Point(0, 6)))
     })
   })
 
