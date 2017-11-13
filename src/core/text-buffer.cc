@@ -111,6 +111,11 @@ struct TextBuffer::Layer {
         preceding_change->new_start.traverse(position_within_preceding_change.position),
         preceding_change_current_offset + position_within_preceding_change.offset
       };
+    } else if (position == preceding_change->new_end) {
+      return {
+        position,
+        preceding_change_current_offset + preceding_change->new_text->size()
+      };
     } else {
       ClipResult base_location = previous_layer->clip_position(
         preceding_change->old_end.traverse(position.traversal(preceding_change->new_end))
@@ -776,7 +781,7 @@ void TextBuffer::set_text_in_range(Range old_range, u16string &&string) {
   }
 
   auto start = clip_position(old_range.start);
-  auto end = clip_position(old_range.end);
+  auto end = old_range.end == old_range.start ? start : clip_position(old_range.end);
   Point deleted_extent = end.position.traversal(start.position);
   Text new_text{move(string)};
   Point inserted_extent = new_text.extent();
