@@ -8,6 +8,7 @@ const Random = require('random-seed')
 const TestDocument = require('./helpers/test-document')
 const {traverse} = require('./helpers/point-helpers')
 const {getExtent} = require('./helpers/text-helpers')
+const words = require('./helpers/words')
 const MAX_INT32 = 4294967296
 
 const isWindows = process.platform === 'win32'
@@ -1174,6 +1175,45 @@ describe('TextBuffer', () => {
         return buffer2.findWordsWithSubsequence('eyJ', '', 1).then(results => {
           assert.equal(results.length, 1)
         })
+      })
+    })
+
+    it('can be called repeatedly between buffer mutations without harming performance', () => {
+      let seed = Date.now()
+      const random = new Random(seed)
+
+      let text = ''
+      for (let i = 0; i < 100; i++) {
+        text += words[random.intBetween(0, words.length)]
+        text += random(5) === 0 ? '\n' : ' '
+      }
+
+      const buffer = new TextBuffer(text + '\n')
+      const promises = []
+
+      for (let i = 0; i < 25; i++) {
+        const position = buffer.getExtent()
+        buffer.setTextInRange({start: position, end: position}, 'x')
+        promises.push(buffer.findWordsWithSubsequence('e', '', 1))
+      }
+
+      return Promise.all(promises).then(subsequenceMatchResults => {
+        for (const matches of subsequenceMatchResults) {
+          // If the search was cancelled, `findWordsWithSubsequence` will resolve with `null`.
+          if (matches) {
+            for (const match of matches) {
+              for (const position of match.positions) {
+                assert.equal(
+                  buffer.getTextInRange({
+                    start: position,
+                    end: {row: position.row, column: position.column + match.word.length}}
+                  ),
+                  match.word
+                )
+              }
+            }
+          }
+        }
       })
     })
   })
