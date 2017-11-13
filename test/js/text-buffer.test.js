@@ -1039,6 +1039,31 @@ describe('TextBuffer', () => {
         }
       }
     })
+
+    it('can be called repeatedly between buffer mutations without harming performance', () => {
+      let seed = Date.now()
+      const random = new Random(seed)
+
+      let text = ''
+      for (let i = 0; i < 10000; i++) {
+        text += words[random.intBetween(0, words.length)]
+        text += random(5) === 0 ? '\n' : ' '
+      }
+
+      const buffer = new TextBuffer(text + '\n')
+      const promises = []
+
+      for (let i = 0; i < 25; i++) {
+        const row = random(buffer.getLineCount())
+        const column = random(buffer.lineLengthForRow(row))
+        const position = {row, column}
+        buffer.setTextInRange({start: position, end: position}, 'x')
+        buffer.lineLengthForRow(row)
+        promises.push(buffer.findAll(/e/))
+      }
+
+      return Promise.all(promises)
+    })
   })
 
   describe('.findAllInRange (sync and async)', () => {
@@ -1183,7 +1208,7 @@ describe('TextBuffer', () => {
       const random = new Random(seed)
 
       let text = ''
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < 1000; i++) {
         text += words[random.intBetween(0, words.length)]
         text += random(5) === 0 ? '\n' : ' '
       }

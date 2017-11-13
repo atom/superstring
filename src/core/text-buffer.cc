@@ -84,14 +84,14 @@ struct TextBuffer::Layer {
       patch.get_change_starting_before_new_position(position);
     if (!preceding_change) return previous_layer->clip_position(position);
 
-    uint32_t preceding_change_base_offset =
-      previous_layer->clip_position(preceding_change->old_start).offset;
-    uint32_t preceding_change_current_offset =
-      preceding_change_base_offset +
-      preceding_change->preceding_new_text_size -
-      preceding_change->preceding_old_text_size;
-
     if (position < preceding_change->new_end) {
+      uint32_t preceding_change_base_offset =
+        previous_layer->clip_position(preceding_change->old_start).offset;
+      uint32_t preceding_change_current_offset =
+        preceding_change_base_offset +
+        preceding_change->preceding_new_text_size -
+        preceding_change->preceding_old_text_size;
+
       ClipResult position_within_preceding_change =
         preceding_change->new_text->clip_position(
           position.traversal(preceding_change->new_start)
@@ -111,22 +111,21 @@ struct TextBuffer::Layer {
         preceding_change->new_start.traverse(position_within_preceding_change.position),
         preceding_change_current_offset + position_within_preceding_change.offset
       };
-    } else if (position == preceding_change->new_end) {
-      return {
-        position,
-        preceding_change_current_offset + preceding_change->new_text->size()
-      };
     } else {
       ClipResult base_location = previous_layer->clip_position(
         preceding_change->old_end.traverse(position.traversal(preceding_change->new_end))
       );
 
-      ClipResult distance_past_preceding_change = {
-        base_location.position.traversal(preceding_change->old_end),
-        base_location.offset - (preceding_change_base_offset + preceding_change->old_text_size)
+      ClipResult result = {
+        preceding_change->new_end.traverse(base_location.position.traversal(preceding_change->old_end)),
+        base_location.offset +
+          preceding_change->preceding_new_text_size -
+          preceding_change->preceding_old_text_size +
+          preceding_change->new_text->size() -
+          preceding_change->old_text_size
       };
 
-      if (distance_past_preceding_change.offset == 0 && base_location.offset < previous_layer->size()) {
+      if (result.position == preceding_change->new_end && base_location.offset < previous_layer->size()) {
         uint16_t previous_character = 0;
         if (preceding_change->new_text->size() > 0) {
           previous_character = preceding_change->new_text->content.back();
@@ -137,15 +136,12 @@ struct TextBuffer::Layer {
         if (previous_character == '\r' && previous_layer->character_at(base_location.position) == '\n') {
           return {
             previous_column(preceding_change->new_end),
-            preceding_change_current_offset + preceding_change->new_text->size() - 1
+            result.offset - 1
           };
         }
       }
 
-      return {
-        preceding_change->new_end.traverse(distance_past_preceding_change.position),
-        preceding_change_current_offset + preceding_change->new_text->size() + distance_past_preceding_change.offset
-      };
+      return result;
     }
   }
 
