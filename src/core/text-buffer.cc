@@ -406,6 +406,10 @@ struct TextBuffer::Layer {
     size_t query_index = 0;
     std::vector<uint32_t> match_indices;
     int16_t score = 0;
+
+    bool operator<(const SubsequenceMatchVariant &other) const {
+      return query_index < other.query_index;
+    }
   };
 
   vector<SubsequenceMatch> find_words_with_subsequence_in_range(u16string query, const u16string &extra_word_characters, Range range) {
@@ -415,6 +419,8 @@ struct TextBuffer::Layer {
     Point current_word_start;
     u16string current_word;
     u16string raw_query = query;
+
+    if (query.size() > MAX_WORD_LENGTH) return vector<SubsequenceMatch>{};
 
     std::transform(query.begin(), query.end(), query.begin(), std::towlower);
 
@@ -470,7 +476,6 @@ struct TextBuffer::Layer {
     static const unsigned subword_start_with_case_mismatch_bonus = 9;
     static const unsigned mismatch_penalty = 1;
     static const unsigned leading_mismatch_penalty = 3;
-    static const unsigned max_variant_count = 100;
 
     vector<SubsequenceMatch> matches;
 
@@ -479,23 +484,24 @@ struct TextBuffer::Layer {
       const vector<Point> &start_positions = entry.second;
 
       vector<SubsequenceMatchVariant> match_variants {{}};
+      vector<SubsequenceMatchVariant> new_match_variants;
 
       for (size_t i = 0; i < word.size(); i++) {
         uint16_t c = towlower(word[i]);
 
-        for (size_t j = 0, size = match_variants.size(); j < size; j++) {
-          if (match_variants[j].query_index < query.size()) {
+        for (auto match_variant = match_variants.begin(); match_variant != match_variants.end();) {
+          if (match_variant->query_index < query.size()) {
             // If the current word character matches the next character of
             // the query for this match variant, create a *new* match variant
             // that consumes the matching character.
-            if (c == query[match_variants[j].query_index]) {
-              SubsequenceMatchVariant new_match = match_variants[j];
+            if (c == query[match_variant->query_index]) {
+              SubsequenceMatchVariant new_match = *match_variant;
               new_match.query_index++;
 
               if (i == 0 ||
                   !std::iswalnum(word[i - 1]) ||
                   (std::iswlower(word[i - 1]) && std::iswupper(word[i]))) {
-                new_match.score += word[i] == raw_query[match_variants[j].query_index]
+                new_match.score += word[i] == raw_query[match_variant->query_index]
                   ? subword_start_with_case_match_bonus
                   : subword_start_with_case_mismatch_bonus;
               }
@@ -505,16 +511,7 @@ struct TextBuffer::Layer {
               }
 
               new_match.match_indices.push_back(i);
-
-              // If there are already too many match variants, then treat the current
-              // character as a match for this variant, rather than treating it as
-              // a mismatch and adding a *new* variant to represent the match.
-              if (match_variants.size() > max_variant_count) {
-                match_variants[j] = new_match;
-                continue;
-              }
-
-              match_variants.push_back(new_match);
+              new_match_variants.push_back(new_match);
             }
 
             // For the current match variant, treat the current character as
@@ -522,12 +519,33 @@ struct TextBuffer::Layer {
             // reserves the chance for the next character to be consumed by a
             // match with higher overall value.
             if (i < 3) {
-              match_variants[j].score -= leading_mismatch_penalty;
+              match_variant->score -= leading_mismatch_penalty;
             } else {
-              match_variants[j].score -= mismatch_penalty;
+              match_variant->score -= mismatch_penalty;
             }
+
+            auto next_match_variant = match_variant + 1;
+            if (next_match_variant != match_variants.end() && next_match_variant->query_index == match_variant->query_index) {
+              match_variant = match_variants.erase(match_variant);
+            } else {
+              ++match_variant;
+            }
+          } else {
+            ++match_variant;
           }
         }
+
+        for (const SubsequenceMatchVariant &new_variant : new_match_variants) {
+          auto existing_match_iter = std::lower_bound(match_variants.begin(), match_variants.end(), new_variant);
+          if (existing_match_iter != match_variants.end() && new_variant.query_index == existing_match_iter->query_index) {
+            if (new_variant.score >= existing_match_iter->score) {
+              *existing_match_iter = new_variant;
+              continue;
+            }
+          }
+          match_variants.insert(existing_match_iter, new_variant);
+        }
+        new_match_variants.clear();
       }
 
       SubsequenceMatchVariant *best_match = nullptr;
