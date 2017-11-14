@@ -146,22 +146,14 @@ struct TextBuffer::Layer {
   }
 
   template <typename Callback>
-  inline bool for_each_chunk_in_range(Point start, Point end,
+  inline bool for_each_chunk_in_range(Point start, Point goal_position,
                                       const Callback &callback, bool splay = false) {
-    Point goal_position = end;
-    return for_each_chunk_in_range(start, &goal_position, callback, splay);
-  }
-
-  // This version of `for_each_chunk_in_range` mutates the goal position parameter so that the
-  // caller can find out the clipped value without having to re-clip it.
-  template <typename Callback>
-  inline bool for_each_chunk_in_range(Point start, Point *goal_position,
-                                      const Callback &callback, bool splay = false) {
-    *goal_position = clip_position(*goal_position, splay).position;
-    Point current_position = clip_position(start, splay).position;
+    // *goal_position = clip_position(*goal_position, splay).position;
+    // Point current_position = clip_position(start, splay).position;
+    Point current_position = start;
 
     if (!uses_patch) {
-      TextSlice slice = TextSlice(*text).slice({current_position, *goal_position});
+      TextSlice slice = TextSlice(*text).slice({current_position, goal_position});
       return !slice.empty() && callback(slice);
     }
 
@@ -176,7 +168,7 @@ struct TextBuffer::Layer {
     } else if (current_position < change->new_end) {
       TextSlice slice = TextSlice(*change->new_text).slice({
         current_position.traversal(change->new_start),
-        goal_position->traversal(change->new_start)
+        goal_position.traversal(change->new_start)
       });
       if (!slice.empty() && callback(slice)) return true;
       base_position = change->old_end;
@@ -186,8 +178,8 @@ struct TextBuffer::Layer {
     }
 
     auto changes = splay ?
-      patch.grab_changes_in_new_range(current_position, *goal_position) :
-      patch.get_changes_in_new_range(current_position, *goal_position);
+      patch.grab_changes_in_new_range(current_position, goal_position) :
+      patch.get_changes_in_new_range(current_position, goal_position);
     for (const auto &change : changes) {
       if (base_position < change.old_start) {
         if (previous_layer->for_each_chunk_in_range(base_position, change.old_start, callback)) {
@@ -196,17 +188,17 @@ struct TextBuffer::Layer {
       }
 
       TextSlice slice = TextSlice(*change.new_text)
-        .prefix(Point::min(change.new_end, *goal_position).traversal(change.new_start));
+        .prefix(Point::min(change.new_end, goal_position).traversal(change.new_start));
       if (!slice.empty() && callback(slice)) return true;
 
       base_position = change.old_end;
       current_position = change.new_end;
     }
 
-    if (current_position < *goal_position) {
+    if (current_position < goal_position) {
       return previous_layer->for_each_chunk_in_range(
         base_position,
-        base_position.traverse(goal_position->traversal(current_position)),
+        base_position.traverse(goal_position.traversal(current_position)),
         callback
       );
     }
@@ -236,19 +228,28 @@ struct TextBuffer::Layer {
 
   u16string text_in_range(Range range, bool splay = false) {
     u16string result;
-    for_each_chunk_in_range(range.start, range.end, [&result](TextSlice slice) {
-      result.insert(result.end(), slice.begin(), slice.end());
-      return false;
-    }, splay);
+    for_each_chunk_in_range(
+      clip_position(range.start).position,
+      clip_position(range.end).position,
+      [&result](TextSlice slice) {
+        result.insert(result.end(), slice.begin(), slice.end());
+        return false;
+      },
+      splay
+    );
     return result;
   }
 
   vector<TextSlice> chunks_in_range(Range range) {
     vector<TextSlice> result;
-    for_each_chunk_in_range(range.start, range.end, [&result](TextSlice slice) {
-      result.push_back(slice);
-      return false;
-    });
+    for_each_chunk_in_range(
+      clip_position(range.start).position,
+      clip_position(range.end).position,
+      [&result](TextSlice slice) {
+        result.push_back(slice);
+        return false;
+      }
+    );
     if (result.empty()) result.push_back(TextSlice(EMPTY_TEXT));
     return result;
   }
@@ -256,6 +257,8 @@ struct TextBuffer::Layer {
   template <typename Callback>
   void scan_in_range(const Regex &regex, Range range, const Callback &callback, bool splay = false) {
     Regex::MatchData match_data(regex);
+    range.start = clip_position(range.start).position;
+    range.end = clip_position(range.end).position;
 
     uint32_t minimum_match_row = range.start.row;
     optional<Range> result;
@@ -265,7 +268,7 @@ struct TextBuffer::Layer {
     Point last_search_end_position = range.start;
     Point slice_to_search_start_position = range.start;
 
-    for_each_chunk_in_range(range.start, &range.end, [&](TextSlice chunk) {
+    for_each_chunk_in_range(range.start, range.end, [&](TextSlice chunk) {
       Point chunk_end_position = chunk_start_position.traverse(chunk.extent());
       while (last_search_end_position < chunk_end_position) {
         TextSlice remaining_chunk = chunk
@@ -419,38 +422,41 @@ struct TextBuffer::Layer {
     // subsequence.
     std::unordered_map<u16string, vector<Point>> substring_matches;
 
-    for_each_chunk_in_range(range.start, range.end, [&] (TextSlice chunk) -> bool {
-      for (uint16_t c : chunk) {
-        bool is_word_character =
-          std::iswalnum(c) ||
-          std::find(extra_word_characters.begin(), extra_word_characters.end(), c) != extra_word_characters.end();
+    for_each_chunk_in_range(
+      clip_position(range.start).position,
+      clip_position(range.end).position,
+      [&] (TextSlice chunk) -> bool {
+        for (uint16_t c : chunk) {
+          bool is_word_character =
+            std::iswalnum(c) ||
+            std::find(extra_word_characters.begin(), extra_word_characters.end(), c) != extra_word_characters.end();
 
-        if (is_word_character) {
-          if (current_word.empty()) current_word_start = position;
-          current_word += c;
-          if (query_index < query.size() && towlower(c) == query[query_index]) {
-            query_index++;
-          }
-        } else {
-          if (!current_word.empty()) {
-            if (query_index == query.size() && current_word.size() <= MAX_WORD_LENGTH) {
-              substring_matches[current_word].push_back(current_word_start);
+          if (is_word_character) {
+            if (current_word.empty()) current_word_start = position;
+            current_word += c;
+            if (query_index < query.size() && towlower(c) == query[query_index]) {
+              query_index++;
             }
-            query_index = 0;
-            current_word.clear();
+          } else {
+            if (!current_word.empty()) {
+              if (query_index == query.size() && current_word.size() <= MAX_WORD_LENGTH) {
+                substring_matches[current_word].push_back(current_word_start);
+              }
+              query_index = 0;
+              current_word.clear();
+            }
+          }
+
+          if (c == '\n') {
+            position.row++;
+            position.column = 0;
+          } else {
+            position.column++;
           }
         }
 
-        if (c == '\n') {
-          position.row++;
-          position.column = 0;
-        } else {
-          position.column++;
-        }
-      }
-
-      return false;
-    });
+        return false;
+      });
 
     if (!current_word.empty() && query_index == query.size() && current_word.size() <= MAX_WORD_LENGTH) {
       substring_matches[current_word].push_back(current_word_start);
@@ -703,7 +709,7 @@ const uint16_t *TextBuffer::line_ending_for_row(uint32_t row) {
 
   const uint16_t *result = NONE;
   top_layer->for_each_chunk_in_range(
-    Point(row, UINT32_MAX),
+    clip_position(Point(row, UINT32_MAX)).position,
     Point(row + 1, 0),
     [&result](TextSlice slice) {
       auto begin = slice.begin();

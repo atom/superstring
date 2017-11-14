@@ -1216,16 +1216,20 @@ describe('TextBuffer', () => {
       const buffer = new TextBuffer(text + '\n')
       const promises = []
 
-      for (let i = 0; i < 25; i++) {
-        const position = buffer.getExtent()
+      for (let i = 0; i < 50; i++) {
+        const row = random(buffer.getLineCount())
+        const column = random(buffer.lineLengthForRow(row))
+        const position = {row, column}
         buffer.setTextInRange({start: position, end: position}, 'x')
-        promises.push(buffer.findWordsWithSubsequence('e', '', 1))
+        const text = buffer.getText()
+        promises.push(buffer.findWordsWithSubsequence('e', '', 1).then(matches => ({matches, text})))
       }
 
       return Promise.all(promises).then(subsequenceMatchResults => {
-        for (const matches of subsequenceMatchResults) {
+        for (const {matches, text} of subsequenceMatchResults) {
           // If the search was cancelled, `findWordsWithSubsequence` will resolve with `null`.
           if (matches) {
+            const buffer = new TextBuffer(text)
             for (const match of matches) {
               for (const position of match.positions) {
                 assert.equal(
