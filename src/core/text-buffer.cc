@@ -470,6 +470,7 @@ struct TextBuffer::Layer {
     static const unsigned subword_start_with_case_mismatch_bonus = 9;
     static const unsigned mismatch_penalty = 1;
     static const unsigned leading_mismatch_penalty = 3;
+    static const unsigned max_variant_count = 100;
 
     vector<SubsequenceMatch> matches;
 
@@ -504,6 +505,14 @@ struct TextBuffer::Layer {
               }
 
               new_match.match_indices.push_back(i);
+
+              // If there are already too many match variants, then treat the current
+              // character as a match for this variant, rather than treating it as
+              // a mismatch and adding a *new* variant to represent the match.
+              if (match_variants.size() > max_variant_count) {
+                match_variants[j] = new_match;
+                continue;
+              }
 
               match_variants.push_back(new_match);
             }

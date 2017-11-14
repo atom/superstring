@@ -1216,13 +1216,19 @@ describe('TextBuffer', () => {
       const buffer = new TextBuffer(text + '\n')
       const promises = []
 
-      for (let i = 0; i < 50; i++) {
-        const row = random(buffer.getLineCount())
-        const column = random(buffer.lineLengthForRow(row))
-        const position = {row, column}
+      const row = random(buffer.getLineCount())
+      const column = random(buffer.lineLengthForRow(row))
+      const position = {row, column}
+      buffer.setTextInRange({start: position, end: position}, ' ')
+      position.column++
+
+      // Simulate typing one character repeatedly
+      let query = ''
+      for (let i = 0; i < 100; i++) {
         buffer.setTextInRange({start: position, end: position}, 'x')
+        query += 'x'
         const text = buffer.getText()
-        promises.push(buffer.findWordsWithSubsequence('e', '', 1).then(matches => ({matches, text})))
+        promises.push(buffer.findWordsWithSubsequence(query, '', 1).then(matches => ({matches, text})))
       }
 
       return Promise.all(promises).then(subsequenceMatchResults => {
