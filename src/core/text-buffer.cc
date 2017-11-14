@@ -524,6 +524,16 @@ struct TextBuffer::Layer {
               match_variant->score -= mismatch_penalty;
             }
 
+            // If a match variant does *not* match the current character (and is therefore
+            // ineligible for the consecutive match bonus on the next character), its
+            // potential for future scoring is determined entirely by its `query_index`.
+            //
+            // These match variants are ordered by ascending `query_index`. If multiple
+            // match variants have the same `query_index`, they are ordered by ascending
+            // `score`.
+            //
+            // If there is another match variant with the same `query_index` and a greater
+            // or equal `score`, discard the current match variant.
             auto next_match_variant = match_variant + 1;
             if (next_match_variant != match_variants.end() && next_match_variant->query_index == match_variant->query_index) {
               match_variant = match_variants.erase(match_variant);
@@ -535,6 +545,11 @@ struct TextBuffer::Layer {
           }
         }
 
+        // Add all of the newly-computed match variants to the list. Avoid creating duplicate
+        // match variants with the same query index unless the new variant (which is
+        // by definition eligible for the consecutive match bonus on the next character) has
+        // a lower score than an existing variant. Maintain the invariant that match variants
+        // are ordered by ascending `query_index` and ascending `score`.
         for (const SubsequenceMatchVariant &new_variant : new_match_variants) {
           auto existing_match_iter = std::lower_bound(match_variants.begin(), match_variants.end(), new_variant);
           if (existing_match_iter != match_variants.end() && new_variant.query_index == existing_match_iter->query_index) {
