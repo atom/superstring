@@ -1192,6 +1192,36 @@ describe('TextBuffer', () => {
       })
     })
 
+    it('prioritizes words in which beginnings of subwords match the query', async () => {
+      const buffer = new TextBuffer(`
+        leading_mismatch_penalty
+        partial_match_position
+        clampedRange
+      `)
+
+      assert.deepEqual((await buffer.findWordsWithSubsequence('lmp', '_', 3)).map(({word}) => word), [
+        'leading_mismatch_penalty',
+        'partial_match_position',
+        'clampedRange',
+      ])
+    })
+
+    it('prioritizes words in which consecutive letters match the query', async () => {
+      const buffer = new TextBuffer(`
+        deserialize
+        deserializer
+        savePromise
+        savePromises
+      `)
+
+      assert.deepEqual((await buffer.findWordsWithSubsequence('seri', '_', 4)).map(({word}) => word), [
+        'deserialize',
+        'deserializer',
+        'savePromise',
+        'savePromises',
+      ])
+    })
+
     it('does not compute matches for words longer than 80 characters', () => {
       const buffer = new TextBuffer('eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL2xpYi9jb252ZXJ0LmpzIl0sIm5hbWVzIjpbImxzi')
       const buffer2 = new TextBuffer('eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uL2xpYi9jb252ZXJ0LmpzIl0sIm5hbWVzIjpbImxz')
