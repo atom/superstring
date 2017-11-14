@@ -263,7 +263,9 @@ void TextBufferWrapper::get_text(const Nan::FunctionCallbackInfo<Value> &info) {
 }
 
 void TextBufferWrapper::set_text_in_range(const Nan::FunctionCallbackInfo<Value> &info) {
-  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  auto text_buffer_wrapper = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This());
+  text_buffer_wrapper->cancel_queued_workers();
+  auto &text_buffer = text_buffer_wrapper->text_buffer;
   auto range = RangeWrapper::range_from_js(info[0]);
   auto text = string_conversion::string_from_js(info[1]);
   if (range && text) {
@@ -272,7 +274,9 @@ void TextBufferWrapper::set_text_in_range(const Nan::FunctionCallbackInfo<Value>
 }
 
 void TextBufferWrapper::set_text(const Nan::FunctionCallbackInfo<Value> &info) {
-  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  auto text_buffer_wrapper = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This());
+  text_buffer_wrapper->cancel_queued_workers();
+  auto &text_buffer = text_buffer_wrapper->text_buffer;
   auto text = string_conversion::string_from_js(info[0]);
   if (text) {
     text_buffer.set_text(move(*text));
@@ -485,7 +489,7 @@ void TextBufferWrapper::find_all(const Nan::FunctionCallbackInfo<Value> &info) {
 }
 
 void TextBufferWrapper::find_words_with_subsequence_in_range(const Nan::FunctionCallbackInfo<v8::Value> &info) {
-  class FindWordsWithSubsequenceInRangeWorker : public Nan::AsyncWorker {
+  class FindWordsWithSubsequenceInRangeWorker : public Nan::AsyncWorker, public CancellableWorker {
     Nan::Persistent<Object> buffer;
     const TextBuffer::Snapshot *snapshot;
     const u16string query;
@@ -493,6 +497,7 @@ void TextBufferWrapper::find_words_with_subsequence_in_range(const Nan::Function
     const size_t max_count;
     const Range range;
     vector<TextBuffer::SubsequenceMatch> result;
+    uv_rwlock_t snapshot_lock;
 
   public:
     FindWordsWithSubsequenceInRangeWorker(Local<Object> buffer,
@@ -506,17 +511,46 @@ void TextBufferWrapper::find_words_with_subsequence_in_range(const Nan::Function
       extra_word_characters{extra_word_characters},
       max_count{max_count},
       range(range) {
+      uv_rwlock_init(&snapshot_lock);
       this->buffer.Reset(buffer);
       auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(buffer)->text_buffer;
       snapshot = text_buffer.create_snapshot();
     }
 
+    ~FindWordsWithSubsequenceInRangeWorker() {
+      uv_rwlock_destroy(&snapshot_lock);
+    }
+
     void Execute() {
+      uv_rwlock_rdlock(&snapshot_lock);
+      if (!snapshot) {
+        uv_rwlock_rdunlock(&snapshot_lock);
+        return;
+      }
       result = snapshot->find_words_with_subsequence_in_range(query, extra_word_characters, range);
+      uv_rwlock_rdunlock(&snapshot_lock);
+    }
+
+    void CancelIfQueued() {
+      int lock_status = uv_rwlock_trywrlock(&snapshot_lock);
+      if (lock_status == 0) {
+        delete snapshot;
+        snapshot = nullptr;
+        uv_rwlock_wrunlock(&snapshot_lock);
+      }
     }
 
     void HandleOKCallback() {
+      if (!snapshot) {
+        Local<Value> argv[] = {Nan::Null()};
+        callback->Call(1, argv);
+        return;
+      }
+
       delete snapshot;
+      auto text_buffer_wrapper = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(Nan::New(buffer));
+      text_buffer_wrapper->outstanding_workers.erase(this);
+
       Local<Array> js_matches_array = Nan::New<Array>();
 
       uint32_t positions_buffer_size = 0;
@@ -555,14 +589,20 @@ void TextBufferWrapper::find_words_with_subsequence_in_range(const Nan::Function
   auto callback = new Nan::Callback(info[4].As<Function>());
 
   if (query && extra_word_characters && max_count && range && callback) {
-    Nan::AsyncQueueWorker(new FindWordsWithSubsequenceInRangeWorker(
-      info.This(),
+    auto js_buffer = info.This();
+    auto text_buffer_wrapper = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(js_buffer);
+
+    auto worker = new FindWordsWithSubsequenceInRangeWorker(
+      js_buffer,
       callback,
       *query,
       *extra_word_characters,
       *max_count,
       *range
-    ));
+    );
+
+    text_buffer_wrapper->outstanding_workers.insert(worker);
+    Nan::AsyncQueueWorker(worker);
   } else {
     Nan::ThrowError("Invalid arguments");
   }
@@ -1072,4 +1112,11 @@ void TextBufferWrapper::base_text_digest(const Nan::FunctionCallbackInfo<Value> 
 void TextBufferWrapper::dot_graph(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
   info.GetReturnValue().Set(Nan::New<String>(text_buffer.get_dot_graph()).ToLocalChecked());
+}
+
+void TextBufferWrapper::cancel_queued_workers() {
+  for (auto worker : outstanding_workers) {
+    worker->CancelIfQueued();
+  }
+  outstanding_workers.clear();
 }

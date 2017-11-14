@@ -231,6 +231,11 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   TextBuffer.prototype.findWordsWithSubsequenceInRange = function (query, extraWordCharacters, maxCount, range) {
     return new Promise(resolve =>
       findWordsWithSubsequenceInRange.call(this, query, extraWordCharacters, maxCount, range, (matches, positions) => {
+        if (!matches) {
+          resolve(null)
+          return
+        }
+
         let positionArrayIndex = 0
         for (let i = 0, n = matches.length; i < n; i++) {
           let positionCount = positions[positionArrayIndex++]

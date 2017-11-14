@@ -3,11 +3,18 @@
 
 #include "nan.h"
 #include "text-buffer.h"
+#include <unordered_set>
+
+class CancellableWorker {
+public:
+  virtual void CancelIfQueued() = 0;
+};
 
 class TextBufferWrapper : public Nan::ObjectWrap {
 public:
   static void init(v8::Local<v8::Object> exports);
   TextBuffer text_buffer;
+  std::unordered_set<CancellableWorker *> outstanding_workers;
 
 private:
   static void construct(const Nan::FunctionCallbackInfo<v8::Value> &info);
@@ -40,6 +47,8 @@ private:
   static void reset(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void base_text_digest(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void dot_graph(const Nan::FunctionCallbackInfo<v8::Value> &info);
+
+  void cancel_queued_workers();
 };
 
 #endif // SUPERSTRING_TEXT_BUFFER_WRAPPER_H
