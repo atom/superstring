@@ -206,7 +206,6 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("baseTextMatchesFile").ToLocalChecked(), Nan::New<FunctionTemplate>(base_text_matches_file));
   prototype_template->Set(Nan::New("save").ToLocalChecked(), Nan::New<FunctionTemplate>(save));
   prototype_template->Set(Nan::New("loadSync").ToLocalChecked(), Nan::New<FunctionTemplate>(load_sync));
-  prototype_template->Set(Nan::New("saveSync").ToLocalChecked(), Nan::New<FunctionTemplate>(save_sync));
   prototype_template->Set(Nan::New("serializeChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(serialize_changes));
   prototype_template->Set(Nan::New("deserializeChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(deserialize_changes));
   prototype_template->Set(Nan::New("reset").ToLocalChecked(), Nan::New<FunctionTemplate>(reset));
@@ -1031,31 +1030,6 @@ class SaveWorker : public Nan::AsyncWorker {
     callback->Call(1, argv);
   }
 };
-
-void TextBufferWrapper::save_sync(const Nan::FunctionCallbackInfo<Value> &info) {
-  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
-
-  Local<String> js_file_path;
-  if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
-  string file_path = *String::Utf8Value(js_file_path);
-
-  Local<String> js_encoding_name;
-  if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
-  string encoding_name = *String::Utf8Value(info[1].As<String>());
-
-  SaveWorker worker(
-    nullptr,
-    text_buffer.create_snapshot(),
-    move(file_path),
-    move(encoding_name)
-  );
-
-  worker.Execute();
-  auto error = worker.Finish();
-  if (!error->IsNull()) {
-    Nan::ThrowError(error);
-  }
-}
 
 void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
