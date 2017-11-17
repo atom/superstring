@@ -674,7 +674,7 @@ static u16string load_file(
   return loaded_string;
 }
 
-class LoadWorker : public Nan::AsyncProgressWorkerBase<size_t> {
+class Loader {
   Nan::Callback *progress_callback;
   TextBuffer *buffer;
   TextBuffer::Snapshot *snapshot;
@@ -685,26 +685,25 @@ class LoadWorker : public Nan::AsyncProgressWorkerBase<size_t> {
   Patch patch;
   bool force;
   bool compute_patch;
-  bool cancelled;
 
  public:
-  LoadWorker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
+  bool cancelled;
+
+  Loader(Nan::Callback *progress_callback,
          TextBuffer *buffer, TextBuffer::Snapshot *snapshot, string &&file_name,
          string &&encoding_name, bool force, bool compute_patch) :
-    AsyncProgressWorkerBase(completion_callback),
     progress_callback{progress_callback},
     buffer{buffer},
     snapshot{snapshot},
-    file_name{file_name},
-    encoding_name(encoding_name),
+    file_name{move(file_name)},
+    encoding_name{move(encoding_name)},
     force{force},
     compute_patch{compute_patch},
     cancelled{false} {}
 
-  LoadWorker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
+  Loader(Nan::Callback *progress_callback,
          TextBuffer *buffer, TextBuffer::Snapshot *snapshot, Text &&text,
          bool force, bool compute_patch) :
-    AsyncProgressWorkerBase(completion_callback),
     progress_callback{progress_callback},
     buffer{buffer},
     snapshot{snapshot},
@@ -713,33 +712,10 @@ class LoadWorker : public Nan::AsyncProgressWorkerBase<size_t> {
     compute_patch{compute_patch},
     cancelled{false} {}
 
-  void Execute(const Nan::AsyncProgressWorkerBase<size_t>::ExecutionProgress &progress) {
-    if (!loaded_text) {
-      loaded_text = Text{
-        load_file(file_name, encoding_name, &error, [&progress](size_t percent_done) {
-          progress.Send(&percent_done, 1);
-        })
-      };
-    }
+  template <typename Callback>
+  void Execute(const Callback &callback) {
+    if (!loaded_text) loaded_text = Text{load_file(file_name, encoding_name, &error, callback)};
     if (!error && compute_patch) patch = text_diff(snapshot->base_text(), *loaded_text);
-  }
-
-  void ExecuteSync() {
-    loaded_text = Text{
-      load_file(file_name, encoding_name, &error, [this](size_t percent_done) {
-        HandleProgressCallback(&percent_done, 1);
-      })
-    };
-    if (!error && compute_patch) patch = text_diff(snapshot->base_text(), *loaded_text);
-  }
-
-  void HandleProgressCallback(const size_t *percent_done, size_t count) {
-    if (!cancelled && progress_callback && percent_done) {
-      Nan::HandleScope scope;
-      Local<Value> argv[] = {Nan::New<Number>(static_cast<uint32_t>(*percent_done))};
-      auto progress_result = progress_callback->Call(1, argv);
-      if (progress_result->IsFalse()) cancelled = true;
-    }
   }
 
   pair<Local<Value>, Local<Value>> Finish() {
@@ -788,8 +764,44 @@ class LoadWorker : public Nan::AsyncProgressWorkerBase<size_t> {
     return {Nan::Null(), patch_wrapper};
   }
 
+  void CallProgressCallback(size_t percent_done) {
+    if (!cancelled && progress_callback) {
+      Nan::HandleScope scope;
+      Local<Value> argv[] = {Nan::New<Number>(static_cast<uint32_t>(percent_done))};
+      auto progress_result = progress_callback->Call(1, argv);
+      if (progress_result->IsFalse()) cancelled = true;
+    }
+  }
+};
+
+class LoadWorker : public Nan::AsyncProgressWorkerBase<size_t> {
+  Loader loader;
+
+ public:
+  LoadWorker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
+             TextBuffer *buffer, TextBuffer::Snapshot *snapshot, string &&file_name,
+             string &&encoding_name, bool force, bool compute_patch) :
+    AsyncProgressWorkerBase(completion_callback),
+    loader(progress_callback, buffer, snapshot, move(file_name), move(encoding_name), force, compute_patch) {}
+
+  LoadWorker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
+             TextBuffer *buffer, TextBuffer::Snapshot *snapshot, Text &&text,
+             bool force, bool compute_patch) :
+    AsyncProgressWorkerBase(completion_callback),
+    loader(progress_callback, buffer, snapshot, move(text), force, compute_patch) {}
+
+  void Execute(const Nan::AsyncProgressWorkerBase<size_t>::ExecutionProgress &progress) {
+    loader.Execute([&progress](size_t percent_done) {
+      progress.Send(&percent_done, 1);
+    });
+  }
+
+  void HandleProgressCallback(const size_t *percent_done, size_t count) {
+    if (percent_done) loader.CallProgressCallback(*percent_done);
+  }
+
   void HandleOKCallback() {
-    auto results = Finish();
+    auto results = loader.Finish();
     Local<Value> argv[] = {results.first, results.second};
     callback->Call(2, argv);
   }
@@ -818,8 +830,7 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
 
   Nan::HandleScope scope;
 
-  LoadWorker worker(
-    nullptr,
+  Loader worker(
     progress_callback,
     &text_buffer,
     text_buffer.create_snapshot(),
@@ -829,7 +840,10 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
     true
   );
 
-  worker.ExecuteSync();
+  worker.Execute([&worker](size_t percent_done) {
+    worker.CallProgressCallback(percent_done);
+  });
+
   auto results = worker.Finish();
   if (results.first->IsNull()) {
     info.GetReturnValue().Set(results.second);
