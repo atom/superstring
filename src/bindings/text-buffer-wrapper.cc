@@ -356,6 +356,15 @@ void TextBufferWrapper::position_for_character_index(const Nan::FunctionCallback
   }
 }
 
+static Local<Value> encode_ranges(const vector<Range> &ranges) {
+  auto length = ranges.size() * 4;
+  auto buffer = v8::ArrayBuffer::New(v8::Isolate::GetCurrent(), length * sizeof(uint32_t));
+  auto result = v8::Uint32Array::New(buffer, 0, length);
+  auto data = buffer->GetContents().Data();
+  memcpy(data, ranges.data(), length * sizeof(uint32_t));
+  return result;
+}
+
 template <bool single_result>
 class TextBufferSearcher : public Nan::AsyncWorker {
   const TextBuffer::Snapshot *snapshot;
@@ -388,18 +397,9 @@ public:
     }
   }
 
-  Local<Value> Finish() {
-    delete snapshot;
-    auto length = matches.size() * 4;
-    auto buffer = v8::ArrayBuffer::New(v8::Isolate::GetCurrent(), length * sizeof(uint32_t));
-    auto result = v8::Uint32Array::New(buffer, 0, length);
-    auto data = buffer->GetContents().Data();
-    memcpy(data, matches.data(), length * sizeof(uint32_t));
-    return result;
-  }
-
   void HandleOKCallback() {
-    Local<Value> argv[] = {Nan::Null(), Finish()};
+    delete snapshot;
+    Local<Value> argv[] = {Nan::Null(), encode_ranges(matches)};
     callback->Call(2, argv);
   }
 };
@@ -414,15 +414,14 @@ void TextBufferWrapper::find_sync(const Nan::FunctionCallbackInfo<Value> &info) 
       if (!search_range) return;
     }
 
-    TextBufferSearcher<true> searcher(
-      nullptr,
-      text_buffer.create_snapshot(),
-      regex,
-      search_range ? *search_range : Range::all_inclusive(),
-      info[0]
+    auto match = text_buffer.find(
+      *regex,
+      search_range ? *search_range : Range::all_inclusive()
     );
-    searcher.Execute();
-    info.GetReturnValue().Set(searcher.Finish());
+    vector<Range> matches;
+    if (match) matches.push_back(*match);
+
+    info.GetReturnValue().Set(encode_ranges(matches));
   }
 }
 
@@ -435,15 +434,13 @@ void TextBufferWrapper::find_all_sync(const Nan::FunctionCallbackInfo<Value> &in
       search_range = RangeWrapper::range_from_js(info[1]);
       if (!search_range) return;
     }
-    TextBufferSearcher<false> searcher(
-      nullptr,
-      text_buffer.create_snapshot(),
-      regex,
-      search_range ? *search_range : Range::all_inclusive(),
-      info[0]
+
+    vector<Range> matches = text_buffer.find_all(
+      *regex,
+      search_range ? *search_range : Range::all_inclusive()
     );
-    searcher.Execute();
-    info.GetReturnValue().Set(searcher.Finish());
+
+    info.GetReturnValue().Set(encode_ranges(matches));
   }
 }
 
