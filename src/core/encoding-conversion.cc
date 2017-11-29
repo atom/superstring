@@ -251,7 +251,13 @@ bool EncodingConversion::encode(const u16string &string, size_t start_offset,
       output_vector.size(),
       end
     );
-    if (bytes_encoded == 0) end = true;
+    if (bytes_encoded == 0) {
+      if (start_offset == end_offset) {
+        end = true;
+      } else {
+        return false;
+      }
+    }
     size_t bytes_written = fwrite(output_buffer, 1, bytes_encoded, stream);
     if (bytes_written < bytes_encoded && ferror(stream)) return false;
   }

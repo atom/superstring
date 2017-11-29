@@ -647,6 +647,21 @@ describe('TextBuffer', () => {
           })
       })
 
+      it('rejects if neither the text nor the replacement character can be represented in the given encoding', (done) => {
+        const buffer = new TextBuffer('💪💪💪')
+        const {path: filePath} = temp.openSync()
+        return buffer.save(filePath, 'iso88591')
+          .then(() => {
+            done(new Error('Expected an error'))
+          })
+          .catch((error) => {
+            assert.include(error.message, ' write ')
+            assert.equal(error.code, 'EILSEQ')
+            assert.equal(error.path, filePath)
+            done()
+          })
+      })
+
       it('rejects with an error if writing to a stream fails', (done) => {
         const tempDir = temp.mkdirSync()
         const filePath = path.join(tempDir, 'one')
