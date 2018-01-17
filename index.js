@@ -8,8 +8,12 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   const DEFAULT_RANGE = Object.freeze({start: {row: 0, column: 0}, end: {row: Infinity, column: Infinity}})
 
   TextBuffer.prototype.findInRangeSync = function (pattern, range) {
-    if (pattern.source) pattern = pattern.source
-    const result = findSync.call(this, pattern, range)
+    let ignoreCase = false
+    if (pattern.source) {
+      ignoreCase = pattern.flags.includes('i')
+      pattern = pattern.source
+    }
+    const result = findSync.call(this, pattern, ignoreCase, range)
     if (typeof result === 'string') {
       throw new Error(result);
     } else {
@@ -22,8 +26,12 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   }
 
   TextBuffer.prototype.findAllInRangeSync = function (pattern, range) {
-    if (pattern.source) pattern = pattern.source
-    const result = findAllSync.call(this, pattern, range)
+    let ignoreCase = false
+    if (pattern.source) {
+      ignoreCase = pattern.flags.includes('i')
+      pattern = pattern.source
+    }
+    const result = findAllSync.call(this, pattern, ignoreCase, range)
     if (typeof result === 'string') {
       throw new Error(result);
     } else {

@@ -997,7 +997,34 @@ describe('TextBuffer', () => {
 
       assert.deepEqual(buffer.findAllSync(/^[ \t\r]*$/), [
         Range(Point(1, 0), Point(1, 0)),
-        Range(Point(3, 0), Point(3, 0))
+        Range(Point(3, 0), Point(3, 0)),
+        Range(Point(4, 0), Point(4, 0))
+      ])
+    })
+
+    it('handles patterns that match the empty string (regression)', () => {
+      const buffer = new TextBuffer('aaab\nab\nb')
+      assert.deepEqual(buffer.findAllSync(/^a*/), [
+        Range(Point(0, 0), Point(0, 3)),
+        Range(Point(1, 0), Point(1, 1)),
+        Range(Point(2, 0), Point(2, 0))
+      ])
+
+      buffer.setText('aaab\nab\nb\n')
+      assert.deepEqual(buffer.findAllSync(/^a*/), [
+        Range(Point(0, 0), Point(0, 3)),
+        Range(Point(1, 0), Point(1, 1)),
+        Range(Point(2, 0), Point(2, 0)),
+        Range(Point(3, 0), Point(3, 0)),
+      ])
+    })
+
+    it('handles the case-insensitive flag', () => {
+      const buffer = new TextBuffer('aB\nab\nac')
+
+      assert.deepEqual(buffer.findAllSync(/ab/i), [
+        Range(Point(0, 0), Point(0, 2)),
+        Range(Point(1, 0), Point(1, 2)),
       ])
     })
 

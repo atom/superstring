@@ -66,6 +66,10 @@ bool Point::operator==(const Point &other) const {
   return compare(other) == 0;
 }
 
+bool Point::operator!=(const Point &other) const {
+  return compare(other) != 0;
+}
+
 bool Point::operator<(const Point &other) const {
   return compare(other) < 0;
 }

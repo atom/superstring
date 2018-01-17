@@ -40,7 +40,7 @@ static u16string preprocess_pattern(const char16_t *pattern, uint32_t length) {
 }
 
 
-Regex::Regex(const char16_t *pattern, uint32_t pattern_length, u16string *error_message) {
+Regex::Regex(const char16_t *pattern, uint32_t pattern_length, u16string *error_message, bool ignore_case) {
   if (pattern_length == 0) {
     pattern = EMPTY_PATTERN;
     pattern_length = 4;
@@ -50,10 +50,12 @@ Regex::Regex(const char16_t *pattern, uint32_t pattern_length, u16string *error_
 
   int error_number = 0;
   size_t error_offset = 0;
+  uint32_t options = PCRE2_MULTILINE;
+  if (ignore_case) options |= PCRE2_CASELESS;
   code = pcre2_compile(
     reinterpret_cast<const uint16_t *>(final_pattern.data()),
     final_pattern.size(),
-    PCRE2_MULTILINE,
+    options,
     &error_number,
     &error_offset,
     nullptr
@@ -72,8 +74,8 @@ Regex::Regex(const char16_t *pattern, uint32_t pattern_length, u16string *error_
   );
 }
 
-Regex::Regex(const u16string &pattern, u16string *error_message)
-  : Regex(pattern.data(), pattern.size(), error_message) {}
+Regex::Regex(const u16string &pattern, u16string *error_message, bool ignore_case)
+  : Regex(pattern.data(), pattern.size(), error_message, ignore_case) {}
 
 Regex::Regex(Regex &&other) : code{other.code} {
   other.code = nullptr;
