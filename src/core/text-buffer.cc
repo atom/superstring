@@ -417,6 +417,18 @@ struct TextBuffer::Layer {
     return result;
   }
 
+  unsigned find_and_mark_all_in_range(MarkerIndex &index, MarkerIndex::MarkerId first_id,
+                                      bool exclusive, const Regex &regex, Range range, bool splay = false) {
+    unsigned id = first_id;
+    scan_in_range(regex, range, [&index, &id, exclusive](Range match_range) -> bool {
+      index.insert(id, match_range.start, match_range.end);
+      index.set_exclusive(id, exclusive);
+      id++;
+      return false;
+    }, splay);
+    return id - first_id;
+  }
+
   struct SubsequenceMatchVariant {
     size_t query_index = 0;
     std::vector<uint32_t> match_indices;
@@ -885,6 +897,11 @@ optional<Range> TextBuffer::find(const Regex &regex, Range range) const {
 
 vector<Range> TextBuffer::find_all(const Regex &regex, Range range) const {
   return top_layer->find_all_in_range(regex, range, false);
+}
+
+unsigned TextBuffer::find_and_mark_all(MarkerIndex &index, MarkerIndex::MarkerId next_id,
+                                       bool exclusive, const Regex &regex, Range range) const {
+  return top_layer->find_and_mark_all_in_range(index, next_id, exclusive, regex, range, false);
 }
 
 bool TextBuffer::SubsequenceMatch::operator==(const SubsequenceMatch &other) const {

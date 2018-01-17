@@ -8,6 +8,7 @@
 #include "point.h"
 #include "range.h"
 #include "regex.h"
+#include "marker-index.h"
 
 class TextBuffer {
   struct Layer;
@@ -50,6 +51,8 @@ public:
 
   optional<Range> find(const Regex &, Range range = Range::all_inclusive()) const;
   std::vector<Range> find_all(const Regex &, Range range = Range::all_inclusive()) const;
+  unsigned find_and_mark_all(MarkerIndex &, MarkerIndex::MarkerId, bool exclusive,
+                             const Regex &, Range range = Range::all_inclusive()) const;
 
   struct SubsequenceMatch {
     std::u16string word;

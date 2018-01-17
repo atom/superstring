@@ -5,6 +5,7 @@
 #include "number-conversion.h"
 #include "point-wrapper.h"
 #include "range-wrapper.h"
+#include "marker-index-wrapper.h"
 #include "string-conversion.h"
 #include "patch-wrapper.h"
 #include "text-writer.h"
@@ -216,6 +217,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("findSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_sync));
   prototype_template->Set(Nan::New("findAll").ToLocalChecked(), Nan::New<FunctionTemplate>(find_all));
   prototype_template->Set(Nan::New("findAllSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_all_sync));
+  prototype_template->Set(Nan::New("findAndMarkAllSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_and_mark_all_sync));
   prototype_template->Set(Nan::New("findWordsWithSubsequenceInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(find_words_with_subsequence_in_range));
   prototype_template->Set(Nan::New("getDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(dot_graph));
   RegexWrapper::init();
@@ -448,6 +450,35 @@ void TextBufferWrapper::find_all_sync(const Nan::FunctionCallbackInfo<Value> &in
     );
 
     info.GetReturnValue().Set(encode_ranges(matches));
+  }
+}
+
+void TextBufferWrapper::find_and_mark_all_sync(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  MarkerIndex *marker_index = MarkerIndexWrapper::from_js(info[0]);
+  if (!marker_index) return;
+  auto next_id = Nan::To<unsigned>(info[1]);
+  if (!next_id.IsJust()) return;
+  if (!info[2]->IsBoolean()) return;
+  bool exclusive = info[2]->BooleanValue();
+
+  const Regex *regex = RegexWrapper::regex_from_js(info[3]);
+  if (regex) {
+    optional<Range> search_range;
+    if (info[4]->IsObject()) {
+      search_range = RangeWrapper::range_from_js(info[4]);
+      if (!search_range) return;
+    }
+
+    unsigned count = text_buffer.find_and_mark_all(
+      *marker_index,
+      next_id.FromJust(),
+      exclusive,
+      *regex,
+      search_range ? *search_range : Range::all_inclusive()
+    );
+
+    info.GetReturnValue().Set(Nan::New<Number>(count));
   }
 }
 
