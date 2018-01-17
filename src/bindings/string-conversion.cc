@@ -22,7 +22,7 @@ optional<u16string> string_conversion::string_from_js(Local<Value> value) {
   return result;
 }
 
-Local<String> string_conversion::string_to_js(const u16string &text) {
+Local<String> string_conversion::string_to_js(const u16string &text, const char *failure_message) {
   Local<String> result;
   if (Nan::New<String>(
     reinterpret_cast<const uint16_t *>(text.data()),
@@ -30,7 +30,8 @@ Local<String> string_conversion::string_to_js(const u16string &text) {
   ).ToLocal(&result)) {
     return result;
   } else {
-    Nan::ThrowError("Couldn't convert text to a String");
+    if (!failure_message) failure_message = "Couldn't convert text to a String";
+    Nan::ThrowError(failure_message);
     return Nan::New<String>("").ToLocalChecked();
   }
 }

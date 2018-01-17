@@ -260,7 +260,12 @@ void TextBufferWrapper::get_text_in_range(const Nan::FunctionCallbackInfo<Value>
 
 void TextBufferWrapper::get_text(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
-  info.GetReturnValue().Set(string_conversion::string_to_js(text_buffer.text()));
+  info.GetReturnValue().Set(string_conversion::string_to_js(
+    text_buffer.text(),
+    "This buffer's content is too large to fit into a string.\n"
+    "\n"
+    "Consider using APIs like `getTextInRange` to access the data you need."
+  ));
 }
 
 void TextBufferWrapper::set_text_in_range(const Nan::FunctionCallbackInfo<Value> &info) {

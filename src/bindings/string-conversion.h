@@ -7,7 +7,10 @@
 #include "text.h"
 
 namespace string_conversion {
-  v8::Local<v8::String> string_to_js(const std::u16string &);
+  v8::Local<v8::String> string_to_js(
+    const std::u16string &,
+    const char *failure_message = nullptr
+  );
   optional<std::u16string> string_from_js(v8::Local<v8::Value>);
 };
 
