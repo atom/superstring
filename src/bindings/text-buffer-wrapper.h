@@ -35,6 +35,7 @@ private:
   static void find_sync(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void find_all(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void find_all_sync(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void find_and_mark_all_sync(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void find_words_with_subsequence_in_range(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void is_modified(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void load(const Nan::FunctionCallbackInfo<v8::Value> &info);

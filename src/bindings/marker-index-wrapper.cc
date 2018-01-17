@@ -10,6 +10,7 @@
 using namespace v8;
 using std::unordered_map;
 
+static Nan::Persistent<v8::FunctionTemplate> marker_index_constructor_template;
 static Nan::Persistent<String> start_string;
 static Nan::Persistent<String> end_string;
 static Nan::Persistent<String> touch_string;
@@ -68,7 +69,16 @@ void MarkerIndexWrapper::init(Local<Object> exports) {
   starting_string.Reset(Nan::Persistent<String>(Nan::New("starting").ToLocalChecked()));
   ending_string.Reset(Nan::Persistent<String>(Nan::New("ending").ToLocalChecked()));
 
+  marker_index_constructor_template.Reset(constructor_template);
   exports->Set(Nan::New("MarkerIndex").ToLocalChecked(), constructor_template->GetFunction());
+}
+
+MarkerIndex *MarkerIndexWrapper::from_js(Local<Value> value) {
+  auto js_marker_index = Local<Object>::Cast(value);
+  if (!Nan::New(marker_index_constructor_template)->HasInstance(js_marker_index)) {
+    return nullptr;
+  }
+  return &Nan::ObjectWrap::Unwrap<MarkerIndexWrapper>(js_marker_index)->marker_index;
 }
 
 void MarkerIndexWrapper::construct(const Nan::FunctionCallbackInfo<Value> &info) {

@@ -1,5 +1,6 @@
 #include "auto-wrap.h"
 #include "text-buffer.h"
+#include "marker-index.h"
 #include <emscripten/bind.h>
 
 using std::string;
@@ -34,6 +35,18 @@ static emscripten::val find_all_sync(TextBuffer &buffer, std::wstring js_pattern
   }
 
   return em_transmit(buffer.find_all(regex, range));
+}
+
+static emscripten::val find_and_mark_all_sync(TextBuffer &buffer, MarkerIndex &index, unsigned next_id,
+                                              bool exclusive, std::wstring js_pattern, bool ignore_case, Range range) {
+  u16string pattern(js_pattern.begin(), js_pattern.end());
+  u16string error_message;
+  Regex regex(pattern, &error_message, ignore_case);
+  if (!error_message.empty()) {
+    return emscripten::val(string(error_message.begin(), error_message.end()));
+  }
+
+  return emscripten::val(buffer.find_and_mark_all(index, next_id, exclusive, regex, range));
 }
 
 static emscripten::val line_ending_for_row(TextBuffer &buffer, uint32_t row) {
@@ -82,6 +95,7 @@ EMSCRIPTEN_BINDINGS(TextBuffer) {
     .function("isModified", WRAP_OVERLOAD(&TextBuffer::is_modified, bool (TextBuffer::*)() const))
     .function("findSync", find_sync)
     .function("findAllSync", find_all_sync)
+    .function("findAndMarkAllSync", find_and_mark_all_sync)
     .function("findWordsWithSubsequenceInRange", WRAP(&TextBuffer::find_words_with_subsequence_in_range));
 
   emscripten::value_object<TextBuffer::SubsequenceMatch>("SubsequenceMatch")

@@ -3,7 +3,7 @@ const path = require('path')
 const temp = require('temp').track()
 const {Writable} = require('stream')
 const {assert} = require('chai')
-const {TextBuffer} = require('../..')
+const {TextBuffer, MarkerIndex} = require('../..')
 const Random = require('random-seed')
 const TestDocument = require('./helpers/test-document')
 const {traverse} = require('./helpers/point-helpers')
@@ -1159,6 +1159,21 @@ describe('TextBuffer', () => {
       assert.deepEqual(buffer.findAllInRangeSync(/\w\r?$/, Range(Point(2, 1), Point(2, Infinity))), [
         Range(Point(2, 4), Point(2, 5))
       ])
+    })
+  })
+
+  describe('.findAndMarkAllSync', () => {
+    it('stores all of the matching ranges in the given marker index', () => {
+      const markerIndex = new MarkerIndex()
+      const buffer = new TextBuffer('abc def\nghi jkl\n')
+      const count = buffer.findAndMarkAllSync(markerIndex, 5, true, /\w+/)
+      assert.equal(count, 4)
+      assert.deepEqual(markerIndex.dump(), {
+        5: {start: {column: 0, row: 0}, end: {column: 3, row: 0}},
+        6: {start: {column: 4, row: 0}, end: {column: 7, row: 0}},
+        7: {start: {column: 0, row: 1}, end: {column: 3, row: 1}},
+        8: {start: {column: 4, row: 1}, end: {column: 7, row: 1}}
+      })
     })
   })
 

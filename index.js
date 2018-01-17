@@ -4,7 +4,7 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   binding = require('./browser');
 
   const {TextBuffer, Patch} = binding
-  const {findSync, findAllSync, findWordsWithSubsequenceInRange} = TextBuffer.prototype
+  const {findSync, findAllSync, findAndMarkAllSync, findWordsWithSubsequenceInRange} = TextBuffer.prototype
   const DEFAULT_RANGE = Object.freeze({start: {row: 0, column: 0}, end: {row: Infinity, column: Infinity}})
 
   TextBuffer.prototype.findInRangeSync = function (pattern, range) {
@@ -38,9 +38,26 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
       return result
     }
   }
-
   TextBuffer.prototype.findAllSync = function (pattern, range) {
     return this.findAllInRangeSync(pattern, DEFAULT_RANGE)
+  }
+
+  TextBuffer.prototype.findAndMarkAllInRangeSync = function (markerIndex, nextId, exclusive, pattern, range) {
+    let ignoreCase = false
+    if (pattern.source) {
+      ignoreCase = pattern.flags.includes('i')
+      pattern = pattern.source
+    }
+    const result = findAndMarkAllSync.call(this, markerIndex, nextId, exclusive, pattern, ignoreCase, range)
+    if (typeof result === 'string') {
+      throw new Error(result);
+    } else {
+      return result
+    }
+  }
+
+  TextBuffer.prototype.findAndMarkAllSync = function (markerIndex, nextId, exclusive, pattern) {
+    return this.findAndMarkAllInRangeSync(markerIndex, nextId, exclusive, pattern, DEFAULT_RANGE)
   }
 
   TextBuffer.prototype.find = function (pattern) {

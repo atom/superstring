@@ -6,6 +6,7 @@
 class MarkerIndexWrapper : public Nan::ObjectWrap {
 public:
   static void init(v8::Local<v8::Object> exports);
+  static MarkerIndex *from_js(v8::Local<v8::Value>);
 
 private:
   static void construct(const Nan::FunctionCallbackInfo<v8::Value> &info);
