@@ -14,8 +14,8 @@ class Regex {
 
  public:
   Regex();
-  Regex(const char16_t *, uint32_t, std::u16string *error_message);
-  Regex(const std::u16string &, std::u16string *error_message);
+  Regex(const char16_t *, uint32_t, std::u16string *error_message, bool ignore_case = false);
+  Regex(const std::u16string &, std::u16string *error_message, bool ignore_case = false);
   Regex(Regex &&);
   ~Regex();
 

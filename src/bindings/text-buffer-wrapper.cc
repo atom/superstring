@@ -82,6 +82,7 @@ class RegexWrapper : public Nan::ObjectWrap {
     Local<String> js_pattern;
     Local<RegExp> js_regex;
     Local<String> cache_key = Nan::New("__textBufferRegex").ToLocalChecked();
+    bool ignore_case = false;
 
     if (value->IsString()) {
       js_pattern = Local<String>::Cast(value);
@@ -92,6 +93,7 @@ class RegexWrapper : public Nan::ObjectWrap {
         return &Nan::ObjectWrap::Unwrap<RegexWrapper>(stored_regex->ToObject())->regex;
       }
       js_pattern = js_regex->GetSource();
+      if (js_regex->GetFlags() & RegExp::kIgnoreCase) ignore_case = true;
     } else {
       Nan::ThrowTypeError("Argument must be a RegExp");
       return nullptr;
@@ -99,7 +101,7 @@ class RegexWrapper : public Nan::ObjectWrap {
 
     u16string error_message;
     optional<u16string> pattern = string_conversion::string_from_js(js_pattern);
-    Regex regex(*pattern, &error_message);
+    Regex regex(*pattern, &error_message, ignore_case);
     if (!error_message.empty()) {
       Nan::ThrowError(string_conversion::string_to_js(error_message));
       return nullptr;

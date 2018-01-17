@@ -1001,6 +1001,15 @@ describe('TextBuffer', () => {
       ])
     })
 
+    it('handles the case-insensitive flag', () => {
+      const buffer = new TextBuffer('aB\nab\nac')
+
+      assert.deepEqual(buffer.findAllSync(/ab/i), [
+        Range(Point(0, 0), Point(0, 2)),
+        Range(Point(1, 0), Point(1, 2)),
+      ])
+    })
+
     it('returns the same results as a reference implementation', () => {
       for (let i = 0; i < 3; i++) {
         const generateSeed = Random.create()
