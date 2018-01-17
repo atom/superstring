@@ -404,6 +404,29 @@ TEST_CASE("TextBuffer::find_all") {
   }));
 }
 
+TEST_CASE("TextBuffer::find_all - empty matches") {
+  TextBuffer buffer{u"aab\nab\nb\n"};
+  REQUIRE(buffer.find_all(Regex(u"^a*", nullptr)) == vector<Range>({
+    Range{Point{0, 0}, Point{0, 2}},
+    Range{Point{1, 0}, Point{1, 1}},
+    Range{Point{2, 0}, Point{2, 0}},
+    Range{Point{3, 0}, Point{3, 0}},
+  }));
+
+  REQUIRE(buffer.find_all(Regex(u"^a*", nullptr), {{1, 0}, {2, 0}}) == vector<Range>({
+    Range{Point{1, 0}, Point{1, 1}},
+    Range{Point{2, 0}, Point{2, 0}},
+  }));
+
+  buffer.set_text(u"abc");
+  REQUIRE(buffer.find_all(Regex(u"", nullptr)) == vector<Range>({
+    Range{Point{0, 0}, Point{0, 0}},
+    Range{Point{0, 1}, Point{0, 1}},
+    Range{Point{0, 2}, Point{0, 2}},
+    Range{Point{0, 3}, Point{0, 3}},
+  }));
+}
+
 TEST_CASE("TextBuffer::find_words_with_subsequence_in_range") {
   {
     TextBuffer buffer{u"banana band bandana banana"};

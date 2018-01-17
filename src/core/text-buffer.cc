@@ -261,7 +261,9 @@ struct TextBuffer::Layer {
     range.end = clip_position(range.end).position;
 
     uint32_t minimum_match_row = range.start.row;
-    optional<Range> result;
+    Range last_match{Point::max(), Point::max()};
+    bool last_match_is_pending = false;
+    bool done = false;
     Text chunk_continuation;
     TextSlice slice_to_search;
     Point chunk_start_position = range.start;
@@ -274,18 +276,22 @@ struct TextBuffer::Layer {
         TextSlice remaining_chunk = chunk
           .suffix(last_search_end_position.traversal(chunk_start_position));
 
-        // Once a result is found, we only continue if the match ends with a CR
-        // at a chunk boundary. If this chunk starts with an LF, we decrement
-        // the column because Points within CRLF line endings are not valid.
-        if (result) {
+        // When we find a match that ends with a CR at a chunk boundary, we wait to
+        // report the match until we can see the next chunk. If the next chunk starts
+        // with an LF, we decrement the end column because Points within CRLF line
+        // endings are not valid.
+        if (last_match_is_pending) {
           if (!remaining_chunk.empty() && remaining_chunk.front() == '\n') {
             chunk_continuation.splice(Point(), Point(), Text{u"\r"});
             slice_to_search_start_position.column--;
-            result->end.column--;
+            last_match.end.column--;
           }
 
-          if (callback(*result)) return true;
-          result = optional<Range>{};
+          last_match_is_pending = false;
+          if (callback(last_match)) {
+            done = true;
+            return true;
+          }
         }
 
         if (!chunk_continuation.empty()) {
@@ -302,7 +308,7 @@ struct TextBuffer::Layer {
         if (slice_to_search_start_position.column == 0) options |= MatchOptions::IsBeginningOfLine;
         if (slice_to_search_end_position == range.end) {
           options |= MatchOptions::IsEndSearch;
-          if (range.end.column == clip_position(Point{range.end.row, UINT32_MAX}).position.column) {
+          if (range.end == clip_position(Point{range.end.row, UINT32_MAX}).position) {
             options |= MatchOptions::IsEndOfLine;
           }
         }
@@ -346,12 +352,12 @@ struct TextBuffer::Layer {
             Point match_end_position = slice_to_search.position_for_offset(match_result.end_offset,
               minimum_match_row - slice_to_search_start_position.row
             );
-            result = Range{
+            last_match = Range{
               slice_to_search_start_position.traverse(match_start_position),
               slice_to_search_start_position.traverse(match_end_position)
             };
 
-            minimum_match_row = result->end.row;
+            minimum_match_row = last_match.end.row;
             last_search_end_position = slice_to_search_start_position.traverse(match_end_position);
             if (match_end_position == match_start_position) {
               last_search_end_position.column++;
@@ -360,12 +366,16 @@ struct TextBuffer::Layer {
             chunk_continuation.clear();
 
             // If the match ends with a CR at the end of a chunk, continue looking
-            // at the next chunk, in case that chunk starts with an LF. Points
-            // within CRLF line endings are not valid.
-            if (match_result.end_offset == slice_to_search.size() && slice_to_search.back() == '\r') continue;
+            // at the next chunk, in case that chunk starts with an LF.
+            if (match_result.end_offset == slice_to_search.size() && slice_to_search.back() == '\r') {
+              last_match_is_pending = true;
+              continue;
+            }
 
-            if (callback(*result)) return true;
-            result = optional<Range>{};
+            if (callback(last_match)) {
+              done = true;
+              return true;
+            }
         }
       }
 
@@ -373,13 +383,18 @@ struct TextBuffer::Layer {
       return false;
     }, splay);
 
-    if (result) {
-      callback(*result);
-    } else {
+    if (last_match_is_pending) {
+      callback(last_match);
+    } else if (!done && last_match.end != range.end) {
       static char16_t EMPTY[] = {0};
-      MatchResult match_result = regex.match(EMPTY, 0, match_data, true);
+      unsigned options = MatchOptions::IsEndSearch;
+      if (range.end.column == 0) options |= MatchOptions::IsBeginningOfLine;
+      if (range.end == clip_position(Point{range.end.row, UINT32_MAX}).position) {
+        options |= MatchOptions::IsEndOfLine;
+      }
+      MatchResult match_result = regex.match(EMPTY, 0, match_data, options);
       if (match_result.type == MatchResult::Partial || match_result.type == MatchResult::Full) {
-        callback(Range{Point(), Point()});
+        callback(Range{range.end, range.end});
       }
     }
   }
