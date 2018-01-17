@@ -22,6 +22,7 @@ struct Point {
   Point traversal(const Point &other) const;
   void serialize(Serializer &output) const;
 
+  bool operator!=(const Point &other) const;
   bool operator==(const Point &other) const;
   bool operator<(const Point &other) const;
   bool operator<=(const Point &other) const;
