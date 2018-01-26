@@ -1019,6 +1019,19 @@ describe('TextBuffer', () => {
       ])
     })
 
+    it('handles patterns with lookahead that span several chunks', () => {
+      const buffer = new TextBuffer('abcdefghi')
+      buffer.setTextInRange(Range(Point(0, 3), Point(0, 3)), 'ABC')
+      buffer.setTextInRange(Range(Point(0, 9), Point(0, 9)), 'DEF')
+      buffer.setTextInRange(Range(Point(0, 15), Point(0, 15)), 'GHI')
+      console.log(buffer.getText())
+
+      assert.deepEqual(buffer.findAllSync(/(cA|Cd)(?=\w+)/), [
+        Range(Point(0, 2), Point(0, 4)),
+        Range(Point(0, 5), Point(0, 7))
+      ])
+    })
+
     it('handles the case-insensitive flag', () => {
       const buffer = new TextBuffer('aB\nab\nac')
 
@@ -1053,6 +1066,7 @@ describe('TextBuffer', () => {
           /[ \t]+$/mg,
           /\w{3}\n\w/mg,
           /[g-z]+\n\s*[a-f]+/mg,
+          /[a-f]+(?=\w+)/mg,
         ]
 
         for (let j = 0; j < 10; j++) {
@@ -1069,7 +1083,7 @@ describe('TextBuffer', () => {
           if (random(2)) {
             const expectedRanges = testDocument.searchAll(regex)
             const actualRanges = buffer.findAllSync(regex)
-            assert.deepEqual(actualRanges, expectedRanges, `Regex: ${regex}, text: ${testDocument.getText()}`)
+            assert.deepEqual(actualRanges, expectedRanges, `Regex: ${regex}, text: ${testDocument.getText()}, j: ${j}`)
           } else {
             const rowCount = testDocument.getExtent().row
             const [startRow, endRow] = [random(rowCount), random(rowCount)].sort((a, b) => a - b)
