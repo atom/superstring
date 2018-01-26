@@ -273,32 +273,36 @@ struct TextBuffer::Layer {
     for_each_chunk_in_range(range.start, range.end, [&](TextSlice chunk) {
       Point chunk_end_position = chunk_start_position.traverse(chunk.extent());
       while (last_search_end_position < chunk_end_position) {
-        TextSlice remaining_chunk = chunk
-          .suffix(last_search_end_position.traversal(chunk_start_position));
+        if (last_search_end_position >= chunk_start_position) {
+          TextSlice remaining_chunk = chunk
+            .suffix(last_search_end_position.traversal(chunk_start_position));
 
-        // When we find a match that ends with a CR at a chunk boundary, we wait to
-        // report the match until we can see the next chunk. If the next chunk starts
-        // with an LF, we decrement the end column because Points within CRLF line
-        // endings are not valid.
-        if (last_match_is_pending) {
-          if (!remaining_chunk.empty() && remaining_chunk.front() == '\n') {
-            chunk_continuation.splice(Point(), Point(), Text{u"\r"});
-            slice_to_search_start_position.column--;
-            last_match.end.column--;
+          // When we find a match that ends with a CR at a chunk boundary, we wait to
+          // report the match until we can see the next chunk. If the next chunk starts
+          // with an LF, we decrement the end column because Points within CRLF line
+          // endings are not valid.
+          if (last_match_is_pending) {
+            if (!remaining_chunk.empty() && remaining_chunk.front() == '\n') {
+              chunk_continuation.splice(Point(), Point(), Text{u"\r"});
+              slice_to_search_start_position.column--;
+              last_match.end.column--;
+            }
+
+            last_match_is_pending = false;
+            if (callback(last_match)) {
+              done = true;
+              return true;
+            }
           }
 
-          last_match_is_pending = false;
-          if (callback(last_match)) {
-            done = true;
-            return true;
+          if (!chunk_continuation.empty()) {
+            chunk_continuation.append(remaining_chunk.prefix(MAX_CHUNK_SIZE_TO_COPY));
+            slice_to_search = TextSlice(chunk_continuation);
+          } else {
+            slice_to_search = remaining_chunk;
           }
-        }
-
-        if (!chunk_continuation.empty()) {
-          chunk_continuation.append(remaining_chunk.prefix(MAX_CHUNK_SIZE_TO_COPY));
-          slice_to_search = TextSlice(chunk_continuation);
         } else {
-          slice_to_search = remaining_chunk;
+          slice_to_search = TextSlice(chunk_continuation);
         }
 
         Point slice_to_search_end_position =
@@ -349,7 +353,8 @@ struct TextBuffer::Layer {
               match_result.start_offset,
               minimum_match_row - slice_to_search_start_position.row
             );
-            Point match_end_position = slice_to_search.position_for_offset(match_result.end_offset,
+            Point match_end_position = slice_to_search.position_for_offset(
+              match_result.end_offset,
               minimum_match_row - slice_to_search_start_position.row
             );
             last_match = Range{
@@ -358,12 +363,17 @@ struct TextBuffer::Layer {
             };
 
             minimum_match_row = last_match.end.row;
-            last_search_end_position = slice_to_search_start_position.traverse(match_end_position);
+            last_search_end_position = last_match.end;
             if (match_end_position == match_start_position) {
               last_search_end_position.column++;
             }
+
             slice_to_search_start_position = last_search_end_position;
-            chunk_continuation.clear();
+            if (slice_to_search_start_position >= chunk_start_position) {
+              chunk_continuation.clear();
+            } else {
+              chunk_continuation.assign(slice_to_search.suffix(match_end_position));
+            }
 
             // If the match ends with a CR at the end of a chunk, continue looking
             // at the next chunk, in case that chunk starts with an LF.
