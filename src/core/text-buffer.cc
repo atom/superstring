@@ -366,6 +366,10 @@ struct TextBuffer::Layer {
             last_search_end_position = last_match.end;
             if (match_end_position == match_start_position) {
               last_search_end_position.column++;
+              if (last_search_end_position.column >= slice_to_search.text->line_length_for_row(last_search_end_position.row)) {
+                last_search_end_position.column = 0;
+                last_search_end_position.row++;
+              }
             }
 
             slice_to_search_start_position = last_search_end_position;
