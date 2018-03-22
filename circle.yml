@@ -3,6 +3,7 @@ machine:
     XCODE_SCHEME: test
     XCODE_WORKSPACE: test
     XCODE_PROJECT: test
+    PATH: /usr/local/opt/python@2/libexec/bin:$PATH
 
   xcode:
     version: 8.2
@@ -13,6 +14,7 @@ dependencies:
     - curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.3/install.sh | bash
     - nvm install 8.4
     - nvm use 8.4
+    - brew install python@2
 
   override:
     - npm install
