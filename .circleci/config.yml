@@ -57,15 +57,3 @@ jobs:
     - run:
         name: Test native
         command: npm run test:native
-
-
-  cache_directories:
-    - $HOME/.nvm
-    - $HOME/.emscripten_cache
-    - emsdk-portable
-
-experimental:
-  notify:
-    branches:
-      only:
-        - master
