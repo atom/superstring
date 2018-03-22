@@ -1174,6 +1174,19 @@ describe('TextBuffer', () => {
         Range(Point(2, 4), Point(2, 5))
       ])
     })
+
+    it('does not skip empty rows', async () => {
+      const buffer = new TextBuffer('\n\n\n\n\n')
+
+      assert.deepEqual(buffer.findAllInRangeSync(/^.*$/, Range(Point(0, 0), Point(5, 0))), [
+        Range(Point(0, 0), Point(0, 0)),
+        Range(Point(1, 0), Point(1, 0)),
+        Range(Point(2, 0), Point(2, 0)),
+        Range(Point(3, 0), Point(3, 0)),
+        Range(Point(4, 0), Point(4, 0)),
+        Range(Point(5, 0), Point(5, 0))
+      ])
+    })
   })
 
   describe('.findAndMarkAllSync', () => {
