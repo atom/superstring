@@ -1192,6 +1192,13 @@ describe('TextBuffer', () => {
       const buffer = new TextBuffer('\r')
       assert.lengthOf(buffer.findAllInRangeSync(/./, Range(Point(0, 0), Point(Infinity, Infinity))), 0)
     })
+
+    it('uses unicode properties for case equivalence', () => {
+      const buffer = new TextBuffer('--- Április ---')
+      assert.deepEqual(buffer.findAllInRangeSync(/április/i, Range(Point(0, 0), Point(Infinity, Infinity))), [
+        Range(Point(0, 4), Point(0, 11))
+      ])
+    })
   })
 
   describe('.findAndMarkAllSync', () => {

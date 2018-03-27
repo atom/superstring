@@ -53,7 +53,7 @@ Regex::Regex(const char16_t *pattern, uint32_t pattern_length, u16string *error_
 
   int error_number = 0;
   size_t error_offset = 0;
-  uint32_t options = PCRE2_MULTILINE;
+  uint32_t options = PCRE2_MULTILINE | PCRE2_UTF;
   if (ignore_case) options |= PCRE2_CASELESS;
   code = pcre2_compile(
     reinterpret_cast<const uint16_t *>(final_pattern.data()),

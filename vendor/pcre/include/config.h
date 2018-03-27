@@ -309,7 +309,9 @@ sure both macros are undefined; an emulation function will then be used. */
    will work even in an EBCDIC environment, but it is incompatible with the
    EBCDIC macro. That is, PCRE2 can support *either* EBCDIC code *or*
    ASCII/Unicode, but not both at once. */
-/* #undef SUPPORT_UNICODE */
+#ifndef SUPPORT_UNICODE
+# define SUPPORT_UNICODE 1
+#endif
 
 /* Define to any value for valgrind support to find invalid memory reads. */
 /* #undef SUPPORT_VALGRIND */
