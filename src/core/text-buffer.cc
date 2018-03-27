@@ -362,7 +362,6 @@ struct TextBuffer::Layer {
               slice_to_search_start_position.traverse(match_end_position)
             };
 
-            minimum_match_row = last_match.end.row;
             last_search_end_position = last_match.end;
             if (match_end_position == match_start_position) {
               last_search_end_position.column++;
@@ -371,6 +370,7 @@ struct TextBuffer::Layer {
                 last_search_end_position.row++;
               }
             }
+            minimum_match_row = last_search_end_position.row;
 
             slice_to_search_start_position = last_search_end_position;
             if (slice_to_search_start_position >= chunk_start_position) {
