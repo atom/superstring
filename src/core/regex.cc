@@ -48,6 +48,9 @@ Regex::Regex(const char16_t *pattern, uint32_t pattern_length, u16string *error_
 
   u16string final_pattern = preprocess_pattern(pattern, pattern_length);
 
+  pcre2_compile_context *context = pcre2_compile_context_create(nullptr);
+  pcre2_set_newline(context, PCRE2_NEWLINE_ANY);
+
   int error_number = 0;
   size_t error_offset = 0;
   uint32_t options = PCRE2_MULTILINE;
@@ -58,8 +61,9 @@ Regex::Regex(const char16_t *pattern, uint32_t pattern_length, u16string *error_
     options,
     &error_number,
     &error_offset,
-    nullptr
+    context
   );
+  pcre2_compile_context_free(context);
 
   if (!code) {
     uint16_t message_buffer[256];
