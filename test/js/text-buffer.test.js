@@ -1187,6 +1187,11 @@ describe('TextBuffer', () => {
         Range(Point(5, 0), Point(5, 0))
       ])
     })
+
+    it('does not match \\r with .', () => {
+      const buffer = new TextBuffer('\r')
+      assert.lengthOf(buffer.findAllInRangeSync(/./), 0)
+    })
   })
 
   describe('.findAndMarkAllSync', () => {
