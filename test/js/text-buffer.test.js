@@ -1195,7 +1195,7 @@ describe('TextBuffer', () => {
 
     it('uses unicode properties for case equivalence', () => {
       const buffer = new TextBuffer('--- Április ---')
-      assert.deepEqual(buffer.findAllInRangeSync(/április/i, Range(Point(0, 0), Point(Infinity, Infinity))), [
+      assert.deepEqual(buffer.findAllInRangeSync(/április/iu, Range(Point(0, 0), Point(Infinity, Infinity))), [
         Range(Point(0, 4), Point(0, 11))
       ])
     })
