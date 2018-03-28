@@ -10,10 +10,10 @@ static TextBuffer *construct(const std::wstring &text) {
   return new TextBuffer(u16string(text.begin(), text.end()));
 }
 
-static emscripten::val find_sync(TextBuffer &buffer, std::wstring js_pattern, bool ignore_case, Range range) {
+static emscripten::val find_sync(TextBuffer &buffer, std::wstring js_pattern, bool ignore_case, bool unicode, Range range) {
   u16string pattern(js_pattern.begin(), js_pattern.end());
   u16string error_message;
-  Regex regex(pattern, &error_message, ignore_case);
+  Regex regex(pattern, &error_message, ignore_case, unicode);
   if (!error_message.empty()) {
     return emscripten::val(string(error_message.begin(), error_message.end()));
   }
@@ -26,10 +26,10 @@ static emscripten::val find_sync(TextBuffer &buffer, std::wstring js_pattern, bo
   return emscripten::val::null();
 }
 
-static emscripten::val find_all_sync(TextBuffer &buffer, std::wstring js_pattern, bool ignore_case, Range range) {
+static emscripten::val find_all_sync(TextBuffer &buffer, std::wstring js_pattern, bool ignore_case, bool unicode, Range range) {
   u16string pattern(js_pattern.begin(), js_pattern.end());
   u16string error_message;
-  Regex regex(pattern, &error_message, ignore_case);
+  Regex regex(pattern, &error_message, ignore_case, unicode);
   if (!error_message.empty()) {
     return emscripten::val(string(error_message.begin(), error_message.end()));
   }
@@ -38,10 +38,11 @@ static emscripten::val find_all_sync(TextBuffer &buffer, std::wstring js_pattern
 }
 
 static emscripten::val find_and_mark_all_sync(TextBuffer &buffer, MarkerIndex &index, unsigned next_id,
-                                              bool exclusive, std::wstring js_pattern, bool ignore_case, Range range) {
+                                              bool exclusive, std::wstring js_pattern, bool ignore_case, bool unicode,
+                                              Range range) {
   u16string pattern(js_pattern.begin(), js_pattern.end());
   u16string error_message;
-  Regex regex(pattern, &error_message, ignore_case);
+  Regex regex(pattern, &error_message, ignore_case, unicode);
   if (!error_message.empty()) {
     return emscripten::val(string(error_message.begin(), error_message.end()));
   }

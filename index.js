@@ -9,11 +9,13 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
 
   TextBuffer.prototype.findInRangeSync = function (pattern, range) {
     let ignoreCase = false
+    let unicode = false
     if (pattern.source) {
       ignoreCase = pattern.flags.includes('i')
+      unicode = pattern.unicode
       pattern = pattern.source
     }
-    const result = findSync.call(this, pattern, ignoreCase, range)
+    const result = findSync.call(this, pattern, ignoreCase, unicode, range)
     if (typeof result === 'string') {
       throw new Error(result);
     } else {
@@ -27,11 +29,13 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
 
   TextBuffer.prototype.findAllInRangeSync = function (pattern, range) {
     let ignoreCase = false
+    let unicode = false
     if (pattern.source) {
       ignoreCase = pattern.flags.includes('i')
+      unicode = pattern.unicode
       pattern = pattern.source
     }
-    const result = findAllSync.call(this, pattern, ignoreCase, range)
+    const result = findAllSync.call(this, pattern, ignoreCase, unicode, range)
     if (typeof result === 'string') {
       throw new Error(result);
     } else {
@@ -44,11 +48,13 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
 
   TextBuffer.prototype.findAndMarkAllInRangeSync = function (markerIndex, nextId, exclusive, pattern, range) {
     let ignoreCase = false
+    let unicode = false
     if (pattern.source) {
       ignoreCase = pattern.flags.includes('i')
+      unicode = pattern.unicode
       pattern = pattern.source
     }
-    const result = findAndMarkAllSync.call(this, markerIndex, nextId, exclusive, pattern, ignoreCase, range)
+    const result = findAndMarkAllSync.call(this, markerIndex, nextId, exclusive, pattern, ignoreCase, unicode, range)
     if (typeof result === 'string') {
       throw new Error(result);
     } else {
