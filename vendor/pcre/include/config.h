@@ -199,7 +199,7 @@ sure both macros are undefined; an emulation function will then be used. */
    at run time. The valid values are 1 (CR), 2 (LF), 3 (CRLF), 4 (ANY), and 5
    (ANYCRLF). */
 #ifndef NEWLINE_DEFAULT
-#define NEWLINE_DEFAULT 2
+#define NEWLINE_DEFAULT 4
 #endif
 
 /* Name of package */
