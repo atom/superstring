@@ -1392,6 +1392,18 @@ describe('TextBuffer', () => {
     })
   })
 
+  describe('.hasAstral', () => {
+    it('returns true on buffers that contain surrogate pairs', () => {
+      const buffer = new TextBuffer('coffee 😄')
+      assert.isTrue(buffer.hasAstral())
+    })
+
+    it('returns false on buffers that do not contain surrogate pairs', () => {
+      const buffer = new TextBuffer('no coffee')
+      assert.isFalse(buffer.hasAstral())
+    })
+  })
+
   describe('concurrent IO', function () {
     if (!TextBuffer.prototype.load) return;
 
