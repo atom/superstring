@@ -465,6 +465,11 @@ TEST_CASE("TextBuffer::find_words_with_subsequence_in_range") {
   }
 }
 
+TEST_CASE("TextBuffer::has_astral") {
+  REQUIRE(TextBuffer{u"ab" "\xd83d" "\xde01" "cd"}.has_astral());
+  REQUIRE(!TextBuffer{u"abcd"}.has_astral());
+}
+
 struct SnapshotData {
   Text base_text;
   u16string text;

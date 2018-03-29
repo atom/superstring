@@ -643,6 +643,20 @@ struct TextBuffer::Layer {
 
     return result;
   }
+
+  bool has_astral() {
+    bool result = false;
+    for_each_chunk_in_range(Point(), extent(), [&](TextSlice chunk) {
+      for (auto ch : chunk) {
+        if ((ch & 0xf800) == 0xd800) {
+          result = true;
+          return true;
+        }
+      }
+      return false;
+    });
+    return result;
+  }
 };
 
 TextBuffer::TextBuffer(u16string &&text) :
@@ -933,6 +947,10 @@ vector<SubsequenceMatch> TextBuffer::find_words_with_subsequence_in_range(const 
 
 bool TextBuffer::is_modified() const {
   return top_layer->is_modified(base_layer);
+}
+
+bool TextBuffer::has_astral() {
+  return top_layer->has_astral();
 }
 
 bool TextBuffer::is_modified(const Snapshot *snapshot) const {
