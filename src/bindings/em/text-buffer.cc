@@ -87,6 +87,7 @@ EMSCRIPTEN_BINDINGS(TextBuffer) {
     .function("getLength", &TextBuffer::size)
     .function("getExtent", &TextBuffer::extent)
     .function("getLineCount", get_line_count)
+    .function("hasAstral", &TextBuffer::has_astral)
     .function("reset", WRAP(&TextBuffer::reset))
     .function("lineLengthForRow", WRAP(&TextBuffer::line_length_for_row))
     .function("lineEndingForRow", line_ending_for_row)

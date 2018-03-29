@@ -196,6 +196,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("getLength").ToLocalChecked(), Nan::New<FunctionTemplate>(get_length));
   prototype_template->Set(Nan::New("getExtent").ToLocalChecked(), Nan::New<FunctionTemplate>(get_extent));
   prototype_template->Set(Nan::New("getLineCount").ToLocalChecked(), Nan::New<FunctionTemplate>(get_line_count));
+  prototype_template->Set(Nan::New("hasAstral").ToLocalChecked(), Nan::New<FunctionTemplate>(has_astral));
   prototype_template->Set(Nan::New("getTextInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text_in_range));
   prototype_template->Set(Nan::New("setTextInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(set_text_in_range));
   prototype_template->Set(Nan::New("getText").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text));
@@ -251,6 +252,11 @@ void TextBufferWrapper::get_extent(const Nan::FunctionCallbackInfo<Value> &info)
 void TextBufferWrapper::get_line_count(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
   info.GetReturnValue().Set(Nan::New(text_buffer.extent().row + 1));
+}
+
+void TextBufferWrapper::has_astral(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  info.GetReturnValue().Set(Nan::New(text_buffer.has_astral()));
 }
 
 void TextBufferWrapper::get_text_in_range(const Nan::FunctionCallbackInfo<Value> &info) {

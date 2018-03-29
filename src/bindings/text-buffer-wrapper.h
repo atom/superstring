@@ -21,6 +21,7 @@ private:
   static void get_length(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void get_extent(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void get_line_count(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void has_astral(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void get_text(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void get_text_in_range(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void set_text(const Nan::FunctionCallbackInfo<v8::Value> &info);
