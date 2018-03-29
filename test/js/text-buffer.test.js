@@ -951,6 +951,10 @@ describe('TextBuffer', () => {
 
       assert.deepEqual(buffer.findSync(/\uxxx/), Range(Point(0, 2), Point(0, 7)))
       assert.deepEqual(buffer.findSync(/\uxx/), Range(Point(0, 2), Point(0, 6)))
+
+      // Escaped "\\u" sequences match literal "\u"
+      buffer.setText('a \\u00e5 b')
+      assert.deepEqual(buffer.findSync(/\\u00e5/), Range(Point(0, 2), Point(0, 8)))
     })
   })
 

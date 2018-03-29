@@ -15,21 +15,28 @@ static u16string preprocess_pattern(const char16_t *pattern, uint32_t length) {
     char16_t c = pattern[i];
 
     // Replace escape sequences like '\u00cf' with their literal UTF16 value
-    if (c == '\\' && i + 1 < length && pattern[i + 1] == 'u') {
-      if (i + 6 <= length) {
-        std::string char_code_string(&pattern[i + 2], &pattern[i + 6]);
-        char16_t char_code_value = strtol(char_code_string.data(), nullptr, 16);
-        if (char_code_value != 0) {
-          result += char_code_value;
-          i += 6;
-          continue;
+    if (c == '\\' && i + 1 < length) {
+      if (pattern[i + 1] == 'u') {
+        if (i + 6 <= length) {
+          std::string char_code_string(&pattern[i + 2], &pattern[i + 6]);
+          char16_t char_code_value = strtol(char_code_string.data(), nullptr, 16);
+          if (char_code_value != 0) {
+            result += char_code_value;
+            i += 6;
+            continue;
+          }
         }
-      }
 
-      // Replace invalid '\u' escape sequences with the literal characters '\' and 'u'
-      result += u"\\\\u";
-      i += 2;
-      continue;
+        // Replace invalid '\u' escape sequences with the literal characters '\' and 'u'
+        result += u"\\\\u";
+        i += 2;
+        continue;
+      } else if (pattern[i + 1] == '\\') {
+        // Prevent '\\u' from UTF16 replacement
+        result += u"\\\\";
+        i += 2;
+        continue;
+      }
     }
 
     result += c;
