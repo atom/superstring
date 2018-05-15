@@ -48,6 +48,7 @@ private:
   static void deserialize_changes(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void reset(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void base_text_digest(const Nan::FunctionCallbackInfo<v8::Value> &info);
+  static void get_snapshot(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void dot_graph(const Nan::FunctionCallbackInfo<v8::Value> &info);
 
   void cancel_queued_workers();
