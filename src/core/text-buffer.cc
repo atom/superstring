@@ -254,6 +254,17 @@ struct TextBuffer::Layer {
     return result;
   }
 
+  vector<pair<const char16_t *, uint32_t>> primitive_chunks() {
+    vector<pair<const char16_t *, uint32_t>> result;
+    for_each_chunk_in_range(Point(), Point::max(), [&result](TextSlice slice) {
+      result.push_back({slice.data(), slice.size()});
+      return false;
+    });
+    if (result.empty()) result.push_back({u"", 0});
+    return result;
+
+  }
+
   template <typename Callback>
   void scan_in_range(const Regex &regex, Range range, const Callback &callback, bool splay = false) {
     Regex::MatchData match_data(regex);
@@ -1031,6 +1042,10 @@ vector<TextSlice> TextBuffer::Snapshot::chunks_in_range(Range range) const {
 
 vector<TextSlice> TextBuffer::Snapshot::chunks() const {
   return layer.chunks_in_range({{0, 0}, extent()});
+}
+
+vector<pair<const char16_t *, uint32_t>> TextBuffer::Snapshot::primitive_chunks() const {
+  return layer.primitive_chunks();
 }
 
 optional<Range> TextBuffer::Snapshot::find(const Regex &regex, Range range) const {

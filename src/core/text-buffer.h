@@ -82,6 +82,7 @@ public:
     uint32_t line_length_for_row(uint32_t) const;
     std::vector<TextSlice> chunks() const;
     std::vector<TextSlice> chunks_in_range(Range) const;
+    std::vector<std::pair<const char16_t *, uint32_t>> primitive_chunks() const;
     std::u16string text() const;
     std::u16string text_in_range(Range) const;
     const Text &base_text() const;

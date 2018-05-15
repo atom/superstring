@@ -8,6 +8,7 @@
 #include "marker-index-wrapper.h"
 #include "string-conversion.h"
 #include "patch-wrapper.h"
+#include "text-buffer-snapshot-wrapper.h"
 #include "text-writer.h"
 #include "text-slice.h"
 #include "text-diff.h"
@@ -223,6 +224,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("findAndMarkAllSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_and_mark_all_sync));
   prototype_template->Set(Nan::New("findWordsWithSubsequenceInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(find_words_with_subsequence_in_range));
   prototype_template->Set(Nan::New("getDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(dot_graph));
+  prototype_template->Set(Nan::New("getSnapshot").ToLocalChecked(), Nan::New<FunctionTemplate>(get_snapshot));
   RegexWrapper::init();
   SubsequenceMatchWrapper::init();
   exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
@@ -1138,6 +1140,13 @@ void TextBufferWrapper::base_text_digest(const Nan::FunctionCallbackInfo<Value> 
   if (Nan::New(stream.str()).ToLocal(&result)) {
     info.GetReturnValue().Set(result);
   }
+}
+
+void TextBufferWrapper::get_snapshot(const Nan::FunctionCallbackInfo<Value> &info) {
+  Nan::HandleScope scope;
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  auto snapshot = text_buffer.create_snapshot();
+  info.GetReturnValue().Set(TextBufferSnapshotWrapper::new_instance(info.This(), reinterpret_cast<void *>(snapshot)));
 }
 
 void TextBufferWrapper::dot_graph(const Nan::FunctionCallbackInfo<Value> &info) {

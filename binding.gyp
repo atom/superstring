@@ -12,6 +12,7 @@
                 "src/bindings/point-wrapper.cc",
                 "src/bindings/range-wrapper.cc",
                 "src/bindings/text-buffer-wrapper.cc",
+                "src/bindings/text-buffer-snapshot-wrapper.cc",
                 "src/bindings/text-reader.cc",
                 "src/bindings/string-conversion.cc",
                 "src/bindings/text-writer.cc",

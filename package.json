@@ -1,6 +1,6 @@
 {
   "name": "superstring",
-  "version": "2.3.0",
+  "version": "2.3.1-0",
   "description": "A data structure to efficiently represent the results of applying patches.",
   "main": "./index",
   "browser": "./browser",
@@ -31,7 +31,7 @@
   },
   "homepage": "https://github.com/atom/superstring",
   "dependencies": {
-    "nan": "^2.4.0"
+    "nan": "^2.10.0"
   },
   "devDependencies": {
     "chai": "^2.0.0",
