@@ -1197,6 +1197,12 @@ describe('TextBuffer', () => {
       assert.lengthOf(buffer.findAllInRangeSync(/./, Range(Point(0, 0), Point(Infinity, Infinity))), 0)
     })
 
+    it('handles empty lines with CRLF line endings (regression)', () => {
+      const buffer = new TextBuffer('abc\r\ndef\r\nghi\r\n')
+      buffer.setTextInRange(Range(Point(1, 0), Point(1, Infinity)), '')
+      buffer.findAllInRangeSync(/(?:abc)*/, Range(Point(1, 0), Point(2, 0)))
+    })
+
     it('uses unicode properties for case equivalence', () => {
       const buffer = new TextBuffer('--- Április ---')
       assert.deepEqual(buffer.findAllInRangeSync(/április/iu, Range(Point(0, 0), Point(Infinity, Infinity))), [
