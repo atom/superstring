@@ -398,7 +398,7 @@ public:
                      const Regex *regex,
                      const Range &search_range,
                      Local<Value> arg) :
-    AsyncWorker(completion_callback),
+    AsyncWorker(completion_callback, "TextBuffer.find"),
     snapshot{snapshot},
     regex{regex},
     search_range(search_range) {
@@ -419,7 +419,7 @@ public:
   void HandleOKCallback() {
     delete snapshot;
     Local<Value> argv[] = {Nan::Null(), encode_ranges(matches)};
-    callback->Call(2, argv);
+    callback->Call(2, argv, async_resource);
   }
 };
 
@@ -550,7 +550,7 @@ void TextBufferWrapper::find_words_with_subsequence_in_range(const Nan::Function
                                    const u16string extra_word_characters,
                                    const size_t max_count,
                                    const Range range) :
-      AsyncWorker(completion_callback),
+      AsyncWorker(completion_callback, "TextBuffer.findWordsWithSubsequence"),
       query{query},
       extra_word_characters{extra_word_characters},
       max_count{max_count},
@@ -587,7 +587,7 @@ void TextBufferWrapper::find_words_with_subsequence_in_range(const Nan::Function
     void HandleOKCallback() {
       if (!snapshot) {
         Local<Value> argv[] = {Nan::Null()};
-        callback->Call(1, argv);
+        callback->Call(1, argv, async_resource);
         return;
       }
 
@@ -621,7 +621,7 @@ void TextBufferWrapper::find_words_with_subsequence_in_range(const Nan::Function
 
       auto positions_array = v8::Uint32Array::New(positions_buffer, 0, positions_buffer_size / sizeof(uint32_t));
       Local<Value> argv[] = {js_matches_array, positions_array};
-      callback->Call(2, argv);
+      callback->Call(2, argv, async_resource);
     }
   };
 
@@ -720,6 +720,7 @@ static u16string load_file(
 
 class Loader {
   Nan::Callback *progress_callback;
+  Nan::AsyncResource *async_resource;
   TextBuffer *buffer;
   TextBuffer::Snapshot *snapshot;
   string file_name;
@@ -733,10 +734,11 @@ class Loader {
  public:
   bool cancelled;
 
-  Loader(Nan::Callback *progress_callback,
+  Loader(Nan::Callback *progress_callback, Nan::AsyncResource *async_resource,
          TextBuffer *buffer, TextBuffer::Snapshot *snapshot, string &&file_name,
          string &&encoding_name, bool force, bool compute_patch) :
     progress_callback{progress_callback},
+    async_resource{async_resource},
     buffer{buffer},
     snapshot{snapshot},
     file_name{move(file_name)},
@@ -745,7 +747,7 @@ class Loader {
     compute_patch{compute_patch},
     cancelled{false} {}
 
-  Loader(Nan::Callback *progress_callback,
+  Loader(Nan::Callback *progress_callback, Nan::AsyncResource *async_resource,
          TextBuffer *buffer, TextBuffer::Snapshot *snapshot, Text &&text,
          bool force, bool compute_patch) :
     progress_callback{progress_callback},
@@ -755,6 +757,10 @@ class Loader {
     force{force},
     compute_patch{compute_patch},
     cancelled{false} {}
+
+  ~Loader() {
+    if (progress_callback) delete progress_callback;
+  }
 
   template <typename Callback>
   void Execute(const Callback &callback) {
@@ -793,8 +799,8 @@ class Loader {
 
     if (progress_callback) {
       Local<Value> argv[] = {Nan::New<Number>(100), patch_wrapper};
-      auto progress_result = progress_callback->Call(2, argv);
-      if (progress_result->IsFalse()) {
+      auto progress_result = progress_callback->Call(2, argv, async_resource);
+      if (!progress_result.IsEmpty() && progress_result.ToLocalChecked()->IsFalse()) {
         return {Nan::Null(), Nan::Null()};
       }
     }
@@ -812,8 +818,14 @@ class Loader {
     if (!cancelled && progress_callback) {
       Nan::HandleScope scope;
       Local<Value> argv[] = {Nan::New<Number>(static_cast<uint32_t>(percent_done))};
-      auto progress_result = progress_callback->Call(1, argv);
-      if (progress_result->IsFalse()) cancelled = true;
+      MaybeLocal<v8::Value> progress_result;
+      if (async_resource) {
+        progress_result = progress_callback->Call(1, argv, async_resource);
+      } else {
+        progress_result = Nan::Call(*progress_callback, 1, argv);
+      }
+
+      if (!progress_result.IsEmpty() && progress_result.ToLocalChecked()->IsFalse()) cancelled = true;
     }
   }
 };
@@ -825,14 +837,14 @@ class LoadWorker : public Nan::AsyncProgressWorkerBase<size_t> {
   LoadWorker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
              TextBuffer *buffer, TextBuffer::Snapshot *snapshot, string &&file_name,
              string &&encoding_name, bool force, bool compute_patch) :
-    AsyncProgressWorkerBase(completion_callback),
-    loader(progress_callback, buffer, snapshot, move(file_name), move(encoding_name), force, compute_patch) {}
+    AsyncProgressWorkerBase(completion_callback, "TextBuffer.load"),
+    loader(progress_callback, async_resource, buffer, snapshot, move(file_name), move(encoding_name), force, compute_patch) {}
 
   LoadWorker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
              TextBuffer *buffer, TextBuffer::Snapshot *snapshot, Text &&text,
              bool force, bool compute_patch) :
-    AsyncProgressWorkerBase(completion_callback),
-    loader(progress_callback, buffer, snapshot, move(text), force, compute_patch) {}
+    AsyncProgressWorkerBase(completion_callback, "TextBuffer.load"),
+    loader(progress_callback, async_resource, buffer, snapshot, move(text), force, compute_patch) {}
 
   void Execute(const Nan::AsyncProgressWorkerBase<size_t>::ExecutionProgress &progress) {
     loader.Execute([&progress](size_t percent_done) {
@@ -847,7 +859,7 @@ class LoadWorker : public Nan::AsyncProgressWorkerBase<size_t> {
   void HandleOKCallback() {
     auto results = loader.Finish();
     Local<Value> argv[] = {results.first, results.second};
-    callback->Call(2, argv);
+    callback->Call(2, argv, async_resource);
   }
 };
 
@@ -876,6 +888,7 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
 
   Loader worker(
     progress_callback,
+    nullptr,
     &text_buffer,
     text_buffer.create_snapshot(),
     move(file_path),
@@ -899,13 +912,6 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
 void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
 
-  Nan::Callback *completion_callback = new Nan::Callback(info[0].As<Function>());
-
-  Nan::Callback *progress_callback = nullptr;
-  if (info[1]->IsFunction()) {
-    progress_callback = new Nan::Callback(info[1].As<Function>());
-  }
-
   bool force = false;
   if (info[2]->IsTrue()) force = true;
 
@@ -914,8 +920,15 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
 
   if (!force && text_buffer.is_modified()) {
     Local<Value> argv[] = {Nan::Null(), Nan::Null()};
-    completion_callback->Call(2, argv);
+    info[0].As<Function>()->Call(Nan::Null(), 2, argv);
     return;
+  }
+
+  Nan::Callback *completion_callback = new Nan::Callback(info[0].As<Function>());
+
+  Nan::Callback *progress_callback = nullptr;
+  if (info[1]->IsFunction()) {
+    progress_callback = new Nan::Callback(info[1].As<Function>());
   }
 
   LoadWorker *worker;
@@ -964,7 +977,7 @@ class BaseTextComparisonWorker : public Nan::AsyncWorker {
  public:
   BaseTextComparisonWorker(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
                        string &&file_name, string &&encoding_name) :
-    AsyncWorker(completion_callback),
+    AsyncWorker(completion_callback, "TextBuffer.baseTextMatchesFile"),
     snapshot{snapshot},
     file_name{move(file_name)},
     encoding_name{move(encoding_name)},
@@ -979,19 +992,19 @@ class BaseTextComparisonWorker : public Nan::AsyncWorker {
     delete snapshot;
     if (error) {
       Local<Value> argv[] = {error_to_js(*error, encoding_name, file_name)};
-      callback->Call(1, argv);
+      callback->Call(1, argv, async_resource);
     } else {
       Local<Value> argv[] = {Nan::Null(), Nan::New<Boolean>(result)};
-      callback->Call(2, argv);
+      callback->Call(2, argv, async_resource);
     }
   }
 };
 
 void TextBufferWrapper::base_text_matches_file(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
-  Nan::Callback *completion_callback = new Nan::Callback(info[0].As<Function>());
 
   if (info[1]->IsString()) {
+    Nan::Callback *completion_callback = new Nan::Callback(info[0].As<Function>());
     Local<String> js_file_path;
     if (!Nan::To<String>(info[1]).ToLocal(&js_file_path)) return;
     string file_path = *String::Utf8Value(js_file_path);
@@ -1010,7 +1023,7 @@ void TextBufferWrapper::base_text_matches_file(const Nan::FunctionCallbackInfo<V
     auto file_contents = Nan::ObjectWrap::Unwrap<TextWriter>(info[1]->ToObject())->get_text();
     bool result = std::equal(file_contents.begin(), file_contents.end(), text_buffer.base_text().begin());
     Local<Value> argv[] = {Nan::Null(), Nan::New<Boolean>(result)};
-    completion_callback->Call(2, argv);
+    info[0].As<Function>()->Call(Nan::Null(), 2, argv);
   }
 }
 
@@ -1023,7 +1036,7 @@ class SaveWorker : public Nan::AsyncWorker {
  public:
   SaveWorker(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
              string &&file_name, string &&encoding_name) :
-    AsyncWorker(completion_callback),
+    AsyncWorker(completion_callback, "TextBuffer.save"),
     snapshot{snapshot},
     file_name{file_name},
     encoding_name(encoding_name) {}
@@ -1072,7 +1085,7 @@ class SaveWorker : public Nan::AsyncWorker {
 
   void HandleOKCallback() {
     Local<Value> argv[] = {Finish()};
-    callback->Call(1, argv);
+    callback->Call(1, argv, async_resource);
   }
 };
 
