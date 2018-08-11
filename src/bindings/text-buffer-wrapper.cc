@@ -873,11 +873,11 @@ void TextBufferWrapper::load_sync(const Nan::FunctionCallbackInfo<Value> &info) 
 
   Local<String> js_file_path;
   if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
-  string file_path = *String::Utf8Value(js_file_path);
+  string file_path = *Nan::Utf8String(js_file_path);
 
   Local<String> js_encoding_name;
   if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
-  string encoding_name = *String::Utf8Value(js_encoding_name);
+  string encoding_name = *Nan::Utf8String(js_encoding_name);
 
   Nan::Callback *progress_callback = nullptr;
   if (info[2]->IsFunction()) {
@@ -935,11 +935,11 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
   if (info[4]->IsString()) {
     Local<String> js_file_path;
     if (!Nan::To<String>(info[4]).ToLocal(&js_file_path)) return;
-    string file_path = *String::Utf8Value(js_file_path);
+    string file_path = *Nan::Utf8String(js_file_path);
 
     Local<String> js_encoding_name;
     if (!Nan::To<String>(info[5]).ToLocal(&js_encoding_name)) return;
-    string encoding_name = *String::Utf8Value(info[5].As<String>());
+    string encoding_name = *Nan::Utf8String(info[5].As<String>());
 
     worker = new LoadWorker(
       completion_callback,
@@ -1007,11 +1007,11 @@ void TextBufferWrapper::base_text_matches_file(const Nan::FunctionCallbackInfo<V
     Nan::Callback *completion_callback = new Nan::Callback(info[0].As<Function>());
     Local<String> js_file_path;
     if (!Nan::To<String>(info[1]).ToLocal(&js_file_path)) return;
-    string file_path = *String::Utf8Value(js_file_path);
+    string file_path = *Nan::Utf8String(js_file_path);
 
     Local<String> js_encoding_name;
     if (!Nan::To<String>(info[2]).ToLocal(&js_encoding_name)) return;
-    string encoding_name = *String::Utf8Value(info[2].As<String>());
+    string encoding_name = *Nan::Utf8String(info[2].As<String>());
 
     Nan::AsyncQueueWorker(new BaseTextComparisonWorker(
       completion_callback,
@@ -1094,11 +1094,11 @@ void TextBufferWrapper::save(const Nan::FunctionCallbackInfo<Value> &info) {
 
   Local<String> js_file_path;
   if (!Nan::To<String>(info[0]).ToLocal(&js_file_path)) return;
-  string file_path = *String::Utf8Value(js_file_path);
+  string file_path = *Nan::Utf8String(js_file_path);
 
   Local<String> js_encoding_name;
   if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
-  string encoding_name = *String::Utf8Value(info[1].As<String>());
+  string encoding_name = *Nan::Utf8String(info[1].As<String>());
 
   Nan::Callback *completion_callback = new Nan::Callback(info[2].As<Function>());
   Nan::AsyncQueueWorker(new SaveWorker(
