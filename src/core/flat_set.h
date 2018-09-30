@@ -60,6 +60,10 @@ public:
   size_t size() const {
     return contents.size();
   }
+
+  contents_type to_vector() {
+    return move(contents);
+  }
 };
 
 #endif // SUPERSTRING_FLAT_SET_H

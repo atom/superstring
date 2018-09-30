@@ -877,6 +877,10 @@ vector<TextSlice> TextBuffer::chunks() const {
   return top_layer->chunks_in_range({{0, 0}, extent()});
 }
 
+vector<TextSlice> TextBuffer::chunks_in_range() const {
+  return top_layer->chunks_in_range(range);
+}
+
 void TextBuffer::set_text(u16string &&new_text) {
   set_text_in_range(Range{Point(0, 0), extent()}, move(new_text));
 }
