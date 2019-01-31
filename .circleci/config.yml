@@ -6,7 +6,7 @@ jobs:
       XCODE_SCHEME: test
       XCODE_WORKSPACE: test
       XCODE_PROJECT: test
-      NODE_VERSION: '8.4'
+      NODE_VERSION: '10.2.1'
     macos:
       xcode: 8.3.3
     steps:
