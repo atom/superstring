@@ -768,7 +768,7 @@ class Loader {
     if (!error && compute_patch) patch = text_diff(snapshot->base_text(), *loaded_text);
   }
 
-  pair<Local<Value>, Local<Value>> Finish() {
+  pair<Local<Value>, Local<Value>> Finish(Nan::AsyncResource* caller_async_resource = nullptr) {
     if (error) {
       delete snapshot;
       return {error_to_js(*error, encoding_name, file_name), Nan::Undefined()};
@@ -799,7 +799,13 @@ class Loader {
 
     if (progress_callback) {
       Local<Value> argv[] = {Nan::New<Number>(100), patch_wrapper};
-      auto progress_result = progress_callback->Call(2, argv, async_resource);
+      MaybeLocal<v8::Value> progress_result;
+      Nan::AsyncResource* resource = caller_async_resource ? caller_async_resource : async_resource;
+      if (resource) {
+        progress_result = progress_callback->Call(2, argv, resource);
+      } else {
+        progress_result = Nan::Call(*progress_callback, 2, argv);
+      }
       if (!progress_result.IsEmpty() && progress_result.ToLocalChecked()->IsFalse()) {
         return {Nan::Null(), Nan::Null()};
       }
@@ -857,7 +863,7 @@ class LoadWorker : public Nan::AsyncProgressWorkerBase<size_t> {
   }
 
   void HandleOKCallback() {
-    auto results = loader.Finish();
+    auto results = loader.Finish(async_resource);
     Local<Value> argv[] = {results.first, results.second};
     callback->Call(2, argv, async_resource);
   }
