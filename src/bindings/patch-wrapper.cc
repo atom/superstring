@@ -37,7 +37,7 @@ class ChangeWrapper : public Nan::ObjectWrap {
 
     const auto &prototype_template = constructor_template->PrototypeTemplate();
     prototype_template->Set(Nan::New<String>("toString").ToLocalChecked(), Nan::New<FunctionTemplate>(to_string));
-    change_wrapper_constructor.Reset(constructor_template->GetFunction());
+    change_wrapper_constructor.Reset(Nan::GetFunction(constructor_template).ToLocalChecked());
   }
 
   static Local<Value> FromChange(Patch::Change change) {
@@ -137,7 +137,7 @@ void PatchWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("getChangeCount").ToLocalChecked(), Nan::New<FunctionTemplate>(get_change_count));
   prototype_template->Set(Nan::New("getBounds").ToLocalChecked(), Nan::New<FunctionTemplate>(get_bounds));
   patch_wrapper_constructor_template.Reset(constructor_template_local);
-  patch_wrapper_constructor.Reset(constructor_template_local->GetFunction());
+  patch_wrapper_constructor.Reset(Nan::GetFunction(constructor_template_local).ToLocalChecked());
   exports->Set(Nan::New("Patch").ToLocalChecked(), Nan::New(patch_wrapper_constructor));
 }
 
@@ -158,10 +158,9 @@ void PatchWrapper::construct(const Nan::FunctionCallbackInfo<Value> &info) {
   Local<Object> options;
 
   if (info.Length() > 0 && Nan::To<Object>(info[0]).ToLocal(&options)) {
-    Local<Boolean> js_merge_adjacent_changes;
-    if (Nan::To<Boolean>(options->Get(Nan::New("mergeAdjacentChanges").ToLocalChecked()))
-            .ToLocal(&js_merge_adjacent_changes)) {
-      merges_adjacent_changes = js_merge_adjacent_changes->BooleanValue();
+    Local<Value> js_merge_adjacent_changes;
+    if (Nan::Get(options, Nan::New("mergeAdjacentChanges").ToLocalChecked()).ToLocal(&js_merge_adjacent_changes)) {
+      merges_adjacent_changes = Nan::To<bool>(js_merge_adjacent_changes).FromMaybe(false);
     }
   }
   PatchWrapper *patch = new PatchWrapper(Patch{merges_adjacent_changes});

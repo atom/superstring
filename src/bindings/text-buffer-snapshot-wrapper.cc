@@ -16,7 +16,7 @@ void TextBufferSnapshotWrapper::init() {
   const auto &prototype_template = constructor_template->PrototypeTemplate();
   prototype_template->Set(Nan::New("destroy").ToLocalChecked(), Nan::New<FunctionTemplate>(destroy));
 
-  snapshot_wrapper_constructor.Reset(constructor_template->GetFunction());
+  snapshot_wrapper_constructor.Reset(Nan::GetFunction(constructor_template).ToLocalChecked());
 }
 
 TextBufferSnapshotWrapper::TextBufferSnapshotWrapper(Local<Object> js_buffer, void *snapshot) :
@@ -46,7 +46,7 @@ void TextBufferSnapshotWrapper::construct(const Nan::FunctionCallbackInfo<Value>
 }
 
 void TextBufferSnapshotWrapper::destroy(const Nan::FunctionCallbackInfo<Value> &info) {
-  auto reader = Nan::ObjectWrap::Unwrap<TextBufferSnapshotWrapper>(info.This()->ToObject());
+  auto reader = Nan::ObjectWrap::Unwrap<TextBufferSnapshotWrapper>(Nan::To<Object>(info.This()).ToLocalChecked());
   if (reader->snapshot) {
     delete reinterpret_cast<TextBuffer::Snapshot *>(reader->snapshot);
     reader->snapshot = nullptr;

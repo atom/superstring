@@ -34,7 +34,7 @@ void RangeWrapper::init() {
   constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
   Nan::SetAccessor(constructor_template->InstanceTemplate(), Nan::New(start_string), get_start);
   Nan::SetAccessor(constructor_template->InstanceTemplate(), Nan::New(end_string), get_end);
-  constructor.Reset(constructor_template->GetFunction());
+  constructor.Reset(Nan::GetFunction(constructor_template).ToLocalChecked());
 }
 
 Local<Value> RangeWrapper::from_range(Range range) {

@@ -15,7 +15,7 @@ void TextReader::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("read").ToLocalChecked(), Nan::New<FunctionTemplate>(read));
   prototype_template->Set(Nan::New("end").ToLocalChecked(), Nan::New<FunctionTemplate>(end));
   prototype_template->Set(Nan::New("destroy").ToLocalChecked(), Nan::New<FunctionTemplate>(destroy));
-  exports->Set(Nan::New("TextReader").ToLocalChecked(), constructor_template->GetFunction());
+  exports->Set(Nan::New("TextReader").ToLocalChecked(), Nan::GetFunction(constructor_template).ToLocalChecked());
 }
 
 TextReader::TextReader(Local<Object> js_buffer,
@@ -34,13 +34,14 @@ TextReader::~TextReader() {
 }
 
 void TextReader::construct(const Nan::FunctionCallbackInfo<Value> &info) {
-  auto js_text_buffer = info[0]->ToObject();
+  Local<Object> js_text_buffer;
+  if (!Nan::To<Object>(info[0]).ToLocal(&js_text_buffer)) return;
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(js_text_buffer)->text_buffer;
   auto snapshot = text_buffer.create_snapshot();
 
   Local<String> js_encoding_name;
   if (!Nan::To<String>(info[1]).ToLocal(&js_encoding_name)) return;
-  String::Utf8Value encoding_name(js_encoding_name);
+  Nan::Utf8String encoding_name(js_encoding_name);
   auto conversion = transcoding_to(*encoding_name);
   if (!conversion) {
     Nan::ThrowError((string("Invalid encoding name: ") + *encoding_name).c_str());
@@ -52,7 +53,7 @@ void TextReader::construct(const Nan::FunctionCallbackInfo<Value> &info) {
 }
 
 void TextReader::read(const Nan::FunctionCallbackInfo<Value> &info) {
-  TextReader *reader = Nan::ObjectWrap::Unwrap<TextReader>(info.This()->ToObject());
+  TextReader *reader = Nan::ObjectWrap::Unwrap<TextReader>(Nan::To<Object>(info.This()).ToLocalChecked());
 
   if (!info[0]->IsUint8Array()) {
     Nan::ThrowError("Expected a buffer");
@@ -87,7 +88,7 @@ void TextReader::read(const Nan::FunctionCallbackInfo<Value> &info) {
 }
 
 void TextReader::end(const Nan::FunctionCallbackInfo<Value> &info) {
-  TextReader *reader = Nan::ObjectWrap::Unwrap<TextReader>(info.This()->ToObject());
+  TextReader *reader = Nan::ObjectWrap::Unwrap<TextReader>(Nan::To<Object>(info.This()).ToLocalChecked());
   if (reader->snapshot) {
     reader->snapshot->flush_preceding_changes();
     delete reader->snapshot;
@@ -96,7 +97,7 @@ void TextReader::end(const Nan::FunctionCallbackInfo<Value> &info) {
 }
 
 void TextReader::destroy(const Nan::FunctionCallbackInfo<Value> &info) {
-  TextReader *reader = Nan::ObjectWrap::Unwrap<TextReader>(info.This()->ToObject());
+  TextReader *reader = Nan::ObjectWrap::Unwrap<TextReader>(Nan::To<Object>(info.This()).ToLocalChecked());
   if (reader->snapshot) {
     delete reader->snapshot;
     reader->snapshot = nullptr;

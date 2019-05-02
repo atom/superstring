@@ -70,7 +70,7 @@ void MarkerIndexWrapper::init(Local<Object> exports) {
   ending_string.Reset(Nan::Persistent<String>(Nan::New("ending").ToLocalChecked()));
 
   marker_index_constructor_template.Reset(constructor_template);
-  exports->Set(Nan::New("MarkerIndex").ToLocalChecked(), constructor_template->GetFunction());
+  Nan::Set(exports, Nan::New("MarkerIndex").ToLocalChecked(), Nan::GetFunction(constructor_template).ToLocalChecked());
 }
 
 MarkerIndex *MarkerIndexWrapper::from_js(Local<Value> value) {
@@ -347,7 +347,7 @@ void MarkerIndexWrapper::find_boundaries_after(const Nan::FunctionCallbackInfo<V
   optional<size_t> max_count;
   Local<Integer> js_max_count;
   if (Nan::To<Integer>(info[1]).ToLocal(&js_max_count)) {
-    max_count = js_max_count->NumberValue();
+    max_count = Nan::To<uint32_t>(js_max_count).FromMaybe(0);
   }
 
   if (start && max_count) {
