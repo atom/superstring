@@ -82,6 +82,7 @@ EMSCRIPTEN_BINDINGS(TextBuffer) {
     .constructor(construct, emscripten::allow_raw_pointers())
     .function("getText", WRAP(&TextBuffer::text))
     .function("setText", WRAP_OVERLOAD(&TextBuffer::set_text, void (TextBuffer::*)(u16string &&)))
+    .function("getCharacterAtPosition", WRAP(&TextBuffer::character_at))
     .function("getTextInRange", WRAP(&TextBuffer::text_in_range))
     .function("setTextInRange", WRAP_OVERLOAD(&TextBuffer::set_text_in_range, void (TextBuffer::*)(Range, u16string &&)))
     .function("getLength", &TextBuffer::size)

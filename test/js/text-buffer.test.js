@@ -776,6 +776,19 @@ describe('TextBuffer', () => {
     })
   })
 
+  describe('.getCharacterAtPosition', () => {
+    it('return a character at the given position', () => {
+      const buffer = new TextBuffer()
+      buffer.setText('abc\ndef\nghi')
+      assert.equal(buffer.getCharacterAtPosition(Point(0, 0)), 'a')
+      assert.equal(buffer.getCharacterAtPosition(Point(0, 1)), 'b')
+      assert.equal(buffer.getCharacterAtPosition(Point(0, 3)), '\n')
+      assert.equal(buffer.getCharacterAtPosition(Point(0, 100)), '\n')
+      assert.equal(buffer.getCharacterAtPosition(Point(2, 0)), 'g')
+      assert.equal(buffer.getCharacterAtPosition(Point(3, 0)), '\u0000')
+    })
+  })
+
   describe('.getTextInRange', () => {
     it('reads substrings from the buffer', () => {
       const buffer = new TextBuffer()
@@ -786,6 +799,8 @@ describe('TextBuffer', () => {
 
       assert.equal(buffer.getTextInRange(Range(Point(-Infinity, -Infinity), Point(0, Infinity))), 'abc')
       assert.equal(buffer.getTextInRange(Range(Point(1, -Infinity), Point(1, Infinity))), 'def')
+
+      assert.equal(buffer.getTextInRange(Range(Point(3, 0), Point(5, 5))), '')
     })
   })
 
