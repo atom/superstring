@@ -4,7 +4,7 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
   binding = require('./browser');
 
   const {TextBuffer, Patch} = binding
-  const {findSync, findAllSync, findAndMarkAllSync, findWordsWithSubsequenceInRange} = TextBuffer.prototype
+  const {findSync, findAllSync, findAndMarkAllSync, findWordsWithSubsequenceInRange, getCharacterAtPosition} = TextBuffer.prototype
   const DEFAULT_RANGE = Object.freeze({start: {row: 0, column: 0}, end: {row: Infinity, column: Infinity}})
 
   TextBuffer.prototype.findInRangeSync = function (pattern, range) {
@@ -93,6 +93,10 @@ if (process.env.SUPERSTRING_USE_BROWSER_VERSION) {
     return Promise.resolve(
       findWordsWithSubsequenceInRange.call(this, query, extraWordCharacters, range).slice(0, maxCount)
     )
+  }
+
+  TextBuffer.prototype.getCharacterAtPosition = function (position) {
+    return String.fromCharCode(getCharacterAtPosition.call(this, position))
   }
 
   const {compose} = Patch
