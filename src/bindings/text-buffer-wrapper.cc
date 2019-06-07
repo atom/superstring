@@ -198,6 +198,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("getExtent").ToLocalChecked(), Nan::New<FunctionTemplate>(get_extent));
   prototype_template->Set(Nan::New("getLineCount").ToLocalChecked(), Nan::New<FunctionTemplate>(get_line_count));
   prototype_template->Set(Nan::New("hasAstral").ToLocalChecked(), Nan::New<FunctionTemplate>(has_astral));
+  prototype_template->Set(Nan::New("getCharacterAtPosition").ToLocalChecked(), Nan::New<FunctionTemplate>(get_character_at_position));
   prototype_template->Set(Nan::New("getTextInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text_in_range));
   prototype_template->Set(Nan::New("setTextInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(set_text_in_range));
   prototype_template->Set(Nan::New("getText").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text));
@@ -261,11 +262,18 @@ void TextBufferWrapper::has_astral(const Nan::FunctionCallbackInfo<Value> &info)
   info.GetReturnValue().Set(Nan::New(text_buffer.has_astral()));
 }
 
+void TextBufferWrapper::get_character_at_position(const Nan::FunctionCallbackInfo<Value> &info) {
+  auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
+  auto point = PointWrapper::point_from_js(info[0]);
+  if (point) {
+    info.GetReturnValue().Set(string_conversion::char_to_js(text_buffer.character_at(*point)));
+  }
+}
+
 void TextBufferWrapper::get_text_in_range(const Nan::FunctionCallbackInfo<Value> &info) {
   auto &text_buffer = Nan::ObjectWrap::Unwrap<TextBufferWrapper>(info.This())->text_buffer;
   auto range = RangeWrapper::range_from_js(info[0]);
   if (range) {
-    Local<String> result;
     info.GetReturnValue().Set(string_conversion::string_to_js(text_buffer.text_in_range(*range)));
   }
 }

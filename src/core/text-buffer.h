@@ -35,6 +35,7 @@ public:
   ClipResult clip_position(Point);
   Point position_for_offset(uint32_t offset);
   std::u16string text();
+  uint16_t character_at(Point position) const;
   std::u16string text_in_range(Range range);
   void set_text(std::u16string &&);
   void set_text(const std::u16string &);

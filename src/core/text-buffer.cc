@@ -869,6 +869,10 @@ u16string TextBuffer::text() {
   return top_layer->text_in_range(Range{Point(), extent()});
 }
 
+uint16_t TextBuffer::character_at(Point position) const {
+  return top_layer->character_at(position);
+}
+
 u16string TextBuffer::text_in_range(Range range) {
   return top_layer->text_in_range(range, true);
 }
