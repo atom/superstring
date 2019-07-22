@@ -93,7 +93,7 @@ class RegexWrapper : public Nan::ObjectWrap {
       js_regex = Local<RegExp>::Cast(value);
       Local<Value> stored_regex = js_regex->Get(cache_key);
       if (!stored_regex->IsUndefined()) {
-        return &Nan::ObjectWrap::Unwrap<RegexWrapper>(stored_regex->ToObject())->regex;
+        return &Nan::ObjectWrap::Unwrap<RegexWrapper>(Nan::To<Object>(stored_regex).ToLocalChecked())->regex;
       }
       js_pattern = js_regex->GetSource();
       if (js_regex->GetFlags() & RegExp::kIgnoreCase) ignore_case = true;
@@ -127,7 +127,7 @@ class RegexWrapper : public Nan::ObjectWrap {
     Local<FunctionTemplate> constructor_template = Nan::New<FunctionTemplate>(construct);
     constructor_template->SetClassName(Nan::New<String>("TextBufferRegex").ToLocalChecked());
     constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
-    constructor.Reset(constructor_template->GetFunction());
+    constructor.Reset(Nan::GetFunction(constructor_template).ToLocalChecked());
   }
 };
 
@@ -150,7 +150,7 @@ public:
     Nan::SetAccessor(instance_template, Nan::New("matchIndices").ToLocalChecked(), get_match_indices);
     Nan::SetAccessor(instance_template, Nan::New("score").ToLocalChecked(), get_score);
 
-    constructor.Reset(constructor_template->GetFunction());
+    constructor.Reset(Nan::GetFunction(constructor_template).ToLocalChecked());
   }
 
   static Local<Value> from_subsequence_match(SubsequenceMatch match) {
@@ -228,7 +228,7 @@ void TextBufferWrapper::init(Local<Object> exports) {
   prototype_template->Set(Nan::New("getSnapshot").ToLocalChecked(), Nan::New<FunctionTemplate>(get_snapshot));
   RegexWrapper::init();
   SubsequenceMatchWrapper::init();
-  exports->Set(Nan::New("TextBuffer").ToLocalChecked(), constructor_template->GetFunction());
+  exports->Set(Nan::New("TextBuffer").ToLocalChecked(), Nan::GetFunction(constructor_template).ToLocalChecked());
 }
 
 void TextBufferWrapper::construct(const Nan::FunctionCallbackInfo<Value> &info) {
@@ -478,7 +478,7 @@ void TextBufferWrapper::find_and_mark_all_sync(const Nan::FunctionCallbackInfo<V
   auto next_id = Nan::To<unsigned>(info[1]);
   if (!next_id.IsJust()) return;
   if (!info[2]->IsBoolean()) return;
-  bool exclusive = info[2]->BooleanValue();
+  bool exclusive = Nan::To<bool>(info[2]).FromMaybe(false);
 
   const Regex *regex = RegexWrapper::regex_from_js(info[3]);
   if (regex) {
@@ -636,7 +636,7 @@ void TextBufferWrapper::find_words_with_subsequence_in_range(const Nan::Function
 
   auto query = string_conversion::string_from_js(info[0]);
   auto extra_word_characters = string_conversion::string_from_js(info[1]);
-  auto max_count = number_conversion::number_from_js<size_t>(info[2]);
+  auto max_count = number_conversion::number_from_js<uint32_t>(info[2]);
   auto range = RangeWrapper::range_from_js(info[3]);
   auto callback = new Nan::Callback(info[4].As<Function>());
 
@@ -934,7 +934,8 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
 
   if (!force && text_buffer.is_modified()) {
     Local<Value> argv[] = {Nan::Null(), Nan::Null()};
-    info[0].As<Function>()->Call(Nan::Null(), 2, argv);
+    auto callback = info[0].As<Function>();
+    Nan::Call(callback, callback->CreationContext()->Global(), 2, argv);
     return;
   }
 
@@ -966,7 +967,7 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
       compute_patch
     );
   } else {
-    auto text_writer = Nan::ObjectWrap::Unwrap<TextWriter>(info[4]->ToObject());
+    auto text_writer = Nan::ObjectWrap::Unwrap<TextWriter>(Nan::To<Object>(info[4]).ToLocalChecked());
     worker = new LoadWorker(
       completion_callback,
       progress_callback,
@@ -1034,10 +1035,11 @@ void TextBufferWrapper::base_text_matches_file(const Nan::FunctionCallbackInfo<V
       move(encoding_name)
     ));
   } else {
-    auto file_contents = Nan::ObjectWrap::Unwrap<TextWriter>(info[1]->ToObject())->get_text();
+    auto file_contents = Nan::ObjectWrap::Unwrap<TextWriter>(Nan::To<Object>(info[1]).ToLocalChecked())->get_text();
     bool result = std::equal(file_contents.begin(), file_contents.end(), text_buffer.base_text().begin());
     Local<Value> argv[] = {Nan::Null(), Nan::New<Boolean>(result)};
-    info[0].As<Function>()->Call(Nan::Null(), 2, argv);
+    auto callback = info[0].As<Function>();
+    Nan::Call(callback, callback->CreationContext()->Global(), 2, argv);
   }
 }
 

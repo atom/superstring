@@ -14,6 +14,12 @@ optional<u16string> string_conversion::string_from_js(Local<Value> value) {
   u16string result;
   result.resize(string->Length());
   string->Write(
+
+    // Nan doesn't wrap this functionality
+    #if NODE_MAJOR_VERSION >= 12
+          Isolate::GetCurrent(),
+    #endif
+
     reinterpret_cast<uint16_t *>(&result[0]),
     0,
     -1,

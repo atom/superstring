@@ -9,7 +9,7 @@ static Nan::Persistent<String> column_string;
 static Nan::Persistent<v8::Function> constructor;
 
 static uint32_t number_from_js(Local<Integer> js_number) {
-  double number = js_number->NumberValue();
+  double number = Nan::To<double>(js_number).FromMaybe(0);
   if (number > 0 && !std::isfinite(number)) {
     return UINT32_MAX;
   } else {
@@ -51,7 +51,7 @@ void PointWrapper::init() {
   constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
   Nan::SetAccessor(constructor_template->InstanceTemplate(), Nan::New(row_string), get_row);
   Nan::SetAccessor(constructor_template->InstanceTemplate(), Nan::New(column_string), get_column);
-  constructor.Reset(constructor_template->GetFunction());
+  constructor.Reset(Nan::GetFunction(constructor_template).ToLocalChecked());
 }
 
 Local<Value> PointWrapper::from_point(Point point) {

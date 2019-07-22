@@ -9,10 +9,12 @@ namespace number_conversion {
   optional<T> number_from_js(v8::Local<v8::Value> js_value) {
     v8::Local<v8::Number> js_number;
     if (Nan::To<v8::Number>(js_value).ToLocal(&js_number)) {
-      return js_number->NumberValue();
-    } else {
-      return optional<T>{};
+      auto maybe_number = Nan::To<T>(js_number);
+      if (maybe_number.IsJust()) {
+        return maybe_number.FromJust();
+      }
     }
+    return optional<T>{};
   }
 }
 
