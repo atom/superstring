@@ -91,7 +91,7 @@ class RegexWrapper : public Nan::ObjectWrap {
       js_pattern = Local<String>::Cast(value);
     } else if (value->IsRegExp()) {
       js_regex = Local<RegExp>::Cast(value);
-      Local<Value> stored_regex = js_regex->Get(cache_key);
+      Local<Value> stored_regex = Nan::Get(js_regex, cache_key).ToLocalChecked();
       if (!stored_regex->IsUndefined()) {
         return &Nan::ObjectWrap::Unwrap<RegexWrapper>(Nan::To<Object>(stored_regex).ToLocalChecked())->regex;
       }
@@ -119,7 +119,7 @@ class RegexWrapper : public Nan::ObjectWrap {
 
     auto regex_wrapper = new RegexWrapper(move(regex));
     regex_wrapper->Wrap(result);
-    if (!js_regex.IsEmpty()) js_regex->Set(cache_key, result);
+    if (!js_regex.IsEmpty()) Nan::Set(js_regex, cache_key, result);
     return &regex_wrapper->regex;
   }
 
@@ -173,7 +173,7 @@ public:
     SubsequenceMatch &match = Nan::ObjectWrap::Unwrap<SubsequenceMatchWrapper>(info.This())->match;
     Local<Array> js_result = Nan::New<Array>();
     for (size_t i = 0; i < match.match_indices.size(); i++) {
-      js_result->Set(i, Nan::New<Integer>(match.match_indices[i]));
+      Nan::Set(js_result, i, Nan::New<Integer>(match.match_indices[i]));
     }
     info.GetReturnValue().Set(js_result);
   }
@@ -193,42 +193,42 @@ void TextBufferWrapper::init(Local<Object> exports) {
   constructor_template->SetClassName(Nan::New<String>("TextBuffer").ToLocalChecked());
   constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
   const auto &prototype_template = constructor_template->PrototypeTemplate();
-  prototype_template->Set(Nan::New("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(noop));
-  prototype_template->Set(Nan::New("getLength").ToLocalChecked(), Nan::New<FunctionTemplate>(get_length));
-  prototype_template->Set(Nan::New("getExtent").ToLocalChecked(), Nan::New<FunctionTemplate>(get_extent));
-  prototype_template->Set(Nan::New("getLineCount").ToLocalChecked(), Nan::New<FunctionTemplate>(get_line_count));
-  prototype_template->Set(Nan::New("hasAstral").ToLocalChecked(), Nan::New<FunctionTemplate>(has_astral));
-  prototype_template->Set(Nan::New("getCharacterAtPosition").ToLocalChecked(), Nan::New<FunctionTemplate>(get_character_at_position));
-  prototype_template->Set(Nan::New("getTextInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text_in_range));
-  prototype_template->Set(Nan::New("setTextInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(set_text_in_range));
-  prototype_template->Set(Nan::New("getText").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text));
-  prototype_template->Set(Nan::New("setText").ToLocalChecked(), Nan::New<FunctionTemplate>(set_text));
-  prototype_template->Set(Nan::New("lineForRow").ToLocalChecked(), Nan::New<FunctionTemplate>(line_for_row));
-  prototype_template->Set(Nan::New("lineLengthForRow").ToLocalChecked(), Nan::New<FunctionTemplate>(line_length_for_row));
-  prototype_template->Set(Nan::New("lineEndingForRow").ToLocalChecked(), Nan::New<FunctionTemplate>(line_ending_for_row));
-  prototype_template->Set(Nan::New("getLines").ToLocalChecked(), Nan::New<FunctionTemplate>(get_lines));
-  prototype_template->Set(Nan::New("characterIndexForPosition").ToLocalChecked(), Nan::New<FunctionTemplate>(character_index_for_position));
-  prototype_template->Set(Nan::New("positionForCharacterIndex").ToLocalChecked(), Nan::New<FunctionTemplate>(position_for_character_index));
-  prototype_template->Set(Nan::New("isModified").ToLocalChecked(), Nan::New<FunctionTemplate>(is_modified));
-  prototype_template->Set(Nan::New("load").ToLocalChecked(), Nan::New<FunctionTemplate>(load));
-  prototype_template->Set(Nan::New("baseTextMatchesFile").ToLocalChecked(), Nan::New<FunctionTemplate>(base_text_matches_file));
-  prototype_template->Set(Nan::New("save").ToLocalChecked(), Nan::New<FunctionTemplate>(save));
-  prototype_template->Set(Nan::New("loadSync").ToLocalChecked(), Nan::New<FunctionTemplate>(load_sync));
-  prototype_template->Set(Nan::New("serializeChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(serialize_changes));
-  prototype_template->Set(Nan::New("deserializeChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(deserialize_changes));
-  prototype_template->Set(Nan::New("reset").ToLocalChecked(), Nan::New<FunctionTemplate>(reset));
-  prototype_template->Set(Nan::New("baseTextDigest").ToLocalChecked(), Nan::New<FunctionTemplate>(base_text_digest));
-  prototype_template->Set(Nan::New("find").ToLocalChecked(), Nan::New<FunctionTemplate>(find));
-  prototype_template->Set(Nan::New("findSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_sync));
-  prototype_template->Set(Nan::New("findAll").ToLocalChecked(), Nan::New<FunctionTemplate>(find_all));
-  prototype_template->Set(Nan::New("findAllSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_all_sync));
-  prototype_template->Set(Nan::New("findAndMarkAllSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_and_mark_all_sync));
-  prototype_template->Set(Nan::New("findWordsWithSubsequenceInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(find_words_with_subsequence_in_range));
-  prototype_template->Set(Nan::New("getDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(dot_graph));
-  prototype_template->Set(Nan::New("getSnapshot").ToLocalChecked(), Nan::New<FunctionTemplate>(get_snapshot));
+  Nan::SetTemplate(prototype_template, Nan::New("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(noop), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getLength").ToLocalChecked(), Nan::New<FunctionTemplate>(get_length), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getExtent").ToLocalChecked(), Nan::New<FunctionTemplate>(get_extent), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getLineCount").ToLocalChecked(), Nan::New<FunctionTemplate>(get_line_count), None);
+  Nan::SetTemplate(prototype_template, Nan::New("hasAstral").ToLocalChecked(), Nan::New<FunctionTemplate>(has_astral), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getCharacterAtPosition").ToLocalChecked(), Nan::New<FunctionTemplate>(get_character_at_position), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getTextInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text_in_range), None);
+  Nan::SetTemplate(prototype_template, Nan::New("setTextInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(set_text_in_range), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getText").ToLocalChecked(), Nan::New<FunctionTemplate>(get_text), None);
+  Nan::SetTemplate(prototype_template, Nan::New("setText").ToLocalChecked(), Nan::New<FunctionTemplate>(set_text), None);
+  Nan::SetTemplate(prototype_template, Nan::New("lineForRow").ToLocalChecked(), Nan::New<FunctionTemplate>(line_for_row), None);
+  Nan::SetTemplate(prototype_template, Nan::New("lineLengthForRow").ToLocalChecked(), Nan::New<FunctionTemplate>(line_length_for_row), None);
+  Nan::SetTemplate(prototype_template, Nan::New("lineEndingForRow").ToLocalChecked(), Nan::New<FunctionTemplate>(line_ending_for_row), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getLines").ToLocalChecked(), Nan::New<FunctionTemplate>(get_lines), None);
+  Nan::SetTemplate(prototype_template, Nan::New("characterIndexForPosition").ToLocalChecked(), Nan::New<FunctionTemplate>(character_index_for_position), None);
+  Nan::SetTemplate(prototype_template, Nan::New("positionForCharacterIndex").ToLocalChecked(), Nan::New<FunctionTemplate>(position_for_character_index), None);
+  Nan::SetTemplate(prototype_template, Nan::New("isModified").ToLocalChecked(), Nan::New<FunctionTemplate>(is_modified), None);
+  Nan::SetTemplate(prototype_template, Nan::New("load").ToLocalChecked(), Nan::New<FunctionTemplate>(load), None);
+  Nan::SetTemplate(prototype_template, Nan::New("baseTextMatchesFile").ToLocalChecked(), Nan::New<FunctionTemplate>(base_text_matches_file), None);
+  Nan::SetTemplate(prototype_template, Nan::New("save").ToLocalChecked(), Nan::New<FunctionTemplate>(save), None);
+  Nan::SetTemplate(prototype_template, Nan::New("loadSync").ToLocalChecked(), Nan::New<FunctionTemplate>(load_sync), None);
+  Nan::SetTemplate(prototype_template, Nan::New("serializeChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(serialize_changes), None);
+  Nan::SetTemplate(prototype_template, Nan::New("deserializeChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(deserialize_changes), None);
+  Nan::SetTemplate(prototype_template, Nan::New("reset").ToLocalChecked(), Nan::New<FunctionTemplate>(reset), None);
+  Nan::SetTemplate(prototype_template, Nan::New("baseTextDigest").ToLocalChecked(), Nan::New<FunctionTemplate>(base_text_digest), None);
+  Nan::SetTemplate(prototype_template, Nan::New("find").ToLocalChecked(), Nan::New<FunctionTemplate>(find), None);
+  Nan::SetTemplate(prototype_template, Nan::New("findSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_sync), None);
+  Nan::SetTemplate(prototype_template, Nan::New("findAll").ToLocalChecked(), Nan::New<FunctionTemplate>(find_all), None);
+  Nan::SetTemplate(prototype_template, Nan::New("findAllSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_all_sync), None);
+  Nan::SetTemplate(prototype_template, Nan::New("findAndMarkAllSync").ToLocalChecked(), Nan::New<FunctionTemplate>(find_and_mark_all_sync), None);
+  Nan::SetTemplate(prototype_template, Nan::New("findWordsWithSubsequenceInRange").ToLocalChecked(), Nan::New<FunctionTemplate>(find_words_with_subsequence_in_range), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(dot_graph), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getSnapshot").ToLocalChecked(), Nan::New<FunctionTemplate>(get_snapshot), None);
   RegexWrapper::init();
   SubsequenceMatchWrapper::init();
-  exports->Set(Nan::New("TextBuffer").ToLocalChecked(), Nan::GetFunction(constructor_template).ToLocalChecked());
+  Nan::Set(exports, Nan::New("TextBuffer").ToLocalChecked(), Nan::GetFunction(constructor_template).ToLocalChecked());
 }
 
 void TextBufferWrapper::construct(const Nan::FunctionCallbackInfo<Value> &info) {
@@ -354,7 +354,7 @@ void TextBufferWrapper::get_lines(const Nan::FunctionCallbackInfo<Value> &info) 
 
   for (uint32_t row = 0, row_count = text_buffer.extent().row + 1; row < row_count; row++) {
     auto text = text_buffer.text_in_range({{row, 0}, {row, UINT32_MAX}});
-    result->Set(row, string_conversion::string_to_js(text));
+    Nan::Set(result, row, string_conversion::string_to_js(text));
   }
 
   info.GetReturnValue().Set(result);
@@ -624,7 +624,7 @@ void TextBufferWrapper::find_words_with_subsequence_in_range(const Nan::Function
           bytes_to_copy
         );
         positions_array_index += bytes_to_copy / sizeof(uint32_t);
-        js_matches_array->Set(i, SubsequenceMatchWrapper::from_subsequence_match(match));
+        Nan::Set(js_matches_array, i, SubsequenceMatchWrapper::from_subsequence_match(match));
       }
 
       auto positions_array = v8::Uint32Array::New(positions_buffer, 0, positions_buffer_size / sizeof(uint32_t));

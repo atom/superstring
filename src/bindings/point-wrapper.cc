@@ -25,14 +25,14 @@ optional<Point> PointWrapper::point_from_js(Local<Value> value) {
     return optional<Point>{};
   }
 
-  Nan::MaybeLocal<Integer> maybe_row = Nan::To<Integer>(object->Get(Nan::New(row_string)));
+  Nan::MaybeLocal<Integer> maybe_row = Nan::To<Integer>(Nan::Get(object, Nan::New(row_string)).ToLocalChecked());
   Local<Integer> js_row;
   if (!maybe_row.ToLocal(&js_row)) {
     Nan::ThrowTypeError("Expected an object with 'row' and 'column' properties.");
     return optional<Point>{};
   }
 
-  Nan::MaybeLocal<Integer> maybe_column = Nan::To<Integer>(object->Get(Nan::New(column_string)));
+  Nan::MaybeLocal<Integer> maybe_column = Nan::To<Integer>(Nan::Get(object, Nan::New(column_string)).ToLocalChecked());
   Local<Integer> js_column;
   if (!maybe_column.ToLocal(&js_column)) {
     Nan::ThrowTypeError("Expected an object with 'row' and 'column' properties.");

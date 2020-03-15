@@ -14,7 +14,7 @@ void TextBufferSnapshotWrapper::init() {
   constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
 
   const auto &prototype_template = constructor_template->PrototypeTemplate();
-  prototype_template->Set(Nan::New("destroy").ToLocalChecked(), Nan::New<FunctionTemplate>(destroy));
+  Nan::SetTemplate(prototype_template, Nan::New("destroy").ToLocalChecked(), Nan::New<FunctionTemplate>(destroy), None);
 
   snapshot_wrapper_constructor.Reset(Nan::GetFunction(constructor_template).ToLocalChecked());
 }
