@@ -2,7 +2,7 @@
 
 set -e
 
-EMSCRIPTEN_DOWNLOAD_URL='https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz'
+EMSCRIPTEN_DOWNLOAD_URL='https://codeload.github.com/emscripten-core/emscripten/tar.gz/1.37.34'
 EMSDK_PATH="./emsdk-portable/emsdk"
 
 if [ ! -f $EMSDK_PATH ]; then
