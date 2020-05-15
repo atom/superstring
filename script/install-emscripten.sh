@@ -2,8 +2,8 @@
 
 set -e
 
-EMSCRIPTEN_DOWNLOAD_URL='https://codeload.github.com/emscripten-core/emsdk/tar.gz/1.39.16'
-EMSDK_PATH="./emsdk-1.39.16/emsdk"
+EMSCRIPTEN_DOWNLOAD_URL='https://codeload.github.com/emscripten-core/emsdk/tar.gz/1.38.48'
+EMSDK_PATH="./emsdk-1.38.48/emsdk"
 
 if [ ! -f $EMSDK_PATH ]; then
   echo 'Downloading emscripten SDK installer...'
@@ -18,5 +18,5 @@ echo 'Installing emscripten SDK...'
 
 $EMSDK_PATH update
 $EMSDK_PATH list
-$EMSDK_PATH install sdk-1.39.16-64bit
-$EMSDK_PATH activate sdk-1.39.16-64bit
+$EMSDK_PATH install sdk-1.38.48-64bit
+$EMSDK_PATH activate sdk-1.38.48-64bit
