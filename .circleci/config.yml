@@ -8,7 +8,7 @@ jobs:
       XCODE_PROJECT: test
       NODE_VERSION: '10.2.1'
     macos:
-      xcode: 10.14.4
+      xcode: 10.12.6
     steps:
     - checkout
     - run:
