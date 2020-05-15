@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-source emsdk-1.39.16/emsdk_env.sh
+source emsdk-1.38.48/emsdk_env.sh
 
 mkdir -p build
 
