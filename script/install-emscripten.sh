@@ -3,7 +3,7 @@
 set -e
 
 EMSCRIPTEN_DOWNLOAD_URL='https://codeload.github.com/emscripten-core/emsdk/tar.gz/1.39.16'
-EMSDK_PATH="./emsdk"
+EMSDK_PATH="./emsdk-1.39.16/emsdk"
 
 if [ ! -f $EMSDK_PATH ]; then
   echo 'Downloading emscripten SDK installer...'
