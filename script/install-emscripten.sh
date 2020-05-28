@@ -17,6 +17,6 @@ echo 'Installing emscripten SDK...'
 #sed -i{} "s_/WebAssembly/binaryen/'_/WebAssembly/binaryen'_" $EMSDK_PATH
 
 $EMSDK_PATH update
-$EMSDK_PATH list
-$EMSDK_PATH install sdk-1.38.48-64bit
-$EMSDK_PATH activate sdk-1.38.48-64bit
+$EMSDK_PATH list --old
+$EMSDK_PATH install sdk-1.37.9-64bit
+$EMSDK_PATH activate sdk-1.37.9-64bit
