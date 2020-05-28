@@ -17,7 +17,7 @@ jobs:
       run: git submodule update --init
         
     - name: Install node dependencies
-      run: npm ci
+      run: npm install
 
     - name: Build with emscripten
       run: script/install-emscripten.sh
