@@ -36,7 +36,7 @@ class ChangeWrapper : public Nan::ObjectWrap {
     Nan::SetAccessor(instance_template, Nan::New("newEnd").ToLocalChecked(), get_new_end);
 
     const auto &prototype_template = constructor_template->PrototypeTemplate();
-    prototype_template->Set(Nan::New<String>("toString").ToLocalChecked(), Nan::New<FunctionTemplate>(to_string));
+    Nan::SetTemplate(prototype_template, Nan::New<String>("toString").ToLocalChecked(), Nan::New<FunctionTemplate>(to_string), None);
     change_wrapper_constructor.Reset(Nan::GetFunction(constructor_template).ToLocalChecked());
   }
 
@@ -45,13 +45,15 @@ class ChangeWrapper : public Nan::ObjectWrap {
     if (Nan::NewInstance(Nan::New(change_wrapper_constructor)).ToLocal(&result)) {
       (new ChangeWrapper(change))->Wrap(result);
       if (change.new_text) {
-        result->Set(
+        Nan::Set(
+          result,
           Nan::New(new_text_string),
           string_conversion::string_to_js(change.new_text->content)
         );
       }
       if (change.old_text) {
-        result->Set(
+        Nan::Set(
+          result,
           Nan::New(old_text_string),
           string_conversion::string_to_js(change.old_text->content)
         );
@@ -112,33 +114,33 @@ void PatchWrapper::init(Local<Object> exports) {
 
   Local<FunctionTemplate> constructor_template_local = Nan::New<FunctionTemplate>(construct);
   constructor_template_local->SetClassName(Nan::New<String>("Patch").ToLocalChecked());
-  constructor_template_local->Set(Nan::New("deserialize").ToLocalChecked(), Nan::New<FunctionTemplate>(deserialize));
-  constructor_template_local->Set(Nan::New("compose").ToLocalChecked(), Nan::New<FunctionTemplate>(compose));
+  Nan::SetTemplate(constructor_template_local, Nan::New("deserialize").ToLocalChecked(), Nan::New<FunctionTemplate>(deserialize), None);
+  Nan::SetTemplate(constructor_template_local, Nan::New("compose").ToLocalChecked(), Nan::New<FunctionTemplate>(compose), None);
   constructor_template_local->InstanceTemplate()->SetInternalFieldCount(1);
   const auto &prototype_template = constructor_template_local->PrototypeTemplate();
-  prototype_template->Set(Nan::New("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(noop));
-  prototype_template->Set(Nan::New("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(splice));
-  prototype_template->Set(Nan::New("spliceOld").ToLocalChecked(), Nan::New<FunctionTemplate>(splice_old));
-  prototype_template->Set(Nan::New("copy").ToLocalChecked(), Nan::New<FunctionTemplate>(copy));
-  prototype_template->Set(Nan::New("invert").ToLocalChecked(), Nan::New<FunctionTemplate>(invert));
-  prototype_template->Set(Nan::New("getChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(get_changes));
-  prototype_template->Set(Nan::New("getChangesInOldRange").ToLocalChecked(),
-                          Nan::New<FunctionTemplate>(get_changes_in_old_range));
-  prototype_template->Set(Nan::New("getChangesInNewRange").ToLocalChecked(),
-                          Nan::New<FunctionTemplate>(get_changes_in_new_range));
-  prototype_template->Set(Nan::New("changeForOldPosition").ToLocalChecked(),
-                          Nan::New<FunctionTemplate>(change_for_old_position));
-  prototype_template->Set(Nan::New("changeForNewPosition").ToLocalChecked(),
-                          Nan::New<FunctionTemplate>(change_for_new_position));
-  prototype_template->Set(Nan::New("serialize").ToLocalChecked(), Nan::New<FunctionTemplate>(serialize));
-  prototype_template->Set(Nan::New("getDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(get_dot_graph));
-  prototype_template->Set(Nan::New("getJSON").ToLocalChecked(), Nan::New<FunctionTemplate>(get_json));
-  prototype_template->Set(Nan::New("rebalance").ToLocalChecked(), Nan::New<FunctionTemplate>(rebalance));
-  prototype_template->Set(Nan::New("getChangeCount").ToLocalChecked(), Nan::New<FunctionTemplate>(get_change_count));
-  prototype_template->Set(Nan::New("getBounds").ToLocalChecked(), Nan::New<FunctionTemplate>(get_bounds));
+  Nan::SetTemplate(prototype_template, Nan::New("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(noop), None);
+  Nan::SetTemplate(prototype_template, Nan::New("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(splice), None);
+  Nan::SetTemplate(prototype_template, Nan::New("spliceOld").ToLocalChecked(), Nan::New<FunctionTemplate>(splice_old), None);
+  Nan::SetTemplate(prototype_template, Nan::New("copy").ToLocalChecked(), Nan::New<FunctionTemplate>(copy), None);
+  Nan::SetTemplate(prototype_template, Nan::New("invert").ToLocalChecked(), Nan::New<FunctionTemplate>(invert), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getChanges").ToLocalChecked(), Nan::New<FunctionTemplate>(get_changes), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getChangesInOldRange").ToLocalChecked(),
+                          Nan::New<FunctionTemplate>(get_changes_in_old_range), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getChangesInNewRange").ToLocalChecked(),
+                          Nan::New<FunctionTemplate>(get_changes_in_new_range), None);
+  Nan::SetTemplate(prototype_template, Nan::New("changeForOldPosition").ToLocalChecked(),
+                          Nan::New<FunctionTemplate>(change_for_old_position), None);
+  Nan::SetTemplate(prototype_template, Nan::New("changeForNewPosition").ToLocalChecked(),
+                          Nan::New<FunctionTemplate>(change_for_new_position), None);
+  Nan::SetTemplate(prototype_template, Nan::New("serialize").ToLocalChecked(), Nan::New<FunctionTemplate>(serialize), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getDotGraph").ToLocalChecked(), Nan::New<FunctionTemplate>(get_dot_graph), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getJSON").ToLocalChecked(), Nan::New<FunctionTemplate>(get_json), None);
+  Nan::SetTemplate(prototype_template, Nan::New("rebalance").ToLocalChecked(), Nan::New<FunctionTemplate>(rebalance), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getChangeCount").ToLocalChecked(), Nan::New<FunctionTemplate>(get_change_count), None);
+  Nan::SetTemplate(prototype_template, Nan::New("getBounds").ToLocalChecked(), Nan::New<FunctionTemplate>(get_bounds), None);
   patch_wrapper_constructor_template.Reset(constructor_template_local);
   patch_wrapper_constructor.Reset(Nan::GetFunction(constructor_template_local).ToLocalChecked());
-  exports->Set(Nan::New("Patch").ToLocalChecked(), Nan::New(patch_wrapper_constructor));
+  Nan::Set(exports, Nan::New("Patch").ToLocalChecked(), Nan::New(patch_wrapper_constructor));
 }
 
 PatchWrapper::PatchWrapper(Patch &&patch) : patch{std::move(patch)} {}
@@ -241,7 +243,7 @@ void PatchWrapper::get_changes(const Nan::FunctionCallbackInfo<Value> &info) {
 
   size_t i = 0;
   for (auto change : patch.get_changes()) {
-    js_result->Set(i++, ChangeWrapper::FromChange(change));
+    Nan::Set(js_result, i++, ChangeWrapper::FromChange(change));
   }
 
   info.GetReturnValue().Set(js_result);
@@ -258,7 +260,7 @@ void PatchWrapper::get_changes_in_old_range(const Nan::FunctionCallbackInfo<Valu
 
     size_t i = 0;
     for (auto change : patch.grab_changes_in_old_range(*start, *end)) {
-      js_result->Set(i++, ChangeWrapper::FromChange(change));
+      Nan::Set(js_result, i++, ChangeWrapper::FromChange(change));
     }
 
     info.GetReturnValue().Set(js_result);
@@ -276,7 +278,7 @@ void PatchWrapper::get_changes_in_new_range(const Nan::FunctionCallbackInfo<Valu
 
     size_t i = 0;
     for (auto change : patch.grab_changes_in_new_range(*start, *end)) {
-      js_result->Set(i++, ChangeWrapper::FromChange(change));
+      Nan::Set(js_result, i++, ChangeWrapper::FromChange(change));
     }
 
     info.GetReturnValue().Set(js_result);
@@ -352,12 +354,12 @@ void PatchWrapper::compose(const Nan::FunctionCallbackInfo<Value> &info) {
     Patch combination;
     bool left_to_right = true;
     for (uint32_t i = 0, n = js_patches->Length(); i < n; i++) {
-      if (!js_patches->Get(i)->IsObject()) {
+      if (!Nan::Get(js_patches, i).ToLocalChecked()->IsObject()) {
         Nan::ThrowTypeError("Patch.compose must be called with an array of patches");
         return;
       }
 
-      Local<Object> js_patch = Local<Object>::Cast(js_patches->Get(i));
+      Local<Object> js_patch = Local<Object>::Cast(Nan::Get(js_patches, i).ToLocalChecked());
       if (!Nan::New(patch_wrapper_constructor_template)->HasInstance(js_patch)) {
         Nan::ThrowTypeError("Patch.compose must be called with an array of patches");
         return;

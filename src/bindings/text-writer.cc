@@ -10,9 +10,9 @@ void TextWriter::init(Local<Object> exports) {
   constructor_template->SetClassName(Nan::New<String>("TextWriter").ToLocalChecked());
   constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
   const auto &prototype_template = constructor_template->PrototypeTemplate();
-  prototype_template->Set(Nan::New("write").ToLocalChecked(), Nan::New<FunctionTemplate>(write));
-  prototype_template->Set(Nan::New("end").ToLocalChecked(), Nan::New<FunctionTemplate>(end));
-  exports->Set(Nan::New("TextWriter").ToLocalChecked(), Nan::GetFunction(constructor_template).ToLocalChecked());
+  Nan::SetTemplate(prototype_template, Nan::New("write").ToLocalChecked(), Nan::New<FunctionTemplate>(write), None);
+  Nan::SetTemplate(prototype_template, Nan::New("end").ToLocalChecked(), Nan::New<FunctionTemplate>(end), None);
+  Nan::Set(exports, Nan::New("TextWriter").ToLocalChecked(), Nan::GetFunction(constructor_template).ToLocalChecked());
 }
 
 TextWriter::TextWriter(EncodingConversion &&conversion) : conversion{move(conversion)} {}

@@ -15,8 +15,8 @@ optional<Range> RangeWrapper::range_from_js(Local<Value> value) {
     return optional<Range>{};
   }
 
-  auto start = PointWrapper::point_from_js(object->Get(Nan::New(start_string)));
-  auto end = PointWrapper::point_from_js(object->Get(Nan::New(end_string)));
+  auto start = PointWrapper::point_from_js(Nan::Get(object, Nan::New(start_string)).ToLocalChecked());
+  auto end = PointWrapper::point_from_js(Nan::Get(object, Nan::New(end_string)).ToLocalChecked());
   if (start && end) {
     return Range{*start, *end};
   } else {
