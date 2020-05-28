@@ -12,10 +12,10 @@ void TextReader::init(Local<Object> exports) {
   constructor_template->SetClassName(Nan::New<String>("TextReader").ToLocalChecked());
   constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
   const auto &prototype_template = constructor_template->PrototypeTemplate();
-  prototype_template->Set(Nan::New("read").ToLocalChecked(), Nan::New<FunctionTemplate>(read));
-  prototype_template->Set(Nan::New("end").ToLocalChecked(), Nan::New<FunctionTemplate>(end));
-  prototype_template->Set(Nan::New("destroy").ToLocalChecked(), Nan::New<FunctionTemplate>(destroy));
-  exports->Set(Nan::New("TextReader").ToLocalChecked(), Nan::GetFunction(constructor_template).ToLocalChecked());
+  Nan::SetTemplate(prototype_template, Nan::New("read").ToLocalChecked(), Nan::New<FunctionTemplate>(read), None);
+  Nan::SetTemplate(prototype_template, Nan::New("end").ToLocalChecked(), Nan::New<FunctionTemplate>(end), None);
+  Nan::SetTemplate(prototype_template, Nan::New("destroy").ToLocalChecked(), Nan::New<FunctionTemplate>(destroy), None);
+  Nan::Set(exports, Nan::New("TextReader").ToLocalChecked(), Nan::GetFunction(constructor_template).ToLocalChecked());
 }
 
 TextReader::TextReader(Local<Object> js_buffer,

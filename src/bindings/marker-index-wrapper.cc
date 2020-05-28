@@ -30,32 +30,32 @@ void MarkerIndexWrapper::init(Local<Object> exports) {
 
   const auto &prototype_template = constructor_template->PrototypeTemplate();
 
-  prototype_template->Set(Nan::New<String>("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(noop));
-  prototype_template->Set(Nan::New<String>("generateRandomNumber").ToLocalChecked(),
-                          Nan::New<FunctionTemplate>(generate_random_number));
-  prototype_template->Set(Nan::New<String>("insert").ToLocalChecked(), Nan::New<FunctionTemplate>(insert));
-  prototype_template->Set(Nan::New<String>("setExclusive").ToLocalChecked(), Nan::New<FunctionTemplate>(set_exclusive));
-  prototype_template->Set(Nan::New<String>("remove").ToLocalChecked(), Nan::New<FunctionTemplate>(remove));
-  prototype_template->Set(Nan::New<String>("has").ToLocalChecked(), Nan::New<FunctionTemplate>(has));
-  prototype_template->Set(Nan::New<String>("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(splice));
-  prototype_template->Set(Nan::New<String>("getStart").ToLocalChecked(), Nan::New<FunctionTemplate>(get_start));
-  prototype_template->Set(Nan::New<String>("getEnd").ToLocalChecked(), Nan::New<FunctionTemplate>(get_end));
-  prototype_template->Set(Nan::New<String>("getRange").ToLocalChecked(), Nan::New<FunctionTemplate>(get_range));
-  prototype_template->Set(Nan::New<String>("compare").ToLocalChecked(), Nan::New<FunctionTemplate>(compare));
-  prototype_template->Set(Nan::New<String>("findIntersecting").ToLocalChecked(),
-                          Nan::New<FunctionTemplate>(find_intersecting));
-  prototype_template->Set(Nan::New<String>("findContaining").ToLocalChecked(),
-                          Nan::New<FunctionTemplate>(find_containing));
-  prototype_template->Set(Nan::New<String>("findContainedIn").ToLocalChecked(),
-                          Nan::New<FunctionTemplate>(find_contained_in));
-  prototype_template->Set(Nan::New<String>("findStartingIn").ToLocalChecked(),
-                          Nan::New<FunctionTemplate>(find_starting_in));
-  prototype_template->Set(Nan::New<String>("findStartingAt").ToLocalChecked(),
-                          Nan::New<FunctionTemplate>(find_starting_at));
-  prototype_template->Set(Nan::New<String>("findEndingIn").ToLocalChecked(), Nan::New<FunctionTemplate>(find_ending_in));
-  prototype_template->Set(Nan::New<String>("findEndingAt").ToLocalChecked(), Nan::New<FunctionTemplate>(find_ending_at));
-  prototype_template->Set(Nan::New<String>("findBoundariesAfter").ToLocalChecked(), Nan::New<FunctionTemplate>(find_boundaries_after));
-  prototype_template->Set(Nan::New<String>("dump").ToLocalChecked(), Nan::New<FunctionTemplate>(dump));
+  Nan::SetTemplate(prototype_template, Nan::New<String>("delete").ToLocalChecked(), Nan::New<FunctionTemplate>(noop), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("generateRandomNumber").ToLocalChecked(),
+                          Nan::New<FunctionTemplate>(generate_random_number), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("insert").ToLocalChecked(), Nan::New<FunctionTemplate>(insert), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("setExclusive").ToLocalChecked(), Nan::New<FunctionTemplate>(set_exclusive), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("remove").ToLocalChecked(), Nan::New<FunctionTemplate>(remove), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("has").ToLocalChecked(), Nan::New<FunctionTemplate>(has), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("splice").ToLocalChecked(), Nan::New<FunctionTemplate>(splice), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("getStart").ToLocalChecked(), Nan::New<FunctionTemplate>(get_start), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("getEnd").ToLocalChecked(), Nan::New<FunctionTemplate>(get_end), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("getRange").ToLocalChecked(), Nan::New<FunctionTemplate>(get_range), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("compare").ToLocalChecked(), Nan::New<FunctionTemplate>(compare), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("findIntersecting").ToLocalChecked(),
+                          Nan::New<FunctionTemplate>(find_intersecting), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("findContaining").ToLocalChecked(),
+                          Nan::New<FunctionTemplate>(find_containing), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("findContainedIn").ToLocalChecked(),
+                          Nan::New<FunctionTemplate>(find_contained_in), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("findStartingIn").ToLocalChecked(),
+                          Nan::New<FunctionTemplate>(find_starting_in), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("findStartingAt").ToLocalChecked(),
+                          Nan::New<FunctionTemplate>(find_starting_at), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("findEndingIn").ToLocalChecked(), Nan::New<FunctionTemplate>(find_ending_in), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("findEndingAt").ToLocalChecked(), Nan::New<FunctionTemplate>(find_ending_at), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("findBoundariesAfter").ToLocalChecked(), Nan::New<FunctionTemplate>(find_boundaries_after), None);
+  Nan::SetTemplate(prototype_template, Nan::New<String>("dump").ToLocalChecked(), Nan::New<FunctionTemplate>(dump), None);
 
   start_string.Reset(Nan::Persistent<String>(Nan::New("start").ToLocalChecked()));
   end_string.Reset(Nan::Persistent<String>(Nan::New("end").ToLocalChecked()));
@@ -110,7 +110,7 @@ Local<Set> MarkerIndexWrapper::marker_ids_set_to_js(const MarkerIndex::MarkerIdS
 Local<Array> MarkerIndexWrapper::marker_ids_vector_to_js(const std::vector<MarkerIndex::MarkerId> &marker_ids) {
   Local<Array> js_array = Nan::New<Array>(marker_ids.size());
   for (size_t i = 0; i < marker_ids.size(); i++) {
-    js_array->Set(i, Nan::New<Integer>(marker_ids[i]));
+    Nan::Set(js_array, i, Nan::New<Integer>(marker_ids[i]));
   }
   return js_array;
 }
@@ -119,9 +119,9 @@ Local<Object> MarkerIndexWrapper::snapshot_to_js(const unordered_map<MarkerIndex
   Local<Object> result_object = Nan::New<Object>();
   for (auto &pair : snapshot) {
     Local<Object> range = Nan::New<Object>();
-    range->Set(Nan::New(start_string), PointWrapper::from_point(pair.second.start));
-    range->Set(Nan::New(end_string), PointWrapper::from_point(pair.second.end));
-    result_object->Set(Nan::New<Integer>(pair.first), range);
+    Nan::Set(range, Nan::New(start_string), PointWrapper::from_point(pair.second.start));
+    Nan::Set(range, Nan::New(end_string), PointWrapper::from_point(pair.second.end));
+    Nan::Set(result_object, Nan::New<Integer>(pair.first), range);
   }
   return result_object;
 }
@@ -207,11 +207,11 @@ void MarkerIndexWrapper::splice(const Nan::FunctionCallbackInfo<Value> &info) {
     MarkerIndex::SpliceResult result = wrapper->marker_index.splice(*start, *old_extent, *new_extent);
 
     Local<Object> invalidated = Nan::New<Object>();
-    invalidated->Set(Nan::New(touch_string), marker_ids_set_to_js(result.touch));
-    invalidated->Set(Nan::New(inside_string), marker_ids_set_to_js(result.inside));
-    invalidated->Set(Nan::New(inside_string), marker_ids_set_to_js(result.inside));
-    invalidated->Set(Nan::New(overlap_string), marker_ids_set_to_js(result.overlap));
-    invalidated->Set(Nan::New(surround_string), marker_ids_set_to_js(result.surround));
+    Nan::Set(invalidated, Nan::New(touch_string), marker_ids_set_to_js(result.touch));
+    Nan::Set(invalidated, Nan::New(inside_string), marker_ids_set_to_js(result.inside));
+    Nan::Set(invalidated, Nan::New(inside_string), marker_ids_set_to_js(result.inside));
+    Nan::Set(invalidated, Nan::New(overlap_string), marker_ids_set_to_js(result.overlap));
+    Nan::Set(invalidated, Nan::New(surround_string), marker_ids_set_to_js(result.surround));
     info.GetReturnValue().Set(invalidated);
   }
 }
@@ -243,8 +243,8 @@ void MarkerIndexWrapper::get_range(const Nan::FunctionCallbackInfo<Value> &info)
   if (id) {
     Range range = wrapper->marker_index.get_range(*id);
     auto result = Nan::New<Object>();
-    result->Set(Nan::New(start_string), PointWrapper::from_point(range.start));
-    result->Set(Nan::New(end_string), PointWrapper::from_point(range.end));
+    Nan::Set(result, Nan::New(start_string), PointWrapper::from_point(range.start));
+    Nan::Set(result, Nan::New(end_string), PointWrapper::from_point(range.end));
     info.GetReturnValue().Set(result);
   }
 }
@@ -353,18 +353,18 @@ void MarkerIndexWrapper::find_boundaries_after(const Nan::FunctionCallbackInfo<V
   if (start && max_count) {
     MarkerIndex::BoundaryQueryResult result = wrapper->marker_index.find_boundaries_after(*start, *max_count);
     Local<Object> js_result = Nan::New<Object>();
-    js_result->Set(Nan::New(containing_start_string), marker_ids_vector_to_js(result.containing_start));
+    Nan::Set(js_result, Nan::New(containing_start_string), marker_ids_vector_to_js(result.containing_start));
 
     Local<Array> js_boundaries = Nan::New<Array>(result.boundaries.size());
     for (size_t i = 0; i < result.boundaries.size(); i++) {
       MarkerIndex::Boundary boundary = result.boundaries[i];
       Local<Object> js_boundary = Nan::New<Object>();
-      js_boundary->Set(Nan::New(position_string), PointWrapper::from_point(boundary.position));
-      js_boundary->Set(Nan::New(starting_string), marker_ids_set_to_js(boundary.starting));
-      js_boundary->Set(Nan::New(ending_string), marker_ids_set_to_js(boundary.ending));
-      js_boundaries->Set(i, js_boundary);
+      Nan::Set(js_boundary, Nan::New(position_string), PointWrapper::from_point(boundary.position));
+      Nan::Set(js_boundary, Nan::New(starting_string), marker_ids_set_to_js(boundary.starting));
+      Nan::Set(js_boundary, Nan::New(ending_string), marker_ids_set_to_js(boundary.ending));
+      Nan::Set(js_boundaries, i, js_boundary);
     }
-    js_result->Set(Nan::New(boundaries_string), js_boundaries);
+    Nan::Set(js_result, Nan::New(boundaries_string), js_boundaries);
 
     info.GetReturnValue().Set(js_result);
   }
