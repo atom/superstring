@@ -18,5 +18,5 @@ echo 'Installing emscripten SDK...'
 
 $EMSDK_PATH update
 $EMSDK_PATH list
-$EMSDK_PATH install sdk-1.39.16-64bit
-$EMSDK_PATH activate sdk-1.39.16-64bit
+$EMSDK_PATH install emscripten-1.37.9
+$EMSDK_PATH activate emscripten-1.37.9
