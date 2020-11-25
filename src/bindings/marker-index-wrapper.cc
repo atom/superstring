@@ -109,19 +109,24 @@ Local<Set> MarkerIndexWrapper::marker_ids_set_to_js(const MarkerIndex::MarkerIdS
 
 Local<Array> MarkerIndexWrapper::marker_ids_vector_to_js(const std::vector<MarkerIndex::MarkerId> &marker_ids) {
   Local<Array> js_array = Nan::New<Array>(marker_ids.size());
+
+  Isolate *isolate = v8::Isolate::GetCurrent();
+  Local<Context> context = isolate->GetCurrentContext();
   for (size_t i = 0; i < marker_ids.size(); i++) {
-    Nan::Set(js_array, i, Nan::New<Integer>(marker_ids[i]));
+    js_array->Set(context, i, Nan::New<Integer>(marker_ids[i]));
   }
   return js_array;
 }
 
 Local<Object> MarkerIndexWrapper::snapshot_to_js(const unordered_map<MarkerIndex::MarkerId, Range> &snapshot) {
   Local<Object> result_object = Nan::New<Object>();
+  Isolate *isolate = v8::Isolate::GetCurrent();
+  Local<Context> context = isolate->GetCurrentContext();
   for (auto &pair : snapshot) {
     Local<Object> range = Nan::New<Object>();
-    Nan::Set(range, Nan::New(start_string), PointWrapper::from_point(pair.second.start));
-    Nan::Set(range, Nan::New(end_string), PointWrapper::from_point(pair.second.end));
-    Nan::Set(result_object, Nan::New<Integer>(pair.first), range);
+    range->Set(context, Nan::New(start_string), PointWrapper::from_point(pair.second.start));
+    range->Set(context, Nan::New(end_string), PointWrapper::from_point(pair.second.end));
+    result_object->Set(context, Nan::New<Integer>(pair.first), range);
   }
   return result_object;
 }
