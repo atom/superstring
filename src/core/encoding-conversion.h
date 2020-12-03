@@ -4,7 +4,7 @@
 #include <optional>
 using std::optional;
 #include "text.h"
-#include <stdio.h>
+#include <cstdio>
 
 class EncodingConversion {
   void *data;

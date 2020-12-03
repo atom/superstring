@@ -1,6 +1,6 @@
 #include "text-slice.h"
 #include "text.h"
-#include <assert.h>
+#include <cassert>
 
 TextSlice::TextSlice() :
   text{nullptr} {}

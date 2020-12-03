@@ -2,7 +2,7 @@
 #include "libmba-diff.h"
 #include "text-slice.h"
 #include <vector>
-#include <string.h>
+#include <cstring>
 #include <ostream>
 #include <cassert>
 

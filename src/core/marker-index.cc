@@ -2,7 +2,7 @@
 #include <climits>
 #include <iterator>
 #include <random>
-#include <stdlib.h>
+#include <cstdlib>
 #include "range.h"
 
 using std::default_random_engine;
