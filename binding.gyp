@@ -68,7 +68,7 @@
 
     "variables": {
         "tests": 0,
-        "STANDARD": 14,
+        "STANDARD": 17,
         "MACOSX_DEPLOYMENT_TARGET": "10.8"
     },
 
