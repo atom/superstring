@@ -547,14 +547,14 @@ MarkerIndex::SpliceResult MarkerIndex::splice(Point start, Point old_extent, Poi
 
     for (MarkerId id : ending_inside_splice) {
       end_node->end_marker_ids.insert(id);
-      if (!starting_inside_splice.count(id)) {
+      if (starting_inside_splice.count(id) == 0u) {
         start_node->right_marker_ids.insert(id);
       }
       end_nodes_by_id[id] = end_node;
     }
 
     for (MarkerId id : end_node->end_marker_ids) {
-      if (exclusive_marker_ids.count(id) && !end_node->start_marker_ids.count(id)) {
+      if ((exclusive_marker_ids.count(id) != 0u) && (end_node->start_marker_ids.count(id) == 0u)) {
         ending_inside_splice.insert(id);
       }
     }
@@ -566,7 +566,7 @@ MarkerIndex::SpliceResult MarkerIndex::splice(Point start, Point old_extent, Poi
 
     for (auto iter = start_node->start_marker_ids.begin(); iter != start_node->start_marker_ids.end();) {
       MarkerId id = *iter;
-      if (exclusive_marker_ids.count(id) && !start_node->end_marker_ids.count(id)) {
+      if ((exclusive_marker_ids.count(id) != 0u) && (start_node->end_marker_ids.count(id) == 0u)) {
         iter = start_node->start_marker_ids.erase(iter);
         start_node->right_marker_ids.erase(id);
         end_node->start_marker_ids.insert(id);
@@ -807,7 +807,7 @@ void MarkerIndex::rotate_node_left(Node *rotation_pivot) {
   rotation_pivot->right_marker_ids.insert(rotation_root->right_marker_ids.begin(), rotation_root->right_marker_ids.end());
 
   for (auto it = rotation_pivot->left_marker_ids.begin(); it != rotation_pivot->left_marker_ids.end();) {
-    if (rotation_root->left_marker_ids.count(*it)) {
+    if (rotation_root->left_marker_ids.count(*it) != 0u) {
       rotation_root->left_marker_ids.erase(*it);
       ++it;
     } else {
@@ -842,13 +842,13 @@ void MarkerIndex::rotate_node_right(Node *rotation_pivot) {
   rotation_root->left_extent = rotation_root->left_extent.traversal(rotation_pivot->left_extent);
 
   for (auto it = rotation_root->left_marker_ids.begin(); it != rotation_root->left_marker_ids.end(); ++it) {
-    if (!rotation_pivot->start_marker_ids.count(*it)) {
+    if (rotation_pivot->start_marker_ids.count(*it) == 0u) {
       rotation_pivot->left_marker_ids.insert(*it);
     }
   }
 
   for (auto it = rotation_pivot->right_marker_ids.begin(); it != rotation_pivot->right_marker_ids.end();) {
-    if (rotation_root->right_marker_ids.count(*it)) {
+    if (rotation_root->right_marker_ids.count(*it) != 0u) {
       rotation_root->right_marker_ids.erase(*it);
       ++it;
     } else {
@@ -887,7 +887,7 @@ void MarkerIndex::populate_splice_invalidation_sets(SpliceResult *invalidated, c
     invalidated->touch.insert(id);
     invalidated->inside.insert(id);
     invalidated->overlap.insert(id);
-    if (ending_inside_splice.count(id)) invalidated->surround.insert(id);
+    if (ending_inside_splice.count(id) != 0u) invalidated->surround.insert(id);
   }
 
   for (MarkerId id : ending_inside_splice) {
