@@ -15,6 +15,7 @@
     "benchmark": "node benchmark/marker-index.benchmark.js",
     "prepublishOnly": "git submodule update --init --recursive && npm run build:browser",
     "standard": "standard --recursive src test",
+    "format": "clang-format -i src/core/*.cc src/core/*.h src/bindings/*.cc src/bindings/*.h src/bindings/em/*.cc src/bindings/em/*.h",
     "tidy": "clang-tidy src/core/*.cc src/core/*.h src/bindings/*.cc src/bindings/*.h src/bindings/em/*.cc src/bindings/em/*.h",
     "tidy:fix": "npm run tidy -- --fix --fix-errors"
   },
