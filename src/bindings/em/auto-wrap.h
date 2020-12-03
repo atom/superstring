@@ -7,7 +7,8 @@
 #include <emscripten/val.h>
 #include "flat_set.h"
 #include "marker-index.h"
-#include "optional.h"
+#include <optional>
+using std::optional;
 #include "point.h"
 #include "text.h"
 

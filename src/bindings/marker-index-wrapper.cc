@@ -3,7 +3,8 @@
 #include "marker-index.h"
 #include "nan.h"
 #include "noop.h"
-#include "optional.h"
+#include <optional>
+using std::optional;
 #include "point-wrapper.h"
 #include "range.h"
 

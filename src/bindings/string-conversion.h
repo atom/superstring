@@ -3,7 +3,8 @@
 
 #include <string>
 #include "nan.h"
-#include "optional.h"
+#include <optional>
+using std::optional;
 #include "text.h"
 
 namespace string_conversion {
