@@ -7,7 +7,7 @@ class PatchWrapper : public Nan::ObjectWrap {
   static v8::Local<v8::Value> from_patch(Patch &&);
 
  private:
-  PatchWrapper(Patch &&patch);
+  explicit PatchWrapper(Patch &&patch);
   static void construct(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void splice(const Nan::FunctionCallbackInfo<v8::Value> &info);
   static void splice_old(const Nan::FunctionCallbackInfo<v8::Value> &info);

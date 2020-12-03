@@ -36,7 +36,7 @@ struct Patch::Node {
   uint32_t old_subtree_text_size;
   uint32_t new_subtree_text_size;
 
-  Node(
+  explicit Node(
     Node *left,
     Node *right,
     Point old_extent,

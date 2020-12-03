@@ -8,7 +8,7 @@ class Serializer {
   std::vector<uint8_t> &vector;
 
  public:
-  inline Serializer(std::vector<uint8_t> &output) :
+  explicit inline Serializer(std::vector<uint8_t> &output) :
     vector(output) {};
 
   template <typename T>
@@ -25,7 +25,7 @@ class Deserializer {
   const uint8_t *end_ptr;
 
  public:
-  inline Deserializer(const std::vector<uint8_t> &input) :
+  explicit inline Deserializer(const std::vector<uint8_t> &input) :
     read_ptr(input.data()),
     end_ptr(input.data() + input.size()) {};
 
