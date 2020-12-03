@@ -61,7 +61,7 @@ EncodingConversion::EncodingConversion(int mode, void *data) :
   data{data}, mode{mode} {}
 
 EncodingConversion::~EncodingConversion() {
-  if (data) iconv_close(data);
+  if (data != nullptr) iconv_close(data);
 }
 
 int EncodingConversion::convert(
