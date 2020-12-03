@@ -69,6 +69,7 @@
     "variables": {
         "tests": 0,
         "STANDARD": 14,
+        "MACOSX_DEPLOYMENT_TARGET": "10.8"
     },
 
     "conditions": [
@@ -101,11 +102,11 @@
                 "conditions": [
                     ['OS=="mac"', {
                         'cflags': [
-                            '-mmacosx-version-min=10.8'
+                            "-mmacosx-version-min=<(MACOSX_DEPLOYMENT_TARGET)"
                         ],
                         "xcode_settings": {
                             "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
-                            'MACOSX_DEPLOYMENT_TARGET': '10.8',
+                            'MACOSX_DEPLOYMENT_TARGET': '<(MACOSX_DEPLOYMENT_TARGET)',
                         }
                     }]
                 ]
