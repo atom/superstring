@@ -1,7 +1,7 @@
 #ifndef SUPERSTRING_TEXT_BUFFER_SNAPSHOT_WRAPPER_H
 #define SUPERSTRING_TEXT_BUFFER_SNAPSHOT_WRAPPER_H
 
-#include "nan.h"
+#include <nan.h>
 #include <string>
 
 // This header can be included by other native node modules, allowing them

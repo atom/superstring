@@ -1,5 +1,5 @@
 #include "marker-index-wrapper.h"
-#include "nan.h"
+#include <nan.h>
 #include "patch-wrapper.h"
 #include "range-wrapper.h"
 #include "point-wrapper.h"

@@ -1,7 +1,7 @@
 #ifndef SUPERSTRING_TEXT_READER_H
 #define SUPERSTRING_TEXT_READER_H
 
-#include "nan.h"
+#include <nan.h>
 #include "text.h"
 #include "text-buffer.h"
 #include "encoding-conversion.h"

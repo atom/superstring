@@ -1,7 +1,7 @@
 #ifndef SUPERSTRING_TEXT_BUFFER_WRAPPER_H
 #define SUPERSTRING_TEXT_BUFFER_WRAPPER_H
 
-#include "nan.h"
+#include <nan.h>
 #include "text-buffer.h"
 #include <unordered_set>
 
