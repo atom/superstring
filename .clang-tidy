@@ -1,0 +1,4 @@
+---
+Checks: "*, -clang-diagnostic-*-compat, -cppcoreguidelines-init-variables, -modernize-return-braced-init-list, -misc-unused-parameters, -misc-non-private-member-variables-in-classes, -llvmlibc-*, -llvm-header-guard, -llvm-include-order, -modernize-use-trailing-return-type, -readability-avoid-const-params-in-decls, -readability-convert-member-functions-to-static, -fuchsia-default-arguments-declarations, -fuchsia-default-arguments-calls, -*-uppercase-literal-suffix, -fuchsia-overloaded-operator, -google-build-using-namespace, -google-global-names-in-headers, -google-readability-todo, -*-else-after-return, -*-braces-around-statements"
+HeaderFilterRegex: ".*"
+FormatStyle: none
