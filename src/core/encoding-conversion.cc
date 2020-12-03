@@ -7,10 +7,10 @@ using std::function;
 using std::u16string;
 using std::vector;
 
-static const uint32_t bytes_per_character = (sizeof(uint16_t) / sizeof(char));
-static const uint16_t replacement_character = 0xFFFD;
-static const size_t conversion_failure = static_cast<size_t>(-1);
-static const float buffer_growth_factor = 2;
+constexpr uint32_t bytes_per_character = (sizeof(uint16_t) / sizeof(char));
+constexpr uint16_t replacement_character = 0xFFFD;
+constexpr size_t conversion_failure = static_cast<size_t>(-1);
+constexpr float buffer_growth_factor = 2;
 
 enum Mode {
   GENERAL,

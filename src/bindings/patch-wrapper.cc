@@ -17,7 +17,7 @@ static Nan::Persistent<v8::Function> change_wrapper_constructor;
 static Nan::Persistent<v8::FunctionTemplate> patch_wrapper_constructor_template;
 static Nan::Persistent<v8::Function> patch_wrapper_constructor;
 
-static const char *InvalidSpliceMessage = "Patch does not apply";
+constexpr char *InvalidSpliceMessage = "Patch does not apply";
 
 class ChangeWrapper : public Nan::ObjectWrap {
  public:
