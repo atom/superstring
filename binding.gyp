@@ -67,7 +67,8 @@
     ],
 
     "variables": {
-        "tests": 0
+        "tests": 0,
+        "STANDARD": 14,
     },
 
     "conditions": [
@@ -111,9 +112,8 @@
             }]
         }]
     ],
-
     "target_defaults": {
-        "cflags_cc": ["-std=c++11"],
+        "cflags_cc": [ "-std=c++<(STANDARD)" ],
         "conditions": [
             ['OS=="mac"', {
                 "xcode_settings": {
