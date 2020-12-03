@@ -78,7 +78,7 @@ class RegexWrapper : public Nan::ObjectWrap {
   static Nan::Persistent<Function> constructor;
   static void construct(const Nan::FunctionCallbackInfo<v8::Value> &info) {}
 
-  RegexWrapper(Regex &&regex) : regex{move(regex)} {}
+  explicit RegexWrapper(Regex &&regex) : regex{move(regex)} {}
 
   static const Regex *regex_from_js(const Local<Value> &value) {
     Local<String> js_pattern;
@@ -137,7 +137,7 @@ class SubsequenceMatchWrapper : public Nan::ObjectWrap {
 public:
   static Nan::Persistent<Function> constructor;
 
-  SubsequenceMatchWrapper(SubsequenceMatch &&match) :
+  explicit SubsequenceMatchWrapper(SubsequenceMatch &&match) :
     match(std::move(match)) {}
 
   static void init() {

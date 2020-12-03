@@ -59,7 +59,7 @@ struct Patch::Node {
     compute_subtree_text_sizes();
   }
 
-  Node(Deserializer &input) :
+  explicit Node(Deserializer &input) :
     left{nullptr},
     right{nullptr},
     old_extent{input},
