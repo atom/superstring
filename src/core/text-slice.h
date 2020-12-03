@@ -16,8 +16,9 @@ class TextSlice {
   size_t start_offset() const;
   size_t end_offset() const;
 
-  TextSlice();
-  TextSlice(const Text &text);
+  explicit TextSlice();
+  TextSlice(const Text &text); // TODO make it explicit
+
   std::pair<TextSlice, TextSlice> split(Point) const;
   std::pair<TextSlice, TextSlice> split(uint32_t) const;
   TextSlice prefix(Point) const;
