@@ -83,7 +83,7 @@ void change_set_noop(Patch::Change &change, T const &) {}
 EMSCRIPTEN_BINDINGS(Patch) {
   emscripten::class_<Patch>("Patch")
     .constructor<>()
-    .constructor<emscripten::val>(WRAP_STATIC(&constructor), emscripten::allow_raw_pointers())
+    .constructor(WRAP_STATIC(&constructor), emscripten::allow_raw_pointers())
     .function("splice", splice)
     .function("splice", splice_with_text)
     .function("spliceOld", WRAP(&Patch::splice_old))
