@@ -4,6 +4,7 @@
 #include "patch.h"
 #include <emscripten/bind.h>
 #include <emscripten/val.h>
+#include <emscripten/wire.h>
 
 using std::runtime_error;
 using std::string;
