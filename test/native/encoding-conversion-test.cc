@@ -42,7 +42,7 @@ TEST_CASE("EncodingConversion::decode - invalid byte sequences in the middle of 
 
   u16string string;
   conversion->decode(string, input.data(), input.size());
-  REQUIRE(string == u"ab" "\ufffd" "\ufffd" "de");
+  REQUIRE(string == u"ab" u"\ufffd" u"\ufffd" u"de");
 }
 
 TEST_CASE("EncodingConversion::decode - invalid byte sequences at the end of the input") {
@@ -58,7 +58,7 @@ TEST_CASE("EncodingConversion::decode - invalid byte sequences at the end of the
   string.clear();
   bytes_encoded = conversion->decode(string, input.data(), input.size(), true);
   REQUIRE(bytes_encoded == 4);
-  REQUIRE(string == u"ab" "\ufffd" "\ufffd");
+  REQUIRE(string == u"ab" u"\ufffd" u"\ufffd");
 }
 
 TEST_CASE("EncodingConversion::decode - four-byte UTF-16 characters") {
@@ -67,7 +67,7 @@ TEST_CASE("EncodingConversion::decode - four-byte UTF-16 characters") {
 
   u16string string;
   conversion->decode(string, input.data(), input.size());
-  REQUIRE(string == u"ab" "\xd83d" "\xde01" "cd");
+  REQUIRE(string == u"ab" u"\xd83d"  u"\xde01" u"cd");
 }
 
 TEST_CASE("EncodingConversion::encode - basic") {
@@ -93,7 +93,7 @@ TEST_CASE("EncodingConversion::encode - basic") {
 
 TEST_CASE("EncodingConversion::encode - four-byte UTF-16 characters") {
   auto conversion = transcoding_to("UTF-8");
-  u16string string = u"ab" "\xd83d" "\xde01" "cd";  // 'ab😁cd'
+  u16string string = u"ab" u"\xd83d" u"\xde01" u"cd";  // 'ab😁cd'
 
   vector<char> output(10);
   size_t bytes_encoded = 0, start = 0;
@@ -116,7 +116,7 @@ TEST_CASE("EncodingConversion::encode - four-byte UTF-16 characters") {
 
 TEST_CASE("EncodingConversion::encode - invalid characters in the middle of the string") {
   auto conversion = transcoding_to("UTF-8");
-  u16string string = u"abc" "\xD800" "def";
+  u16string string = u"abc" u"\xD800" u"def";
 
   vector<char> output(10);
   size_t bytes_encoded = 0, start = 0;
@@ -136,7 +136,7 @@ TEST_CASE("EncodingConversion::encode - invalid characters in the middle of the 
 
 TEST_CASE("EncodingConversion::encode - invalid characters at the end of the string") {
   auto conversion = transcoding_to("UTF-8");
-  u16string string = u"abc" "\xD800";
+  u16string string = u"abc" u"\xD800";
 
   vector<char> output(10);
   size_t bytes_encoded = 0, start = 0;
