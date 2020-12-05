@@ -24,6 +24,12 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: true
+      - name: Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            'node_modules'
+          key: ${{ runner.os }}-${{ matrix.node_version }}-${{ hashFiles('package.json') }}
 
       - name: Setup node
         uses: actions/setup-node@v2-beta
