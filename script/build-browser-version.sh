@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# Activate emscripten
+EMSDK_PATH="./emsdk-2.0.9/emsdk"
+$EMSDK_PATH activate 2.0.9
+
+# Build
+
 mkdir -p build
 
 ## Compile pcre
