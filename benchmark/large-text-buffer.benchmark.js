@@ -23,11 +23,10 @@ async function getText() {
 getText().then(txt => {
   const buffer = new TextBuffer()
 
-  console.log('running findWordsWithSubsequence tests...')
+  console.log('\n running findWordsWithSubsequence tests... \n')
 
   const sizes = [ ['100b', 100], ['1kb', 1000], ['1MB', 1000000], ['51MB', 100000000], ['119MB', txt.length]]
 
-  const word = "Morocco"
   const test = (word, size) => {
     buffer.setText(txt.slice(0, size[1]))
     const ti = performance.now()
@@ -37,9 +36,11 @@ getText().then(txt => {
     })
   }
 
-  return sizes.reduce((promise, size) => {
-    return promise.then(() => test(word, size))
-  }, Promise.resolve())
+  for (const word of ["Morocco", "Austria", "France", "Liechtenstein", "Republic of the Congo", "Antigua and Barbuda", "Japan"]) {
+    sizes.reduce((promise, size) => {
+      return promise.then(() => test(word, size))
+    }, Promise.resolve())
+  }
 }).then(() => {
-  console.log('finished')
+  console.log('findWordsWithSubsequence tests finished \n')
 })
