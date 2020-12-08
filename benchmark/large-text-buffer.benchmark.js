@@ -20,7 +20,7 @@ async function getText() {
   return await readFile(filePath)
 }
 
-getText().then(txt => {
+getText().then(async (txt) => {
   const buffer = new TextBuffer()
 
   console.log('\n running findWordsWithSubsequence tests... \n')
@@ -35,11 +35,11 @@ getText().then(txt => {
       console.log(`In ${size[0]} file, time to find "${word}" was: ${' '.repeat(50-word.length-size[0].length)} ${(tf-ti).toFixed(5)} ms`)
     })
   }
-
-  for (const word of ["Morocco", "Austria", "France", "Liechtenstein", "Republic of the Congo", "Antigua and Barbuda", "Japan"]) {
-    sizes.reduce((promise, size) => {
-      return promise.then(() => test(word, size))
-    }, Promise.resolve())
+  for (const size of sizes) {
+    for (const word of ["Morocco", "Austria", "France", "Liechtenstein", "Republic of the Congo", "Antigua and Barbuda", "Japan"]) {
+      await test(word, size)
+    }
+    console.log('\n')
   }
 }).then(() => {
   console.log('findWordsWithSubsequence tests finished \n')
