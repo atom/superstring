@@ -5,6 +5,7 @@ const {promisify} = require('util')
 const readFile = promisify(fs.readFile)
 const path = require('path')
 const download = require('download')
+const {performance} = require("perf_hooks")
 
 async function getText() {
   const filePath = path.join(__dirname, '1000000 Sales Records.csv')
@@ -19,8 +20,6 @@ async function getText() {
   return await readFile(filePath)
 }
 
-const timer = size => `Time to find "cat" in ${size} file`
-
 getText().then(txt => {
   const buffer = new TextBuffer()
 
@@ -28,17 +27,18 @@ getText().then(txt => {
 
   const sizes = [['10b', 10], ['100b', 100], ['1kb', 1000], ['1MB', 1000000], ['51MB', 100000000], ['119MB', txt.length]]
 
-  const test = size => {
-    const _timer = timer(size[0])
+  const word = "Morocco"
+  const test = (word, size) => {
     buffer.setText(txt.slice(0, size[1]))
-    console.time(_timer)
-    return buffer.findWordsWithSubsequence('cat', '', 100).then(sugs => {
-      console.timeEnd(_timer)
+    const ti = performance.now()
+    return buffer.findWordsWithSubsequence(word, '', 100).then(sugs => {
+      const tf = performance.now()
+      console.log(`Time to find "${word}" in ${size[0]} file: ${(tf-ti).toFixed(5)} ms`)
     })
   }
 
   return sizes.reduce((promise, size) => {
-    return promise.then(() => test(size))
+    return promise.then(() => test(word, size))
   }, Promise.resolve())
 }).then(() => {
   console.log('finished')
