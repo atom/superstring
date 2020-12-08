@@ -4,7 +4,8 @@
 #include "text-slice.h"
 #include "regex.h"
 #include <future>
-#include <unistd.h>
+#include <chrono>
+#include <thread>
 
 using std::move;
 using std::pair;
@@ -466,7 +467,7 @@ TEST_CASE("TextBuffer::find_words_with_subsequence_in_range") {
 }
 
 TEST_CASE("TextBuffer::has_astral") {
-  REQUIRE(TextBuffer{u"ab" "\xd83d" "\xde01" "cd"}.has_astral());
+  REQUIRE(TextBuffer{u"ab" u"\xd83d" u"\xde01" u"cd"}.has_astral());
   REQUIRE(!TextBuffer{u"abcd"}.has_astral());
 }
 
@@ -535,7 +536,7 @@ TEST_CASE("TextBuffer - random edits and queries") {
             Generator rand(seed);
             vector<SnapshotData> results;
             for (uint32_t k = 0; k < 5; k++) {
-              usleep(rand() % 1000);
+              std::this_thread::sleep_for(std::chrono::microseconds(rand() % 1000));
               vector<Point> line_ending_positions;
               for (uint32_t row = 0; row < snapshot->extent().row; row++) {
                 line_ending_positions.push_back({row, snapshot->line_length_for_row(row)});

@@ -15,6 +15,7 @@
 
 using std::cout;
 using std::cerr;
+using uint = unsigned int;
 
 class TextBuffer;
 

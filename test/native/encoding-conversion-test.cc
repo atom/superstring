@@ -10,7 +10,7 @@ using std::u16string;
 
 TEST_CASE("EncodingConversion::decode - basic UTF-8") {
   auto conversion = transcoding_from("UTF-8");
-  string input("abγdefg\nhijklmnop");
+  string input(u8"abγdefg\nhijklmnop");
 
   u16string string;
   conversion->decode(string, input.data(), input.size());
@@ -42,7 +42,7 @@ TEST_CASE("EncodingConversion::decode - invalid byte sequences in the middle of 
 
   u16string string;
   conversion->decode(string, input.data(), input.size());
-  REQUIRE(string == u"ab" "\ufffd" "\ufffd" "de");
+  REQUIRE(string == u"ab" u"\ufffd" u"\ufffd" u"de");
 }
 
 TEST_CASE("EncodingConversion::decode - invalid byte sequences at the end of the input") {
@@ -58,7 +58,7 @@ TEST_CASE("EncodingConversion::decode - invalid byte sequences at the end of the
   string.clear();
   bytes_encoded = conversion->decode(string, input.data(), input.size(), true);
   REQUIRE(bytes_encoded == 4);
-  REQUIRE(string == u"ab" "\ufffd" "\ufffd");
+  REQUIRE(string == u"ab" u"\ufffd" u"\ufffd");
 }
 
 TEST_CASE("EncodingConversion::decode - four-byte UTF-16 characters") {
@@ -67,7 +67,7 @@ TEST_CASE("EncodingConversion::decode - four-byte UTF-16 characters") {
 
   u16string string;
   conversion->decode(string, input.data(), input.size());
-  REQUIRE(string == u"ab" "\xd83d" "\xde01" "cd");
+  REQUIRE(string == u"ab" u"\xd83d"  u"\xde01" u"cd");
 }
 
 TEST_CASE("EncodingConversion::encode - basic") {
@@ -93,7 +93,7 @@ TEST_CASE("EncodingConversion::encode - basic") {
 
 TEST_CASE("EncodingConversion::encode - four-byte UTF-16 characters") {
   auto conversion = transcoding_to("UTF-8");
-  u16string string = u"ab" "\xd83d" "\xde01" "cd";  // 'ab😁cd'
+  u16string string = u"ab" u"\xd83d" u"\xde01" u"cd";  // 'ab😁cd'
 
   vector<char> output(10);
   size_t bytes_encoded = 0, start = 0;
@@ -116,14 +116,14 @@ TEST_CASE("EncodingConversion::encode - four-byte UTF-16 characters") {
 
 TEST_CASE("EncodingConversion::encode - invalid characters in the middle of the string") {
   auto conversion = transcoding_to("UTF-8");
-  u16string string = u"abc" "\xD800" "def";
+  u16string string = u"abc" u"\xD800" u"def";
 
   vector<char> output(10);
   size_t bytes_encoded = 0, start = 0;
 
   bytes_encoded = conversion->encode(
     string, &start, string.size(), output.data(), output.size());
-  REQUIRE(std::string(output.data(), bytes_encoded) == "abc" "\ufffd" "def");
+  REQUIRE(std::string(output.data(), bytes_encoded) == u8"abc" u8"\ufffd" u8"def");
 
   // Here, the invalid character occurs at the end of a chunk.
   start = 0;
@@ -131,17 +131,17 @@ TEST_CASE("EncodingConversion::encode - invalid characters in the middle of the 
     string, &start, 4, output.data(), output.size());
   bytes_encoded += conversion->encode(
     string, &start, string.size(), output.data() + bytes_encoded, output.size() - bytes_encoded);
-  REQUIRE(std::string(output.data(), bytes_encoded) == "abc" "\ufffd" "def");
+  REQUIRE(std::string(output.data(), bytes_encoded) == u8"abc" u8"\ufffd" u8"def");
 }
 
 TEST_CASE("EncodingConversion::encode - invalid characters at the end of the string") {
   auto conversion = transcoding_to("UTF-8");
-  u16string string = u"abc" "\xD800";
+  u16string string = u"abc" u"\xD800";
 
   vector<char> output(10);
   size_t bytes_encoded = 0, start = 0;
 
   bytes_encoded = conversion->encode(
     string, &start, string.size(), output.data(), output.size(), true);
-  REQUIRE(std::string(output.data(), bytes_encoded) == "abc" "\ufffd");
+  REQUIRE(std::string(output.data(), bytes_encoded) == u8"abc" u8"\ufffd");
 }
