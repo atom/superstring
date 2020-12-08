@@ -27,13 +27,12 @@ getText().then(async (txt) => {
 
   const sizes = [ ['100b', 100], ['1kb', 1000], ['1MB', 1000000], ['51MB', 100000000], ['119MB', txt.length]]
 
-  const test = (word, size) => {
+  const test = async (word, size) => {
     buffer.setText(txt.slice(0, size[1]))
     const ti = performance.now()
-    return buffer.findWordsWithSubsequence(word, '', 100).then(sugs => {
-      const tf = performance.now()
-      console.log(`In ${size[0]} file, time to find "${word}" was: ${' '.repeat(50-word.length-size[0].length)} ${(tf-ti).toFixed(5)} ms`)
-    })
+    await buffer.findWordsWithSubsequence(word, '', 100)
+    const tf = performance.now()
+    console.log(`In ${size[0]} file, time to find "${word}" was: ${' '.repeat(50-word.length-size[0].length)} ${(tf-ti).toFixed(5)} ms`)
   }
   for (const size of sizes) {
     for (const word of ["Morocco", "Austria", "France", "Liechtenstein", "Republic of the Congo", "Antigua and Barbuda", "Japan"]) {
