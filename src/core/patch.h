@@ -1,7 +1,8 @@
 #ifndef PATCH_H_
 #define PATCH_H_
 
-#include "optional.h"
+#include <optional>
+using std::optional;
 #include "point.h"
 #include "serializer.h"
 #include "text.h"

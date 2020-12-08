@@ -7,7 +7,8 @@
 #include <ostream>
 #include "serializer.h"
 #include "point.h"
-#include "optional.h"
+#include <optional>
+using std::optional;
 
 class TextSlice;
 

@@ -1,7 +1,8 @@
 #ifndef REGEX_H_
 #define REGEX_H_
 
-#include "optional.h"
+#include <optional>
+using std::optional;
 #include <string>
 
 struct pcre2_real_code_16;
