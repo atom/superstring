@@ -23,23 +23,31 @@ async function getText() {
 getText().then(async (txt) => {
   const buffer = new TextBuffer()
 
-  console.log('\n running findWordsWithSubsequence tests... \n')
+  console.log('\n running large-text-buffer tests... \n')
 
   const sizes = [ ['100b', 100], ['1kb', 1000], ['1MB', 1000000], ['51MB', 100000000], ['119MB', txt.length]]
 
   const test = async (word, size) => {
-    buffer.setText(txt.slice(0, size[1]))
-    const ti = performance.now()
+    const ti2 = performance.now()
     await buffer.findWordsWithSubsequence(word, '', 100)
-    const tf = performance.now()
-    console.log(`In ${size[0]} file, time to find "${word}" was: ${' '.repeat(50-word.length-size[0].length)} ${(tf-ti).toFixed(5)} ms`)
+    const tf2 = performance.now()
+    console.log(`For ${size[0]} file, time to find "${word}" was: ${' '.repeat(50-word.length-size[0].length)} ${(tf2-ti2).toFixed(5)} ms`)
   }
   for (const size of sizes) {
+
+    const bufferText = txt.slice(0, size[1])
+
+    // benchmark buffer.setText
+    const ti1 = performance.now()
+    buffer.setText(bufferText)
+    const tf1 = performance.now()
+    console.log(`For ${size[0]} file, buffer.setText took ${' '.repeat(51-size[0].length)} ${(tf1-ti1).toFixed(5)} ms`)
+
     for (const word of ["Morocco", "Austria", "France", "Liechtenstein", "Republic of the Congo", "Antigua and Barbuda", "Japan"]) {
       await test(word, size)
     }
     console.log('\n')
   }
 }).then(() => {
-  console.log('findWordsWithSubsequence tests finished \n')
+  console.log(' large-text-buffer finished \n')
 })
