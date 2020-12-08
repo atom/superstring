@@ -1,6 +1,10 @@
 'use strict';
 
+console.log(' running marker-index tests... \n')
+
 const Random = require('random-seed')
+const {performance} = require("perf_hooks")
+
 const {MarkerIndex} = require('..')
 const {traverse, traversalDistance, compare} = require('../test/js/helpers/point-helpers')
 
@@ -41,12 +45,13 @@ function runBenchmark () {
 }
 
 function profileOperations (name, operations) {
-  console.time(name)
+  const ti1 = performance.now()
   for (let i = 0, n = operations.length; i < n; i++) {
     const operation = operations[i]
     markerIndex[operation[0]].apply(markerIndex, operation[1])
   }
-  console.timeEnd(name)
+  const tf1 = performance.now()
+  console.log(`${name} ${' '.repeat(80-name.length)} ${(tf1-ti1).toFixed(3)} ms`)
 }
 
 function enqueueSequentialInsert () {
@@ -118,3 +123,5 @@ function getSplice () {
 }
 
 runBenchmark()
+
+console.log(' \n marker-index finished \n')
