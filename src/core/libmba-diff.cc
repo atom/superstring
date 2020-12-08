@@ -52,9 +52,9 @@
  */
 
 #include "libmba-diff.h"
-#include <stdlib.h>
-#include <limits.h>
-#include <errno.h>
+#include <cstdlib>
+#include <climits>
+#include <cerrno>
 #include <vector>
 
 using std::vector;

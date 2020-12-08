@@ -1,7 +1,7 @@
 #ifndef MBA_DIFF_H_
 #define MBA_DIFF_H_
 
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
 
 typedef enum {

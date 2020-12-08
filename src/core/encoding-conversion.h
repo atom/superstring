@@ -1,9 +1,10 @@
 #ifndef SUPERSTRING_ENCODING_CONVERSION_H_
 #define SUPERSTRING_ENCODING_CONVERSION_H_
 
-#include "optional.h"
+#include <optional>
+using std::optional;
 #include "text.h"
-#include <stdio.h>
+#include <cstdio>
 
 class EncodingConversion {
   void *data;

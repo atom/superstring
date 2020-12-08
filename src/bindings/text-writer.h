@@ -1,7 +1,7 @@
 #ifndef SUPERSTRING_TEXT_WRITER_H
 #define SUPERSTRING_TEXT_WRITER_H
 
-#include "nan.h"
+#include <nan.h>
 #include "text.h"
 #include "encoding-conversion.h"
 

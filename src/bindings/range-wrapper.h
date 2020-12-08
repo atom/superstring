@@ -1,8 +1,9 @@
 #ifndef SUPERSTRING_RANGE_WRAPPER_H
 #define SUPERSTRING_RANGE_WRAPPER_H
 
-#include "nan.h"
-#include "optional.h"
+#include <nan.h>
+#include <optional>
+using std::optional;
 #include "point.h"
 #include "range.h"
 

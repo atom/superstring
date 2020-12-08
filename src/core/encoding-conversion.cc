@@ -1,7 +1,7 @@
 #include "encoding-conversion.h"
 #include "utf8-conversions.h"
 #include <iconv.h>
-#include <string.h>
+#include <cstring>
 
 using std::function;
 using std::u16string;

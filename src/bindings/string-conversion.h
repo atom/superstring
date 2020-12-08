@@ -2,8 +2,9 @@
 #define SUPERSTRING_STRING_CONVERSION_H
 
 #include <string>
-#include "nan.h"
-#include "optional.h"
+#include <nan.h>
+#include <optional>
+using std::optional;
 #include "text.h"
 
 namespace string_conversion {

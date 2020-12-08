@@ -1,7 +1,7 @@
 #include "text-buffer-wrapper.h"
 #include <sstream>
 #include <iomanip>
-#include <stdio.h>
+#include <cstdio>
 #include "number-conversion.h"
 #include "point-wrapper.h"
 #include "range-wrapper.h"

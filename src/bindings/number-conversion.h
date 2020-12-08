@@ -1,8 +1,9 @@
 #ifndef SUPERSTRING_NUMBER_CONVERSION_H
 #define SUPERSTRING_NUMBER_CONVERSION_H
 
-#include "nan.h"
-#include "optional.h"
+#include <nan.h>
+#include <optional>
+using std::optional;
 
 namespace number_conversion {
   template<typename T>

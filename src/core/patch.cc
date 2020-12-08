@@ -1,11 +1,12 @@
 #include "patch.h"
-#include "optional.h"
+#include <optional>
+using std::optional;
 #include "text.h"
 #include "text-slice.h"
-#include <assert.h>
+#include <cassert>
 #include <cmath>
 #include <memory>
-#include <stdio.h>
+#include <cstdio>
 #include <sstream>
 #include <vector>
 

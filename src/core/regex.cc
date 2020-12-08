@@ -1,6 +1,6 @@
 #include "regex.h"
-#include <stdlib.h>
-#include "pcre2.h"
+#include <cstdlib>
+#include <pcre2.h>
 
 using std::u16string;
 using MatchResult = Regex::MatchResult;

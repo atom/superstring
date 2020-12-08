@@ -1,6 +1,6 @@
 #include "range-wrapper.h"
 #include "point-wrapper.h"
-#include "nan.h"
+#include <nan.h>
 
 using namespace v8;
 
