@@ -32,7 +32,7 @@ getText().then(txt => {
     const ti = performance.now()
     return buffer.findWordsWithSubsequence(word, '', 100).then(sugs => {
       const tf = performance.now()
-      console.log(`Time to find "${word}" in ${size[0]} file: ${(tf-ti).toFixed(5)} ms`)
+      console.log(`In ${size[0]} file, time to find "${word}" was: ${' '.repeat(50-word.length-size[0].length)} ${(tf-ti).toFixed(5)} ms`)
     })
   }
 
