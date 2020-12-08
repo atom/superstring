@@ -25,7 +25,7 @@ getText().then(txt => {
 
   console.log('running findWordsWithSubsequence tests...')
 
-  const sizes = [['10b', 10], ['100b', 100], ['1kb', 1000], ['1MB', 1000000], ['51MB', 100000000], ['119MB', txt.length]]
+  const sizes = [ ['100b', 100], ['1kb', 1000], ['1MB', 1000000], ['51MB', 100000000], ['119MB', txt.length]]
 
   const word = "Morocco"
   const test = (word, size) => {
