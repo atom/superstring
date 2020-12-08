@@ -11,8 +11,10 @@ node_js:
   - "10"
   - "12.14.1"
 
+distro: bionic
+
 before_install:
-  - export CXX="g++-4.9" CC="gcc-4.9"
+  - export CXX="clang-9.0" CC="clang++-9.0"
 
 script:
   - npm run standard
@@ -31,5 +33,5 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
-    - gcc-4.9
-    - g++-4.9
+    - clang-9.0
+    - clang++-9.0
