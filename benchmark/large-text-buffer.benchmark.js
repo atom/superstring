@@ -1,33 +1,22 @@
-const http = require('http')
-const fs = require('fs')
-const unzip = require('unzip')
 const { TextBuffer } = require('..')
 
-const unzipper = unzip.Parse()
+const fs = require('fs')
+const {promisify} = require('util')
+const readFile = promisify(fs.readFile)
+const path = require('path')
+const download = require('download')
 
-const getText = () => {
-  return new Promise(resolve => {
-    console.log('fetching text file...')
-    const req = http.get({
-      hostname: 'www.acleddata.com',
-      port: 80,
-      // 51 MB text file
-      path: '/wp-content/uploads/2017/01/ACLED-Version-7-All-Africa-1997-2016_csv_dyadic-file.zip',
-      agent: false
-    }, res => {
-      res
-        .pipe(unzipper)
-        .on('entry', entry => {
-          let data = '';
-          entry.on('data', chunk => data += chunk);
-          entry.on('end', () => {
-            resolve(data)
-          });
-        })
-    })
-
-    req.end()
-  })
+async function getText() {
+  const filePath = path.join(__dirname, '1000000 Sales Records.csv')
+  if (!fs.existsSync(filePath)) {
+    // 122MB file
+    await download(
+      'http://eforexcel.com/wp/wp-content/uploads/2017/07/1000000%20Sales%20Records.zip',
+      __dirname,
+      {extract: true}
+    )
+  }
+  return await readFile(filePath)
 }
 
 const timer = size => `Time to find "cat" in ${size} file`
