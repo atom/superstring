@@ -665,7 +665,7 @@ void TextBufferWrapper::is_modified(const Nan::FunctionCallbackInfo<Value> &info
   info.GetReturnValue().Set(Nan::New<Boolean>(text_buffer.is_modified()));
 }
 
-static const int INVALID_ENCODING = -1;
+constexpr int INVALID_ENCODING = -1;
 
 struct Error {
   int number;
