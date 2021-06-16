@@ -12,7 +12,7 @@ public:
   static optional<Point> point_from_js(v8::Local<v8::Value>);
 
 private:
-  PointWrapper(Point point);
+  explicit PointWrapper(Point point);
 
   static void construct(const Nan::FunctionCallbackInfo<v8::Value> &info);
 

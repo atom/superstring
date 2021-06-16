@@ -8,7 +8,7 @@
 class TextWriter : public Nan::ObjectWrap {
 public:
   static void init(v8::Local<v8::Object> exports);
-  TextWriter(EncodingConversion &&conversion);
+  explicit TextWriter(EncodingConversion &&conversion);
   std::u16string get_text();
 
 private:

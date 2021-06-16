@@ -32,7 +32,7 @@ struct TextBuffer::Layer {
   uint32_t size_;
   uint32_t snapshot_count;
 
-  Layer(Text &&text) :
+  explicit Layer(Text &&text) :
     previous_layer{nullptr},
     text{move(text)},
     uses_patch{false},
@@ -40,7 +40,7 @@ struct TextBuffer::Layer {
     size_{this->text->size()},
     snapshot_count{0} {}
 
-  Layer(Layer *previous_layer) :
+  explicit Layer(Layer *previous_layer) :
     previous_layer{previous_layer},
     patch{Patch()},
     uses_patch{true},

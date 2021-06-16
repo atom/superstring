@@ -28,11 +28,11 @@ class Text {
 
   using const_iterator = std::u16string::const_iterator;
 
-  Text();
-  Text(const std::u16string &);
-  Text(std::u16string &&);
-  Text(TextSlice slice);
-  Text(Deserializer &deserializer);
+  explicit Text();
+  explicit Text(const std::u16string & /*string*/);
+  Text(std::u16string && /*content*/); // TODO make it explicit
+  explicit Text(TextSlice slice);
+  explicit Text(Deserializer &deserializer);
   template<typename Iter>
   Text(Iter begin, Iter end) : Text(std::u16string{begin, end}) {}
 

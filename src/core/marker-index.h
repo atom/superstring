@@ -30,7 +30,7 @@ public:
     std::vector<Boundary> boundaries;
   };
 
-  MarkerIndex(unsigned seed = 0u);
+  explicit MarkerIndex(unsigned seed = 0u);
   ~MarkerIndex();
   int generate_random_number();
   void insert(MarkerId id, Point start, Point end);
@@ -74,7 +74,7 @@ private:
 
   class Iterator {
   public:
-    Iterator(MarkerIndex *marker_index);
+    explicit Iterator(MarkerIndex *marker_index);
     void reset();
     Node* insert_marker_start(const MarkerId &id, const Point &start_position, const Point &end_position);
     Node* insert_marker_end(const MarkerId &id, const Point &start_position, const Point &end_position);

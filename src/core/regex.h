@@ -10,7 +10,7 @@ struct BuildRegexResult;
 
 class Regex {
   pcre2_real_code_16 *code;
-  Regex(pcre2_real_code_16 *);
+  explicit Regex(pcre2_real_code_16 *);
 
  public:
   Regex();
@@ -24,7 +24,7 @@ class Regex {
     friend class Regex;
 
    public:
-    MatchData(const Regex &);
+    explicit MatchData(const Regex & /*regex*/);
     ~MatchData();
   };
 

@@ -65,7 +65,7 @@ class ChangeWrapper : public Nan::ObjectWrap {
   }
 
  private:
-  ChangeWrapper(Patch::Change change) : change(change) {}
+  explicit ChangeWrapper(Patch::Change change) : change(change) {}
 
   static void construct(const Nan::FunctionCallbackInfo<Value> &info) {}
 

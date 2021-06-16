@@ -36,7 +36,7 @@ struct Patch::Node {
   uint32_t old_subtree_text_size;
   uint32_t new_subtree_text_size;
 
-  Node(
+  explicit Node(
     Node *left,
     Node *right,
     Point old_extent,
@@ -59,7 +59,7 @@ struct Patch::Node {
     compute_subtree_text_sizes();
   }
 
-  Node(Deserializer &input) :
+  explicit Node(Deserializer &input) :
     left{nullptr},
     right{nullptr},
     old_extent{input},

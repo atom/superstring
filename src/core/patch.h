@@ -35,10 +35,10 @@ public:
   };
 
   // Construction and destruction
-  Patch(bool merges_adjacent_changes = true);
   Patch(Patch &&);
-  Patch(Deserializer &input);
   Patch &operator=(Patch &&);
+  explicit Patch(bool merges_adjacent_changes = true);
+  explicit Patch(Deserializer &input);
   ~Patch();
   void serialize(Serializer &serializer);
 

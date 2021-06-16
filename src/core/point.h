@@ -14,7 +14,7 @@ struct Point {
 
   Point();
   Point(unsigned row, unsigned column);
-  Point(Deserializer &input);
+  explicit Point(Deserializer &input);
 
   int compare(const Point &other) const;
   bool is_zero() const;

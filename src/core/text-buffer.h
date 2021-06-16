@@ -21,8 +21,8 @@ public:
   static uint32_t MAX_CHUNK_SIZE_TO_COPY;
 
   TextBuffer();
-  TextBuffer(std::u16string &&);
-  TextBuffer(const std::u16string &text);
+  explicit TextBuffer(std::u16string && /*text*/);
+  explicit TextBuffer(const std::u16string &text);
   ~TextBuffer();
 
   uint32_t size() const;
