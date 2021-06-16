@@ -69,7 +69,7 @@ Regex::Regex(const char16_t *pattern, uint32_t pattern_length, u16string *error_
     nullptr
   );
 
-  if (!code) {
+  if (code == nullptr) {
     uint16_t message_buffer[256];
     size_t length = pcre2_get_error_message(error_number, message_buffer, 256);
     error_message->assign(message_buffer, message_buffer + length);
@@ -90,7 +90,7 @@ Regex::Regex(Regex &&other) : code{other.code} {
 }
 
 Regex::~Regex() {
-  if (code) pcre2_code_free(code);
+  if (code != nullptr) pcre2_code_free(code);
 }
 
 Regex::MatchData::MatchData(const Regex &regex)

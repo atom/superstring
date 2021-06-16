@@ -125,7 +125,7 @@ static int _find_middle_snake(
       }
       _setv(ctx, k, 0, x);
 
-      if (odd && k >= (delta - (d - 1)) && k <= (delta + (d - 1))) {
+      if ((odd != 0) && k >= (delta - (d - 1)) && k <= (delta + (d - 1))) {
         if (x >= RV(k)) {
           ms->u = x;
           ms->v = y;
@@ -153,7 +153,7 @@ static int _find_middle_snake(
       }
       _setv(ctx, kr, 1, x);
 
-      if (!odd && kr >= -d && kr <= d) {
+      if ((odd == 0) && kr >= -d && kr <= d) {
         if (x <= FV(kr)) {
           ms->x = x;
           ms->y = y;
@@ -172,7 +172,7 @@ static void _edit(struct _ctx *ctx, diff_op op, int off, int len) {
   // Add an edit to the SES (or coalesce if the op is the same)
   auto *e = &ctx->ses->back();
   if (e->op != op) {
-    if (e->op) {
+    if (e->op != 0) {
       ctx->ses->push_back(diff_edit{});
       e = &ctx->ses->back();
     }
@@ -267,7 +267,7 @@ int diff(const char16_t *a, uint32_t n, const char16_t *b, uint32_t m,
          int dmax, vector<diff_edit> *ses) {
   struct _ctx ctx;
   ctx.ses = ses;
-  ctx.dmax = dmax ? dmax : INT_MAX;
+  ctx.dmax = dmax != 0 ? dmax : INT_MAX;
   ses->push_back(diff_edit{static_cast<diff_op>(0), 0, 0});
 
   uint32_t common_prefix_length = 0;

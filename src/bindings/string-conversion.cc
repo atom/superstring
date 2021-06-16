@@ -36,7 +36,7 @@ Local<String> string_conversion::string_to_js(const u16string &text, const char 
   ).ToLocal(&result)) {
     return result;
   } else {
-    if (!failure_message) failure_message = "Couldn't convert text to a String";
+    if (failure_message == nullptr) failure_message = "Couldn't convert text to a String";
     Nan::ThrowError(failure_message);
     return Nan::New<String>("").ToLocalChecked();
   }
@@ -47,7 +47,7 @@ Local<String> string_conversion::char_to_js(const uint16_t c, const char *failur
   if (Nan::New<String>(&c, 1).ToLocal(&result)) {
     return result;
   } else {
-    if (!failure_message) failure_message = "Couldn't convert character to a String";
+    if (failure_message == nullptr) failure_message = "Couldn't convert character to a String";
     Nan::ThrowError(failure_message);
     return Nan::New<String>("").ToLocalChecked();
   }
