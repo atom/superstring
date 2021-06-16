@@ -12,7 +12,7 @@
     "test:node": "mocha test/js/*.js",
     "test:browser": "SUPERSTRING_USE_BROWSER_VERSION=1 mocha test/js/*.js",
     "test": "npm run test:node && npm run test:browser",
-    "benchmark": "node benchmark/marker-index.benchmark.js",
+    "benchmark": "node benchmark/text-buffer.benchmark.js && node benchmark/marker-index.benchmark.js && node benchmark/large-text-buffer.benchmark.js",
     "prepublishOnly": "git submodule update --init --recursive && npm run build:browser",
     "standard": "standard --recursive src test"
   },
@@ -35,11 +35,11 @@
   },
   "devDependencies": {
     "chai": "^2.0.0",
+    "download": "^8.0.0",
     "mocha": "^2.3.4",
     "random-seed": "^0.2.0",
     "standard": "^4.5.4",
-    "temp": "^0.8.3",
-    "unzip": "^0.1.11"
+    "temp": "^0.8.3"
   },
   "standard": {
     "global": [

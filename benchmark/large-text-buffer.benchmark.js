@@ -1,56 +1,53 @@
-const http = require('http')
-const fs = require('fs')
-const unzip = require('unzip')
 const { TextBuffer } = require('..')
 
-const unzipper = unzip.Parse()
+const fs = require('fs')
+const {promisify} = require('util')
+const readFile = promisify(fs.readFile)
+const path = require('path')
+const download = require('download')
+const {performance} = require("perf_hooks")
 
-const getText = () => {
-  return new Promise(resolve => {
-    console.log('fetching text file...')
-    const req = http.get({
-      hostname: 'www.acleddata.com',
-      port: 80,
-      // 51 MB text file
-      path: '/wp-content/uploads/2017/01/ACLED-Version-7-All-Africa-1997-2016_csv_dyadic-file.zip',
-      agent: false
-    }, res => {
-      res
-        .pipe(unzipper)
-        .on('entry', entry => {
-          let data = '';
-          entry.on('data', chunk => data += chunk);
-          entry.on('end', () => {
-            resolve(data)
-          });
-        })
-    })
-
-    req.end()
-  })
+async function getText() {
+  const filePath = path.join(__dirname, '1000000 Sales Records.csv')
+  if (!fs.existsSync(filePath)) {
+    // 122MB file
+    await download(
+      'http://eforexcel.com/wp/wp-content/uploads/2017/07/1000000%20Sales%20Records.zip',
+      __dirname,
+      {extract: true}
+    )
+  }
+  return await readFile(filePath)
 }
 
-const timer = size => `Time to find "cat" in ${size} file`
-
-getText().then(txt => {
+getText().then(async (txt) => {
   const buffer = new TextBuffer()
 
-  console.log('running findWordsWithSubsequence tests...')
+  console.log('\n running large-text-buffer tests... \n')
 
-  const sizes = [['10b', 10], ['100b', 100], ['1kb', 1000], ['1MB', 1000000], ['51MB', 100000000]]
+  const sizes = [ ['100b', 100], ['1kb', 1000], ['1MB', 1000000], ['51MB', 100000000], ['119MB', txt.length]]
 
-  const test = size => {
-    const _timer = timer(size[0])
-    buffer.setText(txt.slice(0, size[1]))
-    console.time(_timer)
-    return buffer.findWordsWithSubsequence('cat', '', 100).then(sugs => {
-      console.timeEnd(_timer)
-    })
+  const test = async (word, size) => {
+    const ti2 = performance.now()
+    await buffer.findWordsWithSubsequence(word, '', 100)
+    const tf2 = performance.now()
+    console.log(`For ${size[0]} file, time to find "${word}" was: ${' '.repeat(50-word.length-size[0].length)} ${(tf2-ti2).toFixed(5)} ms`)
   }
+  for (const size of sizes) {
 
-  return sizes.reduce((promise, size) => {
-    return promise.then(() => test(size))
-  }, Promise.resolve())
+    const bufferText = txt.slice(0, size[1])
+
+    // benchmark buffer.setText
+    const ti1 = performance.now()
+    buffer.setText(bufferText)
+    const tf1 = performance.now()
+    console.log(`For ${size[0]} file, buffer.setText took ${' '.repeat(51-size[0].length)} ${(tf1-ti1).toFixed(5)} ms`)
+
+    for (const word of ["Morocco", "Austria", "France", "Liechtenstein", "Republic of the Congo", "Antigua and Barbuda", "Japan"]) {
+      await test(word, size)
+    }
+    console.log('\n')
+  }
 }).then(() => {
-  console.log('finished')
+  console.log(' large-text-buffer finished \n')
 })
