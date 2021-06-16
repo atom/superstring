@@ -8,7 +8,7 @@
     "build:node": "node-gyp rebuild",
     "build:browser": "script/build-browser-version.sh",
     "build": "npm run build:node && npm run build:browser",
-    "test:native": "script/test-native.js",
+    "test:native": "node ./script/test-native.js",
     "test:node": "mocha test/js/*.js",
     "test:browser": "SUPERSTRING_USE_BROWSER_VERSION=1 mocha test/js/*.js",
     "test": "npm run test:node && npm run test:browser",
