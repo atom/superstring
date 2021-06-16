@@ -14,10 +14,6 @@ jobs:
           - ubuntu-latest
           - macos-latest
           - windows-latest
-        node_version:
-          - 10
-          - 12
-          - 14
     name: Node ${{ matrix.node_version }} on ${{ matrix.os }}
 
     steps:
@@ -34,7 +30,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v2-beta
         with:
-          node-version: ${{ matrix.node_version }}
+          node-version: 14
 
       - name: Install dependencies
         run: npm install
