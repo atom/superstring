@@ -2,8 +2,8 @@
 
 set -e
 
-EMSCRIPTEN_DOWNLOAD_URL='https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz'
-EMSDK_PATH="./emsdk-portable/emsdk"
+EMSCRIPTEN_DOWNLOAD_URL='https://codeload.github.com/emscripten-core/emsdk/tar.gz/2.0.9'
+EMSDK_PATH="./emsdk-2.0.9/emsdk"
 
 if [ ! -f $EMSDK_PATH ]; then
   echo 'Downloading emscripten SDK installer...'
@@ -12,11 +12,6 @@ fi
 
 echo 'Installing emscripten SDK...'
 
-# Workaround https://github.com/juj/emsdk/pull/74
-sed -i{} "s_/kripken/emscripten/'_/kripken/emscripten'_" $EMSDK_PATH
-sed -i{} "s_/WebAssembly/binaryen/'_/WebAssembly/binaryen'_" $EMSDK_PATH
-
 $EMSDK_PATH update
-$EMSDK_PATH list
-$EMSDK_PATH install sdk-1.37.9-64bit
-$EMSDK_PATH activate sdk-1.37.9-64bit
+$EMSDK_PATH install 2.0.9
+$EMSDK_PATH activate 2.0.9 --permanent
