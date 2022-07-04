@@ -9,6 +9,7 @@
 
 using namespace std::chrono;
 using std::vector;
+using uint = unsigned int;
 
 Range get_random_range() {
   Point start(rand() % 100, rand() % 100);

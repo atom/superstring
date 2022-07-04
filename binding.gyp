@@ -69,7 +69,7 @@
     "variables": {
         "tests": 0,
         "STANDARD": 17,
-        "MACOSX_DEPLOYMENT_TARGET": "10.8"
+        "MACOSX_DEPLOYMENT_TARGET": "10.15"
     },
 
     "conditions": [
@@ -119,7 +119,7 @@
             ['OS=="mac"', {
                 "xcode_settings": {
                     'CLANG_CXX_LIBRARY': 'libc++',
-                    'CLANG_CXX_LANGUAGE_STANDARD':'c++11',
+                    'CLANG_CXX_LANGUAGE_STANDARD':'c++(STANDARD)',
                 }
             }],
             ['OS=="win"', {
@@ -136,8 +136,8 @@
           # Release Settings
           'Release': {
             'defines': [ 'NDEBUG' ],
-            "cflags": [ "-fno-exceptions", "-Ofast" ],
-            "cflags_cc": [ "-fno-exceptions", "-Ofast", "-std=c++<(STANDARD)" ],
+            "cflags": [ "-fno-exceptions", "-O3" ],
+            "cflags_cc": [ "-fno-exceptions", "-O3", "-std=c++<(STANDARD)" ],
             "xcode_settings": {
               'GCC_OPTIMIZATION_LEVEL': '3', # stop gyp from defaulting to -Os
               "CLANG_CXX_LIBRARY": "libc++",
