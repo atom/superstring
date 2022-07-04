@@ -67,7 +67,9 @@
     ],
 
     "variables": {
-        "tests": 0
+        "tests": 0,
+        "STANDARD": 17,
+        "MACOSX_DEPLOYMENT_TARGET": "10.15"
     },
 
     "conditions": [
@@ -100,25 +102,24 @@
                 "conditions": [
                     ['OS=="mac"', {
                         'cflags': [
-                            '-mmacosx-version-min=10.8'
+                            "-mmacosx-version-min=<(MACOSX_DEPLOYMENT_TARGET)"
                         ],
                         "xcode_settings": {
                             "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
-                            'MACOSX_DEPLOYMENT_TARGET': '10.8',
+                            'MACOSX_DEPLOYMENT_TARGET': '<(MACOSX_DEPLOYMENT_TARGET)',
                         }
                     }]
                 ]
             }]
         }]
     ],
-
     "target_defaults": {
-        "cflags_cc": ["-std=c++11"],
+        "cflags_cc": [ "-std=c++<(STANDARD)" ],
         "conditions": [
             ['OS=="mac"', {
                 "xcode_settings": {
                     'CLANG_CXX_LIBRARY': 'libc++',
-                    'CLANG_CXX_LANGUAGE_STANDARD':'c++11',
+                    'CLANG_CXX_LANGUAGE_STANDARD':'c++(STANDARD)',
                 }
             }],
             ['OS=="win"', {
@@ -129,6 +130,40 @@
                     "NOMINMAX"
                 ],
             }]
-        ]
-    }
+        ],
+        'default_configuration': 'Release',
+        'configurations': {
+          # Release Settings
+          'Release': {
+            'defines': [ 'NDEBUG' ],
+            "cflags": [ "-fno-exceptions", "-O3" ],
+            "cflags_cc": [ "-fno-exceptions", "-O3", "-std=c++<(STANDARD)" ],
+            "xcode_settings": {
+              'GCC_OPTIMIZATION_LEVEL': '3', # stop gyp from defaulting to -Os
+              "CLANG_CXX_LIBRARY": "libc++",
+              "CLANG_CXX_LANGUAGE_STANDARD": "c++<(STANDARD)",
+              'MACOSX_DEPLOYMENT_TARGET': "<(MACOSX_DEPLOYMENT_TARGET)"
+            }, # XCODE
+            "msvs_settings": {
+              "VCCLCompilerTool": {
+                'ExceptionHandling': 0,               # /EHsc
+                'MultiProcessorCompilation': 'true',
+                'RuntimeTypeInfo': 'false',
+                'Optimization': 3,              # full optimizations /O2  ==  /Og /Oi /Ot /Oy /Ob2 /GF /Gy
+                'StringPooling': 'true',        # pool string literals
+                "AdditionalOptions": [
+                  # C++ standard
+                  "/std:c++<(STANDARD)",
+
+                  # Optimizations
+                  "/O2",
+                  # "/Ob3",  # aggressive inline
+                  "/GL",   # whole Program Optimization  # /LTCG is implied with /GL.
+                  "/DNDEBUG"  # turn off asserts
+                ],
+              }
+            } # MSVC
+          }, # Release
+        }, # configurations
+    } # target-defaults
 }

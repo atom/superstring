@@ -1,5 +1,8 @@
 # Superstring
-[![ci](https://github.com/atom/superstring/actions/workflows/ci.yml/badge.svg)](https://github.com/atom/superstring/actions/workflows/ci.yml)  
+[![macOS Build Status](https://circleci.com/gh/atom/superstring/tree/master.svg?style=shield)](https://circleci.com/gh/atom/superstring)
+[![Dependency Status](https://david-dm.org/atom/superstring.svg)](https://david-dm.org/atom/superstring)
+
+
 
 Native library at the core of Atom's text editor.
 
