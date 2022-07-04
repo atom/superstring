@@ -136,8 +136,8 @@
           # Release Settings
           'Release': {
             'defines': [ 'NDEBUG' ],
-            "cflags": [ "-fno-exceptions", "-Ofast" ],
-            "cflags_cc": [ "-fno-exceptions", "-Ofast", "-std=c++<(STANDARD)" ],
+            "cflags": [ "-fno-exceptions", "-O3" ],
+            "cflags_cc": [ "-fno-exceptions", "-O3", "-std=c++<(STANDARD)" ],
             "xcode_settings": {
               'GCC_OPTIMIZATION_LEVEL': '3', # stop gyp from defaulting to -Os
               "CLANG_CXX_LIBRARY": "libc++",
