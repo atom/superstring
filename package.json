@@ -8,7 +8,7 @@
     "build:node": "node-gyp rebuild",
     "build:browser": "bash -c script/build-browser-version.sh || echo 'the browser build is unsupported'",
     "build": "npm run build:node && npm run build:browser",
-    "test:native": "node ./script/test-native.js",
+    "test:native": "node-gyp build --debug --tests && node script/test-native.js",
     "test:node": "mocha test/js/*.js",
     "test:browser": "cross-env SUPERSTRING_USE_BROWSER_VERSION=1 mocha test/js/*.js || echo 'the browser tests are unsupported'",
     "test": "npm run test:node && npm run test:native && npm run test:browser",
