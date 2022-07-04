@@ -69,7 +69,7 @@
     "variables": {
         "tests": 0,
         "STANDARD": 17,
-        "MACOSX_DEPLOYMENT_TARGET": "10.8"
+        "MACOSX_DEPLOYMENT_TARGET": "10.15"
     },
 
     "conditions": [
@@ -119,7 +119,7 @@
             ['OS=="mac"', {
                 "xcode_settings": {
                     'CLANG_CXX_LIBRARY': 'libc++',
-                    'CLANG_CXX_LANGUAGE_STANDARD':'c++11',
+                    'CLANG_CXX_LANGUAGE_STANDARD':'c++(STANDARD)',
                 }
             }],
             ['OS=="win"', {
