@@ -1,7 +1,5 @@
 # Superstring
 [![macOS Build Status](https://circleci.com/gh/atom/superstring/tree/master.svg?style=shield)](https://circleci.com/gh/atom/superstring)
-[![linux Build Status](https://travis-ci.org/atom/superstring.svg?branch=master)](https://travis-ci.org/atom/superstring)
-[![Windows Build Status](https://ci.appveyor.com/api/projects/status/n5pack4yk7w80fso/branch/master?svg=true)](https://ci.appveyor.com/project/Atom/superstring/branch/master)
 [![Dependency Status](https://david-dm.org/atom/superstring.svg)](https://david-dm.org/atom/superstring)
 
 

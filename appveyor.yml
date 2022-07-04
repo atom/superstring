@@ -1,27 +1,6 @@
-image: Visual Studio 2017
-
-environment:
-  matrix:
-  - nodejs_version: "8"
-  - nodejs_version: "12.14.1"
-
-platform:
-  - x86
-  - x64
-
-install:
-  - ps: Install-Product node $env:nodejs_version
-  - git submodule update --init
-  - node --version
-  - npm --version
-  - npm install
-
-test_script:
-  - npm run standard
-  - npm run test:node
-
+# empty appveyor
 build: off
 
 branches:
   only:
-    - master
+  - non-existing
