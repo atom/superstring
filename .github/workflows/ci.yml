@@ -1,0 +1,64 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  Test:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-2019
+        node_version:
+          - 10
+          - 12
+          - 14
+    name: Node ${{ matrix.node_version }} on ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            'node_modules'
+          key: ${{ runner.os }}-${{ matrix.node_version }}-${{ hashFiles('package.json') }}
+
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node_version }}
+          architecture: x64
+
+      - name: Setup Cpp
+        uses: aminya/setup-cpp@v1
+        with:
+          vcvarsall: true
+          architecture: x64
+          python: true
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint
+        run: npm run standard
+
+      - name: Run tests
+        run: |
+          npm run test:node
+          npm run test:native
+
+  Skip:
+    if: contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip CI 🚫
+        run: echo skip ci
