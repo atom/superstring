@@ -1,6 +1,7 @@
 #include "nan.h"
 #include "marker-index.h"
-#include "optional.h"
+#include <optional>
+using std::optional;
 #include "range.h"
 
 class MarkerIndexWrapper : public Nan::ObjectWrap {
