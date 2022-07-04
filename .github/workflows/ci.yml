@@ -37,6 +37,13 @@ jobs:
           node-version: ${{ matrix.node_version }}
           architecture: x64
 
+      - name: Setup Cpp
+        uses: aminya/setup-cpp@v1
+        with:
+          vcvarsall: true
+          architecture: x64
+          python: true
+
       - name: Install dependencies
         run: npm install
 
