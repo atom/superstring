@@ -943,10 +943,10 @@ void TextBufferWrapper::load(const Nan::FunctionCallbackInfo<Value> &info) {
   if (!force && text_buffer.is_modified()) {
     Local<Value> argv[] = {Nan::Null(), Nan::Null()};
     auto callback = info[0].As<Function>();
-    #if (V8_MAJOR_VERSION < 8)
-      Nan::Call(callback, callback->CreationContext()->Global(), 2, argv);
-    #else
+    #if (V8_MAJOR_VERSION > 9 || (V8_MAJOR_VERSION == 9 && V8_MINOR_VERION <= 4))
       Nan::Call(callback, callback->GetCreationContext().ToLocalChecked()->Global(), 2, argv);
+    #else
+      Nan::Call(callback, callback->CreationContext()->Global(), 2, argv);
     #endif
     return;
   }
