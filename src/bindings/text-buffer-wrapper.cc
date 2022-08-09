@@ -1051,7 +1051,12 @@ void TextBufferWrapper::base_text_matches_file(const Nan::FunctionCallbackInfo<V
     bool result = std::equal(file_contents.begin(), file_contents.end(), text_buffer.base_text().begin());
     Local<Value> argv[] = {Nan::Null(), Nan::New<Boolean>(result)};
     auto callback = info[0].As<Function>();
-    Nan::Call(callback, callback->GetCreationContext().ToLocalChecked()->Global(), 2, argv);
+
+    #if (V8_MAJOR_VERSION > 9 || (V8_MAJOR_VERSION == 9 && V8_MINOR_VERION > 4))
+      Nan::Call(callback, callback->GetCreationContext().ToLocalChecked()->Global(), 2, argv);
+    #else
+      Nan::Call(callback, callback->CreationContext()->Global(), 2, argv);
+    #endif
   }
 }
 
