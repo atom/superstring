@@ -523,11 +523,11 @@ struct TextBuffer::Layer {
     // Next, calculate a score for each word indicating the quality of the
     // match against the query.
 
-    static const unsigned consecutive_bonus = 5;
-    static const unsigned subword_start_with_case_match_bonus = 10;
-    static const unsigned subword_start_with_case_mismatch_bonus = 9;
-    static const unsigned mismatch_penalty = 1;
-    static const unsigned leading_mismatch_penalty = 3;
+    constexpr unsigned consecutive_bonus = 5;
+    constexpr unsigned subword_start_with_case_match_bonus = 10;
+    constexpr unsigned subword_start_with_case_mismatch_bonus = 9;
+    constexpr unsigned mismatch_penalty = 1;
+    constexpr unsigned leading_mismatch_penalty = 3;
 
     vector<SubsequenceMatch> matches;
 

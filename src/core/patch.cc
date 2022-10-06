@@ -17,7 +17,7 @@ using std::ostream;
 using std::endl;
 using Change = Patch::Change;
 
-static const uint32_t SERIALIZATION_VERSION = 1;
+constexpr uint32_t SERIALIZATION_VERSION = 1;
 
 struct Patch::Node {
   Node *left;
