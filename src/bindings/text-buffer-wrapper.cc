@@ -78,7 +78,7 @@ class RegexWrapper : public Nan::ObjectWrap {
   static Nan::Persistent<Function> constructor;
   static void construct(const Nan::FunctionCallbackInfo<v8::Value> &info) {}
 
-  RegexWrapper(Regex &&regex) : regex{move(regex)} {}
+  explicit RegexWrapper(Regex &&regex) : regex{move(regex)} {}
 
   static const Regex *regex_from_js(const Local<Value> &value) {
     Local<String> js_pattern;
@@ -137,7 +137,7 @@ class SubsequenceMatchWrapper : public Nan::ObjectWrap {
 public:
   static Nan::Persistent<Function> constructor;
 
-  SubsequenceMatchWrapper(SubsequenceMatch &&match) :
+  explicit SubsequenceMatchWrapper(SubsequenceMatch &&match) :
     match(std::move(match)) {}
 
   static void init() {
@@ -401,7 +401,7 @@ class TextBufferSearcher : public Nan::AsyncWorker {
   Nan::Persistent<Value> argument;
 
 public:
-  TextBufferSearcher(Nan::Callback *completion_callback,
+  explicit TextBufferSearcher(Nan::Callback *completion_callback,
                      const TextBuffer::Snapshot *snapshot,
                      const Regex *regex,
                      const Range &search_range,
@@ -742,7 +742,7 @@ class Loader {
  public:
   bool cancelled;
 
-  Loader(Nan::Callback *progress_callback, Nan::AsyncResource *async_resource,
+  explicit Loader(Nan::Callback *progress_callback, Nan::AsyncResource *async_resource,
          TextBuffer *buffer, TextBuffer::Snapshot *snapshot, string &&file_name,
          string &&encoding_name, bool force, bool compute_patch) :
     progress_callback{progress_callback},
@@ -755,7 +755,7 @@ class Loader {
     compute_patch{compute_patch},
     cancelled{false} {}
 
-  Loader(Nan::Callback *progress_callback, Nan::AsyncResource *async_resource,
+  explicit Loader(Nan::Callback *progress_callback, Nan::AsyncResource *async_resource,
          TextBuffer *buffer, TextBuffer::Snapshot *snapshot, Text &&text,
          bool force, bool compute_patch) :
     progress_callback{progress_callback},
@@ -848,13 +848,13 @@ class LoadWorker : public Nan::AsyncProgressWorkerBase<size_t> {
   Loader loader;
 
  public:
-  LoadWorker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
+  explicit LoadWorker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
              TextBuffer *buffer, TextBuffer::Snapshot *snapshot, string &&file_name,
              string &&encoding_name, bool force, bool compute_patch) :
     AsyncProgressWorkerBase(completion_callback, "TextBuffer.load"),
     loader(progress_callback, async_resource, buffer, snapshot, move(file_name), move(encoding_name), force, compute_patch) {}
 
-  LoadWorker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
+  explicit LoadWorker(Nan::Callback *completion_callback, Nan::Callback *progress_callback,
              TextBuffer *buffer, TextBuffer::Snapshot *snapshot, Text &&text,
              bool force, bool compute_patch) :
     AsyncProgressWorkerBase(completion_callback, "TextBuffer.load"),
@@ -990,7 +990,7 @@ class BaseTextComparisonWorker : public Nan::AsyncWorker {
   bool result;
 
  public:
-  BaseTextComparisonWorker(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
+  explicit BaseTextComparisonWorker(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
                        string &&file_name, string &&encoding_name) :
     AsyncWorker(completion_callback, "TextBuffer.baseTextMatchesFile"),
     snapshot{snapshot},
@@ -1050,7 +1050,7 @@ class SaveWorker : public Nan::AsyncWorker {
   optional<Error> error;
 
  public:
-  SaveWorker(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
+  explicit SaveWorker(Nan::Callback *completion_callback, TextBuffer::Snapshot *snapshot,
              string &&file_name, string &&encoding_name) :
     AsyncWorker(completion_callback, "TextBuffer.save"),
     snapshot{snapshot},
