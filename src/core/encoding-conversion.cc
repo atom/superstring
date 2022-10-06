@@ -61,7 +61,7 @@ EncodingConversion::EncodingConversion(int mode, void *data) :
   data{data}, mode{mode} {}
 
 EncodingConversion::~EncodingConversion() {
-  if (data) iconv_close(data);
+  if (data != nullptr) iconv_close(data);
 }
 
 int EncodingConversion::convert(
@@ -149,7 +149,7 @@ bool EncodingConversion::decode(u16string &string, FILE *stream,
   for (;;) {
     size_t bytes_to_read = input_vector.size() - bytes_left_over;
     size_t bytes_read = fread(input_buffer + bytes_left_over, 1, bytes_to_read, stream);
-    if (bytes_read < bytes_to_read && ferror(stream)) return false;
+    if (bytes_read < bytes_to_read && (ferror(stream) != 0)) return false;
     size_t bytes_to_append = bytes_left_over + bytes_read;
     if (bytes_to_append == 0) break;
 
@@ -259,7 +259,7 @@ bool EncodingConversion::encode(const u16string &string, size_t start_offset,
       }
     }
     size_t bytes_written = fwrite(output_buffer, 1, bytes_encoded, stream);
-    if (bytes_written < bytes_encoded && ferror(stream)) return false;
+    if (bytes_written < bytes_encoded && (ferror(stream) != 0)) return false;
   }
 
   return true;

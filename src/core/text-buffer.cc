@@ -54,7 +54,7 @@ struct TextBuffer::Layer {
 
   bool is_above_layer(const Layer *layer) const {
     Layer *predecessor = previous_layer;
-    while (predecessor) {
+    while (predecessor != nullptr) {
       if (predecessor == layer) return true;
       predecessor = predecessor->previous_layer;
     }
@@ -680,7 +680,7 @@ TextBuffer::TextBuffer() :
 
 TextBuffer::~TextBuffer() {
   Layer *layer = top_layer;
-  while (layer) {
+  while (layer != nullptr) {
     Layer *previous_layer = layer->previous_layer;
     delete layer;
     layer = previous_layer;
@@ -693,7 +693,7 @@ TextBuffer::TextBuffer(const std::u16string &text) :
 void TextBuffer::reset(Text &&new_base_text) {
   bool has_snapshot = false;
   auto layer = top_layer;
-  while (layer) {
+  while (layer != nullptr) {
     if (layer->snapshot_count > 0) {
       has_snapshot = true;
       break;
@@ -708,7 +708,7 @@ void TextBuffer::reset(Text &&new_base_text) {
   }
 
   layer = top_layer->previous_layer;
-  while (layer) {
+  while (layer != nullptr) {
     Layer *previous_layer = layer->previous_layer;
     delete layer;
     layer = previous_layer;
@@ -783,7 +783,7 @@ void TextBuffer::serialize_changes(Serializer &serializer) {
 }
 
 bool TextBuffer::deserialize_changes(Deserializer &deserializer) {
-  if (top_layer != base_layer || base_layer->previous_layer) return false;
+  if (top_layer != base_layer || (base_layer->previous_layer != nullptr)) return false;
   top_layer = new Layer(base_layer);
   top_layer->size_ = deserializer.read<uint32_t>();
   top_layer->extent_ = Point(deserializer);
@@ -975,7 +975,7 @@ bool TextBuffer::is_modified(const Snapshot *snapshot) const {
 string TextBuffer::get_dot_graph() const {
   Layer *layer = top_layer;
   vector<Layer *> layers;
-  while (layer) {
+  while (layer != nullptr) {
     layers.push_back(layer);
     layer = layer->previous_layer;
   }
@@ -999,7 +999,7 @@ string TextBuffer::get_dot_graph() const {
 size_t TextBuffer::layer_count() const {
   size_t result = 1;
   const Layer *layer = top_layer;
-  while (layer->previous_layer) {
+  while (layer->previous_layer != nullptr) {
     result++;
     layer = layer->previous_layer;
   }
@@ -1094,7 +1094,7 @@ void TextBuffer::consolidate_layers() {
   vector<Layer *> mutable_layers;
   bool needed_by_layer_above = false;
 
-  while (layer) {
+  while (layer != nullptr) {
     if (needed_by_layer_above || layer->snapshot_count > 0) {
       squash_layers(mutable_layers);
       mutable_layers.clear();
@@ -1149,7 +1149,7 @@ void TextBuffer::squash_layers(const vector<Layer *> &layers) {
   Patch patch;
   Layer *previous_layer = layers.back()->previous_layer;
 
-  if (previous_layer) {
+  if (previous_layer != nullptr) {
     layer_index = layer_count - 1;
     patch = move(layers[layer_index]->patch);
     layer_index--;

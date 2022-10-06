@@ -26,7 +26,7 @@ TextBufferSnapshotWrapper::TextBufferSnapshotWrapper(Local<Object> js_buffer, vo
 }
 
 TextBufferSnapshotWrapper::~TextBufferSnapshotWrapper() {
-  if (snapshot) {
+  if (snapshot != nullptr) {
     delete reinterpret_cast<TextBuffer::Snapshot *>(snapshot);
   }
 }

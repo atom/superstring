@@ -25,7 +25,7 @@ MarkerIndex::Iterator::Iterator(MarkerIndex *marker_index) :
 
 void MarkerIndex::Iterator::reset() {
   current_node = marker_index->root;
-  if (current_node) {
+  if (current_node != nullptr) {
     current_node_position = current_node->left_extent;
   }
   left_ancestor_position = Point(0, 0);
@@ -37,7 +37,7 @@ void MarkerIndex::Iterator::reset() {
 MarkerIndex::Node *MarkerIndex::Iterator::insert_marker_start(const MarkerId &id, const Point &start_position, const Point &end_position) {
   reset();
 
-  if (!current_node) {
+  if (current_node == nullptr) {
     return marker_index->root = new Node(nullptr, start_position);
   }
 
@@ -48,7 +48,7 @@ MarkerIndex::Node *MarkerIndex::Iterator::insert_marker_start(const MarkerId &id
         return current_node;
       case -1:
         mark_right(id, start_position, end_position);
-        if (current_node->left) {
+        if (current_node->left != nullptr) {
           descend_left();
           break;
         } else {
@@ -58,7 +58,7 @@ MarkerIndex::Node *MarkerIndex::Iterator::insert_marker_start(const MarkerId &id
           return current_node;
         }
       case 1:
-        if (current_node->right) {
+        if (current_node->right != nullptr) {
           descend_right();
           break;
         } else {
@@ -74,7 +74,7 @@ MarkerIndex::Node *MarkerIndex::Iterator::insert_marker_start(const MarkerId &id
 MarkerIndex::Node *MarkerIndex::Iterator::insert_marker_end(const MarkerId &id, const Point &start_position, const Point &end_position) {
   reset();
 
-  if (!current_node) {
+  if (current_node == nullptr) {
     return marker_index->root = new Node(nullptr, end_position);
   }
 
@@ -84,7 +84,7 @@ MarkerIndex::Node *MarkerIndex::Iterator::insert_marker_end(const MarkerId &id, 
         mark_left(id, start_position, end_position);
         return current_node;
       case -1:
-        if (current_node->left) {
+        if (current_node->left != nullptr) {
           descend_left();
           break;
         } else {
@@ -95,7 +95,7 @@ MarkerIndex::Node *MarkerIndex::Iterator::insert_marker_end(const MarkerId &id, 
         }
       case 1:
         mark_left(id, start_position, end_position);
-        if (current_node->right) {
+        if (current_node->right != nullptr) {
           descend_right();
           break;
         } else {
@@ -116,14 +116,14 @@ MarkerIndex::Node *MarkerIndex::Iterator::insert_splice_boundary(const Point &po
     if (comparison == 0 && !is_insertion_end) {
       return current_node;
     } else if (comparison < 0) {
-      if (current_node->left) {
+      if (current_node->left != nullptr) {
         descend_left();
       } else {
         insert_left_child(position);
         return current_node->left;
       }
     } else { // comparison > 0
-      if (current_node->right) {
+      if (current_node->right != nullptr) {
         descend_right();
       } else {
         insert_right_child(position);
@@ -136,19 +136,19 @@ MarkerIndex::Node *MarkerIndex::Iterator::insert_splice_boundary(const Point &po
 void MarkerIndex::Iterator::find_intersecting(const Point &start, const Point &end, MarkerIdSet *result) {
   reset();
 
-  if (!current_node) return;
+  if (current_node == nullptr) return;
 
   while (true) {
     cache_node_position();
     if (start < current_node_position) {
-      if (current_node->left) {
+      if (current_node->left != nullptr) {
         check_intersection(start, end, result);
         descend_left();
       } else {
         break;
       }
     } else {
-      if (current_node->right) {
+      if (current_node->right != nullptr) {
         check_intersection(start, end, result);
         descend_right();
       } else {
@@ -161,18 +161,18 @@ void MarkerIndex::Iterator::find_intersecting(const Point &start, const Point &e
     check_intersection(start, end, result);
     move_to_successor();
     cache_node_position();
-  } while (current_node && current_node_position <= end);
+  } while ((current_node != nullptr) && current_node_position <= end);
 }
 
 void MarkerIndex::Iterator::find_contained_in(const Point &start, const Point &end, MarkerIdSet *result) {
   reset();
 
-  if (!current_node) return;
+  if (current_node == nullptr) return;
 
   seek_to_first_node_greater_than_or_equal_to(start);
 
   MarkerIdSet started;
-  while (current_node && current_node_position <= end) {
+  while ((current_node != nullptr) && current_node_position <= end) {
     started.insert(current_node->start_marker_ids.begin(), current_node->start_marker_ids.end());
     for (MarkerId id : current_node->end_marker_ids) {
       if (started.count(id) > 0) result->insert(id);
@@ -185,11 +185,11 @@ void MarkerIndex::Iterator::find_contained_in(const Point &start, const Point &e
 void MarkerIndex::Iterator::find_starting_in(const Point &start, const Point &end, MarkerIdSet *result) {
   reset();
 
-  if (!current_node) return;
+  if (current_node == nullptr) return;
 
   seek_to_first_node_greater_than_or_equal_to(start);
 
-  while (current_node && current_node_position <= end) {
+  while ((current_node != nullptr) && current_node_position <= end) {
     result->insert(current_node->start_marker_ids.begin(), current_node->start_marker_ids.end());
     cache_node_position();
     move_to_successor();
@@ -199,11 +199,11 @@ void MarkerIndex::Iterator::find_starting_in(const Point &start, const Point &en
 void MarkerIndex::Iterator::find_ending_in(const Point &start, const Point &end, MarkerIdSet *result) {
   reset();
 
-  if (!current_node) return;
+  if (current_node == nullptr) return;
 
   seek_to_first_node_greater_than_or_equal_to(start);
 
-  while (current_node && current_node_position <= end) {
+  while ((current_node != nullptr) && current_node_position <= end) {
     result->insert(current_node->end_marker_ids.begin(), current_node->end_marker_ids.end());
     cache_node_position();
     move_to_successor();
@@ -212,7 +212,7 @@ void MarkerIndex::Iterator::find_ending_in(const Point &start, const Point &end,
 
 void MarkerIndex::Iterator::find_boundaries_after(Point start, size_t max_count, MarkerIndex::BoundaryQueryResult *result) {
   reset();
-  if (!current_node) return;
+  if (current_node == nullptr) return;
 
   while (true) {
     cache_node_position();
@@ -226,7 +226,7 @@ void MarkerIndex::Iterator::find_boundaries_after(Point start, size_t max_count,
         );
       }
 
-      if (current_node->left) {
+      if (current_node->left != nullptr) {
         descend_left();
       } else {
         break;
@@ -240,7 +240,7 @@ void MarkerIndex::Iterator::find_boundaries_after(Point start, size_t max_count,
         );
       }
 
-      if (current_node->right) {
+      if (current_node->right != nullptr) {
         descend_right();
       } else {
         break;
@@ -257,7 +257,7 @@ void MarkerIndex::Iterator::find_boundaries_after(Point start, size_t max_count,
   );
 
   if (current_node_position < start) move_to_successor();
-  while (current_node && max_count > 0) {
+  while ((current_node != nullptr) && max_count > 0) {
     cache_node_position();
     result->boundaries.push_back({
       current_node_position,
@@ -274,14 +274,14 @@ unordered_map<MarkerIndex::MarkerId, Range> MarkerIndex::Iterator::dump() {
 
   unordered_map<MarkerId, Range> snapshot;
 
-  if (!current_node) return snapshot;
+  if (current_node == nullptr) return snapshot;
 
-  while (current_node && current_node->left) {
+  while ((current_node != nullptr) && (current_node->left != nullptr)) {
     cache_node_position();
     descend_left();
   }
 
-  while (current_node) {
+  while (current_node != nullptr) {
     for (MarkerId id : current_node->start_marker_ids) {
       Range range;
       range.start = current_node_position;
@@ -300,7 +300,7 @@ unordered_map<MarkerIndex::MarkerId, Range> MarkerIndex::Iterator::dump() {
 }
 
 void MarkerIndex::Iterator::ascend() {
-  if (current_node->parent) {
+  if (current_node->parent != nullptr) {
     if (current_node->parent->left == current_node) {
       current_node_position = right_ancestor_position;
     } else {
@@ -338,15 +338,15 @@ void MarkerIndex::Iterator::descend_right() {
 }
 
 void MarkerIndex::Iterator::move_to_successor() {
-  if (!current_node) return;
+  if (current_node == nullptr) return;
 
-  if (current_node->right) {
+  if (current_node->right != nullptr) {
     descend_right();
-    while (current_node->left) {
+    while (current_node->left != nullptr) {
       descend_left();
     }
   } else {
-    while (current_node->parent && current_node->parent->right == current_node) {
+    while ((current_node->parent != nullptr) && current_node->parent->right == current_node) {
       ascend();
     }
     ascend();
@@ -359,13 +359,13 @@ void MarkerIndex::Iterator::seek_to_first_node_greater_than_or_equal_to(const Po
     if (position == current_node_position) {
       break;
     } else if (position < current_node_position) {
-      if (current_node->left) {
+      if (current_node->left != nullptr) {
         descend_left();
       } else {
         break;
       }
     } else { // position > current_node_position
-      if (current_node->right) {
+      if (current_node->right != nullptr) {
         descend_right();
       } else {
         break;
@@ -424,7 +424,7 @@ MarkerIndex::MarkerIndex(unsigned seed)
     iterator{this} {}
 
 MarkerIndex::~MarkerIndex() {
-  if (root) delete_subtree(root);
+  if (root != nullptr) delete_subtree(root);
 }
 
 int MarkerIndex::generate_random_number() {
@@ -468,13 +468,13 @@ void MarkerIndex::remove(MarkerId id) {
   Node *end_node = end_nodes_by_id.find(id)->second;
 
   Node *node = start_node;
-  while (node) {
+  while (node != nullptr) {
     node->right_marker_ids.erase(id);
     node = node->parent;
   }
 
   node = end_node;
-  while (node) {
+  while (node != nullptr) {
     node->left_marker_ids.erase(id);
     node = node->parent;
   }
@@ -503,7 +503,7 @@ MarkerIndex::SpliceResult MarkerIndex::splice(Point start, Point old_extent, Poi
 
   SpliceResult invalidated;
 
-  if (!root || (old_extent.is_zero() && new_extent.is_zero())) return invalidated;
+  if ((root == nullptr) || (old_extent.is_zero() && new_extent.is_zero())) return invalidated;
 
   bool is_insertion = old_extent.is_zero();
   Node *start_node = iterator.insert_splice_boundary(start, false);
@@ -547,14 +547,14 @@ MarkerIndex::SpliceResult MarkerIndex::splice(Point start, Point old_extent, Poi
 
     for (MarkerId id : ending_inside_splice) {
       end_node->end_marker_ids.insert(id);
-      if (!starting_inside_splice.count(id)) {
+      if (starting_inside_splice.count(id) == 0u) {
         start_node->right_marker_ids.insert(id);
       }
       end_nodes_by_id[id] = end_node;
     }
 
     for (MarkerId id : end_node->end_marker_ids) {
-      if (exclusive_marker_ids.count(id) && !end_node->start_marker_ids.count(id)) {
+      if ((exclusive_marker_ids.count(id) != 0u) && (end_node->start_marker_ids.count(id) == 0u)) {
         ending_inside_splice.insert(id);
       }
     }
@@ -566,7 +566,7 @@ MarkerIndex::SpliceResult MarkerIndex::splice(Point start, Point old_extent, Poi
 
     for (auto iter = start_node->start_marker_ids.begin(); iter != start_node->start_marker_ids.end();) {
       MarkerId id = *iter;
-      if (exclusive_marker_ids.count(id) && !start_node->end_marker_ids.count(id)) {
+      if ((exclusive_marker_ids.count(id) != 0u) && (start_node->end_marker_ids.count(id) == 0u)) {
         iter = start_node->start_marker_ids.erase(iter);
         start_node->right_marker_ids.erase(id);
         end_node->start_marker_ids.insert(id);
@@ -580,7 +580,7 @@ MarkerIndex::SpliceResult MarkerIndex::splice(Point start, Point old_extent, Poi
 
   populate_splice_invalidation_sets(&invalidated, start_node, end_node, starting_inside_splice, ending_inside_splice);
 
-  if (start_node->right) {
+  if (start_node->right != nullptr) {
     delete_subtree(start_node->right);
     start_node->right = nullptr;
   }
@@ -716,7 +716,7 @@ Point MarkerIndex::get_node_position(const Node *node) const {
   if (cache_entry == node_position_cache.end()) {
     Point position = node->left_extent;
     const Node *current_node = node;
-    while (current_node->parent) {
+    while (current_node->parent != nullptr) {
       if (current_node->parent->right == current_node) {
         position = current_node->parent->left_extent.traverse(position);
       }
@@ -736,7 +736,7 @@ void MarkerIndex::delete_node(Node *node) {
 
   bubble_node_down(node);
 
-  if (node->parent) {
+  if (node->parent != nullptr) {
     if (node->parent->left == node) {
       node->parent->left = nullptr;
     } else {
@@ -750,13 +750,13 @@ void MarkerIndex::delete_node(Node *node) {
 }
 
 void MarkerIndex::delete_subtree(Node *node) {
-  if (node->left) delete_subtree(node->left);
-  if (node->right) delete_subtree(node->right);
+  if (node->left != nullptr) delete_subtree(node->left);
+  if (node->right != nullptr) delete_subtree(node->right);
   delete node;
 }
 
 void MarkerIndex::bubble_node_up(Node *node) {
-  while (node->parent && node->priority < node->parent->priority) {
+  while ((node->parent != nullptr) && node->priority < node->parent->priority) {
     if (node == node->parent->left) {
       rotate_node_right(node);
     } else {
@@ -767,8 +767,8 @@ void MarkerIndex::bubble_node_up(Node *node) {
 
 void MarkerIndex::bubble_node_down(Node *node) {
   while (true) {
-    int left_child_priority = (node->left) ? node->left->priority : INT_MAX;
-    int right_child_priority = (node->right) ? node->right->priority : INT_MAX;
+    int left_child_priority = (node->left) != nullptr ? node->left->priority : INT_MAX;
+    int right_child_priority = (node->right) != nullptr ? node->right->priority : INT_MAX;
 
     if (left_child_priority < right_child_priority && left_child_priority < node->priority) {
       rotate_node_right(node->left);
@@ -783,7 +783,7 @@ void MarkerIndex::bubble_node_down(Node *node) {
 void MarkerIndex::rotate_node_left(Node *rotation_pivot) {
   Node *rotation_root = rotation_pivot->parent;
 
-  if (rotation_root->parent) {
+  if (rotation_root->parent != nullptr) {
     if (rotation_root->parent->left == rotation_root) {
       rotation_root->parent->left = rotation_pivot;
     } else {
@@ -795,7 +795,7 @@ void MarkerIndex::rotate_node_left(Node *rotation_pivot) {
   rotation_pivot->parent = rotation_root->parent;
 
   rotation_root->right = rotation_pivot->left;
-  if (rotation_root->right) {
+  if (rotation_root->right != nullptr) {
     rotation_root->right->parent = rotation_root;
   }
 
@@ -807,7 +807,7 @@ void MarkerIndex::rotate_node_left(Node *rotation_pivot) {
   rotation_pivot->right_marker_ids.insert(rotation_root->right_marker_ids.begin(), rotation_root->right_marker_ids.end());
 
   for (auto it = rotation_pivot->left_marker_ids.begin(); it != rotation_pivot->left_marker_ids.end();) {
-    if (rotation_root->left_marker_ids.count(*it)) {
+    if (rotation_root->left_marker_ids.count(*it) != 0u) {
       rotation_root->left_marker_ids.erase(*it);
       ++it;
     } else {
@@ -820,7 +820,7 @@ void MarkerIndex::rotate_node_left(Node *rotation_pivot) {
 void MarkerIndex::rotate_node_right(Node *rotation_pivot) {
   Node *rotation_root = rotation_pivot->parent;
 
-  if (rotation_root->parent) {
+  if (rotation_root->parent != nullptr) {
     if (rotation_root->parent->left == rotation_root) {
       rotation_root->parent->left = rotation_pivot;
     } else {
@@ -832,7 +832,7 @@ void MarkerIndex::rotate_node_right(Node *rotation_pivot) {
   rotation_pivot->parent = rotation_root->parent;
 
   rotation_root->left = rotation_pivot->right;
-  if (rotation_root->left) {
+  if (rotation_root->left != nullptr) {
     rotation_root->left->parent = rotation_root;
   }
 
@@ -842,13 +842,13 @@ void MarkerIndex::rotate_node_right(Node *rotation_pivot) {
   rotation_root->left_extent = rotation_root->left_extent.traversal(rotation_pivot->left_extent);
 
   for (auto it = rotation_root->left_marker_ids.begin(); it != rotation_root->left_marker_ids.end(); ++it) {
-    if (!rotation_pivot->start_marker_ids.count(*it)) {
+    if (rotation_pivot->start_marker_ids.count(*it) == 0u) {
       rotation_pivot->left_marker_ids.insert(*it);
     }
   }
 
   for (auto it = rotation_pivot->right_marker_ids.begin(); it != rotation_pivot->right_marker_ids.end();) {
-    if (rotation_root->right_marker_ids.count(*it)) {
+    if (rotation_root->right_marker_ids.count(*it) != 0u) {
       rotation_root->right_marker_ids.erase(*it);
       ++it;
     } else {
@@ -887,7 +887,7 @@ void MarkerIndex::populate_splice_invalidation_sets(SpliceResult *invalidated, c
     invalidated->touch.insert(id);
     invalidated->inside.insert(id);
     invalidated->overlap.insert(id);
-    if (ending_inside_splice.count(id)) invalidated->surround.insert(id);
+    if (ending_inside_splice.count(id) != 0u) invalidated->surround.insert(id);
   }
 
   for (MarkerId id : ending_inside_splice) {

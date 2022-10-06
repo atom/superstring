@@ -104,11 +104,11 @@ struct Patch::Node {
   }
 
   uint32_t left_subtree_old_text_size() const {
-    return left ? left->old_subtree_text_size : 0;
+    return left != nullptr ? left->old_subtree_text_size : 0;
   }
 
   uint32_t right_subtree_old_text_size() const {
-    return right ? right->old_subtree_text_size : 0;
+    return right != nullptr ? right->old_subtree_text_size : 0;
   }
 
   void set_new_text(optional<Text> &&text) {
@@ -124,18 +124,18 @@ struct Patch::Node {
   }
 
   uint32_t left_subtree_new_text_size() const {
-    return left ? left->new_subtree_text_size : 0;
+    return left != nullptr ? left->new_subtree_text_size : 0;
   }
 
   uint32_t right_subtree_new_text_size() const {
-    return right ? right->new_subtree_text_size : 0;
+    return right != nullptr ? right->new_subtree_text_size : 0;
   }
 
   void get_subtree_end(Point *old_end, Point *new_end) {
     Node *node = this;
     *old_end = Point();
     *new_end = Point();
-    while (node) {
+    while (node != nullptr) {
       *old_end = old_end->traverse(node->old_distance_from_left_ancestor)
                      .traverse(node->old_extent);
       *new_end = new_end->traverse(node->new_distance_from_left_ancestor)
@@ -232,7 +232,7 @@ struct Patch::Node {
       << "\"]" << endl;
 
     result << "node_" << this << " -> ";
-    if (left) {
+    if (left != nullptr) {
       result << "node_" << left << endl;
       left->write_dot_graph(result, left_ancestor_old_end, left_ancestor_new_end);
     } else {
@@ -241,7 +241,7 @@ struct Patch::Node {
     }
 
     result << "node_" << this << " -> ";
-    if (right) {
+    if (right != nullptr) {
       result << "node_" << right << endl;
       right->write_dot_graph(result, node_old_end, node_new_end);
     } else {
@@ -263,14 +263,14 @@ struct Patch::Node {
     result << "\"newStart\": {\"row\": " << node_new_start.row << ", \"column\": " << node_new_start.column << "}, ";
     result << "\"newEnd\": {\"row\": " << node_new_end.row << ", \"column\": " << node_new_end.column << "}, ";
     result << "\"left\": ";
-    if (left) {
+    if (left != nullptr) {
       left->write_json(result, left_ancestor_old_end, left_ancestor_new_end);
     } else {
       result << "null";
     }
     result << ", ";
     result << "\"right\": ";
-    if (right) {
+    if (right != nullptr) {
       right->write_json(result, node_old_end, node_new_end);
     } else {
       result << "null";
@@ -387,28 +387,28 @@ Patch &Patch::operator=(Patch &&other) {
 }
 
 Patch::~Patch() {
-  if (root) delete_node(&root);
+  if (root != nullptr) delete_node(&root);
 }
 
 void Patch::serialize(Serializer &output) {
   output.append(SERIALIZATION_VERSION);
   output.append(change_count);
 
-  if (!root) return;
+  if (root == nullptr) return;
   root->serialize(output);
 
   Node *node = root;
   node_stack.clear();
   int previous_node_child_index = -1;
 
-  while (node) {
-    if (node->left && previous_node_child_index < 0) {
+  while (node != nullptr) {
+    if ((node->left != nullptr) && previous_node_child_index < 0) {
       output.append<uint32_t>(Left);
       node->left->serialize(output);
       node_stack.push_back(node);
       node = node->left;
       previous_node_child_index = -1;
-    } else if (node->right && previous_node_child_index < 1) {
+    } else if ((node->right != nullptr) && previous_node_child_index < 1) {
       output.append<uint32_t>(Right);
       node->right->serialize(output);
       node_stack.push_back(node);
@@ -428,7 +428,7 @@ void Patch::serialize(Serializer &output) {
 
 Patch Patch::copy() {
   Node *new_root = nullptr;
-  if (root) {
+  if (root != nullptr) {
     new_root = root->copy();
     node_stack.clear();
     node_stack.push_back(new_root);
@@ -436,11 +436,11 @@ Patch Patch::copy() {
     while (!node_stack.empty()) {
       Node *node = node_stack.back();
       node_stack.pop_back();
-      if (node->left) {
+      if (node->left != nullptr) {
         node->left = node->left->copy();
         node_stack.push_back(node->left);
       }
-      if (node->right) {
+      if (node->right != nullptr) {
         node->right = node->right->copy();
         node_stack.push_back(node->right);
       }
@@ -452,7 +452,7 @@ Patch Patch::copy() {
 
 Patch Patch::invert() {
   Node *inverted_root = nullptr;
-  if (root) {
+  if (root != nullptr) {
     inverted_root = root->invert();
     node_stack.clear();
     node_stack.push_back(inverted_root);
@@ -460,11 +460,11 @@ Patch Patch::invert() {
     while (!node_stack.empty()) {
       Node *node = node_stack.back();
       node_stack.pop_back();
-      if (node->left) {
+      if (node->left != nullptr) {
         node->left = node->left->invert();
         node_stack.push_back(node->left);
       }
-      if (node->right) {
+      if (node->right != nullptr) {
         node->right = node->right->invert();
         node_stack.push_back(node->right);
       }
@@ -482,7 +482,7 @@ bool Patch::splice(Point new_splice_start,
                    uint32_t deleted_text_size) {
   if (new_deletion_extent.is_zero() && new_insertion_extent.is_zero()) return true;
 
-  if (!root) {
+  if (root == nullptr) {
     root = build_node(nullptr, nullptr, new_splice_start, new_splice_start,
                      new_deletion_extent, new_insertion_extent,
                      move(deleted_text), move(inserted_text),
@@ -505,13 +505,13 @@ bool Patch::splice(Point new_splice_start,
   }
 
   Node *upper_bound = splay_node_ending_after<NewCoordinates>(new_deletion_end, new_splice_start);
-  if (upper_bound && lower_bound && lower_bound != upper_bound) {
+  if ((upper_bound != nullptr) && (lower_bound != nullptr) && lower_bound != upper_bound) {
     if (lower_bound != upper_bound->left) {
       rotate_node_right(lower_bound, upper_bound->left, upper_bound);
     }
   }
 
-  if (lower_bound && upper_bound) {
+  if ((lower_bound != nullptr) && (upper_bound != nullptr)) {
     Point lower_bound_old_start = lower_bound->old_distance_from_left_ancestor;
     Point lower_bound_new_start = lower_bound->new_distance_from_left_ancestor;
     Point upper_bound_old_start = upper_bound->old_distance_from_left_ancestor;
@@ -658,7 +658,7 @@ bool Patch::splice(Point new_splice_start,
             upper_bound_new_start.traversal(new_deletion_end);
       }
     }
-  } else if (lower_bound) {
+  } else if (lower_bound != nullptr) {
     Point lower_bound_old_start = lower_bound->old_distance_from_left_ancestor;
     Point lower_bound_new_start = lower_bound->new_distance_from_left_ancestor;
     Point lower_bound_new_end =
@@ -701,7 +701,7 @@ bool Patch::splice(Point new_splice_start,
     }
 
     delete_node(&lower_bound->right);
-  } else if (upper_bound) {
+  } else if (upper_bound != nullptr) {
     Point upper_bound_new_start = upper_bound->new_distance_from_left_ancestor;
     Point upper_bound_old_start = upper_bound->old_distance_from_left_ancestor;
     Point upper_bound_new_end =
@@ -711,7 +711,7 @@ bool Patch::splice(Point new_splice_start,
       (merges_adjacent_changes && new_deletion_end == upper_bound_new_start);
 
     Point old_deletion_end;
-    if (upper_bound->left) {
+    if (upper_bound->left != nullptr) {
       Point rightmost_child_old_end, rightmost_child_new_end;
       upper_bound->left->get_subtree_end(&rightmost_child_old_end, &rightmost_child_new_end);
       old_deletion_end =
@@ -770,15 +770,15 @@ bool Patch::splice(Point new_splice_start,
     );
   }
 
-  if (lower_bound) lower_bound->compute_subtree_text_sizes();
-  if (upper_bound) upper_bound->compute_subtree_text_sizes();
+  if (lower_bound != nullptr) lower_bound->compute_subtree_text_sizes();
+  if (upper_bound != nullptr) upper_bound->compute_subtree_text_sizes();
 
   return true;
 }
 
 void Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
                       Point old_insertion_extent) {
-  if (!root) return;
+  if (root == nullptr) return;
 
   Point old_deletion_end = old_splice_start.traverse(old_deletion_extent);
   Point old_insertion_end = old_splice_start.traverse(old_insertion_extent);
@@ -786,7 +786,7 @@ void Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
   Node *lower_bound = splay_node_ending_before<OldCoordinates>(old_splice_start);
   Node *upper_bound = splay_node_starting_after<OldCoordinates>(old_deletion_end, old_splice_start);
 
-  if (!lower_bound && !upper_bound) {
+  if ((lower_bound == nullptr) && (upper_bound == nullptr)) {
     delete_node(&root);
     return;
   }
@@ -801,7 +801,7 @@ void Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
     return;
   }
 
-  if (upper_bound && lower_bound) {
+  if ((upper_bound != nullptr) && (lower_bound != nullptr)) {
     if (lower_bound != upper_bound->left) {
       rotate_node_right(lower_bound, upper_bound->left, upper_bound);
     }
@@ -809,7 +809,7 @@ void Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
 
   Point new_deletion_end, new_insertion_end;
 
-  if (lower_bound) {
+  if (lower_bound != nullptr) {
     Point lower_bound_old_start = lower_bound->old_distance_from_left_ancestor;
     Point lower_bound_new_start = lower_bound->new_distance_from_left_ancestor;
     Point lower_bound_old_end =
@@ -827,7 +827,7 @@ void Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
     new_insertion_end = old_insertion_end;
   }
 
-  if (upper_bound) {
+  if (upper_bound != nullptr) {
     Point distance_between_splice_and_upper_bound =
         upper_bound->old_distance_from_left_ancestor.traversal(
             old_deletion_end);
@@ -836,7 +836,7 @@ void Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
     upper_bound->new_distance_from_left_ancestor =
         new_insertion_end.traverse(distance_between_splice_and_upper_bound);
 
-    if (lower_bound) {
+    if (lower_bound != nullptr) {
       if (lower_bound->old_distance_from_left_ancestor.traverse(
               lower_bound->old_extent) ==
           upper_bound->old_distance_from_left_ancestor) {
@@ -874,8 +874,8 @@ void Patch::splice_old(Point old_splice_start, Point old_deletion_extent,
     }
   }
 
-  if (lower_bound) lower_bound->compute_subtree_text_sizes();
-  if (upper_bound) upper_bound->compute_subtree_text_sizes();
+  if (lower_bound != nullptr) lower_bound->compute_subtree_text_sizes();
+  if (upper_bound != nullptr) upper_bound->compute_subtree_text_sizes();
 }
 
 bool Patch::combine(const Patch &other, bool left_to_right) {
@@ -904,19 +904,19 @@ bool Patch::combine(const Patch &other, bool left_to_right) {
 }
 
 void Patch::clear() {
-  if (root) delete_node(&root);
+  if (root != nullptr) delete_node(&root);
 }
 
 void Patch::rebalance() {
-  if (!root)
+  if (root == nullptr)
     return;
 
   // Transform tree to vine
   Node *pseudo_root = root, *pseudo_root_parent = nullptr;
-  while (pseudo_root) {
+  while (pseudo_root != nullptr) {
     Node *left = pseudo_root->left;
     Node *right = pseudo_root->right;
-    if (left) {
+    if (left != nullptr) {
       rotate_node_right(left, pseudo_root, pseudo_root_parent);
       pseudo_root = left;
     } else {
@@ -951,7 +951,7 @@ optional<Change> Patch::get_bounds() const {
   if (!root) return optional<Change>{};
 
   Node *node = root;
-  while (node->left) {
+  while (node->left != nullptr) {
     node = node->left;
   }
 
@@ -960,7 +960,7 @@ optional<Change> Patch::get_bounds() const {
 
   node = root;
   Point old_end, new_end;
-  while (node) {
+  while (node != nullptr) {
     old_end = old_end.traverse(node->old_distance_from_left_ancestor.traverse(node->old_extent));
     new_end = new_end.traverse(node->new_distance_from_left_ancestor.traverse(node->new_extent));
     node = node->right;
@@ -1002,7 +1002,7 @@ Point Patch::new_position_for_new_offset(uint32_t target_offset,
   Point preceding_new_position, preceding_old_position;
   uint32_t preceding_old_offset = 0, preceding_new_offset = 0;
 
-  while (node) {
+  while (node != nullptr) {
     Point node_old_start = left_ancestor_info.old_end.traverse(node->old_distance_from_left_ancestor);
     Point node_new_start = left_ancestor_info.new_end.traverse(node->new_distance_from_left_ancestor);
     uint32_t node_old_start_offset = old_offset_for_old_position(node_old_start);
@@ -1019,7 +1019,7 @@ Point Patch::new_position_for_new_offset(uint32_t target_offset,
       preceding_new_position = node_new_start.traverse(node->new_extent);
       preceding_old_offset = node_old_end_offset;
       preceding_new_offset = node_new_end_offset;
-      if (node->right) {
+      if (node->right != nullptr) {
         left_ancestor_info.old_end = preceding_old_position;
         left_ancestor_info.new_end = preceding_new_position;
         left_ancestor_info.total_old_text_size += node->left_subtree_old_text_size() + node->old_text_size();
@@ -1032,7 +1032,7 @@ Point Patch::new_position_for_new_offset(uint32_t target_offset,
       return node_new_start
         .traverse(node->new_text->position_for_offset(target_offset - node_new_start_offset));
     } else {
-      if (node->left) {
+      if (node->left != nullptr) {
         node = node->left;
       } else {
         break;
@@ -1104,7 +1104,7 @@ void Patch::splay_node(Node *node) {
       node_stack.pop_back();
     }
 
-    if (grandparent) {
+    if (grandparent != nullptr) {
       Node *great_grandparent = nullptr;
       if (!node_stack.empty()) {
         great_grandparent = node_stack.back();
@@ -1136,7 +1136,7 @@ void Patch::splay_node(Node *node) {
 }
 
 void Patch::rotate_node_left(Node *pivot, Node *root, Node *root_parent) {
-  if (root_parent) {
+  if (root_parent != nullptr) {
     if (root_parent->left == root) {
       root_parent->left = pivot;
     } else {
@@ -1161,7 +1161,7 @@ void Patch::rotate_node_left(Node *pivot, Node *root, Node *root_parent) {
 }
 
 void Patch::rotate_node_right(Node *pivot, Node *root, Node *root_parent) {
-  if (root_parent) {
+  if (root_parent != nullptr) {
     if (root_parent->left == root) {
       root_parent->left = pivot;
     } else {
@@ -1188,15 +1188,15 @@ void Patch::rotate_node_right(Node *pivot, Node *root, Node *root_parent) {
 void Patch::delete_root() {
   Node *node = root, *parent = nullptr;
   while (true) {
-    if (node->left) {
+    if (node->left != nullptr) {
       Node *left = node->left;
       rotate_node_right(node->left, node, parent);
       parent = left;
-    } else if (node->right) {
+    } else if (node->right != nullptr) {
       Node *right = node->right;
       rotate_node_left(node->right, node, parent);
       parent = right;
-    } else if (parent) {
+    } else if (parent != nullptr) {
       if (parent->left == node) {
         delete_node(&parent->left);
         break;
@@ -1217,10 +1217,10 @@ void Patch::delete_root() {
 void Patch::perform_rebalancing_rotations(uint32_t count) {
   Node *pseudo_root = root, *pseudo_root_parent = nullptr;
   for (uint32_t i = 0; i < count; i++) {
-    if (!pseudo_root)
+    if (pseudo_root == nullptr)
       return;
     Node *right_child = pseudo_root->right;
-    if (!right_child)
+    if (right_child == nullptr)
       return;
     rotate_node_left(right_child, pseudo_root, pseudo_root_parent);
     pseudo_root = right_child->right;
@@ -1320,16 +1320,16 @@ Patch::Node *Patch::build_node(Node *left, Node *right,
 }
 
 void Patch::delete_node(Node **node_to_delete) {
-  if (*node_to_delete) {
+  if (*node_to_delete != nullptr) {
     node_stack.clear();
     node_stack.push_back(*node_to_delete);
 
     while (!node_stack.empty()) {
       Node *node = node_stack.back();
       node_stack.pop_back();
-      if (node->left)
+      if (node->left != nullptr)
         node_stack.push_back(node->left);
-      if (node->right)
+      if (node->right != nullptr)
         node_stack.push_back(node->right);
       delete node;
       change_count--;
@@ -1861,7 +1861,7 @@ ostream &operator<<(ostream &stream, const Patch::Change &change) {
     << ", new_range: (" << change.new_start << " - " << change.new_end << ")"
     << ", old_text: ";
 
-  if (change.old_text) {
+  if (change.old_text != nullptr) {
     stream << *change.old_text;
   } else {
     stream << "null";
@@ -1869,7 +1869,7 @@ ostream &operator<<(ostream &stream, const Patch::Change &change) {
 
   stream << ", new_text: ";
 
-  if (change.new_text) {
+  if (change.new_text != nullptr) {
     stream << *change.new_text;
   } else {
     stream << "null";
