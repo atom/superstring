@@ -4,5 +4,9 @@ build
 .clang_complete
 
 /browser.js
-emsdk-portable
+emsdk-*
 package-lock.json
+
+*.wasm
+*.o
+*.a

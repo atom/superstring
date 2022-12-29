@@ -1,16 +1,22 @@
 #!/usr/bin/env bash
 
-source emsdk-portable/emsdk_env.sh
+# Activate emscripten
+EMSDK_PATH="./emsdk-2.0.9/emsdk"
+$EMSDK_PATH activate 2.0.9
+
+# Build
 
 mkdir -p build
 
+## Compile pcre
+
 emcc                                         \
-  -o build/pcre.o                            \
   -O3                                        \
   -I vendor/pcre/10.23/src                   \
   -I vendor/pcre/include                     \
   -D HAVE_CONFIG_H                           \
   -D PCRE2_CODE_UNIT_WIDTH=16                \
+  -c                                         \
   vendor/pcre/pcre2_chartables.c             \
   vendor/pcre/10.23/src/pcre2_auto_possess.c \
   vendor/pcre/10.23/src/pcre2_compile.c      \
@@ -36,6 +42,14 @@ emcc                                         \
   vendor/pcre/10.23/src/pcre2_valid_utf.c    \
   vendor/pcre/10.23/src/pcre2_xclass.c
 
+mv ./*.o build/
+
+emar                         \
+  rcs build/pcre.a           \
+  build/*.o
+
+### Compile superstring
+
 em++                                    \
   --bind                                \
   -o browser.js                         \
@@ -44,13 +58,13 @@ em++                                    \
   -I src/core                           \
   -I vendor/libcxx                      \
   -I vendor/pcre/include                \
+  -D HAVE_CONFIG_H                      \
   -D PCRE2_CODE_UNIT_WIDTH=16           \
-  -xc++                                 \
+  -s TOTAL_MEMORY=134217728             \
   --pre-js src/bindings/em/prologue.js  \
   --post-js src/bindings/em/epilogue.js \
   src/core/*.cc                         \
   src/bindings/em/*.cc                  \
-  build/pcre.o                          \
-  -s TOTAL_MEMORY=134217728             \
+  build/pcre.a                          \
   --memory-init-file 0                  \
   "$@"
